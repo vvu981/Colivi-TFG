@@ -1,556 +1,1020 @@
-# CLAUDE.md — Guía de Implementación del TFG
-## Plataforma de Alojamiento, Gastos Compartidos y Auditoría MCP
+# Plan de Desarrollo Maestro — TFG
+## Plataforma Integral de Búsqueda de Alojamiento, Gestión de Gastos Compartidos y Auditoría Inteligente mediante MCP
 
-Este documento es la guía maestra para implementar el proyecto de forma incremental y verificable.
-Cada fase termina con un conjunto de comprobaciones antes de avanzar a la siguiente.
-
----
-
-## Convenciones Generales
-
-- Toda lógica de negocio vive en la capa `service`, nunca en controllers ni repositories.
-- Todas las dependencias se inyectan por constructor, nunca por campo (`@Autowired` en campo está prohibido).
-- Cada endpoint del backend devuelve DTOs, nunca entidades JPA directamente.
-- Los repositorios de auditoría solo exponen `save` y métodos `find*`. Nunca `delete` ni `update`.
-- Los tests unitarios acompañan a cada servicio en la misma fase en que se implementa.
-- Las migraciones de base de datos se gestionan con Flyway (un archivo `.sql` por cambio, nunca retroceder).
+> **Versión:** 1.0.0 · **Autor:** Víctor Vallejo Uroz · **Metodología:** Desarrollo Secuencial por Fases
 
 ---
 
-## FASE 1 — Núcleo de Infraestructura y Seguridad
+## Tabla de Contenidos
 
-**Objetivo:** Tener un proyecto arrancando con autenticación funcional de extremo a extremo.
-
-### 1.1 Inicialización del Proyecto Backend
-
-- Crear proyecto Spring Boot 3.x con Java 21 mediante Spring Initializr.
-- Dependencias iniciales: `spring-boot-starter-web`, `spring-boot-starter-data-jpa`,
-  `spring-boot-starter-security`, `postgresql`, `flyway-core`, `lombok`, `jjwt`.
-- Configurar `application.yml` con los perfiles `dev` y `prod`. En `dev` apuntar a una base de datos
-  PostgreSQL local con nombre `tfg_dev`.
-- Verificar que el proyecto arranca sin errores con `./mvnw spring-boot:run`.
-
-### 1.2 Esquema de Base de Datos — Migración inicial
-
-- Crear el primer script Flyway: `V1__create_user_table.sql`.
-- Definir la tabla `USER` con todos los campos del modelo de datos: `id` (UUID, PK),
-  `nickname`, `email` (UNIQUE), `password_hash`, `first_name`, `last_name_1`, `last_name_2`,
-  `phone`, `profile_pic_url`, `role` (ENUM: `USER`, `ADMIN`).
-- Verificar que Flyway ejecuta la migración correctamente al arrancar.
-
-### 1.3 Entidad y Repositorio de Usuario
-
-- Crear la entidad JPA `UserEntity` mapeada a la tabla anterior. Usar `UUID` como tipo de PK
-  generado con `@GeneratedValue(strategy = GenerationType.UUID)`.
-- Crear la interfaz `UserRepository` extendiendo `JpaRepository<UserEntity, UUID>`.
-  Añadir solo los métodos necesarios: `findByEmail`, `findByNickname`, `existsByEmail`.
-- No añadir ningún método de borrado masivo; la eliminación de usuarios no está en el alcance.
-
-### 1.4 Seguridad JWT
-
-- Crear una clase `JwtService` (un único método para generar token, otro para extraerlo y validarlo).
-- Crear el filtro `JwtAuthenticationFilter` que intercepta cada request, extrae el token del header
-  `Authorization: Bearer ...`, lo valida y carga el `SecurityContext`.
-- Configurar `SecurityFilterChain` en una clase `SecurityConfig`:
-    - Rutas públicas: `POST /api/v1/auth/**`, `GET /api/v1/accommodations/**`.
-    - Todo lo demás requiere autenticación.
-- El `UserDetailsService` cargará usuarios por email desde `UserRepository`.
-
-### 1.5 Endpoints de Autenticación
-
-- `POST /api/v1/auth/register` — Recibe `RegisterRequestDTO` (nickname, email, password, nombre,
-  apellidos, teléfono). El servicio hashea la contraseña con BCrypt antes de persistir.
-  Devuelve el token JWT y los datos básicos del usuario creado.
-- `POST /api/v1/auth/login` — Recibe `LoginRequestDTO` (email, password). Autentica contra la BD,
-  devuelve token JWT.
-- Crear `AuthController`, `AuthService` (con su interfaz `IAuthService`), los DTOs de entrada y
-  el `AuthResponseDTO` de salida.
-
-### 1.6 Endpoint de Perfil Propio
-
-- `GET /api/v1/users/me` — Devuelve el perfil del usuario autenticado. Extraer el `UUID` del
-  usuario desde el `SecurityContext`, no del request body.
-
-### ✅ Comprobaciones de Fase 1
-
-- [ ] `./mvnw test` pasa sin errores.
-- [ ] Flyway crea la tabla `USER` al arrancar.
-- [ ] `POST /auth/register` crea un usuario; la contraseña en BD está hasheada, nunca en claro.
-- [ ] `POST /auth/login` devuelve un JWT válido.
-- [ ] `GET /users/me` con el JWT retorna los datos del usuario; sin JWT retorna 401.
-- [ ] `GET /users/me` con un JWT manipulado retorna 401.
+1. [Descripción General de la Plataforma](#1-descripción-general-de-la-plataforma)
+2. [Reglas de Negocio y Restricciones](#2-reglas-de-negocio-y-restricciones)
+3. [Arquitectura y Stack Tecnológico](#3-arquitectura-y-stack-tecnológico)
+4. [Modelo de Datos](#4-modelo-de-datos)
+5. [Endpoints de la REST API](#5-endpoints-de-la-rest-api)
+6. [Especificación del Servidor MCP](#6-especificación-del-servidor-mcp)
+7. [Vistas y Componentes del Frontend](#7-vistas-y-componentes-del-frontend)
+8. [Infraestructura Docker](#8-infraestructura-docker)
+9. [Fases de Desarrollo y Desglose de Tareas](#9-fases-de-desarrollo-y-desglose-de-tareas)
 
 ---
 
-## FASE 2 — Módulo de Hogar y Motor Financiero
+## 1. Descripción General de la Plataforma
 
-**Objetivo:** Crear hogares, gestionar miembros, registrar gastos y calcular balances correctamente.
+La plataforma es un sistema web completo que integra tres funcionalidades principales bajo una arquitectura desacoplada de tres capas:
 
-### 2.1 Migraciones de Tablas del Módulo Hogar
+- **Módulo de Alojamiento:** Mercado de anuncios de alquiler con búsqueda geolocalizada, sistema de valoraciones cruzadas (usuario→alojamiento, usuario→usuario), mensajería privada con soporte para ofertas económicas formales y flujo de aprobación administrativa.
+- **Módulo de Hogar Compartido:** Gestión privada de convivencia entre usuarios registrados. Incluye registro de gastos con prorrateo configurable, un algoritmo de simplificación de deudas (proyección en memoria sin alteración del historial), y gestión de tareas colectivas del hogar.
+- **Módulo de Inteligencia Artificial (MCP):** Capa de extensión que expone los datos internos del sistema a un LLM (mediante API Key de Groq) mediante el Model Context Protocol. Permite auditorías conversacionales, análisis de deudas y búsqueda semántica de alojamientos respetando el aislamiento multi-tenant por JWT.
 
-- `V2__create_hogar_tables.sql`: tablas `HOGAR` y `HOGAR_MEMBER` (clave compuesta `hogar_id` +
-  `user_id`). Incluir columna `is_admin` (BOOLEAN) en `HOGAR_MEMBER` para marcar al creador.
-- `V3__create_expense_tables.sql`: tablas `EXPENSE` y `EXPENSE_AFFECTED`.
-    - `EXPENSE`: id, `hogar_id` (FK), `payer_id` (FK a USER), `amount` (NUMERIC(10,2)),
-      `description`, `created_at`.
-    - `EXPENSE_AFFECTED`: `expense_id` (FK) + `user_id` (FK), clave primaria compuesta.
-- `V4__create_task_table.sql`: tabla `TASK` con id, `hogar_id` (FK), `title`, `description`,
-  `is_completed` (BOOLEAN, DEFAULT false), `assigned_to` (FK a USER, nullable).
-
-### 2.2 Entidades y Repositorios
-
-- Crear entidades JPA: `HogarEntity`, `HogarMemberEntity` (con clave embebida `HogarMemberId`),
-  `ExpenseEntity`, `ExpenseAffectedEntity`, `TaskEntity`.
-- Repositorios: `HogarRepository`, `HogarMemberRepository`, `ExpenseRepository`,
-  `ExpenseAffectedRepository`, `TaskRepository`.
-
-### 2.3 Gestión de Hogar
-
-- `POST /api/v1/hogares` — Crea un hogar. El usuario autenticado se convierte automáticamente en
-  miembro con `is_admin = true`.
-- `POST /api/v1/hogares/{hogarId}/members` — Invita a un usuario por email o nickname.
-  Solo el admin del hogar puede ejecutarlo.
-- `DELETE /api/v1/hogares/{hogarId}/members/{userId}` — Elimina un miembro. Restricción: no se
-  puede eliminar si el usuario tiene deudas pendientes (balance negativo en el hogar). El servicio
-  debe verificar esto antes de proceder.
-- `GET /api/v1/hogares/{hogarId}` — Devuelve datos del hogar y lista de miembros. Solo accesible
-  para miembros del hogar.
-- Implementar un componente `HogarAuthorizationService` que centralice las comprobaciones de
-  pertenencia y rol dentro de un hogar. Los demás servicios lo reutilizan en lugar de duplicar la lógica.
-
-### 2.4 Gestión de Gastos
-
-- `POST /api/v1/hogares/{hogarId}/expenses` — Crea un gasto. El DTO de entrada incluye:
-  `amount`, `description`, `payerId`, lista de `affectedUserIds`.
-  Validaciones en el servicio:
-    - El pagador y todos los afectados deben ser miembros del hogar.
-    - La lista de afectados no puede estar vacía.
-    - El monto debe ser mayor que 0.
-- `GET /api/v1/hogares/{hogarId}/expenses` — Lista todos los gastos del hogar, paginados.
-- `PUT /api/v1/hogares/{hogarId}/expenses/{expenseId}` — Edita un gasto. Solo el pagador
-  o el admin del hogar puede editarlo.
-- `DELETE /api/v1/hogares/{hogarId}/expenses/{expenseId}` — Elimina un gasto.
-
-### 2.5 Motor de Balances y Simplificación de Deudas
-
-Este es el componente más crítico de la aplicación. Implementarlo con especial cuidado y tests exhaustivos.
-
-- Crear la interfaz `DebtSimplifierEngine` con un único método:
-  `List<DebtTransactionDTO> simplify(List<MemberBalanceDTO> balances)`.
-- Implementar `TransitDebtSimplifier` que aplique el algoritmo de tránsito:
-    1. Calcular el balance neto de cada miembro (suma de lo que pagó menos su parte proporcional
-       en todos los gastos del hogar).
-    2. Separar en dos listas: deudores (balance negativo) y acreedores (balance positivo).
-    3. Iterar emparejando al mayor deudor con el mayor acreedor, generando transacciones directas
-       hasta que todos los balances sean cero. Este proceso elimina intermediarios.
-- `GET /api/v1/hogares/{hogarId}/balances` — Devuelve:
-    - Lista de miembros con su balance neto (positivo o negativo, con indicador de color).
-    - Lista simplificada de transacciones necesarias para saldar todas las deudas.
-
-### 2.6 Gestión de Tareas
-
-- `POST /api/v1/hogares/{hogarId}/tasks` — Crea una tarea.
-- `GET /api/v1/hogares/{hogarId}/tasks` — Lista tareas del hogar.
-- `PATCH /api/v1/hogares/{hogarId}/tasks/{taskId}/toggle` — Conmuta el estado
-  `is_completed` de la tarea.
-- `PUT /api/v1/hogares/{hogarId}/tasks/{taskId}` — Edita título, descripción o asignado.
-- `DELETE /api/v1/hogares/{hogarId}/tasks/{taskId}` — Elimina una tarea.
-
-### ✅ Comprobaciones de Fase 2
-
-- [ ] Tests unitarios del `TransitDebtSimplifier` con al menos estos escenarios:
-    - Hogar de 2 personas: A paga todo, B debe la mitad.
-    - Hogar de 3: A debe a B, B debe a C → resultado: A paga directamente a C.
-    - Hogar de 4 con múltiples gastos cruzados → verificar que el número de transacciones
-      resultantes es siempre menor o igual que N-1 (siendo N el número de miembros).
-- [ ] Crear un hogar, invitar a dos usuarios, registrar 3 gastos con distintos pagadores
-  y afectados, y verificar que los balances son matemáticamente correctos.
-- [ ] Intentar eliminar un miembro con deuda pendiente → recibir error 409 Conflict.
-- [ ] Solo el admin puede invitar y expulsar miembros → verificar 403 en caso contrario.
+**Usuarios objetivo:** Universitarios, jóvenes profesionales y propietarios particulares que necesiten gestionar convivencia y búsqueda de alojamiento en una sola plataforma.
 
 ---
 
-## FASE 3 — Sistema de Auditoría Inmutable
+## 2. Reglas de Negocio y Restricciones
 
-**Objetivo:** Registrar automáticamente todos los cambios en gastos y tareas con snapshots antes/después,
-garantizando que esos registros nunca puedan ser modificados ni borrados.
+### 2.1 Gestión de Roles y Acceso
 
-### 3.1 Migración de la Tabla de Auditoría
+| Rol | Permisos |
+|-----|----------|
+| **Invitado** (no registrado) | Lectura de anuncios, filtros básicos, visualización de mapa |
+| **Usuario Registrado** | Todo lo anterior + publicar anuncios (en estado PENDIENTE), valorar, mensajear, crear/unirse a hogares |
+| **Administrador** | Todo lo anterior + aprobar/rechazar anuncios, moderar valoraciones y comentarios |
 
-- `V5__create_audit_log_table.sql`: tabla `AUDIT_SNAPSHOT_LOG`.
-    - Columnas: `id` (UUID, PK), `user_id` (FK a USER), `entity_type` (VARCHAR: `EXPENSE`, `TASK`),
-      `entity_id` (UUID), `action_type` (ENUM: `CREATE`, `UPDATE`, `DELETE`),
-      `snapshot_before` (JSONB, nullable), `snapshot_after` (JSONB, nullable),
-      `server_timestamp` (TIMESTAMP WITH TIME ZONE, DEFAULT NOW()).
-    - Crear un trigger PostgreSQL `prevent_audit_modification` que ejecute `RAISE EXCEPTION`
-      ante cualquier `UPDATE` o `DELETE` sobre esta tabla. Esto es la primera línea de defensa.
-
-### 3.2 Entidad y Repositorio de Auditoría
-
-- Entidad `AuditSnapshotLogEntity` mapeada a la tabla anterior.
-    - Anotarla con `@Immutable` de Hibernate para que el ORM nunca intente hacer flush de cambios.
-- `AuditLogRepository`: solo exponer `save`, `findByEntityId`, `findByHogarId` (con JOIN),
-  y métodos de paginación. **No heredar** `deleteById` ni ningún método destructivo de
-  `JpaRepository`. Usar `@Repository` sobre una interfaz personalizada que extienda
-  `Repository<AuditSnapshotLogEntity, UUID>` (la versión mínima de Spring Data).
-- Añadir en `AuditLogService` un método anotado con `@PreRemove` y `@PreUpdate` que lance una
-  excepción `AuditImmutabilityViolationException` si algún código Java intenta persistir un cambio.
-  Esta es la segunda línea de defensa (a nivel de aplicación).
-
-### 3.3 Interceptor de Auditoría
-
-- Crear `AuditInterceptorService`. Este servicio es transversal y será llamado por los servicios
-  de `Expense` y `Task` en cada operación de escritura.
-- Su responsabilidad: recibir el estado anterior (objeto antes de modificar) y el estado posterior
-  (objeto tras modificar), serializarlos a JSON (usando Jackson `ObjectMapper`), y persistir el
-  registro en `AUDIT_SNAPSHOT_LOG` con el `userId` del usuario autenticado y el timestamp del servidor.
-- El timestamp **siempre** se toma con `Instant.now()` en el servidor; nunca se acepta del cliente.
-- Integrar las llamadas al interceptor dentro de los métodos `create`, `update` y `delete` de
-  `ExpenseService` y `TaskService`. Usar `@Transactional` para que el snapshot y el cambio
-  principal se persistan en la misma transacción.
-
-### 3.4 Feed de Actividad Cronológica
-
-- `GET /api/v1/audit/hogar/{hogarId}?page=0&size=20` — Devuelve los registros de auditoría
-  del hogar ordenados por `server_timestamp` DESC, paginados.
-- El DTO de respuesta (`AuditFeedItemDTO`) debe incluir: timestamp, tipo de acción, tipo de
-  entidad, nickname del autor del cambio, y un campo `humanReadableSummary` (String) que el
-  servicio construye comparando `snapshotBefore` y `snapshotAfter` en lenguaje natural.
-  Ejemplos: `"Carlos modificó el monto del gasto 'Supermercado' de 45.00€ a 52.50€"`,
-  `"Ana marcó como completada la tarea 'Limpiar baño'"`.
-
-### ✅ Comprobaciones de Fase 3
-
-- [ ] Crear un gasto → verificar que existe exactamente 1 registro en `AUDIT_SNAPSHOT_LOG`
-  con `action_type = CREATE`, `snapshot_before = null` y `snapshot_after` con los datos del gasto.
-- [ ] Editar el monto del gasto → verificar un nuevo registro `UPDATE` con ambos snapshots poblados.
-- [ ] Eliminar el gasto → verificar un registro `DELETE` con `snapshot_after = null`.
-- [ ] Intentar ejecutar directamente en PostgreSQL: `DELETE FROM audit_snapshot_log WHERE id = '...'`
-  → el trigger debe abortar la operación con excepción.
-- [ ] Verificar que el feed cronológico devuelve los ítems en orden correcto y el
-  `humanReadableSummary` es legible.
-- [ ] `./mvnw test` sigue pasando.
-
----
-
-## FASE 4 — Módulo de Alojamiento y Marketplace
-
-**Objetivo:** Gestión completa de anuncios de alojamiento con flujo de aprobación, valoraciones y mensajería.
-
-### 4.1 Migraciones de Tablas del Módulo Alojamiento
-
-- `V6__create_accommodation_tables.sql`: tablas `ACCOMMODATION` y `ACCOMMODATION_IMAGE`.
-    - `ACCOMMODATION`: id, `owner_id` (FK), `title`, `description` (TEXT), `price_per_month`
-      (NUMERIC), `address`, `locality`, `city`, `country`, `latitude`, `longitude`,
-      `status` (ENUM: `PENDING`, `ACTIVE`, `REJECTED`, `FINISHED`).
-    - `ACCOMMODATION_IMAGE`: id, `accommodation_id` (FK), `image_url` (TEXT).
-    - Crear índice compuesto `idx_accommodation_city_price` sobre `(city, price_per_month)`.
-    - Crear índices B-Tree sobre `latitude` y `longitude`.
-- `V7__create_review_tables.sql`: tabla `ACCOMMODATION_REVIEW` y `USER_REVIEW`.
-    - `ACCOMMODATION_REVIEW`: id, `author_id` (FK), `accommodation_id` (FK), `rating` (INT CHECK
-      BETWEEN 1 AND 5), `comment` (TEXT, nullable). Restricción UNIQUE sobre
-      `(author_id, accommodation_id)` para impedir valoraciones duplicadas del mismo usuario.
-    - `USER_REVIEW`: id, `reviewer_id` (FK), `reviewed_user_id` (FK), `rating`, `comment`.
-      Restricción para que un usuario no pueda valorarse a sí mismo.
-- `V8__create_message_tables.sql`: tablas `CONVERSATION` y `MESSAGE`.
-    - `CONVERSATION`: id, `accommodation_id` (FK), `sender_id` (FK), `owner_id` (FK), `created_at`.
-      Restricción UNIQUE sobre `(accommodation_id, sender_id)`.
-    - `MESSAGE`: id, `conversation_id` (FK), `author_id` (FK), `content` (TEXT), `sent_at`,
-      `is_offer` (BOOLEAN DEFAULT false), `offer_amount` (NUMERIC, nullable).
-
-### 4.2 Endpoints Públicos (sin autenticación)
-
-- `GET /api/v1/accommodations` — Lista anuncios con `status = ACTIVE`. Parámetros query opcionales:
-  `city`, `minPrice`, `maxPrice`. Solo devuelve anuncios con al menos 2 imágenes asociadas.
-- `GET /api/v1/accommodations/{id}` — Detalle de un anuncio activo: datos completos, imágenes,
-  valoraciones y rating medio.
-- `GET /api/v1/accommodations/reviews?city={city}` — Devuelve valoraciones y comentarios de
-  alojamientos de una ciudad (usado por el servidor MCP para búsqueda semántica).
-
-### 4.3 Endpoints Autenticados — Propietario
-
-- `POST /api/v1/accommodations` — Crea un anuncio en estado `PENDING`. El `owner_id` se extrae
-  del JWT, nunca del body. Requiere al menos título, descripción, precio, dirección completa
-  y coordenadas.
-- `POST /api/v1/accommodations/{id}/images` — Añade URLs de imágenes al anuncio. Solo el
-  propietario del anuncio puede añadirlas.
-- `PUT /api/v1/accommodations/{id}` — Edita un anuncio propio. No permite editar el `status`
-  directamente (eso es competencia del admin).
-- `DELETE /api/v1/accommodations/{id}` — El propietario puede retirar su propio anuncio
-  (cambia status a `FINISHED`, no elimina el registro).
-
-### 4.4 Endpoints Autenticados — Administrador
-
-- `GET /api/v1/admin/accommodations/pending` — Lista todos los anuncios en estado `PENDING`.
-- `POST /api/v1/admin/accommodations/{id}/approve` — Aprueba un anuncio. El servicio verifica
-  que tenga al menos 2 imágenes antes de cambiar el estado a `ACTIVE`. Si no, devuelve 422
-  Unprocessable Entity con mensaje descriptivo.
-- `POST /api/v1/admin/accommodations/{id}/reject` — Rechaza un anuncio, cambia estado a `REJECTED`.
-  Opcionalmente acepta un campo `reason` en el body.
-- `DELETE /api/v1/admin/accommodations/{id}` — Eliminación definitiva (solo admin, para moderación).
-- `DELETE /api/v1/admin/reviews/{id}` — Elimina una valoración inapropiada.
-
-### 4.5 Valoraciones
-
-- `POST /api/v1/accommodations/{id}/reviews` — Publica una valoración sobre un alojamiento.
-  El servicio valida que el autor no sea el propietario del alojamiento y que no haya
-  valorado ya ese alojamiento.
-- `POST /api/v1/users/{userId}/reviews` — Publica una valoración sobre otro usuario.
-  El servicio valida que `reviewerId != reviewedUserId`.
-
-### 4.6 Mensajería y Ofertas
-
-- `POST /api/v1/accommodations/{id}/conversations` — Inicia o recupera una conversación entre
-  el usuario autenticado y el propietario del anuncio. Si ya existe `CONVERSATION` con ese par
-  `(accommodation_id, sender_id)`, devuelve la existente.
-- `GET /api/v1/conversations/{conversationId}/messages` — Lista mensajes de la conversación.
-  Solo los participantes pueden acceder.
-- `POST /api/v1/conversations/{conversationId}/messages` — Envía un mensaje. Si `isOffer = true`,
-  incluir `offerAmount`. El servicio valida que `offerAmount > 0` cuando `isOffer = true`.
-
-### ✅ Comprobaciones de Fase 4
-
-- [ ] Un usuario no autenticado puede listar y ver anuncios activos, pero no puede crearlos.
-- [ ] Crear un anuncio con 0 o 1 imagen e intentar aprobarlo → recibir 422.
-- [ ] Añadir 2 imágenes y aprobar → el anuncio aparece en el listado público.
-- [ ] Un usuario no puede valorar su propio alojamiento → recibir 400 o 403.
-- [ ] Un usuario no puede enviar dos valoraciones al mismo alojamiento → recibir 409.
-- [ ] Un usuario no admin no puede acceder a `/admin/**` → recibir 403.
-- [ ] Verificar que los índices de ciudad y precio funcionan (consultar el `EXPLAIN ANALYZE`
-  de la query de filtrado).
-
----
-
-## FASE 5 — Frontend Next.js
-
-**Objetivo:** Interfaz de usuario completa, conectada al backend, con mapa interactivo y chat.
-
-### 5.1 Inicialización del Proyecto Frontend
-
-- Crear proyecto Next.js 15 con TypeScript y App Router: `npx create-next-app@latest`.
-- Instalar dependencias clave: `axios` o `fetch` nativo, `zustand` (gestión de estado global),
-  `react-hook-form` + `zod` (formularios y validación), `leaflet` o `mapbox-gl` (mapas),
-  librería de componentes UI (Shadcn/ui recomendado por compatibilidad con App Router).
-- Configurar un cliente HTTP centralizado en `lib/apiClient.ts` que inyecte automáticamente
-  el JWT en el header `Authorization` de cada request autenticada.
-- Configurar `middleware.ts` de Next.js para proteger rutas privadas (redirigir a `/login` si
-  no hay token).
-
-### 5.2 Páginas y Rutas
-
-Estructura de rutas con App Router:
+### 2.2 Ciclo de Vida de un Anuncio de Alojamiento
 
 ```
-/                        → Página principal: buscador, filtros, lista y mapa de anuncios
-/login                   → Formulario de login
-/register                → Formulario de registro
-/accommodations/[id]     → Detalle de anuncio con galería, mapa, valoraciones y chat
-/dashboard               → Panel privado del usuario autenticado
-/dashboard/hogares       → Lista de hogares del usuario
-/dashboard/hogares/[id]  → Vista interna del hogar: gastos, tareas, balances, feed de actividad
-/dashboard/hogares/nuevo → Crear hogar
-/dashboard/mensajes      → Bandeja de conversaciones
-/admin                   → Panel de administración (solo rol ADMIN)
-/admin/pending           → Lista de anuncios pendientes de aprobación
+[Usuario envía solicitud] → PENDIENTE → [Admin revisa] → ACTIVO | RECHAZADO
+                                                                      ↓
+                                                                 FINALIZADO
 ```
 
-### 5.3 Componentes Clave
+- Un anuncio no puede pasar a estado `ACTIVO` si tiene menos de **2 imágenes** asociadas en `ACCOMMODATION_IMAGE`.
+- Las imágenes se almacenan en un proveedor cloud (S3 / GCS / Cloudinary); la base de datos persiste únicamente las **URLs absolutas públicas**.
 
-- `AccommodationCard` — Tarjeta de anuncio con imagen, precio, ciudad y rating medio.
-- `AccommodationMap` — Mapa interactivo con marcadores. Al hacer clic en un marcador, mostrar
-  un popup con la `AccommodationCard`. Los marcadores se actualizan reactivamente al cambiar los filtros.
-- `FilterBar` — Inputs de ciudad, precio mínimo y máximo. Al cambiar, actualiza la query sin
-  recargar la página (parámetros en la URL con `useSearchParams`).
-- `ExpenseForm` — Formulario para crear/editar un gasto: monto, descripción, selector de pagador
-  y selector multi-selección de afectados (solo miembros del hogar actual).
-- `BalanceDashboard` — Muestra los balances de cada miembro con círculo verde/rojo y la lista
-  de transacciones simplificadas recomendadas.
-- `AuditFeed` — Lista cronológica de eventos del hogar con el `humanReadableSummary`.
-- `ChatWindow` — Ventana de mensajería con soporte para mensajes normales y ofertas económicas.
-- `AiChatPanel` — Panel lateral de chat con el LLM conectado al servidor MCP. Distinguible
-  visualmente del chat de mensajería de alojamientos.
+### 2.3 Motor de Gastos Compartidos
 
-### 5.4 Autenticación en el Frontend
+- Cada gasto define un **pagador único** y un conjunto de **usuarios afectados**.
+- La división por defecto es equitativa. Se permite configurar porcentajes personalizados; la suma de todos los porcentajes debe ser exactamente **100%**.
+- El algoritmo de simplificación de deudas opera **exclusivamente en memoria / como vista proyectada**. Nunca modifica, reescribe ni fusiona registros de gastos en la base de datos.
+- **Regla de tránsito:** Si A debe 10 € a B y B debe 10 € a C → el sistema proyecta que A debe 10 € directamente a C.
+- Un miembro con **deudas pendientes** no puede ser eliminado del hogar.
 
-- Guardar el JWT en `localStorage` (o cookie HttpOnly si se implementa SSR completo; priorizar
-  la opción más sencilla primero).
-- Crear un `AuthContext` (o store de Zustand) que exponga `user`, `token`, `login()`, `logout()`.
-- Al montar la app, intentar recuperar el perfil con `GET /users/me` para validar el token guardado.
+### 2.4 Inmutabilidad del Subsistema de Auditoría
 
-### 5.5 Mapa Interactivo
+- La tabla `AUDIT_SNAPSHOT_LOG` es **Append-Only**. Ninguna operación `UPDATE` o `DELETE` está permitida sobre sus registros.
+- La inmutabilidad se refuerza a **dos niveles**:
+  - Interceptores JPA (`@PreUpdate`, `@PreRemove`) en Spring Boot que lanzan excepción crítica.
+  - Trigger a nivel de base de datos PostgreSQL como segunda barrera.
+- Cada registro de auditoría captura el estado `snapshot_before` y `snapshot_after` en formato **JSONB**.
+- El `server_timestamp` se obtiene exclusivamente del reloj del servidor, nunca del cliente.
 
-- Usar `Leaflet` con tiles de OpenStreetMap (gratuito, sin API key).
-- El mapa se inicializa centrado en España por defecto.
-- Los marcadores se generan a partir de los campos `latitude` y `longitude` de cada anuncio.
-- Al aplicar un filtro, se hace fetch de los nuevos resultados y se actualiza el estado de marcadores.
-- El mapa NO se monta en SSR (usar `dynamic` de Next.js con `{ ssr: false }` para el componente
-  del mapa, ya que Leaflet requiere `window`).
+### 2.5 Control de Concurrencia Optimista
 
-### ✅ Comprobaciones de Fase 5
+- Las entidades `HOGAR`, `EXPENSE` y `TASK` implementan un campo `version (INT)` gestionado por la anotación `@Version` de JPA.
+- En caso de conflicto concurrente, Spring lanza `OptimisticLockingFailureException`. El cliente secundario debe sincronizar el estado real antes de reintentar.
 
-- [ ] Un usuario no autenticado ve la página principal con anuncios y el mapa. No ve el dashboard.
-- [ ] Filtrar por ciudad actualiza la lista y los marcadores del mapa simultáneamente.
-- [ ] El flujo completo de registro → login → crear hogar → invitar miembro → crear gasto funciona
-  sin errores de consola ni errores de red.
-- [ ] Los círculos de balance aparecen en verde/rojo según el saldo de cada miembro.
-- [ ] El feed de auditoría muestra los cambios en orden cronológico inverso.
-- [ ] Un usuario con rol ADMIN ve el enlace al panel de administración; un usuario normal no lo ve.
-- [ ] Lighthouse score: Performance > 80, Accessibility > 90 en la página principal.
+### 2.6 Seguridad Multi-Tenant en el Servidor MCP
+
+- El servidor MCP no tiene acceso directo a la base de datos.
+- El token JWT del usuario se propaga desde el frontend → servidor MCP → API Spring Boot sin modificaciones (**JWT Passthrough**).
+- El backend valida en cada llamada que el usuario autenticado pertenece al `hogar_id` solicitado. En caso contrario, retorna `403 Forbidden`.
 
 ---
 
-## FASE 6 — Servidor MCP e Integración con LLM
+## 3. Arquitectura y Stack Tecnológico
 
-**Objetivo:** Exponer las capacidades analíticas del sistema a través de MCP para que el LLM pueda
-razonar sobre los datos internos de la aplicación.
+### 3.1 Diagrama de Tres Capas
 
-### 6.1 Inicialización del Servidor MCP
+```
+┌─────────────────────────────────────────────────────────────┐
+│                  CAPA DE PRESENTACIÓN                       │
+│                 Next.js 15 + TypeScript                     │
+│                                                             │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
+│  │  Páginas SSR │  │ Componentes  │  │  Interfaz Chat   │  │
+│  │  (App Router)│  │    React     │  │  (LLM / MCP)     │  │
+│  └──────────────┘  └──────────────┘  └──────────────────┘  │
+│           │                                    │            │
+│    HTTP REST (JWT)                   JSON-RPC + JWT         │
+└───────────┼────────────────────────────────────┼────────────┘
+            │                                    │
+            ▼                                    ▼
+┌───────────────────────┐         ┌──────────────────────────┐
+│   CAPA DE NEGOCIO     │         │   CAPA IA / MCP          │
+│  Java Spring Boot 3.x │◄────────│  Node.js + TypeScript    │
+│                       │  HTTP   │                          │
+│  • Spring Security    │  REST   │  • Model Context Protocol│
+│  • Spring Data JPA    │  + JWT  │  • JSON-RPC sobre SSE    │
+│  • BCrypt + JWT       │         │  • JWT Passthrough Auth  │
+│  • Lógica de negocio  │         │  • Tools: auditar,       │
+│  • Auditoría AOP      │         │    analizar, buscar      │
+└───────────┬───────────┘         └──────────────────────────┘
+            │
+            ▼
+┌───────────────────────┐
+│   CAPA DE DATOS       │
+│   PostgreSQL 16       │
+│                       │
+│  • Índices B-Tree     │
+│  • Tipos JSONB        │
+│  • Triggers DDL       │
+│  • Constraint checks  │
+└───────────────────────┘
+```
 
-- Crear un proyecto Node.js independiente (en `/mcp-server`) con TypeScript.
-- Instalar: `@modelcontextprotocol/sdk`, `axios`, `zod`, `dotenv`.
-- Configurar `tsconfig.json` para target ES2022, módulo CommonJS.
-- El servidor se comunica con el backend a través de variables de entorno:
-  `BACKEND_BASE_URL`, `MCP_SERVICE_JWT` (un token JWT de larga duración generado para el
-  servicio MCP, con un rol especial `SERVICE_ACCOUNT` que el backend reconocerá).
+### 3.2 Stack Tecnológico
 
-### 6.2 Autenticación del Servidor MCP contra el Backend
-
-- En el backend Spring Boot, crear un nuevo valor en el ENUM de roles: `SERVICE`.
-- Crear un endpoint de generación de token de servicio `POST /api/v1/auth/service-token`
-  accesible solo para usuarios con rol `ADMIN`, que genera un JWT de muy larga duración
-  (30 días) para el rol `SERVICE`.
-- El servidor MCP almacena este token en su `.env` y lo incluye en todas sus peticiones al backend.
-- En la `SecurityConfig` del backend, los endpoints consumidos por el MCP requieren el rol
-  `SERVICE` o `ADMIN`.
-
-### 6.3 Implementación de las Tres Herramientas MCP
-
-Cada herramienta sigue la misma estructura: definición del esquema `zod` → handler asíncrono
-→ llamada HTTP al backend → formateo de la respuesta para el LLM.
-
-**Herramienta `auditar_conflictos_hogar`:**
-- Parámetros: `hogarId` (string), `limite` (number, opcional, default 50).
-- Llama a `GET /api/v1/audit/hogar/{hogarId}?size={limite}`.
-- Formatea la respuesta como una secuencia cronológica de eventos con autoría y resumen legible.
-- Añadir instrucciones en la descripción de la herramienta para que el LLM use esta herramienta
-  cuando el usuario haga preguntas del tipo "¿quién cambió X?", "¿cuándo se modificó Y?".
-
-**Herramienta `analizar_balances_y_deudas`:**
-- Parámetros: `hogarId` (string).
-- Llama a `GET /api/v1/hogares/{hogarId}/balances`.
-- Formatea la respuesta indicando claramente quién debe a quién y cuánto, y la lista de
-  transferencias simplificadas. El LLM usará esto para dar recomendaciones de liquidación.
-
-**Herramienta `busqueda_semantica_alojamientos`:**
-- Parámetros: `criterioSemantico` (string), `ciudad` (string).
-- Llama a `GET /api/v1/accommodations/reviews?city={ciudad}`.
-- Entrega al LLM el conjunto de anuncios con sus descripciones y comentarios de valoraciones.
-  El LLM actúa como filtro cualitativo para seleccionar los más relevantes según el criterio.
-
-### 6.4 Integración del Chat en el Frontend
-
-- En el panel `AiChatPanel`, el frontend NO llama directamente al servidor MCP.
-  La comunicación es: `Frontend → API de Anthropic/OpenAI → Servidor MCP`.
-- Configurar el SDK del LLM en el frontend (o en una API Route de Next.js para no exponer
-  la API key en el cliente) para que use el servidor MCP como proveedor de herramientas.
-- El `AiChatPanel` pasa el `hogarId` activo como contexto inicial del sistema al LLM para
-  que las herramientas se ejecuten sobre el hogar correcto sin que el usuario tenga que
-  especificarlo en cada pregunta.
-- Mostrar en la UI un indicador visual cuando el LLM está invocando una herramienta
-  (spinner con texto "Consultando datos del hogar...").
-
-### ✅ Comprobaciones de Fase 6
-
-- [ ] El servidor MCP arranca sin errores: `npm run dev`.
-- [ ] Usando el cliente MCP inspector, las tres herramientas aparecen con sus esquemas correctos.
-- [ ] Llamar manualmente a `auditar_conflictos_hogar` con un `hogarId` válido devuelve
-  los registros de auditoría formateados.
-- [ ] En el chat del frontend, preguntar "¿Cuánto le debo a cada uno en mi hogar?" desencadena
-  la herramienta `analizar_balances_y_deudas` y el LLM responde con datos reales.
-- [ ] Preguntar "Busco un piso tranquilo con buen casero en Sevilla" desencadena
-  `busqueda_semantica_alojamientos` y el LLM cruza los comentarios con el criterio.
-- [ ] El servidor MCP no accede directamente a la base de datos bajo ninguna circunstancia.
-  Verificar que no tiene dependencia de `pg` ni ningún cliente de base de datos.
+| Capa | Tecnología | Versión |
+|------|------------|---------|
+| Frontend | Next.js (App Router) | 15.x |
+| Frontend | React + TypeScript | 18.x / 5.x |
+| Frontend | Mapas interactivos | Leaflet.js / Mapbox GL |
+| Backend | Java | 21 (LTS) |
+| Backend | Spring Boot | 3.x |
+| Backend | Spring Security + JWT | 6.x |
+| Backend | Spring Data JPA + Hibernate | 6.x |
+| Base de Datos | PostgreSQL | 16 |
+| Servidor MCP | Node.js + TypeScript | 20 LTS |
+| Almacenamiento Objetos | Cloudinary / S3 / GCS | — |
+| Contenedores | Docker + Docker Compose | — |
+| Build Backend | Maven o Gradle | — |
+| Build Frontend | pnpm / npm | — |
 
 ---
 
-## FASE 7 — Hardening, Tests y Preparación para Entrega
+## 4. Modelo de Datos
 
-**Objetivo:** Asegurar la calidad, robustez y documentación del proyecto antes de la defensa.
+### 4.1 Esquema Relacional Completo
 
-### 7.1 Cobertura de Tests Backend
+```sql
+-- ============================================================
+-- USUARIOS Y AUTENTICACIÓN
+-- ============================================================
+CREATE TABLE "user" (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    nickname        VARCHAR(50)  NOT NULL UNIQUE,
+    email           VARCHAR(255) NOT NULL UNIQUE,
+    password_hash   TEXT         NOT NULL,
+    first_name      VARCHAR(100) NOT NULL,
+    last_name_1     VARCHAR(100) NOT NULL,
+    last_name_2     VARCHAR(100),
+    phone           VARCHAR(20),
+    profile_pic_url TEXT,
+    role            VARCHAR(20)  NOT NULL DEFAULT 'USER'  -- 'USER' | 'ADMIN'
+);
 
-- Tests unitarios (JUnit 5 + Mockito):
-    - `TransitDebtSimplifier`: mínimo 8 casos de prueba incluyendo casos borde (hogar de 1 persona,
-      todos a cero, deudas circulares complejas).
-    - `AuditInterceptorService`: verificar que se generan snapshots correctos para cada operación.
-    - `AccommodationService`: verificar la validación de 2 imágenes mínimas al aprobar.
-- Tests de integración (Spring Boot Test + Testcontainers para PostgreSQL):
-    - Flujo completo de registro → login → crear hogar → gasto → balance.
-    - Verificar que el trigger de inmutabilidad de auditoría funciona desde el test de integración.
-    - Flujo de aprobación de anuncio por el administrador.
+-- ============================================================
+-- MÓDULO DE ALOJAMIENTO
+-- ============================================================
+CREATE TABLE accommodation (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    owner_id         UUID        NOT NULL REFERENCES "user"(id),
+    title            VARCHAR(255) NOT NULL,
+    description      TEXT,
+    price_per_month  NUMERIC(10,2) NOT NULL,
+    address          VARCHAR(255) NOT NULL,
+    locality         VARCHAR(100) NOT NULL,
+    city             VARCHAR(100) NOT NULL,
+    country          VARCHAR(100) NOT NULL,
+    latitude         NUMERIC(9,6) NOT NULL,
+    longitude        NUMERIC(9,6) NOT NULL,
+    status           VARCHAR(20)  NOT NULL DEFAULT 'PENDIENTE'
+                         -- 'PENDIENTE' | 'ACTIVO' | 'RECHAZADO' | 'FINALIZADO'
+);
 
-### 7.2 Validación y Manejo de Errores
+CREATE TABLE accommodation_image (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    accommodation_id UUID NOT NULL REFERENCES accommodation(id) ON DELETE CASCADE,
+    image_url        TEXT NOT NULL
+);
 
-- Revisar que todos los endpoints tienen validación con Bean Validation (`@NotNull`, `@Min`,
-  `@Size`, etc.) en los DTOs de entrada.
-- Crear un `GlobalExceptionHandler` con `@RestControllerAdvice` que capture:
-    - `MethodArgumentNotValidException` → 400 Bad Request con lista de errores de campo.
-    - `AccessDeniedException` → 403 Forbidden.
-    - `EntityNotFoundException` → 404 Not Found.
-    - `AuditImmutabilityViolationException` → 500 Internal Server Error con mensaje descriptivo.
-    - Excepciones no controladas → 500 genérico sin stack trace en el body (seguridad).
+-- Restricción: mínimo 2 imágenes para activar anuncio (validada en servicio)
+-- Índices de búsqueda optimizada
+CREATE INDEX idx_accommodation_city_price
+    ON accommodation(city, price_per_month);
+CREATE INDEX idx_accommodation_lat
+    ON accommodation(latitude);
+CREATE INDEX idx_accommodation_lon
+    ON accommodation(longitude);
 
-### 7.3 Configuración CORS y Variables de Entorno
+CREATE TABLE accommodation_review (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    author_id        UUID NOT NULL REFERENCES "user"(id),
+    accommodation_id UUID NOT NULL REFERENCES accommodation(id) ON DELETE CASCADE,
+    rating           SMALLINT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+    comment          TEXT,
+    created_at       TIMESTAMP NOT NULL DEFAULT now(),
+    UNIQUE (author_id, accommodation_id)  -- Un usuario, una review por alojamiento
+);
 
-- Configurar CORS en Spring Boot para aceptar peticiones exclusivamente desde el origen del
-  frontend (`http://localhost:3000` en dev, la URL de producción en prod).
-- Asegurarse de que ninguna credencial (claves JWT, credenciales de BD, API keys del LLM)
-  está hardcodeada en el código. Todo debe venir de variables de entorno o archivos `.env`
-  excluidos del control de versiones.
-- Añadir al `.gitignore`: `.env`, `application-prod.yml`, `*.jks`, cualquier archivo de secretos.
+CREATE TABLE user_review (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    author_id     UUID NOT NULL REFERENCES "user"(id),
+    reviewed_id   UUID NOT NULL REFERENCES "user"(id),
+    rating        SMALLINT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+    comment       TEXT,
+    created_at    TIMESTAMP NOT NULL DEFAULT now(),
+    UNIQUE (author_id, reviewed_id)
+);
 
-### 7.4 Docker Compose para Entorno de Desarrollo
+CREATE TABLE private_message (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    sender_id        UUID NOT NULL REFERENCES "user"(id),
+    receiver_id      UUID NOT NULL REFERENCES "user"(id),
+    accommodation_id UUID REFERENCES accommodation(id),
+    content          TEXT NOT NULL,
+    offer_amount     NUMERIC(10,2),          -- NULL si es mensaje de texto plano
+    sent_at          TIMESTAMP NOT NULL DEFAULT now()
+);
 
-- Crear `docker-compose.yml` en la raíz del monorepo con servicios:
-    - `db`: imagen `postgres:16`, con volumen persistente, variables de entorno para usuario/pass/bd.
-    - `backend`: build desde `./backend`, depende de `db`, expone puerto 8080.
-    - `frontend`: build desde `./frontend`, expone puerto 3000.
-    - `mcp-server`: build desde `./mcp-server`, depende de `backend`, expone puerto 3001.
-- Añadir un `README.md` en la raíz con instrucciones para arrancar todo con `docker compose up`.
+-- ============================================================
+-- MÓDULO DE HOGAR
+-- ============================================================
+CREATE TABLE hogar (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name        VARCHAR(100) NOT NULL,
+    admin_id    UUID NOT NULL REFERENCES "user"(id),
+    version     INT NOT NULL DEFAULT 0,       -- Bloqueo optimista JPA @Version
+    created_at  TIMESTAMP NOT NULL DEFAULT now()
+);
 
-### 7.5 Documentación de la API
+CREATE TABLE hogar_member (
+    hogar_id UUID NOT NULL REFERENCES hogar(id) ON DELETE CASCADE,
+    user_id  UUID NOT NULL REFERENCES "user"(id),
+    joined_at TIMESTAMP NOT NULL DEFAULT now(),
+    PRIMARY KEY (hogar_id, user_id)
+);
 
-- Añadir `springdoc-openapi-starter-webmvc-ui` al backend.
-- Documentar cada endpoint con `@Operation`, `@ApiResponse` y `@Parameter` donde sea necesario.
-- Verificar que Swagger UI es accesible en `http://localhost:8080/swagger-ui.html` y que
-  permite ejecutar peticiones autenticadas (configurar el botón "Authorize" con JWT).
+CREATE TABLE expense (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    hogar_id    UUID NOT NULL REFERENCES hogar(id) ON DELETE CASCADE,
+    payer_id    UUID NOT NULL REFERENCES "user"(id),
+    amount      NUMERIC(10,2) NOT NULL CHECK (amount > 0),
+    description VARCHAR(255) NOT NULL,
+    version     INT NOT NULL DEFAULT 0,       -- Bloqueo optimista JPA @Version
+    created_at  TIMESTAMP NOT NULL DEFAULT now()
+);
 
-### ✅ Comprobaciones Finales de Fase 7
+CREATE TABLE expense_affected (
+    expense_id  UUID NOT NULL REFERENCES expense(id) ON DELETE CASCADE,
+    user_id     UUID NOT NULL REFERENCES "user"(id),
+    percentage  NUMERIC(5,2) NOT NULL CHECK (percentage > 0 AND percentage <= 100),
+    PRIMARY KEY (expense_id, user_id)
+    -- Restricción de negocio: suma de porcentajes = 100 (validada en servicio)
+);
 
-- [ ] `./mvnw test` pasa al 100%. Cobertura de líneas en servicios clave > 80%.
-- [ ] `docker compose up` levanta todo el sistema desde cero sin intervención manual.
-- [ ] Swagger UI lista todos los endpoints agrupados por módulo con descripción.
-- [ ] Ninguna credencial aparece en el historial de Git (`git log -S "password"` no devuelve hits).
-- [ ] El trigger de la BD impide modificar logs de auditoría incluso con acceso directo a psql.
-- [ ] Flujo completo de demo funciona: registro → hogar → gastos → balances → chat MCP →
-  búsqueda de alojamiento → valoración → aprobación de anuncio por admin.
+CREATE TABLE task (
+    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    hogar_id     UUID NOT NULL REFERENCES hogar(id) ON DELETE CASCADE,
+    title        VARCHAR(255) NOT NULL,
+    description  TEXT,
+    assigned_to  UUID REFERENCES "user"(id),
+    is_completed BOOLEAN NOT NULL DEFAULT false,
+    version      INT NOT NULL DEFAULT 0,      -- Bloqueo optimista JPA @Version
+    created_at   TIMESTAMP NOT NULL DEFAULT now()
+);
+
+-- ============================================================
+-- SUBSISTEMA DE AUDITORÍA (APPEND-ONLY)
+-- ============================================================
+CREATE TABLE audit_snapshot_log (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id          UUID NOT NULL REFERENCES "user"(id),
+    entity_type      VARCHAR(50) NOT NULL,  -- 'EXPENSE' | 'TASK' | 'HOGAR'
+    entity_id        UUID NOT NULL,
+    action_type      VARCHAR(20) NOT NULL,  -- 'CREATE' | 'UPDATE' | 'DELETE'
+    snapshot_before  JSONB,
+    snapshot_after   JSONB,
+    server_timestamp TIMESTAMP NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_audit_hogar_entity
+    ON audit_snapshot_log(entity_id, entity_type, server_timestamp DESC);
+
+-- Trigger de inmutabilidad (doble barrera junto al interceptor Spring)
+CREATE OR REPLACE FUNCTION prevent_audit_modification()
+RETURNS trigger AS $$
+BEGIN
+    RAISE EXCEPTION 'audit_snapshot_log es inmutable: no se permiten UPDATE ni DELETE';
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_audit_immutable
+    BEFORE UPDATE OR DELETE ON audit_snapshot_log
+    FOR EACH ROW EXECUTE FUNCTION prevent_audit_modification();
+```
+
+### 4.2 Entidades JPA Clave (Resumen)
+
+| Entidad JPA | Tabla | Notas |
+|-------------|-------|-------|
+| `UserEntity` | `user` | Enum `Role { USER, ADMIN }` |
+| `AccommodationEntity` | `accommodation` | Enum `AccommodationStatus` |
+| `AccommodationImageEntity` | `accommodation_image` | Colección en `AccommodationEntity` |
+| `AccommodationReviewEntity` | `accommodation_review` | |
+| `UserReviewEntity` | `user_review` | |
+| `PrivateMessageEntity` | `private_message` | `offerAmount` nullable |
+| `HogarEntity` | `hogar` | `@Version` en `version` |
+| `ExpenseEntity` | `expense` | `@Version` en `version` |
+| `ExpenseAffectedEntity` | `expense_affected` | Clave compuesta `@EmbeddedId` |
+| `TaskEntity` | `task` | `@Version` en `version` |
+| `AuditSnapshotLogEntity` | `audit_snapshot_log` | Solo `save()` permitido |
 
 ---
 
-## Notas Arquitectónicas Importantes
+## 5. Endpoints de la REST API
 
-**Sobre la inmutabilidad de la auditoría:** La defensa más fuerte es el trigger de PostgreSQL
-(Fase 3.1). El bloqueo a nivel de Spring Boot es una segunda capa defensiva. Ambas deben coexistir.
+> **Base URL:** `/api/v1`
+> **Autenticación:** `Authorization: Bearer <JWT>` en todos los endpoints protegidos.
+> **Roles:** `[PUBLIC]` = sin autenticación · `[USER]` = token válido · `[ADMIN]` = rol administrador
 
-**Sobre el algoritmo de deudas:** El algoritmo de tránsito no siempre produce el mínimo absoluto
-de transacciones (ese problema es NP-hard), pero es correcto, rápido y fácil de explicar en la
-defensa del TFG. Es suficiente y adecuado para el alcance del proyecto.
+### 5.1 Autenticación y Usuarios
 
-**Sobre el servidor MCP:** El aislamiento estricto (MCP → Backend → BD) es un requisito
-arquitectónico, no una preferencia. No añadir acceso directo a la base de datos en el servidor
-MCP aunque parezca más conveniente. La trazabilidad y el control de acceso dependen de este diseño.
+| Método | Endpoint | Rol | Descripción |
+|--------|----------|-----|-------------|
+| `POST` | `/auth/register` | PUBLIC | Registro de nuevo usuario |
+| `POST` | `/auth/login` | PUBLIC | Login → retorna JWT |
+| `GET` | `/users/{id}` | USER | Perfil público de un usuario |
+| `PUT` | `/users/{id}` | USER | Actualizar perfil propio |
+| `GET` | `/users/{id}/reviews` | PUBLIC | Valoraciones recibidas por un usuario |
 
-**Sobre el orden de implementación:** No empezar el frontend hasta que los endpoints de Fases 1-3
-estén testados. No empezar el MCP hasta que los endpoints de Fase 4 estén listos. Respetar el
-orden elimina el riesgo de construir una UI sobre un backend incompleto.
+### 5.2 Alojamientos
+
+| Método | Endpoint | Rol | Descripción |
+|--------|----------|-----|-------------|
+| `GET` | `/accommodations` | PUBLIC | Listar anuncios `ACTIVOS` con filtros (`city`, `minPrice`, `maxPrice`, `page`, `size`) |
+| `GET` | `/accommodations/{id}` | PUBLIC | Detalle de un anuncio |
+| `POST` | `/accommodations` | USER | Crear anuncio (estado inicial `PENDIENTE`) |
+| `PUT` | `/accommodations/{id}` | USER | Editar anuncio propio (solo si no está `ACTIVO`) |
+| `DELETE` | `/accommodations/{id}` | ADMIN | Eliminar cualquier anuncio |
+| `POST` | `/accommodations/{id}/images` | USER | Subir URL de imagen al anuncio |
+| `DELETE` | `/accommodations/{id}/images/{imgId}` | USER | Eliminar imagen del anuncio propio |
+| `PATCH` | `/accommodations/{id}/status` | ADMIN | Cambiar estado (`ACEPTAR` / `RECHAZAR`) |
+| `GET` | `/accommodations/pending` | ADMIN | Listar anuncios pendientes de revisión |
+| `GET` | `/accommodations/reviews` | PUBLIC | Valoraciones de alojamientos (con `?city=`) |
+
+### 5.3 Valoraciones
+
+| Método | Endpoint | Rol | Descripción |
+|--------|----------|-----|-------------|
+| `POST` | `/accommodations/{id}/reviews` | USER | Crear valoración de alojamiento |
+| `DELETE` | `/accommodations/{accommodationId}/reviews/{reviewId}` | ADMIN | Eliminar valoración |
+| `POST` | `/users/{id}/reviews` | USER | Crear valoración de usuario |
+| `DELETE` | `/users/{userId}/reviews/{reviewId}` | ADMIN | Eliminar valoración de usuario |
+
+### 5.4 Mensajería
+
+| Método | Endpoint | Rol | Descripción |
+|--------|----------|-----|-------------|
+| `GET` | `/messages/conversations` | USER | Lista de conversaciones del usuario autenticado |
+| `GET` | `/messages/conversations/{userId}` | USER | Hilo de mensajes con un usuario |
+| `POST` | `/messages` | USER | Enviar mensaje (texto o con `offerAmount`) |
+
+### 5.5 Hogares
+
+| Método | Endpoint | Rol | Descripción |
+|--------|----------|-----|-------------|
+| `POST` | `/hogares` | USER | Crear hogar (el creador se convierte en admin) |
+| `GET` | `/hogares/{id}` | USER | Detalle del hogar (solo miembros) |
+| `POST` | `/hogares/{id}/invitations` | USER | Invitar miembro por email o nickname |
+| `DELETE` | `/hogares/{id}/members/{userId}` | USER | Expulsar miembro (solo si no tiene deudas) |
+| `GET` | `/hogares/{id}/balances` | USER | Balances actuales + deudas simplificadas |
+
+### 5.6 Gastos
+
+| Método | Endpoint | Rol | Descripción |
+|--------|----------|-----|-------------|
+| `GET` | `/hogares/{hogarId}/expenses` | USER | Listar gastos del hogar |
+| `POST` | `/hogares/{hogarId}/expenses` | USER | Registrar nuevo gasto |
+| `PUT` | `/hogares/{hogarId}/expenses/{id}` | USER | Editar gasto (pagador o admin del hogar) |
+| `DELETE` | `/hogares/{hogarId}/expenses/{id}` | USER | Eliminar gasto |
+
+### 5.7 Tareas
+
+| Método | Endpoint | Rol | Descripción |
+|--------|----------|-----|-------------|
+| `GET` | `/hogares/{hogarId}/tasks` | USER | Listar tareas del hogar |
+| `POST` | `/hogares/{hogarId}/tasks` | USER | Crear tarea |
+| `PUT` | `/hogares/{hogarId}/tasks/{id}` | USER | Editar tarea |
+| `PATCH` | `/hogares/{hogarId}/tasks/{id}/toggle` | USER | Conmutar estado `COMPLETADA` / `PENDIENTE` |
+| `DELETE` | `/hogares/{hogarId}/tasks/{id}` | USER | Eliminar tarea |
+
+### 5.8 Auditoría
+
+| Método | Endpoint | Rol | Descripción |
+|--------|----------|-----|-------------|
+| `GET` | `/audit/hogar/{hogarId}` | USER | Feed cronológico de cambios del hogar (con `?limit=`) |
+| `GET` | `/audit/entity/{entityId}` | USER | Historial de cambios de una entidad específica |
+
+---
+
+## 6. Especificación del Servidor MCP
+
+### 6.1 Arquitectura de Comunicación
+
+```
+┌────────────────────────────────────────┐
+│         Interfaz de Chat (Next.js)     │
+│  Usuario escribe: "¿Cuánto le debo     │
+│  a Ana este mes?"                      │
+└─────────────────┬──────────────────────┘
+                  │  JSON-RPC sobre SSE
+                  │  + JWT en metadatos de contexto
+                  ▼
+┌────────────────────────────────────────┐
+│           Servidor MCP                 │
+│      (Node.js 20 + TypeScript)         │
+│                                        │
+│  1. Extrae JWT del contexto MCP        │
+│  2. Selecciona tool adecuada           │
+│  3. Llama a Spring Boot API            │
+│     con Authorization: Bearer <JWT>   │
+│  4. Formatea respuesta para el LLM     │
+└─────────────────┬──────────────────────┘
+                  │  HTTP REST + JWT Passthrough
+                  ▼
+┌────────────────────────────────────────┐
+│          API Spring Boot               │
+│  Valida JWT → Verifica membresía       │
+│  hogar → Retorna datos o 403           │
+└────────────────────────────────────────┘
+```
+
+### 6.2 Catálogo de Herramientas (Tools)
+
+#### Tool 1: `auditar_conflictos_hogar`
+
+```typescript
+{
+  name: "auditar_conflictos_hogar",
+  description: "Recupera y analiza la secuencia cronológica de cambios sobre un hogar específico (gastos, tareas, miembros) para resolver malentendidos entre convivientes.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      hogarId: {
+        type: "string",
+        description: "Identificador UUID del hogar a auditar"
+      },
+      limite: {
+        type: "integer",
+        description: "Número máximo de registros a analizar (default: 50)",
+        default: 50
+      }
+    },
+    required: ["hogarId"]
+  }
+}
+```
+
+**Flujo interno:**
+1. Extrae el JWT del contexto de la petición MCP.
+2. `GET /api/v1/audit/hogar/{hogarId}?limit={limite}` con `Authorization: Bearer <JWT>`.
+3. Itera sobre el array de snapshots y construye un texto estructurado: `[Timestamp] Usuario X [acción] sobre [entidad]: ANTES → {...}, DESPUÉS → {...}`.
+4. Retorna el texto formateado al LLM para análisis conversacional.
+
+---
+
+#### Tool 2: `analizar_balances_y_deudas`
+
+```typescript
+{
+  name: "analizar_balances_y_deudas",
+  description: "Extrae el grafo de deudas consolidado del hogar para proveer análisis de optimización de pagos y recomendaciones de liquidación eficiente.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      hogarId: {
+        type: "string",
+        description: "Identificador UUID del hogar"
+      }
+    },
+    required: ["hogarId"]
+  }
+}
+```
+
+**Flujo interno:**
+1. Extrae el JWT del contexto MCP.
+2. `GET /api/v1/hogares/{hogarId}/balances` con `Authorization: Bearer <JWT>`.
+3. Transforma la estructura de balances en lenguaje natural: lista de quién debe a quién y por qué importe, ya optimizada por el algoritmo de tránsito del backend.
+4. El LLM emite recomendaciones: *"Para cerrar todas las deudas del mes, Ana debería transferir 35 € a Carlos y 12 € a Luis."*
+
+---
+
+#### Tool 3: `busqueda_semantica_alojamientos`
+
+```typescript
+{
+  name: "busqueda_semantica_alojamientos",
+  description: "Permite buscar alojamientos mediante lenguaje natural cruzando criterios cualitativos (casero amable, zona tranquila, luminoso) con las valoraciones y comentarios del sistema.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      criterioSemantico: {
+        type: "string",
+        description: "Texto libre con preferencias: 'piso luminoso cerca de la universidad, propietario responsivo'"
+      },
+      ciudad: {
+        type: "string",
+        description: "Ciudad base para filtrar los alojamientos"
+      }
+    },
+    required: ["criterioSemantico", "ciudad"]
+  }
+}
+```
+
+**Flujo interno:**
+1. Extrae el JWT del contexto MCP.
+2. `GET /api/v1/accommodations/reviews?city={ciudad}` con `Authorization: Bearer <JWT>`.
+3. Concatena descripciones y comentarios de valoraciones en un corpus de texto.
+4. El LLM actúa como filtro semántico sobre el corpus, identificando qué alojamientos o propietarios mejor se ajustan al `criterioSemantico`.
+5. Retorna una lista priorizada con justificación cualitativa.
+
+### 6.3 Protocolo de Seguridad Multi-Tenant
+
+```typescript
+// Ejemplo de extracción y propagación del JWT en el servidor MCP
+server.setRequestHandler(CallToolRequestSchema, async (request, context) => {
+  // 1. Extraer JWT de los metadatos de contexto inyectados por el frontend
+  const jwt = context?.meta?.authorization?.replace("Bearer ", "");
+  if (!jwt) throw new McpError(ErrorCode.InvalidRequest, "Token JWT requerido");
+
+  // 2. Propagar en todas las llamadas al backend
+  const response = await fetch(`${SPRING_API_BASE}${endpoint}`, {
+    headers: {
+      "Authorization": `Bearer ${jwt}`,
+      "Content-Type": "application/json"
+    }
+  });
+
+  // 3. Gestionar respuestas de autorización denegada
+  if (response.status === 403) {
+    throw new McpError(ErrorCode.InvalidRequest, "Acceso denegado: no eres miembro de este hogar");
+  }
+
+  return await response.json();
+});
+```
+
+---
+
+## 7. Vistas y Componentes del Frontend
+
+### 7.1 Mapa de Rutas (Next.js App Router)
+
+```
+app/
+├── (public)/
+│   ├── page.tsx                  → Home: listado + mapa de alojamientos
+│   ├── accommodations/
+│   │   ├── page.tsx              → Búsqueda con filtros
+│   │   └── [id]/
+│   │       └── page.tsx          → Detalle de alojamiento
+│   └── users/
+│       └── [id]/
+│           └── page.tsx          → Perfil público de usuario
+│
+├── (auth)/
+│   ├── login/page.tsx            → Formulario de login
+│   └── register/page.tsx         → Formulario de registro
+│
+├── (dashboard)/                  → Layout protegido (requiere JWT)
+│   ├── layout.tsx                → Sidebar + NavBar autenticada
+│   ├── dashboard/page.tsx        → Panel principal del usuario
+│   ├── accommodations/
+│   │   └── new/page.tsx          → Formulario de nuevo anuncio
+│   ├── messages/
+│   │   ├── page.tsx              → Lista de conversaciones
+│   │   └── [userId]/page.tsx     → Hilo de mensajes
+│   ├── hogar/
+│   │   ├── page.tsx              → Vista del hogar: balances, tareas
+│   │   ├── expenses/
+│   │   │   ├── page.tsx          → Lista de gastos
+│   │   │   └── new/page.tsx      → Formulario de nuevo gasto
+│   │   ├── tasks/page.tsx        → Gestión de tareas
+│   │   └── activity/page.tsx     → Feed de auditoría cronológica
+│   └── chat/page.tsx             → Interfaz de chat con LLM (MCP)
+│
+└── (admin)/                      → Layout solo ADMIN
+    ├── layout.tsx
+    └── admin/
+        ├── pending/page.tsx      → Anuncios pendientes de aprobación
+        └── moderation/page.tsx   → Moderación de reviews y comentarios
+```
+
+### 7.2 Componentes Reutilizables Clave
+
+| Componente | Descripción |
+|------------|-------------|
+| `<AccommodationCard />` | Tarjeta de anuncio con imagen, precio, ciudad y rating |
+| `<AccommodationMap />` | Mapa Leaflet/Mapbox con marcadores geolocalizados filtrados |
+| `<FilterBar />` | Barra de filtros: ciudad, rango de precios |
+| `<StarRating />` | Componente de valoración de 1-5 estrellas |
+| `<BalanceIndicator />` | Círculo verde/rojo con importe de balance del usuario |
+| `<DebtGraph />` | Visualización del grafo simplificado de deudas |
+| `<ExpenseForm />` | Formulario de gasto con selector de afectados y porcentajes |
+| `<TaskCard />` | Tarjeta de tarea con toggle de estado completada/pendiente |
+| `<AuditFeedItem />` | Ítem del feed de actividad con diff antes/después en lenguaje natural |
+| `<ChatInterface />` | Interfaz de chat conectada al LLM vía servidor MCP |
+| `<ImageUploader />` | Subida de imágenes a la nube con previsualización |
+| `<MessageThread />` | Hilo de mensajes privados con soporte para ofertas económicas |
+| `<ProtectedRoute />` | HOC / layout que redirige a /login si no hay JWT válido |
+
+### 7.3 Gestión de Estado y Peticiones
+
+- **Autenticación:** JWT almacenado en `httpOnly cookie` o `localStorage` según política CORS. Contexto global con React Context / Zustand.
+- **Peticiones API:** `fetch` nativo o `axios` con interceptor que inyecta el JWT automáticamente en cada cabecera.
+- **Mapa:** Carga dinámica con `next/dynamic` y `{ ssr: false }` para evitar errores de hidratación con Leaflet.
+- **Formularios:** React Hook Form + Zod para validación en cliente.
+
+---
+
+## 8. Infraestructura Docker
+
+### 8.1 `docker-compose.yml` Sugerido
+
+```yaml
+version: "3.9"
+
+services:
+
+  # ──────────────────────────────────────────────
+  # BASE DE DATOS
+  # ──────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: tfg_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: tfg_db
+      POSTGRES_USER: tfg_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tfg_user -d tfg_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ──────────────────────────────────────────────
+  # BACKEND — Java Spring Boot
+  # ──────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: tfg_backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/tfg_db
+      SPRING_DATASOURCE_USERNAME: tfg_user
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION_MS: 86400000
+      CLOUD_STORAGE_URL: ${CLOUD_STORAGE_URL}
+      CLOUD_STORAGE_API_KEY: ${CLOUD_STORAGE_API_KEY}
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ──────────────────────────────────────────────
+  # SERVIDOR MCP — Node.js / TypeScript
+  # ──────────────────────────────────────────────
+  mcp-server:
+    build:
+      context: ./mcp-server
+      dockerfile: Dockerfile
+    container_name: tfg_mcp
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      SPRING_API_BASE_URL: http://backend:8080/api/v1
+      MCP_PORT: 3001
+    ports:
+      - "3001:3001"
+
+  # ──────────────────────────────────────────────
+  # FRONTEND — Next.js
+  # ──────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: tfg_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+      - mcp-server
+    environment:
+      NEXT_PUBLIC_API_URL: http://backend:8080/api/v1
+      NEXT_PUBLIC_MCP_URL: http://mcp-server:3001
+      NEXT_PUBLIC_MAP_TOKEN: ${MAP_TOKEN}
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:
+```
+
+### 8.2 Dockerfiles de Referencia
+
+**Backend (`backend/Dockerfile`):**
+```dockerfile
+FROM maven:3.9-eclipse-temurin-21 AS build
+WORKDIR /app
+COPY pom.xml .
+COPY src ./src
+RUN mvn clean package -DskipTests
+
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+COPY --from=build /app/target/*.jar app.jar
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]
+```
+
+**MCP Server (`mcp-server/Dockerfile`):**
+```dockerfile
+FROM node:20-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY dist ./dist
+EXPOSE 3001
+CMD ["node", "dist/index.js"]
+```
+
+**Frontend (`frontend/Dockerfile`):**
+```dockerfile
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+EXPOSE 3000
+CMD ["node", "server.js"]
+```
+
+### 8.3 Variables de Entorno (`.env`)
+
+```env
+POSTGRES_PASSWORD=SuperSecretPassword123!
+JWT_SECRET=your-256-bit-secret-key-here
+CLOUD_STORAGE_URL=https://api.cloudinary.com/v1_1/your-cloud
+CLOUD_STORAGE_API_KEY=your-cloudinary-api-key
+MAP_TOKEN=your-mapbox-or-leaflet-token
+```
+
+---
+
+## 9. Fases de Desarrollo y Desglose de Tareas
+
+> **Metodología:** Desarrollo secuencial por un único desarrollador. Cada fase debe completarse y pasar sus pruebas antes de iniciar la siguiente. Las estimaciones son orientativas.
+
+---
+
+### Fase 1 — Infraestructura Base y Seguridad
+**Duración estimada: 1-2 semanas**
+
+**Objetivo:** Tener el proyecto configurado, la base de datos funcionando y la autenticación completamente operativa.
+
+#### 1.1 Configuración del Proyecto Backend
+- [ ] Inicializar proyecto Spring Boot 3.x con Java 21 (via Spring Initializr).
+- [ ] Agregar dependencias: `spring-boot-starter-web`, `spring-boot-starter-data-jpa`, `spring-boot-starter-security`, `spring-boot-starter-validation`, `postgresql`, `jjwt`.
+- [ ] Configurar `application.yml` con perfiles `dev` y `prod` (datasource, JPA DDL, logging).
+- [ ] Estructurar paquetes según arquitectura limpia: `config`, `features/{user,accommodation,hogar,audit}`, `shared`.
+
+#### 1.2 Esquema de Base de Datos
+- [ ] Crear todas las entidades JPA (`@Entity`, `@Table`, relaciones `@ManyToOne`, `@OneToMany`, `@ManyToMany`).
+- [ ] Añadir `@Version` a `HogarEntity`, `ExpenseEntity`, `TaskEntity`.
+- [ ] Configurar Hibernate para generación de esquema en dev (`ddl-auto: create`).
+- [ ] Crear script `init.sql` con índices compuestos, índices B-Tree sobre `latitude`/`longitude` y trigger de inmutabilidad para `audit_snapshot_log`.
+- [ ] Verificar la creación correcta del esquema en PostgreSQL local / Docker.
+
+#### 1.3 Módulo de Seguridad JWT
+- [ ] Diseñar interfaz `JwtTokenProvider` y su implementación.
+- [ ] Implementar `JwtAuthenticationFilter` (extends `OncePerRequestFilter`).
+- [ ] Configurar `SecurityFilterChain`: rutas públicas vs. protegidas, CORS.
+- [ ] Implementar `UserDetailsServiceImpl` que carga usuarios desde repositorio.
+
+#### 1.4 Autenticación de Usuarios (SRP aplicado)
+- [ ] Diseñar interfaz `UserService` con métodos `register`, `login`, `findById`.
+- [ ] Implementar `UserServiceImpl` (lógica de negocio, cifrado BCrypt, generación de JWT).
+- [ ] Crear `UserController`: `POST /auth/register`, `POST /auth/login`.
+- [ ] Crear `UserRepository extends JpaRepository<UserEntity, UUID>`.
+- [ ] Definir DTOs: `RegisterRequestDto`, `LoginRequestDto`, `AuthResponseDto`, `UserProfileDto`.
+- [ ] Pruebas unitarias de `UserServiceImpl` con Mockito.
+
+#### 1.5 Configuración del Proyecto Frontend
+- [ ] Inicializar proyecto Next.js 15 con TypeScript, Tailwind CSS y App Router.
+- [ ] Configurar cliente HTTP (axios o fetch) con interceptor de JWT.
+- [ ] Implementar páginas `/login` y `/register` con React Hook Form + Zod.
+- [ ] Implementar contexto de autenticación global (almacenamiento de JWT, estado del usuario).
+- [ ] Implementar layout protegido `(dashboard)/layout.tsx`.
+
+---
+
+### Fase 2 — Backend Core: Hogar y Motor Financiero
+**Duración estimada: 2 semanas**
+
+**Objetivo:** Módulo de hogar completamente funcional con gestión de gastos, deudas simplificadas y tareas.
+
+#### 2.1 Módulo de Hogar (SOLID estricto)
+- [ ] Diseñar interfaz `HogarService` (ISP: métodos separados por responsabilidad).
+- [ ] Implementar `HogarServiceImpl`: crear hogar, invitar miembro (por email/nickname), expulsar miembro (con validación de deudas), listar miembros.
+- [ ] Crear `HogarController` con endpoints CRUD del hogar.
+- [ ] Crear `HogarRepository`, `HogarMemberRepository`.
+
+#### 2.2 Motor de Gastos
+- [ ] Diseñar interfaz `ExpenseService`.
+- [ ] Implementar `ExpenseServiceImpl`: registrar gasto con pagador y afectados, validar suma de porcentajes = 100%, editar, eliminar.
+- [ ] Crear `ExpenseController`, `ExpenseRepository`, `ExpenseAffectedRepository`.
+- [ ] DTOs con validaciones (`@NotNull`, `@Positive`, `@Size`).
+
+#### 2.3 Algoritmo de Simplificación de Deudas (OCP aplicado)
+- [ ] Diseñar interfaz `DebtSimplifierEngine` con método `simplify(List<Balance> balances): List<DebtTransfer>`.
+- [ ] Implementar `TransitDebtSimplifier implements DebtSimplifierEngine`:
+  - Calcular saldo neto por usuario (Σ pagado − Σ adeudado).
+  - Aplicar algoritmo greedy de compensación directa (acreedores vs deudores).
+  - Retornar lista de transferencias optimizadas `{from, to, amount}`.
+- [ ] El servicio de balances consume la interfaz `DebtSimplifierEngine` vía DIP (inyección por constructor).
+- [ ] **No se modifica ningún registro de BD:** el resultado es exclusivamente una proyección en memoria.
+- [ ] Endpoint `GET /hogares/{id}/balances` retorna: balances por usuario (verde/rojo) + lista de transferencias sugeridas.
+- [ ] Pruebas unitarias exhaustivas del algoritmo con casos extremos (deudas circulares, un solo deudor, balances cero).
+
+#### 2.4 Módulo de Tareas
+- [ ] Diseñar interfaz `TaskService` y `TaskServiceImpl`.
+- [ ] Operaciones: crear tarea, editar, eliminar, conmutar estado `COMPLETADA`/`PENDIENTE`.
+- [ ] Verificar que el `@Version` en `TaskEntity` dispara `OptimisticLockingFailureException` ante concurrencia.
+- [ ] Controlador de excepciones global (`@ControllerAdvice`) que retorna `409 Conflict` ante `OptimisticLockingFailureException`.
+
+---
+
+### Fase 3 — Subsistema de Auditoría Inmutable
+**Duración estimada: 1 semana**
+
+**Objetivo:** Captura automática de snapshots, inmutabilidad garantizada y feed de actividad.
+
+#### 3.1 Mecanismo de Captura de Snapshots
+- [ ] Implementar `AuditInterceptor` mediante **Spring AOP** (`@Aspect`, `@Around`) que intercepta los métodos de `ExpenseService` y `TaskService`.
+- [ ] Alternativa con JPA Entity Listeners (`@EntityListeners`) en `ExpenseEntity` y `TaskEntity` para eventos `@PreUpdate`, `@PreRemove`.
+- [ ] Serializar el estado antes/después de cada operación a JSONB usando `ObjectMapper`.
+- [ ] Extraer `userId` del `SecurityContextHolder` para la trazabilidad de autoría.
+- [ ] Inyectar timestamp desde `Clock.systemUTC()` (bean de Spring) para impedir manipulación del cliente.
+
+#### 3.2 Servicio de Auditoría (ISP aplicado)
+- [ ] Diseñar interfaz `AuditLogRepository extends JpaRepository` con **solo** métodos de lectura y `save()`. Eliminar explícitamente `deleteById` y `deleteAll` del contrato.
+- [ ] Implementar `AuditLogServiceImpl` que invoca únicamente `auditLogRepository.save(snapshot)`.
+- [ ] Añadir `@PreUpdate` y `@PreRemove` en `AuditSnapshotLogEntity` que lancen `UnsupportedOperationException`.
+- [ ] Verificar que el trigger DDL de PostgreSQL bloquea `UPDATE`/`DELETE` como segunda barrera.
+
+#### 3.3 Feed de Actividad
+- [ ] Endpoint `GET /audit/hogar/{hogarId}?limit=50` que retorna la lista de snapshots ordenados por `server_timestamp DESC`.
+- [ ] Servicio de transformación: convierte JSONB de snapshots a texto legible en español (ej: *"Carlos modificó el gasto 'Supermercado' de 45 € a 52 €"*).
+- [ ] Pruebas de integración: crear gasto → modificar → verificar que hay 2 entradas en `audit_snapshot_log`.
+
+---
+
+### Fase 4 — Módulo de Alojamiento y Mapa
+**Duración estimada: 2 semanas**
+
+**Objetivo:** Mercado de anuncios completamente funcional con búsqueda geolocalizada, valoraciones y mensajería.
+
+#### 4.1 CRUD de Alojamientos y Aprobaciones
+- [ ] Diseñar interfaz `AccommodationService` y `AccommodationServiceImpl`.
+- [ ] Endpoint `POST /accommodations`: crea anuncio en estado `PENDIENTE`.
+- [ ] Endpoint `PATCH /accommodations/{id}/status`: solo ADMIN puede activar/rechazar. Validar ≥ 2 imágenes antes de activar.
+- [ ] Integración con proveedor de almacenamiento cloud: `POST /accommodations/{id}/images` recibe URL verificada y la persiste en `accommodation_image`.
+- [ ] Endpoint `GET /accommodations/pending` para el panel de administración.
+
+#### 4.2 Búsqueda y Filtrado
+- [ ] Query JPA con `Specification` o JPQL dinámica para filtros: `city`, `minPrice`, `maxPrice`, `status = ACTIVO`.
+- [ ] Endpoint paginado `GET /accommodations?page=0&size=12`.
+- [ ] Endpoint con filtro geográfico por bounding box (lat/lon min-max) usando los índices B-Tree.
+
+#### 4.3 Sistema de Valoraciones
+- [ ] `AccommodationReviewService` + `UserReviewService` (dos servicios separados: SRP).
+- [ ] Validar que un usuario no pueda valorarse a sí mismo.
+- [ ] Validar unicidad de valoración (un usuario → un anuncio: constraint `UNIQUE`).
+- [ ] Endpoints de moderación para ADMIN.
+
+#### 4.4 Mensajería Privada
+- [ ] `PrivateMessageService` + `PrivateMessageController`.
+- [ ] Soporte para `offerAmount` opcional (oferta económica formal).
+- [ ] Listar conversaciones agrupadas por interlocutor.
+
+#### 4.5 Frontend — Módulo de Alojamiento
+- [ ] Página Home (`/`): grid de `AccommodationCard` + `AccommodationMap` con marcadores Leaflet (carga dinámica SSR=false).
+- [ ] Página de detalle (`/accommodations/[id]`): galería de imágenes, descripción, mapa centrado, valoraciones, botón de mensaje.
+- [ ] Formulario de nuevo anuncio con `ImageUploader` y validación de mínimo 2 imágenes.
+- [ ] Panel de administración: lista de pendientes con botones Aprobar/Rechazar.
+
+---
+
+### Fase 5 — Frontend — Módulo de Hogar
+**Duración estimada: 1 semana**
+
+**Objetivo:** Interfaz completa para gestión de convivencia, gastos y auditoría.
+
+- [ ] Página del hogar (`/hogar`): lista de miembros con `BalanceIndicator` (verde/rojo), resumen de deudas simplificadas.
+- [ ] Componente `DebtGraph`: visualización de quién debe pagar a quién según el algoritmo de tránsito.
+- [ ] Página de gastos (`/hogar/expenses`): lista cronológica, formulario de nuevo gasto con `ExpenseForm` (selector de afectados + inputs de porcentaje con validación de suma = 100%).
+- [ ] Página de tareas (`/hogar/tasks`): lista de `TaskCard` con toggle de estado (optimistic UI update).
+- [ ] Página del feed de actividad (`/hogar/activity`): lista de `AuditFeedItem` con diff visual antes/después.
+- [ ] Flujo de invitación de miembros mediante modal.
+
+---
+
+### Fase 6 — Servidor MCP y Chat IA
+**Duración estimada: 1 semana**
+
+**Objetivo:** Servidor MCP completamente operativo con las tres herramientas e integrado en el frontend.
+
+#### 6.1 Servidor MCP (Node.js + TypeScript)
+- [ ] Inicializar proyecto Node.js 20 con TypeScript, compilación `tsc`.
+- [ ] Instalar SDK oficial MCP (`@modelcontextprotocol/sdk`).
+- [ ] Implementar servidor con transporte SSE o stdio según entorno.
+- [ ] Registrar las tres tools: `auditar_conflictos_hogar`, `analizar_balances_y_deudas`, `busqueda_semantica_alojamientos`.
+- [ ] Implementar lógica de extracción del JWT del contexto de la petición JSON-RPC.
+- [ ] Implementar cliente HTTP hacia Spring Boot con propagación del JWT (passthrough).
+- [ ] Gestionar respuestas `403` del backend retornando `McpError` apropiado.
+- [ ] Pruebas de integración: simular petición MCP con JWT válido/inválido.
+
+#### 6.2 Frontend — Interfaz de Chat
+- [ ] Página `/chat` con componente `ChatInterface`.
+- [ ] Conexión al servidor MCP vía SSE o WebSocket con inyección del JWT en metadatos de contexto.
+- [ ] Historial de mensajes con diferenciación visual usuario / asistente.
+- [ ] Indicador de "tool en uso" mientras el LLM llama a una herramienta MCP.
+- [ ] Manejo de errores: token expirado, acceso denegado.
+
+---
+
+### Fase 7 — Integración, Pruebas y Pulido Final
+**Duración estimada: 1 semana**
+
+**Objetivo:** Sistema completamente integrado, testeado y listo para presentación.
+
+#### 7.1 Pruebas de Integración Backend
+- [ ] Tests de integración con `@SpringBootTest` + `TestContainers` (PostgreSQL real).
+- [ ] Test del ciclo completo de auditoría: crear → modificar → verificar inmutabilidad.
+- [ ] Test de concurrencia optimista: dos hilos modificando el mismo `ExpenseEntity` simultáneamente.
+- [ ] Test del algoritmo de simplificación de deudas con escenario de tránsito (A→B→C = A→C).
+- [ ] Verificar que el trigger DDL bloquea efectivamente `UPDATE`/`DELETE` en `audit_snapshot_log`.
+
+#### 7.2 Configuración Docker Compose
+- [ ] Completar `docker-compose.yml` con todos los servicios.
+- [ ] Crear archivo `.env.example` con todas las variables necesarias.
+- [ ] Verificar arranque completo con `docker compose up --build`.
+- [ ] Comprobar healthchecks y orden de arranque con `depends_on`.
+
+#### 7.3 Seguridad y Hardening
+- [ ] Revisar que todos los endpoints sensibles exigen JWT.
+- [ ] Auditar que ningún endpoint del módulo de hogar retorna datos si el usuario no es miembro.
+- [ ] Configurar CORS de Spring Boot para aceptar solo el origen del frontend.
+- [ ] Revisar headers de seguridad en Next.js (`next.config.js`).
+
+#### 7.4 Documentación
+- [ ] Generar documentación de la API REST con **Springdoc OpenAPI** (Swagger UI en `/swagger-ui.html`).
+- [ ] Documentar en `README.md`: instrucciones de arranque con Docker, variables de entorno, arquitectura.
+- [ ] Comentar las interfaces y clases clave de Spring Boot con Javadoc.
+
+---
+
+## Resumen de Fases
+
+| Fase | Nombre | Duración Est. | Entregable Principal |
+|------|--------|--------------|---------------------|
+| 1 | Infraestructura Base y Seguridad | 1-2 semanas | Autenticación JWT + DB funcionando |
+| 2 | Backend Core: Hogar y Motor Financiero | 2 semanas | API de hogares, gastos y deudas |
+| 3 | Subsistema de Auditoría Inmutable | 1 semana | Captura de snapshots + feed de actividad |
+| 4 | Módulo de Alojamiento y Mapa | 2 semanas | Mercado de anuncios con mapa y valoraciones |
+| 5 | Frontend — Módulo de Hogar | 1 semana | UI completa de gestión de convivencia |
+| 6 | Servidor MCP y Chat IA | 1 semana | Servidor MCP con 3 tools + chat integrado |
+| 7 | Integración, Pruebas y Pulido Final | 1 semana | Sistema completo, testeado y dockerizado |
+| | **Total estimado** | **9-10 semanas** | |
+
+---
+
+*Documento generado como Plan de Desarrollo Maestro para TFG. Actualizar el estado de las tareas (`[ ]` → `[x]`) conforme avance el desarrollo.*

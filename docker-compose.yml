@@ -1,0 +1,91 @@
+services:
+
+  # ──────────────────────────────────────────────
+  # BASE DE DATOS
+  # ──────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: tfg_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: tfg_db
+      POSTGRES_USER: tfg_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tfg_user -d tfg_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ──────────────────────────────────────────────
+  # BACKEND — Java Spring Boot
+  # ──────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: tfg_backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/tfg_db
+      SPRING_DATASOURCE_USERNAME: tfg_user
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION_MS: 86400000
+      CLOUD_STORAGE_URL: ${CLOUD_STORAGE_URL}
+      CLOUD_STORAGE_API_KEY: ${CLOUD_STORAGE_API_KEY}
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ──────────────────────────────────────────────
+  # SERVIDOR MCP — Node.js / TypeScript
+  # ──────────────────────────────────────────────
+  mcp-server:
+    build:
+      context: ./mcp-server
+      dockerfile: Dockerfile
+    container_name: tfg_mcp
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      SPRING_API_BASE_URL: http://backend:8080/api/v1
+      MCP_PORT: 3001
+    ports:
+      - "3001:3001"
+
+  # ──────────────────────────────────────────────
+  # FRONTEND — Next.js
+  # ──────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: tfg_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+      - mcp-server
+    environment:
+      NEXT_PUBLIC_API_URL: http://backend:8080/api/v1
+      NEXT_PUBLIC_MCP_URL: http://mcp-server:3001
+      NEXT_PUBLIC_MAP_TOKEN: ${MAP_TOKEN}
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:
