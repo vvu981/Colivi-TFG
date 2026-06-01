@@ -19,6 +19,5 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     List<User> findAllByDeletedAtIsNull();
 
-    
-
+    void setAdmin(UUID targetUserId);
 }

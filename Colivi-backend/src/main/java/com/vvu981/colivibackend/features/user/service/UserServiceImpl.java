@@ -12,6 +12,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.UUID;
+
 @Service
 @RequiredArgsConstructor // Genera el constructor automáticamente inyectando los campos 'final'
 public class UserServiceImpl implements UserService {
@@ -86,5 +88,18 @@ public class UserServiceImpl implements UserService {
         String nuevoAccessToken = jwtTokenProvider.generateAccessToken(user);
 
         return new AuthResponse(nuevoAccessToken, tokenLargo, ACCESS_TOKEN_EXPIRATION);
+    }
+
+    @Override
+    public void setAdmin(UUID targetUserId) {
+        // 1. Le pedimos al archivador (base de datos) que busque a la persona
+        User user = userRepository.findByIdAndDeletedAtIsNull(targetUserId)
+                .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado"));
+
+        // 2. Usamos la goma de borrar virtual y le ponemos la etiqueta de jefe
+        user.setRole(UserRole.ADMIN);
+
+        // 3. Devolvemos la carpeta al archivador para que guarde los cambios
+        userRepository.save(user);
     }
 }
