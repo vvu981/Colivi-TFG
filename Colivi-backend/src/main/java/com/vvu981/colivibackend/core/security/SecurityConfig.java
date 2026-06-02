@@ -1,5 +1,6 @@
 package com.vvu981.colivibackend.core.security;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -12,39 +13,40 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity
+@EnableMethodSecurity // Activa los candados @PreAuthorize en los controladores
+@RequiredArgsConstructor // Necesario para inyectar nuestro filtro nuevo
 public class SecurityConfig {
 
-    // Aquí es donde activas BCrypt. Ahora Spring se lo pasará a tu UserService automáticamente.
+    private final JwtAuthenticationFilter jwtAuthFilter; // Tu nuevo escáner
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    // El gestor principal de credenciales de la aplicación
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
 
-    // El control de aduanas: quién pasa y quién no
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // Desactivamos CSRF porque vamos a usar nuestros propios tokens (JWT)
                 .csrf(AbstractHttpConfigurer::disable)
 
-                // Le decimos que no guarde sesiones en memoria, cada petición debe traer su token
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                // Reglas de las puertas
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/auth/**").permitAll() // La puerta de registro/login está abierta a todos
-                        .anyRequest().authenticated() // Para todo lo demás, hay que enseñar el token
-                );
+                        .requestMatchers("/api/v1/auth/**").permitAll() // Rutas públicas (Login y Registro)
+                        .anyRequest().authenticated() // Todo lo demás requiere estar logueado
+                )
+
+                // LA LÍNEA CLAVE: Instalamos nuestro escáner justo antes del filtro por defecto de Spring
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

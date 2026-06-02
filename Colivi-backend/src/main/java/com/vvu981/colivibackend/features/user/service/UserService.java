@@ -1,9 +1,7 @@
 package com.vvu981.colivibackend.features.user.service;
 
-import com.vvu981.colivibackend.features.user.dto.AuthResponse;
-import com.vvu981.colivibackend.features.user.dto.LoginRequest;
-import com.vvu981.colivibackend.features.user.dto.RefreshTokenRequest;
-import com.vvu981.colivibackend.features.user.dto.RegisterRequest;
+import com.vvu981.colivibackend.features.user.domain.User;
+import com.vvu981.colivibackend.features.user.dto.*;
 
 import java.util.UUID;
 
@@ -16,4 +14,6 @@ public interface UserService {
     AuthResponse refreshToken(RefreshTokenRequest request);
 
     void setAdmin(UUID targetUserId);
+
+    UpdateNonSensible updateNonSensibleData(User currentUser, UpdateNonSensible updateData);
 }

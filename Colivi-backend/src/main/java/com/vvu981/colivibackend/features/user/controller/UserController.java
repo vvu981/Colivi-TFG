@@ -1,9 +1,12 @@
 package com.vvu981.colivibackend.features.user.controller;
 
+import com.vvu981.colivibackend.features.user.domain.User;
+import com.vvu981.colivibackend.features.user.dto.UpdateNonSensible;
 import com.vvu981.colivibackend.features.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -26,5 +29,18 @@ public class UserController {
 
         // Devolvemos un simple "200 OK" sin cuerpo, indicando éxito.
         return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/me/profile")
+    public ResponseEntity<UpdateNonSensible> updateMyProfile(
+            @RequestBody UpdateNonSensible request,
+            @AuthenticationPrincipal User currentUser
+    ) {
+
+        // El controlador simplemente hace de puente. Le pasa el usuario seguro y los datos al servicio.
+        UpdateNonSensible response = userService.updateNonSensibleData(currentUser, request);
+
+        // Devuelve un 200 OK con los datos actualizados
+        return ResponseEntity.ok(response);
     }
 }

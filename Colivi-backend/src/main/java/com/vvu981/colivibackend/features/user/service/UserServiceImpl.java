@@ -3,10 +3,8 @@ package com.vvu981.colivibackend.features.user.service;
 import com.vvu981.colivibackend.core.security.JwtTokenProvider;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
-import com.vvu981.colivibackend.features.user.dto.AuthResponse;
-import com.vvu981.colivibackend.features.user.dto.LoginRequest;
-import com.vvu981.colivibackend.features.user.dto.RefreshTokenRequest;
-import com.vvu981.colivibackend.features.user.dto.RegisterRequest;
+import com.vvu981.colivibackend.features.user.dto.*;
+import com.vvu981.colivibackend.features.user.mapper.UserMapper;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -21,6 +19,7 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder; // Inyección directa de la herramienta
+    private final UserMapper userMapper; // <-- Nuestra nueva herramienta
 
     // Centralizamos el tiempo de expiración (24 horas) para no tener 'magic numbers'
     private static final long ACCESS_TOKEN_EXPIRATION = 86400000L;
@@ -92,14 +91,29 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void setAdmin(UUID targetUserId) {
-        // 1. Le pedimos al archivador (base de datos) que busque a la persona
-        User user = userRepository.findByIdAndDeletedAtIsNull(targetUserId)
-                .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado"));
+        User user = getActiveUserById(targetUserId);
 
-        // 2. Usamos la goma de borrar virtual y le ponemos la etiqueta de jefe
         user.setRole(UserRole.ADMIN);
 
-        // 3. Devolvemos la carpeta al archivador para que guarde los cambios
         userRepository.save(user);
+    }
+
+    @Override
+    public UpdateNonSensible updateNonSensibleData(User currentUser, UpdateNonSensible updateData) {
+
+        // 1. Delegamos la lógica de copiado. Se actualizan solo los campos enviados.
+        userMapper.updateEntityFromDto(updateData, currentUser);
+
+        // 2. Consolidamos en la base de datos.
+        User savedUser = userRepository.save(currentUser);
+
+        // 3. Empaquetamos la respuesta limpia y la devolvemos.
+        return userMapper.toUpdateNonSensibleDto(savedUser);
+    }
+
+    public UpdateSensible updateSensibleData(User currentUser, )
+
+    private User getActiveUserById(UUID userId) {
+        return userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado"));
     }
 }
