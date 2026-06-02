@@ -2,6 +2,7 @@ package com.vvu981.colivibackend.core.security;
 
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,6 +17,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -28,61 +30,62 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        // 1. Extraer la cabecera HTTP
-        final String authHeader = request.getHeader("Authorization");
-        final String jwt;
-        final String userEmail;
+        try {
+            // 1. Intentamos extraer el token de la petición
+            Optional<String> jwt = extractJwtFromRequest(request);
 
-        // 2. Si no hay cabecera o no empieza por "Bearer ", dejamos que pase como usuario "Anónimo"
-        // (Será rechazado más adelante si la ruta requiere estar logueado)
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response);
+            // 2. Si hay token, delegamos el proceso de autenticación
+            jwt.ifPresent(s -> authenticateToken(s, request));
+
+        } catch (JwtException e) {
+            // Solo atrapamos errores reales de la librería JWT (ej. token malformado o caducado).
+            // No hacemos nada, el usuario queda como "Anónimo" y será rechazado por los controladores.
+        }
+
+        // 3. El filtro siempre debe continuar
+        filterChain.doFilter(request, response);
+    }
+
+    // --- MÉTODOS PRIVADOS DE APOYO (Clean Code) ---
+    private Optional<String> extractJwtFromRequest(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            return Optional.of(authHeader.substring(7));
+        }
+        return Optional.empty();
+    }
+
+    private void authenticateToken(String jwt, HttpServletRequest request) {
+        String userEmail = jwtTokenProvider.extractEmail(jwt);
+
+        // Cláusula de guarda (Early Return): Si no hay email o ya está autenticado, abortamos sin anidar 'ifs'
+        if (userEmail == null || SecurityContextHolder.getContext().getAuthentication() != null) {
             return;
         }
 
-        // 3. Recortamos la palabra "Bearer " para quedarnos solo con el texto cifrado
-        jwt = authHeader.substring(7);
-
-        try {
-            // 4. Extraemos el email del token
-            userEmail = jwtTokenProvider.extractEmail(jwt);
-            // 5. Si hay un email y la caja fuerte temporal (SecurityContext) aún está vacía
-            if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-
-                // Comprobamos si el token es matemáticamente válido y no ha caducado
-                if (jwtTokenProvider.isTokenValid(jwt)) {
-
-                    // Buscamos al usuario en base de datos.
-                    // Esto nos asegura que si lo hemos borrado hoy, su token viejo no le sirva de nada.
-                    User user = userRepository.findByEmailAndDeletedAtIsNull(userEmail)
-                            .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-
-                    if (jwtTokenProvider.extractTokenVersion(jwt).equals(user.getTokenVersion())) {
-
-                        // Convertimos su rol (ej: "ADMIN") en la credencial oficial que entiende Spring Security
-                        SimpleGrantedAuthority authority = new SimpleGrantedAuthority(user.getRole().name());
-
-                        // Creamos el pase oficial de seguridad
-                        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                                user,
-                                null, // No necesitamos la contraseña para nada en este punto
-                                Collections.singletonList(authority)
-                        );
-
-                        // Le adjuntamos detalles técnicos de la petición (como la IP)
-                        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
-                        // 6. Guardamos el pase en la caja fuerte temporal de esta petición
-                        SecurityContextHolder.getContext().setAuthentication(authToken);
-                    }
-                }
-            }
-        } catch (Exception e) {
-            // Si el token fue manipulado o está caducado, la librería lanzará un error.
-            // Lo capturamos en silencio. El SecurityContext quedará vacío y la petición será rechazada en la puerta.
+        if (!jwtTokenProvider.isTokenValid(jwt)) {
+            return;
         }
 
-        // 7. Pase lo que pase, le decimos al sistema que continúe al siguiente paso
-        filterChain.doFilter(request, response);
+        userRepository.findByEmailAndDeletedAtIsNull(userEmail).ifPresent(user -> {
+
+            // Validamos la versión del token
+            if (jwtTokenProvider.extractTokenVersion(jwt).equals(user.getTokenVersion())) {
+                setSecurityContext(user, request);
+            }
+        });
+    }
+
+    private void setSecurityContext(User user, HttpServletRequest request) {
+        SimpleGrantedAuthority authority = new SimpleGrantedAuthority(user.getRole().name());
+
+        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                user,
+                null,
+                Collections.singletonList(authority)
+        );
+        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+        SecurityContextHolder.getContext().setAuthentication(authToken);
     }
 }
