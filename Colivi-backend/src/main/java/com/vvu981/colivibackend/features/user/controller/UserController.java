@@ -2,6 +2,7 @@ package com.vvu981.colivibackend.features.user.controller;
 
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.dto.UpdateNonSensible;
+import com.vvu981.colivibackend.features.user.dto.UpdateSensible;
 import com.vvu981.colivibackend.features.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -42,5 +43,13 @@ public class UserController {
 
         // Devuelve un 200 OK con los datos actualizados
         return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/me/credentials")
+    public ResponseEntity updateMyProfile(
+            @RequestBody UpdateSensible request,@AuthenticationPrincipal User currentUser
+    ) {
+        userService.updateSensibleData(currentUser, request);
+        return ResponseEntity.ok().build();
     }
 }

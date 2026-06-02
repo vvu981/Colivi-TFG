@@ -16,4 +16,6 @@ public interface UserService {
     void setAdmin(UUID targetUserId);
 
     UpdateNonSensible updateNonSensibleData(User currentUser, UpdateNonSensible updateData);
+
+    void updateSensibleData(User currentUser, UpdateSensible updateSensible);
 }

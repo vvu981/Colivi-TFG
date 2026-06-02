@@ -46,7 +46,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             // 4. Extraemos el email del token
             userEmail = jwtTokenProvider.extractEmail(jwt);
-
             // 5. Si hay un email y la caja fuerte temporal (SecurityContext) aún está vacía
             if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
@@ -58,21 +57,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     User user = userRepository.findByEmailAndDeletedAtIsNull(userEmail)
                             .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-                    // Convertimos su rol (ej: "ADMIN") en la credencial oficial que entiende Spring Security
-                    SimpleGrantedAuthority authority = new SimpleGrantedAuthority(user.getRole().name());
+                    if (jwtTokenProvider.extractTokenVersion(jwt).equals(user.getTokenVersion())) {
 
-                    // Creamos el pase oficial de seguridad
-                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                            user,
-                            null, // No necesitamos la contraseña para nada en este punto
-                            Collections.singletonList(authority)
-                    );
+                        // Convertimos su rol (ej: "ADMIN") en la credencial oficial que entiende Spring Security
+                        SimpleGrantedAuthority authority = new SimpleGrantedAuthority(user.getRole().name());
 
-                    // Le adjuntamos detalles técnicos de la petición (como la IP)
-                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        // Creamos el pase oficial de seguridad
+                        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                                user,
+                                null, // No necesitamos la contraseña para nada en este punto
+                                Collections.singletonList(authority)
+                        );
 
-                    // 6. Guardamos el pase en la caja fuerte temporal de esta petición
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                        // Le adjuntamos detalles técnicos de la petición (como la IP)
+                        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+                        // 6. Guardamos el pase en la caja fuerte temporal de esta petición
+                        SecurityContextHolder.getContext().setAuthentication(authToken);
+                    }
                 }
             }
         } catch (Exception e) {

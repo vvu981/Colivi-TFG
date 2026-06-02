@@ -54,4 +54,6 @@ public class User {
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    private Integer tokenVersion = 1;
 }

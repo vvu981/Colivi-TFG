@@ -11,4 +11,8 @@ public interface JwtTokenProvider {
     boolean isTokenValid(String token);
 
     String extractEmail(String token);
+
+    Integer extractTokenVersion(String token);
+
+
 }

@@ -57,6 +57,7 @@ public class JwtTokenProviderImpl implements JwtTokenProvider {
         return claims.getSubject(); // El "subject" es donde guardamos el email
     }
 
+
     // --- MÉTODOS PRIVADOS DE UTILIDAD ---
 
     private String buildToken(User user, long expiration) {
@@ -64,6 +65,7 @@ public class JwtTokenProviderImpl implements JwtTokenProvider {
                 .subject(user.getEmail()) // Guardamos el email como identificador principal
                 .claim("role", user.getRole().name()) // Guardamos su rol (ADMIN o USER)
                 .claim("id", user.getId().toString()) // Guardamos su UUID
+                .claim("tokenVersion", user.getTokenVersion())
                 .issuedAt(new Date(System.currentTimeMillis()))
                 .expiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(getSignInKey()) // Firmamos con nuestra clave secreta
@@ -73,5 +75,27 @@ public class JwtTokenProviderImpl implements JwtTokenProvider {
     private SecretKey getSignInKey() {
         byte[] keyBytes = Decoders.BASE64.decode(secretKey);
         return Keys.hmacShaKeyFor(keyBytes);
+    }
+
+    // Método principal que usarás desde tu filtro de aduanas
+    @Override
+    public Integer extractTokenVersion(String token) {
+        return extractClaim(token, claims -> claims.get("tokenVersion", Integer.class));
+    }
+
+    // Método genérico para extraer cualquier pieza de información del documento.
+    // (Si ya tienes este método en tu clase para extraer el email o el ID,
+    // no lo dupliques, utiliza el tuyo. Te lo incluyo completo para garantizar que la solución no se rompa).
+    public <T> T extractClaim(String token, java.util.function.Function<io.jsonwebtoken.Claims, T> claimsResolver) {
+        final io.jsonwebtoken.Claims claims = extractAllClaims(token);
+        return claimsResolver.apply(claims);
+    }
+
+    private io.jsonwebtoken.Claims extractAllClaims(String token) {
+        return io.jsonwebtoken.Jwts.parser()
+                .verifyWith(getSignInKey()) // Tu método que devuelve la SecretKey
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
     }
 }

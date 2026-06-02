@@ -111,7 +111,28 @@ public class UserServiceImpl implements UserService {
         return userMapper.toUpdateNonSensibleDto(savedUser);
     }
 
-    public UpdateSensible updateSensibleData(User currentUser, )
+    @Override
+    public void updateSensibleData(User currentUser, UpdateSensible updateSensible) {
+        if (passwordEncoder.matches(updateSensible.currentPassword(), currentUser.getPasswordHash()))
+            throw new RuntimeException("Error: la contraseña es incorrecta");
+
+        boolean isModified = false;
+
+        if (updateSensible.newEmail() != null && !updateSensible.newEmail().isBlank()) {
+            currentUser.setEmail(updateSensible.newEmail());
+            isModified = true;
+        }
+
+        if (updateSensible.newPassword() != null && !updateSensible.newPassword().isBlank()) {
+            String hashedNewPassword = passwordEncoder.encode(updateSensible.newPassword());
+            currentUser.setPasswordHash(hashedNewPassword);
+            isModified = true;
+        }
+
+        if (isModified) {
+            userRepository.save(currentUser);
+        }
+    }
 
     private User getActiveUserById(UUID userId) {
         return userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado"));
