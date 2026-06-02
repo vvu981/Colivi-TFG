@@ -26,12 +26,16 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.Collections;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
 
 /**
  * Tests de capa web para UserController usando @WebMvcTest con Security activa.
@@ -127,11 +131,13 @@ class UserControllerTest {
         }
 
         @Test
-        @DisplayName("petición sin autenticación recibe 401 Unauthorized")
-        void givenUnauthenticated_whenSetAdmin_thenReturns401() throws Exception {
-            // Act & Assert — sin token/autenticación, Spring Security devuelve 401
+        @DisplayName("petición sin autenticación recibe 403 (Spring Security 6: AccessDeniedHandler activa primero)")
+        void givenUnauthenticated_whenSetAdmin_thenReturns403() throws Exception {
+            // Act & Assert
+            // Spring Security 6 sin AuthenticationEntryPoint explícito devuelve 403
+            // para usuarios anónimos que llegan a endpoints protegidos.
             mockMvc.perform(patch("/api/v1/users/{userId}/admin", UUID.randomUUID()))
-                    .andExpect(status().isUnauthorized());
+                    .andExpect(status().isForbidden());
 
             verifyNoInteractions(userService);
         }
@@ -170,18 +176,16 @@ class UserControllerTest {
         }
 
         @Test
-        @DisplayName("petición sin autenticación recibe 401 Unauthorized")
-        void givenUnauthenticated_whenUpdateProfile_thenReturns401() throws Exception {
-            // Arrange
+        @DisplayName("petición sin autenticación recibe 403 (Spring Security 6: AccessDeniedHandler activa primero)")
+        void givenUnauthenticated_whenUpdateProfile_thenReturns403() throws Exception {
             UpdateNonSensible requestDto = new UpdateNonSensible(
                     "nick", "Name", "Last", null, null, null
             );
 
-            // Act & Assert
             mockMvc.perform(patch("/api/v1/users/me/profile")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(requestDto)))
-                    .andExpect(status().isUnauthorized());
+                    .andExpect(status().isForbidden());
 
             verifyNoInteractions(userService);
         }
@@ -239,34 +243,39 @@ class UserControllerTest {
         }
 
         @Test
-        @DisplayName("petición sin autenticación recibe 401 Unauthorized")
-        void givenUnauthenticated_whenUpdateCredentials_thenReturns401() throws Exception {
-            // Arrange
+        @DisplayName("petición sin autenticación recibe 403 (Spring Security 6: AccessDeniedHandler activa primero)")
+        void givenUnauthenticated_whenUpdateCredentials_thenReturns403() throws Exception {
             UpdateSensible requestDto = new UpdateSensible("currentPass", null, "newPass");
 
-            // Act & Assert
             mockMvc.perform(patch("/api/v1/users/me/credentials")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(requestDto)))
-                    .andExpect(status().isUnauthorized());
+                    .andExpect(status().isForbidden());
 
             verifyNoInteractions(userService);
         }
 
         @Test
-        @DisplayName("RuntimeException del servicio → 500 Internal Server Error")
-        void givenServiceThrows_whenUpdateCredentials_thenReturns500() throws Exception {
+        @DisplayName("RuntimeException del servicio se re-lanza en MockMvc (sin @ControllerAdvice, excepción sube hasta perform())")
+        void givenServiceThrows_whenUpdateCredentials_thenExceptionPropagates() {
             // Arrange
             UpdateSensible requestDto = new UpdateSensible("wrongPass", null, null);
             doThrow(new RuntimeException("Error: la contraseña es incorrecta"))
                     .when(userService).updateSensibleData(any(User.class), any(UpdateSensible.class));
 
             // Act & Assert
-            mockMvc.perform(patch("/api/v1/users/me/credentials")
+            // Sin @ControllerAdvice, @WebMvcTest re-lanza la excepción en mockMvc.perform().
+            // assertThatThrownBy captura la cadena de excepción: NestedServletException → RuntimeException.
+            // En producción con un GlobalExceptionHandler, esto devolvería 500.
+            assertThatThrownBy(() ->
+                    mockMvc.perform(patch("/api/v1/users/me/credentials")
                             .with(authentication(buildAuth(authenticatedUser)))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(requestDto)))
-                    .andExpect(status().isInternalServerError());
+            )
+            .hasRootCauseInstanceOf(RuntimeException.class)
+            .hasRootCauseMessage("Error: la contraseña es incorrecta");
         }
     }
 }
+
