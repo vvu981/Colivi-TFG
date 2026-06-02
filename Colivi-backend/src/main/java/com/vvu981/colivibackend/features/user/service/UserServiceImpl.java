@@ -113,8 +113,9 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void updateSensibleData(User currentUser, UpdateSensible updateSensible) {
-        if (passwordEncoder.matches(updateSensible.currentPassword(), currentUser.getPasswordHash()))
+        if (!passwordEncoder.matches(updateSensible.currentPassword(), currentUser.getPasswordHash()))
             throw new RuntimeException("Error: la contraseña es incorrecta");
+
 
         boolean isModified = false;
 

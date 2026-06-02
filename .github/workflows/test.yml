@@ -1,0 +1,73 @@
+name: CI — Test & Coverage Gate
+
+on:
+  push:
+    branches: [ "main", "dev" ]
+  pull_request:
+    branches: [ "main", "dev" ]
+
+jobs:
+  test:
+    name: Build, Test & JaCoCo Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Checkout ──────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Java 21 (Temurin, misma JDK que producción) ──────────────────────
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      # ── 3. Caché de dependencias Maven ───────────────────────────────────────
+      - name: Cache Maven local repository
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      # ── 4. Compilar y ejecutar la suite de pruebas ───────────────────────────
+      #    - verify ejecuta: compile → test → JaCoCo check (umbral 90 %)
+      #    - Se omite el empaquetado final (-DskipITs si hubiera ITs separados)
+      - name: Run tests and verify JaCoCo coverage threshold
+        working-directory: ./Colivi-backend
+        run: mvn --batch-mode --no-transfer-progress verify
+        env:
+          # Variables de entorno mínimas para que el contexto Spring arranque en tests unitarios.
+          # Los tests de integración con BD real usarían Testcontainers y no necesitarían esto.
+          SPRING_DATASOURCE_URL: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+          SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.h2.Driver
+          SPRING_DATASOURCE_USERNAME: sa
+          SPRING_DATASOURCE_PASSWORD: ""
+          SPRING_JPA_HIBERNATE_DDL_AUTO: create-drop
+          SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.H2Dialect
+          JWT_SECRET: dGVzdC1zZWNyZXQta2V5LWZvci1naXRodWItYWN0aW9ucy0xMjM0NTY3OA==
+          JWT_EXPIRATION: 3600000
+          JWT_REFRESH_EXPIRATION: 86400000
+
+      # ── 5. Publicar reporte JaCoCo como artefacto del workflow ───────────────
+      - name: Upload JaCoCo HTML report
+        if: always()   # se sube aunque el job falle, para diagnóstico
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: Colivi-backend/target/site/jacoco/
+          retention-days: 14
+
+      # ── 6. Publicar resumen de cobertura en el PR (solo en pull_request) ─────
+      - name: Add JaCoCo coverage summary to PR
+        if: github.event_name == 'pull_request'
+        uses: madrapps/jacoco-report@v1.6.1
+        with:
+          paths: Colivi-backend/target/site/jacoco/jacoco.xml
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: '📊 Cobertura de Código (JaCoCo)'
+          min-coverage-overall: 90
+          min-coverage-changed-files: 80
