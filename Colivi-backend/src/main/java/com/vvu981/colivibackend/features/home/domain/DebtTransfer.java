@@ -1,4 +1,4 @@
-package com.vvu981.colivibackend.features.hogar.domain;
+package com.vvu981.colivibackend.features.home.domain;
 
 /**
  * Representa una instrucción directa de pago sugerida por el motor para saldar cuentas.

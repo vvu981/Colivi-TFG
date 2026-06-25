@@ -1,4 +1,4 @@
-package com.vvu981.colivibackend.features.hogar.domain;
+package com.vvu981.colivibackend.features.home.domain;
 
 /**
  * Representa el saldo neto consolidado de un usuario en el hogar.

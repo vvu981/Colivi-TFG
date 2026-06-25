@@ -228,15 +228,15 @@ Para evitar brechas de privacidad y garantizar el aislamiento absoluto de los da
 #### Herramienta 1: `auditar_conflictos_hogar`
 * **Descripción:** Recupera y analiza la secuencia cronológica de cambios estructurales, precios o responsabilidades sobre un hogar específico, procesando los snapshots para resolver malentendidos entre convivientes.
 * **Parámetros de Entrada:**
-    * `hogarId` (string, obligatorio): Identificador único del hogar.
+    * `homeId` (string, obligatorio): Identificador único del hogar.
     * `limite` (integer, opcional): Número máximo de registros a analizar para evitar desbordamiento de contexto.
-* **Funcionamiento Interno:** El servidor MCP realiza una petición GET al endpoint `/api/v1/audit/hogar/{hogarId}` del backend en Spring Boot inyectando el token JWT del usuario. Transforma el array de snapshots en un texto estructurado donde se contrasta la autoría de cada cambio.
+* **Funcionamiento Interno:** El servidor MCP realiza una petición GET al endpoint `/api/v1/audit/home/{homeId}` del backend en Spring Boot inyectando el token JWT del usuario. Transforma el array de snapshots en un texto estructurado donde se contrasta la autoría de cada cambio.
 
 #### Herramienta 2: `analizar_balances_y_deudas`
 * **Descripción:** Extrae el grafo de deudas consolidado y el histórico financiero de los últimos meses dentro del hogar para proveer análisis de optimización de gastos y planes de pago eficientes.
 * **Parámetros de Entrada:**
-    * `hogarId` (string, obligatorio): Identificador del hogar.
-* **Funcionamiento Interno:** Consume el endpoint `/api/v1/hogares/{hogarId}/balances` bajo la identidad del token JWT provisto. Devuelve los estados de saldo (quién debe y a quién se le debe una vez procesado el algoritmo de tránsito virtual). El LLM procesa esta información para emitir recomendaciones conversacionales (ej. *"Os recomiendo que A le haga una transferencia de 10€ a C y con eso cerráis la deuda entera del mes"*).
+    * `homeId` (string, obligatorio): Identificador del hogar.
+* **Funcionamiento Interno:** Consume el endpoint `/api/v1/home/{homeId}/balances` bajo la identidad del token JWT provisto. Devuelve los estados de saldo (quién debe y a quién se le debe una vez procesado el algoritmo de tránsito virtual). El LLM procesa esta información para emitir recomendaciones conversacionales (ej. *"Os recomiendo que A le haga una transferencia de 10€ a C y con eso cerráis la deuda entera del mes"*).
 
 #### Herramienta 3: `busqueda_semantica_alojamientos`
 * **Descripción:** Permite al LLM cruzar las peticiones en lenguaje natural del usuario (ej. "piso luminoso, casero amable, zona universitaria") con las valoraciones textuales y descripciones del sistema que la búsqueda por filtros tradicionales de base de datos no puede indexar.

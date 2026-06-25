@@ -1,7 +1,7 @@
-package com.vvu981.colivibackend.features.hogar.service;
+package com.vvu981.colivibackend.features.home.service;
 
-import com.vvu981.colivibackend.features.hogar.domain.Balance;
-import com.vvu981.colivibackend.features.hogar.domain.DebtTransfer;
+import com.vvu981.colivibackend.features.home.domain.Balance;
+import com.vvu981.colivibackend.features.home.domain.DebtTransfer;
 
 import java.util.List;
 

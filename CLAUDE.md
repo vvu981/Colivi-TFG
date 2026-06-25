@@ -364,44 +364,44 @@ CREATE TYPE audit_action    AS ENUM ('CREATE', 'UPDATE', 'DELETE');
 | `GET` | `/messages/conversations/{userId}` | 🔒 | Mensajes con un usuario concreto |
 | `POST` | `/messages` | 🔒 | Enviar mensaje (texto o con `isOffer: true` y `offerAmount`) |
 
-### 5.5 Hogares (`/hogares`)
+### 5.5 Hogares (`/home`)
 
 | Método | Endpoint | Auth | Descripción |
 |---|---|---|---|
-| `POST` | `/hogares` | 🔒 | Crear un nuevo hogar (el creador es admin del hogar) |
-| `GET` | `/hogares/{hogarId}` | 🔒 | Detalle del hogar (solo miembros) |
-| `PUT` | `/hogares/{hogarId}` | 🔒 HOGAR-ADMIN | Actualizar nombre del hogar |
-| `POST` | `/hogares/{hogarId}/members` | 🔒 HOGAR-ADMIN | Invitar miembro por email o nickname |
-| `DELETE` | `/hogares/{hogarId}/members/{userId}` | 🔒 HOGAR-ADMIN | Eliminar miembro (solo si balance neto = 0) |
-| `GET` | `/hogares/{hogarId}/balances` | 🔒 | Balances actuales y grafo de deudas simplificado |
+| `POST` | `/home` | 🔒 | Crear un nuevo hogar (el creador es admin del hogar) |
+| `GET` | `/home/{hogarId}` | 🔒 | Detalle del hogar (solo miembros) |
+| `PUT` | `/home/{hogarId}` | 🔒 HOGAR-ADMIN | Actualizar nombre del hogar |
+| `POST` | `/home/{hogarId}/members` | 🔒 HOGAR-ADMIN | Invitar miembro por email o nickname |
+| `DELETE` | `/home/{hogarId}/members/{userId}` | 🔒 HOGAR-ADMIN | Eliminar miembro (solo si balance neto = 0) |
+| `GET` | `/home/{hogarId}/balances` | 🔒 | Balances actuales y grafo de deudas simplificado |
 
-### 5.6 Gastos (`/hogares/{hogarId}/expenses`)
-
-| Método | Endpoint | Auth | Descripción |
-|---|---|---|---|
-| `GET` | `/hogares/{hogarId}/expenses` | 🔒 | Listar gastos del hogar (`page`, `size`, `from`, `to`) |
-| `GET` | `/hogares/{hogarId}/expenses/{expenseId}` | 🔒 | Detalle de un gasto |
-| `POST` | `/hogares/{hogarId}/expenses` | 🔒 | Registrar nuevo gasto (`payerId`, `amount`, `affectedUsers[]`, `percentages[]`) |
-| `PUT` | `/hogares/{hogarId}/expenses/{expenseId}` | 🔒 | Modificar gasto (genera snapshot de auditoría) |
-| `DELETE` | `/hogares/{hogarId}/expenses/{expenseId}` | 🔒 | Eliminar gasto (genera snapshot de auditoría) |
-
-### 5.7 Tareas (`/hogares/{hogarId}/tasks`)
+### 5.6 Gastos (`/home/{hogarId}/expenses`)
 
 | Método | Endpoint | Auth | Descripción |
 |---|---|---|---|
-| `GET` | `/hogares/{hogarId}/tasks` | 🔒 | Listar tareas del hogar |
-| `POST` | `/hogares/{hogarId}/tasks` | 🔒 | Crear tarea (`title`, `description`, `assignedTo`) |
-| `PUT` | `/hogares/{hogarId}/tasks/{taskId}` | 🔒 | Actualizar tarea (genera snapshot de auditoría) |
-| `PATCH` | `/hogares/{hogarId}/tasks/{taskId}/toggle` | 🔒 | Conmutar estado `COMPLETADA` / `PENDIENTE` |
-| `DELETE` | `/hogares/{hogarId}/tasks/{taskId}` | 🔒 | Eliminar tarea |
+| `GET` | `/home/{hogarId}/expenses` | 🔒 | Listar gastos del hogar (`page`, `size`, `from`, `to`) |
+| `GET` | `/home/{hogarId}/expenses/{expenseId}` | 🔒 | Detalle de un gasto |
+| `POST` | `/home/{hogarId}/expenses` | 🔒 | Registrar nuevo gasto (`payerId`, `amount`, `affectedUsers[]`, `percentages[]`) |
+| `PUT` | `/home/{hogarId}/expenses/{expenseId}` | 🔒 | Modificar gasto (genera snapshot de auditoría) |
+| `DELETE` | `/home/{hogarId}/expenses/{expenseId}` | 🔒 | Eliminar gasto (genera snapshot de auditoría) |
+
+### 5.7 Tareas (`/home/{hogarId}/tasks`)
+
+| Método | Endpoint | Auth | Descripción |
+|---|---|---|---|
+| `GET` | `/home/{hogarId}/tasks` | 🔒 | Listar tareas del hogar |
+| `POST` | `/home/{hogarId}/tasks` | 🔒 | Crear tarea (`title`, `description`, `assignedTo`) |
+| `PUT` | `/home/{hogarId}/tasks/{taskId}` | 🔒 | Actualizar tarea (genera snapshot de auditoría) |
+| `PATCH` | `/home/{hogarId}/tasks/{taskId}/toggle` | 🔒 | Conmutar estado `COMPLETADA` / `PENDIENTE` |
+| `DELETE` | `/home/{hogarId}/tasks/{taskId}` | 🔒 | Eliminar tarea |
 
 ### 5.8 Auditoría (`/audit`)
 
 | Método | Endpoint | Auth | Descripción |
 |---|---|---|---|
-| `GET` | `/audit/hogar/{hogarId}` | 🔒 | Feed cronológico de actividad del hogar. Query: `limit`, `page`, `entityType` |
-| `GET` | `/audit/hogar/{hogarId}/expense/{expenseId}` | 🔒 | Historial completo de cambios de un gasto |
-| `GET` | `/audit/hogar/{hogarId}/task/{taskId}` | 🔒 | Historial completo de cambios de una tarea |
+| `GET` | `/audit/home/{homeId}` | 🔒 | Feed cronológico de actividad del hogar. Query: `limit`, `page`, `entityType` |
+| `GET` | `/audit/home/{homeId}/expense/{expenseId}` | 🔒 | Historial completo de cambios de un gasto |
+| `GET` | `/audit/home/{homeId}/task/{taskId}` | 🔒 | Historial completo de cambios de una tarea |
 
 ### 5.9 Codificación de Respuestas de Error
 
@@ -411,7 +411,7 @@ CREATE TYPE audit_action    AS ENUM ('CREATE', 'UPDATE', 'DELETE');
   "status": 403,
   "error": "Forbidden",
   "message": "El usuario no pertenece al hogar solicitado.",
-  "path": "/api/v1/hogares/abc123/balances"
+  "path": "/api/v1/home/abc123/balances"
 }
 ```
 
@@ -480,7 +480,7 @@ El servidor MCP **no almacena, no genera y no modifica** tokens JWT. Actúa excl
 **Endpoint interno consumido:**
 
 ```
-GET /api/v1/audit/hogar/{hogarId}?limit={limite}&entityType={entityType}
+GET /api/v1/audit/home/{homeId}?limit={limite}&entityType={entityType}
 Authorization: Bearer <JWT propagado>
 ```
 
@@ -520,7 +520,7 @@ Authorization: Bearer <JWT propagado>
 **Endpoint interno consumido:**
 
 ```
-GET /api/v1/hogares/{hogarId}/balances
+GET /api/v1/home/{homeId}/balances
 Authorization: Bearer <JWT propagado>
 ```
 
@@ -938,7 +938,7 @@ CMD ["node", "server.js"]
 - [ ] Implementar `ExpenseServiceImpl implements IExpenseService` invocando `IAuditService` en cada mutación
 - [ ] Diseñar interfaz `DebtSimplifierEngine`: `simplify(List<RawDebt>): List<SimplifiedDebt>`
 - [ ] Implementar `SimpleTransitDebtSimplifier implements DebtSimplifierEngine`
-- [ ] Implementar endpoint `GET /hogares/{hogarId}/balances` que invoca `DebtSimplifierEngine`
+- [ ] Implementar endpoint `GET /home/{homeId}/balances` que invoca `DebtSimplifierEngine`
 - [ ] Implementar `HogarController` y `ExpenseController` con sus endpoints correspondientes
 
 **Tests adicionales:**
@@ -969,7 +969,7 @@ CMD ["node", "server.js"]
 - [ ] Verificar que el trigger de PostgreSQL de inmutabilidad está activo en migración Flyway
 - [ ] Crear `TaskEntity` con `@Version`, entidad `Task` y su servicio `ITaskService` / `TaskServiceImpl`
 - [ ] Implementar `TaskController` con todos los endpoints de tareas
-- [ ] Implementar endpoint `GET /audit/hogar/{hogarId}` con paginación y filtros
+- [ ] Implementar endpoint `GET /audit/home/{homeId}` con paginación y filtros
 - [ ] Implementar transformación de snapshots JSONB a texto legible en `AuditFeedFormatter`
 
 **Tests:**
@@ -1058,7 +1058,7 @@ CMD ["node", "server.js"]
 - [ ] Implementar componente `<ChatWindow />` con historial de mensajes
 - [ ] Implementar llamada al LLM (Anthropic API / OpenAI) con inyección del JWT en el contexto MCP
 - [ ] Implementar `<ToolCallIndicator />` que muestra qué herramienta MCP está usando el modelo
-- [ ] Conectar el chat a la ruta `/hogar/[hogarId]/chat`
+- [ ] Conectar el chat a la ruta `/home/[homeId]/chat`
 
 **Entregable verificable:** El usuario puede abrir el chat en su hogar y preguntar *"¿Quién ha tocado el gasto de la luz?"*. El LLM invoca `auditar_conflictos_hogar`, recibe los snapshots del backend con el JWT del usuario y responde con una explicación en lenguaje natural.
 
