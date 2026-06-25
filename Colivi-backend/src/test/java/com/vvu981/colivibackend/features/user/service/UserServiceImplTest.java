@@ -252,7 +252,7 @@ class UserServiceImplTest {
     class RefreshToken {
 
         @Test
-        @DisplayName("happy path: refresh token válido devuelve nuevo access token")
+        @DisplayName("happy path: refresh token válido devuelve nuevo access token y refresh token")
         void givenValidRefreshToken_whenRefresh_thenReturnsNewAccessToken() {
             // Arrange
             RefreshTokenRequest request = new RefreshTokenRequest("valid.refresh.token");
@@ -260,15 +260,17 @@ class UserServiceImplTest {
             when(jwtTokenProvider.extractEmail("valid.refresh.token")).thenReturn("victor@colivi.com");
             when(userRepository.findByEmailAndDeletedAtIsNull("victor@colivi.com"))
                     .thenReturn(Optional.of(persistedUser));
+            when(jwtTokenProvider.extractTokenVersion("valid.refresh.token")).thenReturn(1);
             when(jwtTokenProvider.generateAccessToken(persistedUser)).thenReturn("new.access.token");
+            when(jwtTokenProvider.generateRefreshToken(persistedUser)).thenReturn("new.refresh.token");
 
             // Act
             AuthResponse response = userService.refreshToken(request);
 
             // Assert
             assertThat(response.accessToken()).isEqualTo("new.access.token");
-            // El refresh token original se reutiliza en la respuesta
-            assertThat(response.refreshToken()).isEqualTo("valid.refresh.token");
+            // El refresh token rota
+            assertThat(response.refreshToken()).isEqualTo("new.refresh.token");
         }
 
         @Test
