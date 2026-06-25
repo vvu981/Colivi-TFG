@@ -62,12 +62,14 @@ jobs:
           retention-days: 14
 
       # ── 6. Publicar resumen de cobertura en el PR (solo en pull_request) ─────
-      - name: Add JaCoCo coverage summary to PR
+      - name: Generate JaCoCo Code Coverage Report
+        id: jacoco_report
         if: github.event_name == 'pull_request'
-        uses: madrapps/jacoco-report@v1.6.1
+        uses: Madrapps/jacoco-report@v1.7.1
         with:
-          paths: Colivi-backend/target/site/jacoco/jacoco.xml
+          paths: ${{ github.workspace }}/Colivi-backend/target/site/jacoco/jacoco.xml
           token: ${{ secrets.GITHUB_TOKEN }}
-          title: '📊 Cobertura de Código (JaCoCo)'
-          min-coverage-overall: 90
-          min-coverage-changed-files: 80
+          min-coverage-default: 90
+          min-coverage-changed-files: 90
+          title: "Backend Build & Test summary"
+          update-comment: true
