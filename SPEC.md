@@ -40,6 +40,7 @@ Este módulo gestiona el mercado de alquileres de corta y larga duración, permi
     * Acceso a un panel de moderación global.
     * Capacidad de eliminar cualquier anuncio, comentario o valoración que vulnere las normativas de la plataforma.
     * **Gestión de Solicitudes:** Bandeja de entrada para `ACEPTAR` o `RECHAZAR` las solicitudes de nuevos alojamientos enviadas por los usuarios.
+    * **Alertas de Moderación Automática:** Recibirá notificaciones prioritarias cuando un anuncio supere el umbral de 5 denuncias únicas en estado `PENDING`, que habrán activado la ocultación preventiva automática del anuncio.
 
 #### B. Requisitos del Anuncio de Alojamiento
 Cada anuncio publicado debe contener obligatoriamente los siguientes datos validados en el backend:
@@ -70,7 +71,7 @@ Este módulo opera de forma completamente privada. Todos los usuarios que intera
     * Debajo del nombre de cada usuario aparecerá un **círculo rojo** si el balance global del usuario es negativo (debe dinero al grupo).
     * Aparecerá un **círculo verde** si el balance global es positivo (el grupo le debe dinero a él).
 * **Algoritmo de Simplificación de Deudas:** El backend ejecutará un algoritmo de optimización de grafos de transacciones para reducir el número de transferencias necesarias para liquidar el hogar.
-    * *Restricción de Integridad Histórica:* Para coexistir armónicamente con el subsistema de auditoría inmutable, **este algoritmo opera estrictamente como una vista proyectada calculada en tiempo de ejecución (On-the-Fly)** o cacheada temporalmente. Bajo ninguna circunstancia modificará, reescribirá o fusionará los registros de gastos originales persistidos en la base de datos. El historial de transacciones se mantiene intacto; el sistema simplemente calcula y sugiere de forma dinámica la matriz óptima de compensaciones (*"quién debe pagar a quién hoy"*) para saldar las cuentas totales reduciendo los pasos intermedios.
+    * *Restricción de Integridad Histórica:* Para coexistir armónicamente con el subsistema de auditoría inmutable, **este algoritmo opera estrictamente como una vista proyectada calculada en tiempo de ejecución (On-the-Fly)** o cacheada temporalmente. Bajo ninguna circunstancia modificará, reescribirá o fusionará los registros de gastos originales persistidos en la base de datos. El historial de transacciones se mantiene intacto; el sistema simplemente calcula y sugiere de forma dinámica la matriz óptima de compensaciones (*"quién debe pagar a quién hoy"*) para saldar las cuentas totales reduciendo los pasos indeseados.
     * *Regla de tránsito:* Si el usuario A debe 10€ al usuario B, y el usuario B debe 10€ al usuario C, el sistema simplifica automáticamente la estructura transaccional sugiriendo que **A debe 10€ directamente a C**, eliminando la necesidad de que el dinero pase por B en la vista de liquidación.
 
 #### C. Módulo de Tareas Colectivas
@@ -100,20 +101,22 @@ Este componente técnico transversal responde de manera directa a las restriccio
 A continuación se detalla la estructura de entidades e índices necesaria en la base de datos PostgreSQL para dar soporte al sistema y garantizar el cumplimiento de las restricciones funcionales.
 
 ```
-                                  +-----------------------+
-                                  |         USER          |
-                                  +-----------------------+
-                                  | PK: id (UUID)         |<----+
-                                  | nickname (VARCHAR)    |     |
-                                  | email (VARCHAR)       |     |
-                                  | password_hash (TEXT)  |     |
-                                  | first_name (VARCHAR)  |     |
-                                  | last_name_1 (VARCHAR) |     |
-                                  | last_name_2 (VARCHAR) |     |
-                                  | phone (VARCHAR)       |     |
-                                  | profile_pic_url (TEXT)|     |
-                                  | role (ENUM)           |     |
-                                  +-----------------------+     |
+                                  +--------------------------+
+                                  |          USER            |
+                                  +--------------------------+
+                                  | PK: id (UUID)            |<----+
+                                  | nickname (VARCHAR)       |     |
+                                  | email (VARCHAR)          |     |
+                                  | password_hash (TEXT)     |     |
+                                  | first_name (VARCHAR)     |     |
+                                  | last_name_1 (VARCHAR)    |     |
+                                  | last_name_2 (VARCHAR)    |     |
+                                  | phone (VARCHAR)          |     |
+                                  | profile_pic_url (TEXT)   |     |
+                                  | role (ENUM)              |     |
+                                  | bannedUntil (TIMESTAMP)  |     | ← penalización temporal
+                                  | banReason (TEXT, NULL)   |     | ← motivo de la sanción
+                                  +--------------------------+     |
                                    /     |           \         |
                                   /      |            \        |
                                  /       |             \       |
@@ -144,6 +147,21 @@ A continuación se detalla la estructura de entidades e índices necesaria en la
   | longitude (NUMERIC)                                      |
   | status (ENUM)                                            |
   +-----------------------------+                            |
+                 |                                           |
+                 v  1:N                                      v
+   +-------------------------------------+                   |
+   |       ACCOMMODATION_REPORT          |                   |
+   +-------------------------------------+                   |
+   | PK: id           (UUID)             |                   |
+   | FK: accommodation_id (UUID)         |                   |
+   | FK: reporter_id  (UUID, NULL)       | ← null = reporte anónimo
+   | reason (ENUM: SPAM|SCAM|           |                   |
+   |         INAPPROPRIATE|MISLEADING)  |                   |
+   | description (TEXT)                  |                   |
+   | status (ENUM: PENDING|             |                   |
+   |         REVIEWED|DISMISSED)        |                   |
+   | created_at (TIMESTAMP)              |                   |
+   +-------------------------------------+                   |
                  |                                           |
                  v                                           v
   +-----------------------------+             +-----------------------+
@@ -199,6 +217,20 @@ A continuación se detalla la estructura de entidades e índices necesaria en la
     * Índice compuesto en `ACCOMMODATION(city, price_per_month)` para optimizar los filtros de la página principal.
     * Índices numéricos estándar sobre B-Tree para `latitude` y `longitude` para resolver las consultas del buscador basado en mapas de forma eficiente.
 4.  **Campos de Control de Bloqueo:** Las tablas `HOGAR`, `EXPENSE` y `TASK` incorporan la columna `version (INT)` gestionada de forma automática por Spring Data JPA para instrumentar el control de concurrencia optimista.
+5.  **Gestión de Baneos Temporales (Entidad `USER`):**
+    * El campo `bannedUntil (TIMESTAMP, NULL)` almacena la fecha/hora de expiración del baneo. Un valor `NULL` o una fecha en el pasado significa que el usuario no está baneado.
+    * El campo `banReason (TEXT, NULL)` almacena el motivo humano-legible de la sanción impuesta por el administrador.
+    * La entidad `User` expone el método de negocio `isBanned(): boolean` que compara `bannedUntil` con el reloj del servidor (`LocalDateTime.now()`) de forma dinámica. No se persiste ningún flag booleano de estado.
+    * El `JwtAuthenticationFilter` intercepta **cada petición entrante** y, tras validar el JWT, invoca `isBanned()` sobre el usuario cargado. Si el resultado es `true`, la petición se rechaza inmediatamente con `403 Forbidden` y un cuerpo de error que incluye la fecha de expiración del baneo. Esto garantiza que un JWT activo emitido antes del baneo quede operativamente anulado en tiempo real sin necesidad de invalidar el token en base de datos.
+6.  **Auto-Moderación Preventiva de Denuncias (`ACCOMMODATION_REPORT`):**
+    * Si un anuncio acumula más de 5 denuncias únicas (por `reporter_id` distinto o anónimas) en estado `PENDING`, el sistema ejecuta automáticamente las siguientes acciones de forma atómica dentro de la misma transacción:
+        1. Cambia el `status` del `ACCOMMODATION` afectado a `PENDIENTE` (ocultándolo del marketplace público).
+        2. Genera una alerta prioritaria en la bandeja del Administrador para revisión humana urgente.
+    * El umbral de 5 denuncias se evalúa en `AccommodationReportService` tras cada nueva denuncia persistida.
+    * El endpoint de creación de denuncias es: `POST /api/v1/accommodations/{id}/reports` (🔒 o anónimo).
+    * **Enumerados requeridos:**
+        * `report_reason AS ENUM ('SPAM', 'SCAM', 'INAPPROPRIATE', 'MISLEADING')`
+        * `report_status AS ENUM ('PENDING', 'REVIEWED', 'DISMISSED')`
 
 ---
 
@@ -270,11 +302,11 @@ es.tfg.plataforma
 
 ### Aplicación Práctica de Principios SOLID en el Backend
 
-1.  **Single Responsibility Principle (SRP):** Un controlador (`AccommodationController`) solo gestiona la deserialización y validación HTTP. La lógica de aprobación o rechazo de anuncios reside exclusivamente en `AccommodationService`. La persistencia física de la inmutabilidad de logs se delega a `AuditLogService`. Ninguna clase asume dos responsabilidades.
+1.  **Single Responsibility Principle (SRP):** Un controlador (`AccommodationController`) solo gestiona la deserialización y validación HTTP. La lógica de aprobación o rechazo de anuncios reside exclusivamente en `AccommodationService`. La persistencia física de la inmutabilidad de logs se delega a `AuditLogService`. La evaluación del contador de denuncias y la auto-moderación reside exclusivamente en `AccommodationReportService`. Ninguna clase asume dos responsabilidades.
 2.  **Open/Closed Principle (OCP):** El motor de liquidación de deudas se implementará mediante una interfaz `DebtSimplifierEngine`. Si en el futuro se desea cambiar el algoritmo actual de tránsito directo por uno basado en programación lineal o flujos de redes maximales, se creará una nueva clase implementando la interfaz sin modificar el código de los servicios que consumen la liquidación.
 3.  **Liskov Substitution Principle (LSP):** Todas las extensiones o tipos de usuarios heredan de la entidad base o comparten contratos de seguridad. Cualquier componente del sistema que requiera un identificador de autoría puede interactuar con la abstracción del usuario autenticado sin importar si el rol final es un Administrador o un Usuario Común.
-4.  **Interface Segregation Principle (ISP):** Los repositorios de Spring Data se fragmentan. No se crea una interfaz gigantesca de base de datos. `AuditLogRepository` solo expone operaciones de lectura (`findById`, `findAll`) y guardado (`save`), eliminando de su interfaz cualquier método de actualización o borrado destructivo.
-5.  **Dependency Inversion Principle (DIP):** Los componentes de alto nivel (como los controladores o los servicios principales) nunca dependen de implementaciones concretas de bajo nivel. Todas las dependencias se inyectan a través de constructores utilizando interfaces, facilitando el desacoplamiento total y la viabilidad de pruebas unitarias con mocks.
+4.  **Interface Segregation Principle (ISP):** Los repositorios de Spring Data se fragmentan. No se crea una interfaz gigantesca de base de datos. `AuditLogRepository` solo expone operaciones de lectura (`findById`, `findAll`) y guardado (`save`), eliminando de su interfaz cualquier método de actualización o borrado destructivo. De igual forma, `IAccommodationReportRepository` únicamente expone `save`, `countPendingByAccommodationId` y `findByAccommodationId`, sin métodos de mutación masiva.
+5.  **Dependency Inversion Principle (DIP):** Los componentes de alto nivel (como los controladores o los servicios principales) nunca dependen de implementaciones concretas de bajo nivel. Todas las dependencias se inyectan a través de constructores utilizando interfaces, facilitando el desacoplamiento total y la viabilidad de pruebas unitarias con mocks. El `JwtAuthenticationFilter` depende de la abstracción `IUserService` para cargar el usuario y evaluar `isBanned()`, nunca de `UserServiceImpl` directamente.
 
 ---
 

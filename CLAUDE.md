@@ -46,7 +46,9 @@ Servidor independiente que implementa el Model Context Protocol (MCP) y actúa c
 | **Mínimo de imágenes** | Un anuncio no puede pasar a estado `ACTIVO` si tiene menos de 2 imágenes asociadas. Validación en `AccommodationService` y a nivel de base de datos. |
 | **Ciclo de vida del anuncio** | Estados: `PENDIENTE → ACTIVO` (aprobado por admin) · `PENDIENTE → RECHAZADO` · `ACTIVO → FINALIZADO` |
 | **Almacenamiento de imágenes** | Las imágenes se suben a un proveedor cloud (S3 / GCS / Cloudinary). El backend persiste únicamente las URLs absolutas públicas. Nunca se almacenan binarios en el servidor Spring Boot. |
-| **Moderación** | Un Administrador puede eliminar cualquier anuncio, comentario o valoración. Solo un Administrador puede aprobar o rechazar solicitudes de publicación. |
+| **Moderación manual** | Un Administrador puede eliminar cualquier anuncio, comentario o valoración. Solo un Administrador puede aprobar o rechazar solicitudes de publicación. |
+| **Auto-moderación preventiva** | Si un anuncio acumula más de **5 denuncias únicas** en estado `PENDING` (en tabla `ACCOMMODATION_REPORT`), el sistema cambia automáticamente su estado a `PENDIENTE` y genera una alerta prioritaria en la bandeja del Administrador. Esta acción es atómica y gestionada por `AccommodationReportService`. |
+| **Denuncias de anuncios** | Cualquier usuario (registrado o anónimo) puede enviar una denuncia vía `POST /api/v1/accommodations/{id}/reports`. Los motivos posibles son: `SPAM`, `SCAM`, `INAPPROPRIATE`, `MISLEADING`. El estado de la denuncia sigue el ciclo: `PENDING → REVIEWED → DISMISSED`. |
 
 ### 2.2 Motor de Gastos Compartidos
 
@@ -75,6 +77,7 @@ Servidor independiente que implementa el Model Context Protocol (MCP) y actúa c
 | **Cifrado de contraseñas** | BCrypt con factor de coste ≥ 12. |
 | **Multi-tenant estricto** | Antes de devolver datos de un `hogar_id`, el backend verifica que el JWT del solicitante pertenezca a ese hogar. Respuesta `403 Forbidden` en caso contrario. |
 | **MCP Passthrough Auth** | El Servidor MCP no genera ni almacena tokens. Propaga el JWT del usuario sin modificaciones en la cabecera `Authorization: Bearer <JWT>` de cada llamada al backend. |
+| **Baneos temporales** | Los campos `bannedUntil (LocalDateTime)` y `banReason (String)` en la entidad `User` permiten penalizaciones con expiración automática. El método `isBanned()` calcula dinámicamente el estado comparando `bannedUntil` con `LocalDateTime.now()` en el servidor, sin persistir flags booleanos. El `JwtAuthenticationFilter` invoca `isBanned()` en cada petición tras validar el JWT: si el usuario está baneado, la petición se rechaza con `403 Forbidden` incluyendo la fecha de expiración, anulando operativamente cualquier JWT activo emitido antes del baneo sin necesidad de invalidar tokens en base de datos. |
 
 ---
 
@@ -170,6 +173,8 @@ Servidor independiente que implementa el Model Context Protocol (MCP) y actúa c
 │    profile_pic_url TEXT      │                                   │
 │    role           ENUM       │  (ADMIN, USER)                    │
 │    created_at     TIMESTAMP  │                                   │
+│    bannedUntil    TIMESTAMP  │  ← NULL = sin baneo activo        │
+│    banReason      TEXT NULL  │  ← motivo de la sanción           │
 └──────────────────────────────┘                                   │
          │              │                                          │
          │ 1:N          │ 1:N                                      │
@@ -279,6 +284,11 @@ CREATE INDEX idx_audit_entity       ON audit_snapshot_log(entity_id, server_time
 -- Mensajería privada
 CREATE INDEX idx_message_receiver   ON message(receiver_id, created_at DESC);
 CREATE INDEX idx_message_sender     ON message(sender_id, created_at DESC);
+
+-- Denuncias: contar denuncias pendientes por anuncio (clave para la regla de auto-moderación)
+CREATE INDEX idx_report_accommodation_status
+    ON accommodation_report(accommodation_id, status)
+    WHERE status = 'PENDING';
 ```
 
 ### 4.3 Trigger de Inmutabilidad (PostgreSQL)
@@ -305,6 +315,8 @@ CREATE TRIGGER trg_audit_immutable
 CREATE TYPE user_role       AS ENUM ('ADMIN', 'USER');
 CREATE TYPE listing_status  AS ENUM ('PENDIENTE', 'ACTIVO', 'RECHAZADO', 'FINALIZADO');
 CREATE TYPE audit_action    AS ENUM ('CREATE', 'UPDATE', 'DELETE');
+CREATE TYPE report_reason   AS ENUM ('SPAM', 'SCAM', 'INAPPROPRIATE', 'MISLEADING');
+CREATE TYPE report_status   AS ENUM ('PENDING', 'REVIEWED', 'DISMISSED');
 ```
 
 ---
@@ -347,6 +359,7 @@ CREATE TYPE audit_action    AS ENUM ('CREATE', 'UPDATE', 'DELETE');
 | `GET` | `/accommodations/{id}/reviews` | ❌ | Valoraciones del alojamiento |
 | `POST` | `/accommodations/{id}/reviews` | 🔒 | Publicar valoración sobre el alojamiento |
 | `DELETE` | `/accommodations/{id}/reviews/{reviewId}` | 🔒 ADMIN | Moderar y eliminar valoración |
+| `POST` | `/accommodations/{id}/reports` | ❌/🔒 | Enviar denuncia sobre el anuncio. Body: `{reason, description}`. Anonymous si no se adjunta JWT. Desencadena auto-moderación si el contador PENDING supera 5. |
 
 #### Endpoints de Administración de Anuncios
 
@@ -419,7 +432,7 @@ CREATE TYPE audit_action    AS ENUM ('CREATE', 'UPDATE', 'DELETE');
 |---|---|
 | `400` | Validación de datos (porcentajes ≠ 100 %, imágenes insuficientes, etc.) |
 | `401` | Token JWT ausente, expirado o inválido |
-| `403` | Acceso a recursos de otro hogar / acciones sin permiso de rol |
+| `403` | Acceso a recursos de otro hogar / acciones sin permiso de rol / usuario baneado temporalmente (incluye `bannedUntil` en el cuerpo del error) |
 | `404` | Recurso no encontrado |
 | `409` | Conflicto de versión (`OptimisticLockingFailureException`) |
 | `500` | Error interno del servidor |
@@ -994,20 +1007,33 @@ CMD ["node", "server.js"]
 **Tareas — Backend:**
 
 - [ ] Crear entidades JPA: `Accommodation`, `AccommodationImage`, `AccommodationReview`, `Message`
-- [ ] Crear migraciones Flyway: tablas, índices compuestos `(city, price_per_month)` e índices B-Tree sobre `(latitude, longitude)`
+- [ ] Crear entidad JPA `AccommodationReport` con campos: `id` (UUID), `accommodationId` (UUID FK), `reporterId` (UUID FK, nullable), `reason` (ENUM), `description` (Text), `status` (ENUM, default `PENDING`), `createdAt` (Timestamp)
+- [ ] Crear migraciones Flyway: tablas, índices compuestos `(city, price_per_month)`, índices B-Tree sobre `(latitude, longitude)`, índice parcial sobre `accommodation_report(accommodation_id, status) WHERE status='PENDING'`
+- [ ] Añadir enumerados PostgreSQL: `report_reason` y `report_status` en migración Flyway
+- [ ] Añadir campos `bannedUntil (LocalDateTime, nullable)` y `banReason (String, nullable)` a la entidad JPA `User` y su migración Flyway correspondiente
+- [ ] Implementar método de negocio `isBanned()` en la entidad `User` que compara `bannedUntil` con `LocalDateTime.now()` dinámicamente (sin flag booleano persistido)
+- [ ] Actualizar `JwtAuthenticationFilter` para invocar `isBanned()` tras validar el JWT y rechazar con `403 Forbidden` si el resultado es `true`, incluyendo `bannedUntil` en el cuerpo del error
 - [ ] Diseñar interfaz `IImageStorageService`: `uploadImage(file): String` (devuelve URL pública)
 - [ ] Implementar `CloudinaryImageStorageService implements IImageStorageService` (o S3)
 - [ ] Diseñar interfaz `IAccommodationService`: `createListing`, `approveListing`, `rejectListing`, `updateListing`, `deleteListing`, `searchListings`
 - [ ] Implementar `AccommodationServiceImpl` con validación de mínimo 2 imágenes antes de aprobar
+- [ ] Diseñar interfaz `IAccommodationReportService` con métodos: `createReport`, `getPendingReports`, `reviewReport`, `dismissReport`
+- [ ] Implementar `AccommodationReportServiceImpl` que, tras persistir una nueva denuncia, cuenta las denuncias únicas en `PENDING` para ese `accommodationId`. Si el contador supera 5, cambia atómicamente el estado del anuncio a `PENDIENTE` y genera la alerta de administrador
+- [ ] Diseñar interfaz `IAccommodationReportRepository` exponiéndo exclusivamente: `save`, `countByAccommodationIdAndStatus`, `findByAccommodationId` (sin métodos de mutación masiva — ISP)
+- [ ] Implementar `AccommodationReportController` con endpoint: `POST /accommodations/{id}/reports` (abierto a anónimos y autenticados)
 - [ ] Implementar `IReviewService` / `ReviewServiceImpl` para valoraciones de alojamiento y de usuario
 - [ ] Implementar `IMessageService` / `MessageServiceImpl` con soporte para ofertas económicas
 - [ ] Implementar `AccommodationController`, `ReviewController`, `MessageController`
-- [ ] Implementar `AdminController` con endpoints de moderación (protegidos por rol `ADMIN`)
+- [ ] Implementar `AdminController` con endpoints de moderación (protegidos por rol `ADMIN`), incluyendo endpoints para listar y revisar denuncias: `GET /admin/accommodations/{id}/reports`, `POST /admin/accommodations/{id}/reports/{reportId}/review`, `POST /admin/accommodations/{id}/reports/{reportId}/dismiss`
+- [ ] Implementar endpoint de baneo de usuario: `POST /admin/users/{userId}/ban` con body `{bannedUntil, banReason}` (solo ADMIN)
 
 **Tests:**
 
 - [ ] Test unitario: `AccommodationServiceImpl.approveListing` con 1 imagen lanza `InsufficientImagesException`
 - [ ] Test unitario: `AccommodationServiceImpl.approveListing` con 2+ imágenes cambia estado a `ACTIVO`
+- [ ] Test unitario: `User.isBanned()` — `bannedUntil` en el futuro devuelve `true`; `bannedUntil` en el pasado o `null` devuelve `false`
+- [ ] Test unitario: `AccommodationReportServiceImpl` con 5 denuncias PENDING no activa auto-moderación; con 6 sí la activa y cambia estado del anuncio a `PENDIENTE`
+- [ ] Test de integración: `JwtAuthenticationFilter` rechaza con `403` una petición de usuario baneado con JWT válido
 - [ ] Test de integración: búsqueda por `city` y `maxPrice` devuelve solo anuncios `ACTIVO` dentro del rango
 
 **Entregable verificable:** Un usuario puede crear un anuncio, subir 2 imágenes, esperar aprobación del admin, y aparecer en el mapa con la localización correcta.
