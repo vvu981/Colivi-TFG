@@ -18,4 +18,8 @@ public interface UserService {
     UpdateNonSensible updateNonSensibleData(User currentUser, UpdateNonSensible updateData);
 
     void updateSensibleData(User currentUser, UpdateSensible updateSensible);
+
+    void deleteUserSoft(UUID userId);
+
+    void deleteUserHard(UUID userId);
 }

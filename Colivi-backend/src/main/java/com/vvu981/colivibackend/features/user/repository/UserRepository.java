@@ -19,5 +19,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     List<User> findAllByDeletedAtIsNull();
 
-    void setAdmin(UUID targetUserId);
+    @Modifying
+    @Query("UPDATE User u SET u.role = 'ADMIN' WHERE u.id = :targetUserId AND u.deletedAt IS NULL")
+    void setAdmin(@Param("targetUserId") UUID targetUserId);
 }

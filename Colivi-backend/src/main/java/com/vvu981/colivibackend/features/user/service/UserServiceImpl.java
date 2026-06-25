@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Service
@@ -137,5 +138,20 @@ public class UserServiceImpl implements UserService {
 
     private User getActiveUserById(UUID userId) {
         return userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado"));
+    }
+
+    @Override
+    public void deleteUserSoft(UUID userId) {
+        User user = getActiveUserById(userId);
+
+        user.setDeletedAt(LocalDateTime.now());
+        userRepository.save(user);
+    }
+
+    @Override
+    public void deleteUserHard(UUID userId) {
+        User user = getActiveUserById(userId);
+
+        userRepository.delete(user);
     }
 }
