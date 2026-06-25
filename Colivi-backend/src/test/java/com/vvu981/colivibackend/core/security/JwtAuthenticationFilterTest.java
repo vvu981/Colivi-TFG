@@ -36,11 +36,16 @@ import static org.mockito.Mockito.*;
 @DisplayName("JwtAuthenticationFilter")
 class JwtAuthenticationFilterTest {
 
-    @Mock private JwtTokenProvider    jwtTokenProvider;
-    @Mock private UserRepository      userRepository;
-    @Mock private HttpServletRequest  request;
-    @Mock private HttpServletResponse response;
-    @Mock private FilterChain         filterChain;
+    @Mock
+    private JwtTokenProvider jwtTokenProvider;
+    @Mock
+    private UserRepository userRepository;
+    @Mock
+    private HttpServletRequest request;
+    @Mock
+    private HttpServletResponse response;
+    @Mock
+    private FilterChain filterChain;
 
     @InjectMocks
     private JwtAuthenticationFilter filter;
@@ -307,6 +312,58 @@ class JwtAuthenticationFilterTest {
             verify(filterChain).doFilter(request, response);
             verifyNoInteractions(userRepository);
             assertThat(SecurityContextHolder.getContext().getAuthentication()).isEqualTo(existingAuth);
+        }
+        // =========================================================================
+        // Escenario 8: Usuario baneado
+        // =========================================================================
+
+        @Nested
+        @DisplayName("cuando el usuario está baneado")
+        class BannedUser {
+
+            @Test
+            @DisplayName("isBanned es true → no autentica, cadena continúa")
+            void givenBannedUser_whenFilter_thenNoAuthentication() throws Exception {
+                // Arrange
+                activeUser.setBannedAt(java.time.LocalDateTime.now());
+                when(request.getHeader("Authorization")).thenReturn("Bearer valid.token");
+                when(jwtTokenProvider.extractEmail(anyString())).thenReturn("victor@colivi.com");
+                when(jwtTokenProvider.isTokenValid(anyString())).thenReturn(true);
+                when(jwtTokenProvider.extractTokenVersion(anyString())).thenReturn(1);
+                when(userRepository.findByEmailAndDeletedAtIsNull("victor@colivi.com"))
+                        .thenReturn(Optional.of(activeUser));
+
+                // Act
+                filter.doFilterInternal(request, response, filterChain);
+
+                // Assert
+                verify(filterChain).doFilter(request, response);
+                assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+            }
+        }
+
+        // =========================================================================
+        // Escenario 9: Email nulo en token
+        // =========================================================================
+
+        @Nested
+        @DisplayName("cuando el token no contiene email")
+        class NullEmail {
+
+            @Test
+            @DisplayName("extractEmail devuelve null → no autentica, cadena continúa")
+            void givenNullEmail_whenFilter_thenNoAuthentication() throws Exception {
+                // Arrange
+                when(request.getHeader("Authorization")).thenReturn("Bearer no.email.token");
+                when(jwtTokenProvider.extractEmail(anyString())).thenReturn(null);
+
+                // Act
+                filter.doFilterInternal(request, response, filterChain);
+
+                // Assert
+                verify(filterChain).doFilter(request, response);
+                assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+            }
         }
     }
 }
