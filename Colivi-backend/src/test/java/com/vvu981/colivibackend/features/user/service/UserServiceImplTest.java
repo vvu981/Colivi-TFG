@@ -458,4 +458,110 @@ class UserServiceImplTest {
             verify(userRepository, never()).save(any());
         }
     }
+
+    // =========================================================================
+    // deleteUserSoft
+    // =========================================================================
+
+    @Nested
+    @DisplayName("deleteUserSoft")
+    class DeleteUserSoft {
+
+        @Test
+        @DisplayName("happy path: usuario existente obtiene deletedAt y se persiste")
+        void givenExistingUser_whenDeleteUserSoft_thenDeletedAtSetAndSaved() {
+            // Arrange
+            UUID userId = persistedUser.getId();
+            assertThat(persistedUser.getDeletedAt()).isNull(); // precondición
+            when(userRepository.findByIdAndDeletedAtIsNull(userId))
+                    .thenReturn(Optional.of(persistedUser));
+            when(userRepository.save(persistedUser)).thenReturn(persistedUser);
+
+            // Act
+            userService.deleteUserSoft(userId);
+
+            // Assert — el campo deletedAt fue asignado y el usuario fue persistido
+            assertThat(persistedUser.getDeletedAt()).isNotNull();
+            verify(userRepository).save(persistedUser);
+        }
+
+        @Test
+        @DisplayName("el timestamp de deletedAt es anterior o igual al momento de la llamada")
+        void givenExistingUser_whenDeleteUserSoft_thenDeletedAtIsBeforeOrEqualNow() {
+            // Arrange
+            UUID userId = persistedUser.getId();
+            when(userRepository.findByIdAndDeletedAtIsNull(userId))
+                    .thenReturn(Optional.of(persistedUser));
+            when(userRepository.save(persistedUser)).thenReturn(persistedUser);
+
+            java.time.LocalDateTime before = java.time.LocalDateTime.now();
+
+            // Act
+            userService.deleteUserSoft(userId);
+
+            java.time.LocalDateTime after = java.time.LocalDateTime.now();
+
+            // Assert — el timestamp debe estar en el rango [before, after]
+            assertThat(persistedUser.getDeletedAt())
+                    .isAfterOrEqualTo(before)
+                    .isBeforeOrEqualTo(after);
+        }
+
+        @Test
+        @DisplayName("usuario no encontrado lanza RuntimeException y no persiste nada")
+        void givenNonExistentUserId_whenDeleteUserSoft_thenThrowsRuntimeException() {
+            // Arrange
+            UUID unknownId = UUID.randomUUID();
+            when(userRepository.findByIdAndDeletedAtIsNull(unknownId))
+                    .thenReturn(Optional.empty());
+
+            // Act & Assert
+            assertThatThrownBy(() -> userService.deleteUserSoft(unknownId))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("Usuario no encontrado");
+
+            verify(userRepository, never()).save(any());
+        }
+    }
+
+    // =========================================================================
+    // deleteUserHard
+    // =========================================================================
+
+    @Nested
+    @DisplayName("deleteUserHard")
+    class DeleteUserHard {
+
+        @Test
+        @DisplayName("happy path: usuario existente se elimina físicamente de la BD")
+        void givenExistingUser_whenDeleteUserHard_thenRepositoryDeleteCalled() {
+            // Arrange
+            UUID userId = persistedUser.getId();
+            when(userRepository.findByIdAndDeletedAtIsNull(userId))
+                    .thenReturn(Optional.of(persistedUser));
+
+            // Act
+            userService.deleteUserHard(userId);
+
+            // Assert — se delegó en delete(), nunca en save()
+            verify(userRepository).delete(persistedUser);
+            verify(userRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("usuario no encontrado lanza RuntimeException y no elimina nada")
+        void givenNonExistentUserId_whenDeleteUserHard_thenThrowsRuntimeException() {
+            // Arrange
+            UUID unknownId = UUID.randomUUID();
+            when(userRepository.findByIdAndDeletedAtIsNull(unknownId))
+                    .thenReturn(Optional.empty());
+
+            // Act & Assert
+            assertThatThrownBy(() -> userService.deleteUserHard(unknownId))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("Usuario no encontrado");
+
+            verify(userRepository, never()).delete(any());
+        }
+    }
 }
