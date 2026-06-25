@@ -57,4 +57,18 @@ public class User {
 
     @Version
     private Integer tokenVersion = 1;
+
+    private LocalDateTime bannedUntil;
+
+    private String banReason;
+
+    public boolean isBanned() {
+        if (bannedAt == null) {
+            return false;
+        }
+        if (bannedUntil == null) {
+            return true;
+        }
+        return LocalDateTime.now().isBefore(bannedUntil);
+    }
 }

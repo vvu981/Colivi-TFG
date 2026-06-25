@@ -4,6 +4,9 @@ import com.vvu981.colivibackend.core.security.JwtTokenProvider;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
 import com.vvu981.colivibackend.features.user.dto.*;
+import com.vvu981.colivibackend.features.user.exception.InvalidTokenException;
+import com.vvu981.colivibackend.features.user.exception.StaleSessionException;
+import com.vvu981.colivibackend.features.user.exception.UserNotFoundException;
 import com.vvu981.colivibackend.features.user.mapper.UserMapper;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +25,8 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder; // Inyección directa de la herramienta
     private final UserMapper userMapper; // <-- Nuestra nueva herramienta
 
-    // Centralizamos el tiempo de expiración (24 horas) para no tener 'magic numbers'
+    // Centralizamos el tiempo de expiración (24 horas) para no tener 'magic
+    // numbers'
     private static final long ACCESS_TOKEN_EXPIRATION = 86400000L;
 
     @Override
@@ -74,20 +78,26 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public AuthResponse refreshToken(RefreshTokenRequest request) {
-        String tokenLargo = request.refreshToken();
+        String currentRefreshToken = request.refreshToken();
 
-        if (!jwtTokenProvider.isTokenValid(tokenLargo)) {
-            throw new RuntimeException("Error: Refresh token inválido o caducado");
+        if (!jwtTokenProvider.isTokenValid(currentRefreshToken)) {
+            throw new InvalidTokenException("Error: Refresh token inválido o caducado.");
         }
 
-        String email = jwtTokenProvider.extractEmail(tokenLargo);
-
+        String email = jwtTokenProvider.extractEmail(currentRefreshToken);
         User user = userRepository.findByEmailAndDeletedAtIsNull(email)
-                .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado"));
+                .orElseThrow(() -> new UserNotFoundException("Error: Usuario no encontrado."));
 
+        Integer tokenVersionInJwt = jwtTokenProvider.extractTokenVersion(currentRefreshToken);
+        if (!user.getTokenVersion().equals(tokenVersionInJwt)) {
+            throw new StaleSessionException("Error: La sesión ha expirado o ha sido invalidada de forma remota.");
+        }
+
+        // 4. Rotación del Refresh Token (RTR) para máxima seguridad
         String nuevoAccessToken = jwtTokenProvider.generateAccessToken(user);
+        String nuevoRefreshToken = jwtTokenProvider.generateRefreshToken(user);
 
-        return new AuthResponse(nuevoAccessToken, tokenLargo, ACCESS_TOKEN_EXPIRATION);
+        return new AuthResponse(nuevoAccessToken, nuevoRefreshToken, ACCESS_TOKEN_EXPIRATION);
     }
 
     @Override
@@ -117,7 +127,6 @@ public class UserServiceImpl implements UserService {
         if (!passwordEncoder.matches(updateSensible.currentPassword(), currentUser.getPasswordHash()))
             throw new RuntimeException("Error: la contraseña es incorrecta");
 
-
         boolean isModified = false;
 
         if (updateSensible.newEmail() != null && !updateSensible.newEmail().isBlank()) {
@@ -137,7 +146,8 @@ public class UserServiceImpl implements UserService {
     }
 
     private User getActiveUserById(UUID userId) {
-        return userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado"));
+        return userRepository.findByIdAndDeletedAtIsNull(userId)
+                .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado"));
     }
 
     @Override
@@ -153,5 +163,32 @@ public class UserServiceImpl implements UserService {
         User user = getActiveUserById(userId);
 
         userRepository.delete(user);
+    }
+
+    @Override
+    public void logout(User currentUser) {
+
+        User user = getActiveUserById(currentUser.getId());
+
+        user.setTokenVersion(user.getTokenVersion() + 1);
+        userRepository.save(user);
+    }
+
+    @Override
+    public void banUser(UUID userId, String message, Long days) {
+        User user = getActiveUserById(userId);
+
+        user.setBannedAt(LocalDateTime.now());
+        user.setBanReason(message);
+        user.setBannedUntil(LocalDateTime.now().plusDays(days));
+        userRepository.save(user);
+    }
+
+    @Override
+    public void unbanUser(UUID userId) {
+        User user = getActiveUserById(userId);
+
+        user.setBannedAt(null);
+        userRepository.save(user);
     }
 }

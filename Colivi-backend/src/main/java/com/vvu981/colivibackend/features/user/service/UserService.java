@@ -22,4 +22,10 @@ public interface UserService {
     void deleteUserSoft(UUID userId);
 
     void deleteUserHard(UUID userId);
+
+    void logout(User currentUser);
+
+    void banUser(UUID userId, String message, Long days);
+
+    void unbanUser(UUID userId);
 }

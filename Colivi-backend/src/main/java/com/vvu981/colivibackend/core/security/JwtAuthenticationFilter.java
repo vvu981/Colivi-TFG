@@ -38,8 +38,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             jwt.ifPresent(s -> authenticateToken(s, request));
 
         } catch (JwtException e) {
-            // Solo atrapamos errores reales de la librería JWT (ej. token malformado o caducado).
-            // No hacemos nada, el usuario queda como "Anónimo" y será rechazado por los controladores.
+            // Solo atrapamos errores reales de la librería JWT (ej. token malformado o
+            // caducado).
+            // No hacemos nada, el usuario queda como "Anónimo" y será rechazado por los
+            // controladores.
         }
 
         // 3. El filtro siempre debe continuar
@@ -58,7 +60,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private void authenticateToken(String jwt, HttpServletRequest request) {
         String userEmail = jwtTokenProvider.extractEmail(jwt);
 
-        // Cláusula de guarda (Early Return): Si no hay email o ya está autenticado, abortamos sin anidar 'ifs'
+        // Cláusula de guarda (Early Return): Si no hay email o ya está autenticado,
+        // abortamos sin anidar 'ifs'
         if (userEmail == null || SecurityContextHolder.getContext().getAuthentication() != null) {
             return;
         }
@@ -71,6 +74,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             // Validamos la versión del token
             if (jwtTokenProvider.extractTokenVersion(jwt).equals(user.getTokenVersion())) {
+                if (user.isBanned()) {
+                    return;
+                }
                 setSecurityContext(user, request);
             }
         });
@@ -82,8 +88,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                 user,
                 null,
-                Collections.singletonList(authority)
-        );
+                Collections.singletonList(authority));
         authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
         SecurityContextHolder.getContext().setAuthentication(authToken);

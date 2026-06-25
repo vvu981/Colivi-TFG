@@ -35,10 +35,10 @@ public class UserController {
     @PatchMapping("/me/profile")
     public ResponseEntity<UpdateNonSensible> updateMyProfile(
             @RequestBody UpdateNonSensible request,
-            @AuthenticationPrincipal User currentUser
-    ) {
+            @AuthenticationPrincipal User currentUser) {
 
-        // El controlador simplemente hace de puente. Le pasa el usuario seguro y los datos al servicio.
+        // El controlador simplemente hace de puente. Le pasa el usuario seguro y los
+        // datos al servicio.
         UpdateNonSensible response = userService.updateNonSensibleData(currentUser, request);
 
         // Devuelve un 200 OK con los datos actualizados
@@ -47,9 +47,42 @@ public class UserController {
 
     @PatchMapping("/me/credentials")
     public ResponseEntity updateMyProfile(
-            @RequestBody UpdateSensible request,@AuthenticationPrincipal User currentUser
-    ) {
+            @RequestBody UpdateSensible request, @AuthenticationPrincipal User currentUser) {
         userService.updateSensibleData(currentUser, request);
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/me/logout")
+    public ResponseEntity<Void> logout(@AuthenticationPrincipal User currentUser) {
+        userService.logout(currentUser);
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/me/delete/soft")
+    public ResponseEntity<Void> deleteUserSoft(@AuthenticationPrincipal User currentUser) {
+        userService.deleteUserSoft(currentUser.getId());
+        return ResponseEntity.ok().build();
+    }
+
+    @PreAuthorize("hasAuthority('ADMIN')")
+    @PatchMapping("/{userId}/delete/hard")
+    public ResponseEntity<Void> deleteUserHard(@PathVariable UUID userId) {
+        userService.deleteUserHard(userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PreAuthorize("hasAuthority('ADMIN')")
+    @PatchMapping("/{userId}/ban")
+    public ResponseEntity<Void> banUser(@PathVariable UUID userId, @RequestBody String message,
+            @RequestBody Long days) {
+        userService.banUser(userId, message, days);
+        return ResponseEntity.ok().build();
+    }
+
+    @PreAuthorize("hasAuthority('ADMIN')")
+    @PatchMapping("/{userId}/unban")
+    public ResponseEntity<Void> unbanUser(@PathVariable UUID userId) {
+        userService.unbanUser(userId);
         return ResponseEntity.ok().build();
     }
 }
