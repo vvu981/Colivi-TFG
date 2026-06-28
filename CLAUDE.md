@@ -176,34 +176,51 @@ Servidor independiente que implementa el Model Context Protocol (MCP) y actúa c
 │    bannedUntil    TIMESTAMP  │  ← NULL = sin baneo activo        │
 │    banReason      TEXT NULL  │  ← motivo de la sanción           │
 └──────────────────────────────┘                                   │
-         │              │                                          │
-         │ 1:N          │ 1:N                                      │
-         ▼              ▼                                          │
-┌────────────────┐  ┌─────────────────────────────┐               │
-│ ACCOMMODATION  │  │    ACCOMMODATION_REVIEW     │               │
-├────────────────┤  ├─────────────────────────────┤               │
-│ PK id  UUID    │  │ PK id          UUID          │               │
-│ FK owner_id ───┼─►│ FK author_id ───────────────┼───────────────┤
-│ title  VARCHAR │  │ FK accommodation_id ────────┼──┐            │
-│ description    │  │ rating         INT (1-5)     │  │            │
-│ price_per_month│  │ comment        TEXT NULL     │  │            │
-│ address VARCHAR│  │ created_at     TIMESTAMP     │  │            │
-│ locality       │  └─────────────────────────────┘  │            │
-│ city   VARCHAR │◄───────────────────────────────────┘            │
-│ country VARCHAR│                                                 │
-│ latitude NUMERIC│  1:N                                           │
-│ longitude      ├──────────────────┐                             │
-│ status  ENUM   │  (PENDIENTE,     │                             │
-│ version  INT   │   ACTIVO,        │                             │
-│ created_at     │   RECHAZADO,     ▼                             │
-└────────────────┘   FINALIZADO) ┌──────────────────────┐         │
-                                 │  ACCOMMODATION_IMAGE  │         │
-                                 ├──────────────────────┤         │
-                                 │ PK id    UUID         │         │
-                                 │ FK accommodation_id   │         │
-                                 │ image_url TEXT        │         │
-                                 │ display_order INT     │         │
-                                 └──────────────────────┘         │
+         │                                                         │
+         │ 1:N  (un usuario puede poseer varias propiedades)       │
+         ▼                                                         │
+┌──────────────────────────────┐                                   │
+│        ACCOMMODATION         │  ← Propiedad Física               │
+├──────────────────────────────┤                                   │
+│ PK id             UUID       │                                   │
+│    address        VARCHAR    │                                   │
+│    total_rooms    INT        │                                   │
+│    square_meters  NUMERIC    │                                   │
+│    city           VARCHAR    │                                   │
+│    locality       VARCHAR    │                                   │
+│    country        VARCHAR    │                                   │
+│    latitude       NUMERIC    │                                   │
+│    longitude      NUMERIC    │                                   │
+│    created_at     TIMESTAMP  │                                   │
+└──────────────┬───────────────┘                                   │
+               │ 1:N  (una propiedad puede tener varios anuncios)  │
+               ▼                                                   │
+┌──────────────────────────────────────┐                           │
+│         ACCOMMODATION_LISTING        │  ← Anuncio Comercial      │
+├──────────────────────────────────────┤                           │
+│ PK id                UUID            │                           │
+│ FK accommodation_id  UUID ───────────┘  (propiedad física)       │
+│ FK host_id           UUID ───────────────────────────────────────┤
+│    title             VARCHAR         │  (propietario/anunciante) │
+│    description       TEXT            │                           │
+│    price_per_month   NUMERIC         │                           │
+│    status            ENUM            │  (PENDING, ACTIVE,        │
+│    version           INT             │   REJECTED, FINISHED)     │
+│    created_at        TIMESTAMP       │                           │
+└──────────────┬───────────────────────┘                           │
+               │                     │                             │
+               │ 1:N                 │ 1:N                         │
+               ▼                     ▼                             │
+┌──────────────────────┐  ┌─────────────────────────────┐         │
+│  ACCOMMODATION_IMAGE │  │    ACCOMMODATION_REVIEW     │         │
+├──────────────────────┤  ├─────────────────────────────┤         │
+│ PK id    UUID        │  │ PK id          UUID          │         │
+│ FK listing_id  UUID  │  │ FK author_id ───────────────┼─────────┤
+│ image_url TEXT       │  │ FK listing_id  UUID          │         │
+│ display_order INT    │  │ rating         INT (1-5)     │         │
+└──────────────────────┘  │ comment        TEXT NULL     │         │
+                          │ created_at     TIMESTAMP     │         │
+                          └─────────────────────────────┘         │
                                                                    │
 ┌──────────────────────────────┐                                   │
 │          HOGAR               │                                   │
@@ -269,14 +286,22 @@ Servidor independiente que implementa el Model Context Protocol (MCP) y actúa c
 ### 4.2 Índices Críticos
 
 ```sql
--- Búsqueda de alojamientos por ciudad y precio
-CREATE INDEX idx_accommodation_city_price
-    ON accommodation(city, price_per_month)
-    WHERE status = 'ACTIVO';
+-- Búsqueda de anuncios activos por ciudad y precio (sobre el anuncio comercial)
+CREATE INDEX idx_listing_city_price
+    ON accommodation_listing(city, price_per_month)
+    WHERE status = 'ACTIVE';
 
--- Geolocalización (consultas de radio por mapa)
+-- Geolocalización (consultas de radio por mapa, sobre la propiedad física)
 CREATE INDEX idx_accommodation_lat  ON accommodation(latitude);
 CREATE INDEX idx_accommodation_lng  ON accommodation(longitude);
+
+-- Búsqueda de todos los anuncios de una propiedad física
+CREATE INDEX idx_listing_accommodation_id
+    ON accommodation_listing(accommodation_id);
+
+-- Todos los anuncios publicados por un host
+CREATE INDEX idx_listing_host_id
+    ON accommodation_listing(host_id, created_at DESC);
 
 -- Auditoría: consultas por hogar (a través de entity_id)
 CREATE INDEX idx_audit_entity       ON audit_snapshot_log(entity_id, server_timestamp DESC);
@@ -286,8 +311,8 @@ CREATE INDEX idx_message_receiver   ON message(receiver_id, created_at DESC);
 CREATE INDEX idx_message_sender     ON message(sender_id, created_at DESC);
 
 -- Denuncias: contar denuncias pendientes por anuncio (clave para la regla de auto-moderación)
-CREATE INDEX idx_report_accommodation_status
-    ON accommodation_report(accommodation_id, status)
+CREATE INDEX idx_report_listing_status
+    ON accommodation_report(listing_id, status)
     WHERE status = 'PENDING';
 ```
 
@@ -313,7 +338,7 @@ CREATE TRIGGER trg_audit_immutable
 
 ```sql
 CREATE TYPE user_role       AS ENUM ('ADMIN', 'USER');
-CREATE TYPE listing_status  AS ENUM ('PENDIENTE', 'ACTIVO', 'RECHAZADO', 'FINALIZADO');
+CREATE TYPE listing_status  AS ENUM ('PENDING', 'ACTIVE', 'REJECTED', 'FINISHED');
 CREATE TYPE audit_action    AS ENUM ('CREATE', 'UPDATE', 'DELETE');
 CREATE TYPE report_reason   AS ENUM ('SPAM', 'SCAM', 'INAPPROPRIATE', 'MISLEADING');
 CREATE TYPE report_status   AS ENUM ('PENDING', 'REVIEWED', 'DISMISSED');
@@ -867,11 +892,11 @@ CMD ["node", "server.js"]
 
 **Tareas:**
 
-- [ ] Crear repositorio Git con estructura monorepo: `/backend`, `/frontend`, `/mcp-server`
-- [ ] Inicializar proyecto Spring Boot 3.x con Java 21 (Spring Initializr):
+- [X] Crear repositorio Git con estructura monorepo: `/backend`, `/frontend`, `/mcp-server`
+- [X] Inicializar proyecto Spring Boot 3.x con Java 21 (Spring Initializr):
   - Dependencias: `spring-web`, `spring-data-jpa`, `spring-security`, `postgresql`, `lombok`, `mapstruct`, `flyway`, `validation`
-- [ ] Configurar `docker-compose.yml` con PostgreSQL y levantar base de datos local
-- [ ] Configurar Flyway: crear migración `V1__init_schema.sql` con el esquema completo del modelo de datos
+- [X] Configurar `docker-compose.yml` con PostgreSQL y levantar base de datos local
+- [X] Configurar Flyway: crear migración `V1__init_schema.sql` con el esquema completo del modelo de datos
 - [ ] Inicializar proyecto Next.js 15 con TypeScript, Tailwind CSS y App Router
 - [ ] Inicializar proyecto Node.js TypeScript para el servidor MCP
 - [ ] Configurar ESLint + Prettier en frontend y MCP server
@@ -1000,31 +1025,48 @@ CMD ["node", "server.js"]
 **Objetivo:** Implementar el módulo de clasificados completo con moderación, imágenes en cloud, mapa y valoraciones.
 
 **Principios SOLID aplicados:**
-- `IAccommodationService` con métodos bien delimitados; la lógica de aprobación/rechazo no reside en el controlador
-- `IImageStorageService` (interfaz): la implementación concreta (S3, Cloudinary) es intercambiable sin tocar `AccommodationService` → OCP
-- `IReviewService` separado de `IAccommodationService` → SRP
+- `IAccommodationService` gestiona exclusivamente el inventario físico de propiedades → SRP
+- `IAccommodationListingService` encapsula el ciclo de vida comercial del anuncio (publicar, aprobar, rechazar, finalizar, buscar) → SRP
+- `IImageStorageService` (interfaz): la implementación concreta (S3, Cloudinary) es intercambiable sin tocar ningún servicio de dominio → OCP
+- `IReviewService` separado de `IAccommodationListingService` → SRP
+- Todos los servicios de dominio se consumen a través de interfaces → DIP
 
 **Tareas — Backend:**
 
-- [ ] Crear entidades JPA: `Accommodation`, `AccommodationImage`, `AccommodationReview`, `Message`
-- [ ] Crear entidad JPA `AccommodationReport` con campos: `id` (UUID), `accommodationId` (UUID FK), `reporterId` (UUID FK, nullable), `reason` (ENUM), `description` (Text), `status` (ENUM, default `PENDING`), `createdAt` (Timestamp)
-- [ ] Crear migraciones Flyway: tablas, índices compuestos `(city, price_per_month)`, índices B-Tree sobre `(latitude, longitude)`, índice parcial sobre `accommodation_report(accommodation_id, status) WHERE status='PENDING'`
-- [ ] Añadir enumerados PostgreSQL: `report_reason` y `report_status` en migración Flyway
+- [ ] Crear entidad JPA `Accommodation` (propiedad física): campos `id` (UUID, PK), `address`, `totalRooms`, `squareMeters`, `city`, `locality`, `country`, `latitude`, `longitude`, `createdAt`
+- [ ] Crear entidad JPA `AccommodationListing` (anuncio comercial): campos `id` (UUID, PK), `accommodation` (FK → `Accommodation`, relación `@ManyToOne`), `host` (FK → `User`), `title`, `description`, `pricePerMonth`, `status` (`ListingStatus` ENUM: `PENDING`, `ACTIVE`, `REJECTED`, `FINISHED`), `version` (`@Version`), `createdAt`
+- [ ] Crear entidades JPA `AccommodationImage` (FK → `AccommodationListing`), `AccommodationReview` (FK → `AccommodationListing`), `Message`
+- [ ] Crear entidad JPA `AccommodationReport` con campos: `id` (UUID), `listingId` (UUID FK → `AccommodationListing`), `reporterId` (UUID FK, nullable), `reason` (ENUM), `description` (Text), `status` (ENUM, default `PENDING`), `createdAt` (Timestamp)
+- [ ] Crear migraciones Flyway: tablas `accommodation` y `accommodation_listing`, índices `idx_listing_city_price`, índices B-Tree sobre `(latitude, longitude)` en `accommodation`, índice `idx_listing_accommodation_id`, índice `idx_listing_host_id`, índice parcial sobre `accommodation_report(listing_id, status) WHERE status='PENDING'`
+- [ ] Añadir enumerados PostgreSQL: `listing_status` (`PENDING`, `ACTIVE`, `REJECTED`, `FINISHED`), `report_reason` y `report_status` en migración Flyway
 - [ ] Añadir campos `bannedUntil (LocalDateTime, nullable)` y `banReason (String, nullable)` a la entidad JPA `User` y su migración Flyway correspondiente
 - [ ] Implementar método de negocio `isBanned()` en la entidad `User` que compara `bannedUntil` con `LocalDateTime.now()` dinámicamente (sin flag booleano persistido)
 - [ ] Actualizar `JwtAuthenticationFilter` para invocar `isBanned()` tras validar el JWT y rechazar con `403 Forbidden` si el resultado es `true`, incluyendo `bannedUntil` en el cuerpo del error
 - [ ] Diseñar interfaz `IImageStorageService`: `uploadImage(file): String` (devuelve URL pública)
 - [ ] Implementar `CloudinaryImageStorageService implements IImageStorageService` (o S3)
-- [ ] Diseñar interfaz `IAccommodationService`: `createListing`, `approveListing`, `rejectListing`, `updateListing`, `deleteListing`, `searchListings`
-- [ ] Implementar `AccommodationServiceImpl` con validación de mínimo 2 imágenes antes de aprobar
+- [ ] Diseñar interfaz `IAccommodationService` — Gestión del inventario físico:
+  - `registerProperty(CreateAccommodationRequest): AccommodationDto`
+  - `findById(UUID): AccommodationDto`
+  - `updateProperty(UUID, UpdateAccommodationRequest): AccommodationDto`
+  - `deleteProperty(UUID): void` *(solo si no tiene listings ACTIVE o PENDING)*
+- [ ] Implementar `AccommodationServiceImpl implements IAccommodationService`
+- [ ] Diseñar interfaz `IAccommodationListingService` — Ciclo de vida comercial del anuncio:
+  - `publishListing(UUID accommodationId, CreateListingRequest): AccommodationListingDto`
+  - `approveListing(UUID listingId): AccommodationListingDto` *(valida mínimo 2 imágenes)*
+  - `rejectListing(UUID listingId, String reason): AccommodationListingDto`
+  - `finishListing(UUID listingId): AccommodationListingDto`
+  - `updateListing(UUID listingId, UpdateListingRequest): AccommodationListingDto` *(solo en PENDING)*
+  - `deleteListing(UUID listingId): void`
+  - `searchListings(String city, BigDecimal minPrice, BigDecimal maxPrice, Pageable): Page<AccommodationListingDto>`
+- [ ] Implementar `AccommodationListingServiceImpl implements IAccommodationListingService` con validación de mínimo 2 imágenes antes de aprobar
 - [ ] Diseñar interfaz `IAccommodationReportService` con métodos: `createReport`, `getPendingReports`, `reviewReport`, `dismissReport`
-- [ ] Implementar `AccommodationReportServiceImpl` que, tras persistir una nueva denuncia, cuenta las denuncias únicas en `PENDING` para ese `accommodationId`. Si el contador supera 5, cambia atómicamente el estado del anuncio a `PENDIENTE` y genera la alerta de administrador
-- [ ] Diseñar interfaz `IAccommodationReportRepository` exponiéndo exclusivamente: `save`, `countByAccommodationIdAndStatus`, `findByAccommodationId` (sin métodos de mutación masiva — ISP)
+- [ ] Implementar `AccommodationReportServiceImpl` que, tras persistir una nueva denuncia, cuenta las denuncias únicas en `PENDING` para ese `listingId`. Si el contador supera 5, cambia atómicamente el estado del listing a `PENDING` y genera la alerta de administrador
+- [ ] Diseñar interfaz `IAccommodationReportRepository` exponiendo exclusivamente: `save`, `countByListingIdAndStatus`, `findByListingId` (sin métodos de mutación masiva — ISP)
 - [ ] Implementar `AccommodationReportController` con endpoint: `POST /accommodations/{id}/reports` (abierto a anónimos y autenticados)
-- [ ] Implementar `IReviewService` / `ReviewServiceImpl` para valoraciones de alojamiento y de usuario
+- [ ] Implementar `IReviewService` / `ReviewServiceImpl` para valoraciones de anuncio y de usuario
 - [ ] Implementar `IMessageService` / `MessageServiceImpl` con soporte para ofertas económicas
-- [ ] Implementar `AccommodationController`, `ReviewController`, `MessageController`
-- [ ] Implementar `AdminController` con endpoints de moderación (protegidos por rol `ADMIN`), incluyendo endpoints para listar y revisar denuncias: `GET /admin/accommodations/{id}/reports`, `POST /admin/accommodations/{id}/reports/{reportId}/review`, `POST /admin/accommodations/{id}/reports/{reportId}/dismiss`
+- [ ] Implementar `AccommodationController`, `AccommodationListingController`, `ReviewController`, `MessageController`
+- [ ] Implementar `AdminController` con endpoints de moderación (protegidos por rol `ADMIN`), incluyendo endpoints para listar y revisar denuncias: `GET /admin/listings/{id}/reports`, `POST /admin/listings/{id}/reports/{reportId}/review`, `POST /admin/listings/{id}/reports/{reportId}/dismiss`
 - [ ] Implementar endpoint de baneo de usuario: `POST /admin/users/{userId}/ban` con body `{bannedUntil, banReason}` (solo ADMIN)
 
 **Tests:**
