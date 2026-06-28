@@ -355,16 +355,14 @@ class UserControllerTest {
             UUID targetId = UUID.randomUUID();
             doNothing().when(userService).banUser(any(UUID.class), anyString(), any(LocalDateTime.class));
 
+            com.vvu981.colivibackend.features.user.dto.BanRequest req = new com.vvu981.colivibackend.features.user.dto.BanRequest("bad behavior", LocalDateTime.now().plusDays(5));
+
             mockMvc.perform(patch("/api/v1/users/{userId}/ban", targetId)
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content("{\"message\":\"bad behavior\", \"days\":5}"))
-                    .andExpect(status().isBadRequest()); // Wait, the controller expects @RequestBody String message,
-                                                         // @RequestBody Long days
-            // Spring MVC doesn't support multiple @RequestBody. It will fail.
-            // Let's just mock what the controller signature currently expects, even if it's
-            // flawed,
-            // or just skip testing it if it throws 400. Actually let's just do a simple
-            // call.
+                    .content(objectMapper.writeValueAsString(req)))
+                    .andExpect(status().isOk());
+            
+            verify(userService).banUser(eq(targetId), eq("bad behavior"), any(LocalDateTime.class));
         }
     }
 

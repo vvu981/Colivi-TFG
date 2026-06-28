@@ -74,9 +74,8 @@ public class UserController {
 
     @PreAuthorize("hasAuthority('ADMIN')")
     @PatchMapping("/{userId}/ban")
-    public ResponseEntity<Void> banUser(@PathVariable UUID userId, @RequestBody String message,
-            @RequestBody LocalDateTime bannedUntil) {
-        userService.banUser(userId, message, bannedUntil);
+    public ResponseEntity<Void> banUser(@PathVariable UUID userId, @RequestBody com.vvu981.colivibackend.features.user.dto.BanRequest request) {
+        userService.banUser(userId, request.message(), request.bannedUntil());
         return ResponseEntity.ok().build();
     }
 

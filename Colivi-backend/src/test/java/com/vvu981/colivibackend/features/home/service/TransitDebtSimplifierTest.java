@@ -93,4 +93,17 @@ class TransitDebtSimplifierTest {
 
         assertTrue(result.isEmpty());
     }
+
+    @Test
+    void escenario_5_unbalanced_creditors_run_out_first() {
+        // Deudas superan a los créditos, los acreedores se quedan sin fondos antes.
+        // Esto cubre la rama donde j < creditors.size() evalúa a false.
+        List<Balance> balances = List.of(
+                new Balance("userA", -100.0),
+                new Balance("userB", 50.0)
+        );
+
+        List<DebtTransfer> result = simplifierEngine.simplify(balances);
+        assertEquals(1, result.size());
+    }
 }

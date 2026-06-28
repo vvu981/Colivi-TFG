@@ -32,5 +32,5 @@ for counter in root.findall('counter'):
     percentage = (covered / total * 100) if total > 0 else 0
     summary.append(f'| {display_name} | {covered} | {missed} | {percentage:.2f}% |')
 
-with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
+with open(os.environ['GITHUB_STEP_SUMMARY'], 'w', encoding='utf-8') as f:
     f.write('\n'.join(summary))

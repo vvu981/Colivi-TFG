@@ -462,6 +462,21 @@ class UserServiceImplTest {
                         // Assert — no se guardó nada innecesariamente
                         verify(userRepository, never()).save(any());
                 }
+
+                @Test
+                @DisplayName("con campos en blanco (newEmail y newPassword son empty) no persiste en BD")
+                void givenBlankChanges_whenUpdateSensible_thenRepositoryNotCalled() {
+                        // Arrange — nada que cambiar
+                        UpdateSensible request = new UpdateSensible("correct_current", "   ", "");
+                        when(passwordEncoder.matches("correct_current", persistedUser.getPasswordHash()))
+                                        .thenReturn(true);
+
+                        // Act
+                        userService.updateSensibleData(persistedUser, request);
+
+                        // Assert — no se guardó nada innecesariamente
+                        verify(userRepository, never()).save(any());
+                }
         }
 
         // =========================================================================
