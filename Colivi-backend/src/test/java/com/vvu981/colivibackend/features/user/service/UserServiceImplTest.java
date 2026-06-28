@@ -368,11 +368,14 @@ class UserServiceImplTest {
                                         "newNick", "NuevoNombre", "NuevoApellido", null, "+34699999999", null);
                         UpdateNonSensible expectedResponse = new UpdateNonSensible(
                                         "newNick", "NuevoNombre", "NuevoApellido", null, "+34699999999", null);
+                        when(userRepository.findByIdAndDeletedAtIsNull(persistedUser.getId()))
+                                        .thenReturn(Optional.of(persistedUser));
                         when(userRepository.save(persistedUser)).thenReturn(persistedUser);
                         when(userMapper.toUpdateNonSensibleDto(persistedUser)).thenReturn(expectedResponse);
 
                         // Act
-                        UpdateNonSensible result = userService.updateNonSensibleData(persistedUser, updateRequest);
+                        UpdateNonSensible result = userService.updateNonSensibleData(persistedUser.getId(),
+                                        updateRequest);
 
                         // Assert
                         verify(userMapper).updateEntityFromDto(updateRequest, persistedUser);
@@ -399,13 +402,15 @@ class UserServiceImplTest {
                 void givenWrongCurrentPassword_whenUpdateSensible_thenThrowsRuntimeException() {
                         // Arrange
                         UpdateSensible request = new UpdateSensible("wrong_current", "new@email.com", null);
+                        when(userRepository.findByIdAndDeletedAtIsNull(persistedUser.getId()))
+                                        .thenReturn(Optional.of(persistedUser));
                         when(passwordEncoder.matches("wrong_current", persistedUser.getPasswordHash()))
                                         .thenReturn(false); // contraseña incorrecta
 
                         // Act & Assert
                         // Con el código actual (bug): NO lanza excepción cuando debería hacerlo.
                         // Este test captura el comportamiento CORRECTO esperado.
-                        assertThatThrownBy(() -> userService.updateSensibleData(persistedUser, request))
+                        assertThatThrownBy(() -> userService.updateSensibleData(persistedUser.getId(), request))
                                         .isInstanceOf(RuntimeException.class)
                                         .hasMessageContaining("contraseña es incorrecta");
 
@@ -417,12 +422,14 @@ class UserServiceImplTest {
                 void givenCorrectCurrentPassword_whenUpdateEmailOnly_thenEmailUpdatedAndSaved() {
                         // Arrange
                         UpdateSensible request = new UpdateSensible("correct_current", "nuevo@colivi.com", null);
+                        when(userRepository.findByIdAndDeletedAtIsNull(persistedUser.getId()))
+                                        .thenReturn(Optional.of(persistedUser));
                         when(passwordEncoder.matches("correct_current", persistedUser.getPasswordHash()))
                                         .thenReturn(true);
                         when(userRepository.save(persistedUser)).thenReturn(persistedUser);
 
                         // Act
-                        userService.updateSensibleData(persistedUser, request);
+                        userService.updateSensibleData(persistedUser.getId(), request);
 
                         // Assert
                         assertThat(persistedUser.getEmail()).isEqualTo("nuevo@colivi.com");
@@ -435,13 +442,15 @@ class UserServiceImplTest {
 
                         // Arrange
                         UpdateSensible request = new UpdateSensible("correct_current", null, "NewSecure1!");
+                        when(userRepository.findByIdAndDeletedAtIsNull(persistedUser.getId()))
+                                        .thenReturn(Optional.of(persistedUser));
                         when(passwordEncoder.matches("correct_current", persistedUser.getPasswordHash()))
                                         .thenReturn(true);
                         when(passwordEncoder.encode("NewSecure1!")).thenReturn("$2a$12$newHashed");
                         when(userRepository.save(persistedUser)).thenReturn(persistedUser);
 
                         // Act
-                        userService.updateSensibleData(persistedUser, request);
+                        userService.updateSensibleData(persistedUser.getId(), request);
 
                         // Assert
                         assertThat(persistedUser.getPasswordHash()).isEqualTo("$2a$12$newHashed");
@@ -453,11 +462,13 @@ class UserServiceImplTest {
                 void givenNoChanges_whenUpdateSensible_thenRepositoryNotCalled() {
                         // Arrange — nada que cambiar
                         UpdateSensible request = new UpdateSensible("correct_current", null, null);
+                        when(userRepository.findByIdAndDeletedAtIsNull(persistedUser.getId()))
+                                        .thenReturn(Optional.of(persistedUser));
                         when(passwordEncoder.matches("correct_current", persistedUser.getPasswordHash()))
                                         .thenReturn(true);
 
                         // Act
-                        userService.updateSensibleData(persistedUser, request);
+                        userService.updateSensibleData(persistedUser.getId(), request);
 
                         // Assert — no se guardó nada innecesariamente
                         verify(userRepository, never()).save(any());
@@ -468,11 +479,13 @@ class UserServiceImplTest {
                 void givenBlankChanges_whenUpdateSensible_thenRepositoryNotCalled() {
                         // Arrange — nada que cambiar
                         UpdateSensible request = new UpdateSensible("correct_current", "   ", "");
+                        when(userRepository.findByIdAndDeletedAtIsNull(persistedUser.getId()))
+                                        .thenReturn(Optional.of(persistedUser));
                         when(passwordEncoder.matches("correct_current", persistedUser.getPasswordHash()))
                                         .thenReturn(true);
 
                         // Act
-                        userService.updateSensibleData(persistedUser, request);
+                        userService.updateSensibleData(persistedUser.getId(), request);
 
                         // Assert — no se guardó nada innecesariamente
                         verify(userRepository, never()).save(any());
@@ -602,7 +615,7 @@ class UserServiceImplTest {
                                 when(userRepository.save(persistedUser)).thenReturn(persistedUser);
 
                                 // Act
-                                userService.logout(persistedUser);
+                                userService.logout(persistedUser.getId());
 
                                 // Assert
                                 assertThat(persistedUser.getTokenVersion()).isEqualTo(originalVersion + 1);
@@ -621,7 +634,7 @@ class UserServiceImplTest {
                                                 .thenReturn(Optional.empty());
 
                                 // Act & Assert
-                                assertThatThrownBy(() -> userService.logout(unknownUser))
+                                assertThatThrownBy(() -> userService.logout(unknownId))
                                                 .isInstanceOf(RuntimeException.class)
                                                 .hasMessageContaining("Usuario no encontrado");
 

@@ -110,7 +110,9 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UpdateNonSensible updateNonSensibleData(User currentUser, UpdateNonSensible updateData) {
+    public UpdateNonSensible updateNonSensibleData(UUID userId, UpdateNonSensible updateData) {
+
+        User currentUser = getActiveUserById(userId);
 
         // 1. Delegamos la lógica de copiado. Se actualizan solo los campos enviados.
         userMapper.updateEntityFromDto(updateData, currentUser);
@@ -123,7 +125,10 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public void updateSensibleData(User currentUser, UpdateSensible updateSensible) {
+    public void updateSensibleData(UUID userId, UpdateSensible updateSensible) {
+
+        User currentUser = getActiveUserById(userId);
+
         if (!passwordEncoder.matches(updateSensible.currentPassword(), currentUser.getPasswordHash()))
             throw new RuntimeException("Error: la contraseña es incorrecta");
 
@@ -166,9 +171,9 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public void logout(User currentUser) {
+    public void logout(UUID userId) {
 
-        User user = getActiveUserById(currentUser.getId());
+        User user = getActiveUserById(userId);
 
         user.setTokenVersion(user.getTokenVersion() + 1);
         userRepository.save(user);
@@ -190,5 +195,19 @@ public class UserServiceImpl implements UserService {
 
         user.setBannedAt(null);
         userRepository.save(user);
+    }
+
+    @Override
+    public UserProfileResponse getUserProfile(UUID userId) {
+        User user = getActiveUserById(userId);
+
+        return userMapper.toUserProfileDto(user);
+    }
+
+    @Override
+    public UserProfileResponse getMyProfile(UUID userId) {
+        User user = getActiveUserById(userId);
+
+        return userMapper.toUserProfileDto(user);
     }
 }

@@ -1,6 +1,5 @@
 package com.vvu981.colivibackend.features.user.service;
 
-import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.dto.*;
 
 import java.time.LocalDateTime;
@@ -16,17 +15,21 @@ public interface UserService {
 
     void setAdmin(UUID targetUserId);
 
-    UpdateNonSensible updateNonSensibleData(User currentUser, UpdateNonSensible updateData);
+    UpdateNonSensible updateNonSensibleData(UUID userId, UpdateNonSensible updateData);
 
-    void updateSensibleData(User currentUser, UpdateSensible updateSensible);
+    void updateSensibleData(UUID userId, UpdateSensible updateSensible);
 
     void deleteUserSoft(UUID userId);
 
     void deleteUserHard(UUID userId);
 
-    void logout(User currentUser);
+    void logout(UUID userId);
 
     void banUser(UUID userId, String message, LocalDateTime bannedUntil);
 
     void unbanUser(UUID userId);
+
+    UserProfileResponse getUserProfile(UUID userId);
+
+    UserProfileResponse getMyProfile(UUID userId);
 }

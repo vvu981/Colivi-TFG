@@ -27,11 +27,8 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -169,7 +166,7 @@ class UserControllerTest {
                     "nuevo_nick", "NuevoNombre", "NuevoApellido", null, "+34600000000", null);
             UpdateNonSensible responseDto = new UpdateNonSensible(
                     "nuevo_nick", "NuevoNombre", "NuevoApellido", null, "+34600000000", null);
-            when(userService.updateNonSensibleData(any(User.class), any(UpdateNonSensible.class)))
+            when(userService.updateNonSensibleData(any(UUID.class), any(UpdateNonSensible.class)))
                     .thenReturn(responseDto);
 
             // Act & Assert — authentication() inyecta el User entidad como
@@ -204,7 +201,7 @@ class UserControllerTest {
             // Arrange
             UpdateNonSensible requestDto = new UpdateNonSensible(null, "Nuevo", "Ap", null, null, null);
             UpdateNonSensible responseDto = new UpdateNonSensible("vvu981", "Nuevo", "Ap", null, null, null);
-            when(userService.updateNonSensibleData(any(User.class), any(UpdateNonSensible.class)))
+            when(userService.updateNonSensibleData(any(UUID.class), any(UpdateNonSensible.class)))
                     .thenReturn(responseDto);
 
             // Act
@@ -216,7 +213,7 @@ class UserControllerTest {
 
             // Assert — el User inyectado tiene el email correcto (anti-IDOR check)
             verify(userService).updateNonSensibleData(
-                    argThat(u -> authenticatedUser.getEmail().equals(u.getEmail())),
+                    argThat(u -> authenticatedUser.getId().equals(u)),
                     any(UpdateNonSensible.class));
         }
     }
@@ -234,7 +231,7 @@ class UserControllerTest {
         void givenAuthenticatedUser_whenUpdateCredentials_thenReturns200() throws Exception {
             // Arrange
             UpdateSensible requestDto = new UpdateSensible("currentPass", "new@email.com", null);
-            doNothing().when(userService).updateSensibleData(any(User.class), any(UpdateSensible.class));
+            doNothing().when(userService).updateSensibleData(any(UUID.class), any(UpdateSensible.class));
 
             // Act & Assert
             mockMvc.perform(patch("/api/v1/users/me/credentials")
@@ -244,7 +241,7 @@ class UserControllerTest {
                     .andExpect(status().isOk());
 
             verify(userService).updateSensibleData(
-                    argThat(u -> authenticatedUser.getEmail().equals(u.getEmail())),
+                    argThat(u -> authenticatedUser.getId().equals(u)),
                     any(UpdateSensible.class));
         }
 
@@ -267,7 +264,7 @@ class UserControllerTest {
             // Arrange
             UpdateSensible requestDto = new UpdateSensible("wrongPass", null, null);
             doThrow(new RuntimeException("Error: la contraseña es incorrecta"))
-                    .when(userService).updateSensibleData(any(User.class), any(UpdateSensible.class));
+                    .when(userService).updateSensibleData(any(UUID.class), any(UpdateSensible.class));
 
             // Act & Assert
             // Sin @ControllerAdvice, @WebMvcTest re-lanza la excepción en
@@ -293,13 +290,13 @@ class UserControllerTest {
         @Test
         @DisplayName("Returns 200 OK")
         void givenAuthenticatedUser_whenLogout_thenReturns200() throws Exception {
-            doNothing().when(userService).logout(any(User.class));
+            doNothing().when(userService).logout(any(UUID.class));
 
             mockMvc.perform(patch("/api/v1/users/me/logout")
                     .with(authentication(buildAuth(authenticatedUser))))
                     .andExpect(status().isOk());
 
-            verify(userService).logout(argThat(u -> authenticatedUser.getEmail().equals(u.getEmail())));
+            verify(userService).logout(argThat(u -> authenticatedUser.getId().equals(u)));
         }
     }
 
@@ -355,13 +352,14 @@ class UserControllerTest {
             UUID targetId = UUID.randomUUID();
             doNothing().when(userService).banUser(any(UUID.class), anyString(), any(LocalDateTime.class));
 
-            com.vvu981.colivibackend.features.user.dto.BanRequest req = new com.vvu981.colivibackend.features.user.dto.BanRequest("bad behavior", LocalDateTime.now().plusDays(5));
+            com.vvu981.colivibackend.features.user.dto.BanRequest req = new com.vvu981.colivibackend.features.user.dto.BanRequest(
+                    "bad behavior", LocalDateTime.now().plusDays(5));
 
             mockMvc.perform(patch("/api/v1/users/{userId}/ban", targetId)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(req)))
                     .andExpect(status().isOk());
-            
+
             verify(userService).banUser(eq(targetId), eq("bad behavior"), any(LocalDateTime.class));
         }
     }

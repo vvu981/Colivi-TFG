@@ -8,7 +8,6 @@ import com.vvu981.colivibackend.features.user.dto.RegisterRequest;
 import com.vvu981.colivibackend.features.user.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
@@ -46,7 +45,8 @@ class AuthControllerTest {
 
     @Test
     void register_shouldReturnOkAndAuthResponse() throws Exception {
-        RegisterRequest request = new RegisterRequest("nick", "email@colivi.com", "Pass123!", "Victor", "Val", "Lejo", "+34666666666");
+        RegisterRequest request = new RegisterRequest("nick", "email@colivi.com", "Pass123!", "Victor", "Val", "Lejo",
+                "+34666666666");
         AuthResponse response = new AuthResponse("access", "refresh", 3600L);
 
         when(userService.register(any(RegisterRequest.class))).thenReturn(response);
