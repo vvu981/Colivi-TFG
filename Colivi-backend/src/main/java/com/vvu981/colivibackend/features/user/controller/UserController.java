@@ -10,6 +10,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @RestController
@@ -74,8 +75,8 @@ public class UserController {
     @PreAuthorize("hasAuthority('ADMIN')")
     @PatchMapping("/{userId}/ban")
     public ResponseEntity<Void> banUser(@PathVariable UUID userId, @RequestBody String message,
-            @RequestBody Long days) {
-        userService.banUser(userId, message, days);
+            @RequestBody LocalDateTime bannedUntil) {
+        userService.banUser(userId, message, bannedUntil);
         return ResponseEntity.ok().build();
     }
 

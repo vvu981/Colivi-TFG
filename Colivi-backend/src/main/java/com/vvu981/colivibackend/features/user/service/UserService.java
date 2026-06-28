@@ -3,6 +3,7 @@ package com.vvu981.colivibackend.features.user.service;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.dto.*;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 public interface UserService {
@@ -25,7 +26,7 @@ public interface UserService {
 
     void logout(User currentUser);
 
-    void banUser(UUID userId, String message, Long days);
+    void banUser(UUID userId, String message, LocalDateTime bannedUntil);
 
     void unbanUser(UUID userId);
 }

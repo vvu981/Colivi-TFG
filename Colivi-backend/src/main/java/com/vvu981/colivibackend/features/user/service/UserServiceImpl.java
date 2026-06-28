@@ -175,12 +175,12 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public void banUser(UUID userId, String message, Long days) {
+    public void banUser(UUID userId, String message, LocalDateTime bannedUntil) {
         User user = getActiveUserById(userId);
 
         user.setBannedAt(LocalDateTime.now());
         user.setBanReason(message);
-        user.setBannedUntil(LocalDateTime.now().plusDays(days));
+        user.setBannedUntil(bannedUntil);
         userRepository.save(user);
     }
 

@@ -632,7 +632,8 @@ class UserServiceImplTest {
                                 when(userRepository.save(persistedUser)).thenReturn(persistedUser);
 
                                 // Act
-                                userService.banUser(userId, "Mal comportamiento", 5L);
+                                userService.banUser(userId, "Mal comportamiento",
+                                                java.time.LocalDateTime.now().plusDays(5));
 
                                 // Assert
                                 assertThat(persistedUser.getBannedAt()).isNotNull();
