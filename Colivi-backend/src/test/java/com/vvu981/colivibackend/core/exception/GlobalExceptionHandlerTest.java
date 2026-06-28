@@ -28,11 +28,12 @@ class GlobalExceptionHandlerTest {
 
         // Assert
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
-        assertNotNull(response.getBody());
-        assertEquals("Unauthorized", response.getBody().get("error"));
-        assertEquals("Invalid token error", response.getBody().get("message"));
-        assertEquals(HttpStatus.UNAUTHORIZED.value(), response.getBody().get("status"));
-        assertNotNull(response.getBody().get("timestamp"));
+        Map<String, Object> body = response.getBody();
+        assertNotNull(body);
+        assertEquals("Unauthorized", body.get("error"));
+        assertEquals("Invalid token error", body.get("message"));
+        assertEquals(HttpStatus.UNAUTHORIZED.value(), body.get("status"));
+        assertNotNull(body.get("timestamp"));
     }
 
     @Test
@@ -46,11 +47,12 @@ class GlobalExceptionHandlerTest {
 
         // Assert
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
-        assertNotNull(response.getBody());
-        assertEquals("Unauthorized", response.getBody().get("error"));
-        assertEquals("Stale session error", response.getBody().get("message"));
-        assertEquals(HttpStatus.UNAUTHORIZED.value(), response.getBody().get("status"));
-        assertNotNull(response.getBody().get("timestamp"));
+        Map<String, Object> body = response.getBody();
+        assertNotNull(body);
+        assertEquals("Unauthorized", body.get("error"));
+        assertEquals("Stale session error", body.get("message"));
+        assertEquals(HttpStatus.UNAUTHORIZED.value(), body.get("status"));
+        assertNotNull(body.get("timestamp"));
     }
 
     @Test
@@ -64,10 +66,11 @@ class GlobalExceptionHandlerTest {
 
         // Assert
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
-        assertNotNull(response.getBody());
-        assertEquals("Not Found", response.getBody().get("error"));
-        assertEquals("User not found error", response.getBody().get("message"));
-        assertEquals(HttpStatus.NOT_FOUND.value(), response.getBody().get("status"));
-        assertNotNull(response.getBody().get("timestamp"));
+        Map<String, Object> body = response.getBody();
+        assertNotNull(body);
+        assertEquals("Not Found", body.get("error"));
+        assertEquals("User not found error", body.get("message"));
+        assertEquals(HttpStatus.NOT_FOUND.value(), body.get("status"));
+        assertNotNull(body.get("timestamp"));
     }
 }

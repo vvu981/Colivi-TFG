@@ -2,7 +2,6 @@ package com.vvu981.colivibackend.features.user.mapper;
 
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.dto.UpdateNonSensible;
-import com.vvu981.colivibackend.features.user.dto.UpdateSensible;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 

@@ -1,6 +1,5 @@
 package com.vvu981.colivibackend.features.user.controller;
 
-import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.dto.BanRequest;
 import com.vvu981.colivibackend.features.user.dto.UpdateNonSensible;
 import com.vvu981.colivibackend.features.user.dto.UpdateSensible;
@@ -13,7 +12,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 @RestController
