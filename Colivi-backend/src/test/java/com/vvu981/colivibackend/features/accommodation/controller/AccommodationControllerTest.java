@@ -167,4 +167,38 @@ class AccommodationControllerTest {
                     .andExpect(status().isForbidden());
         }
     }
+
+    @Nested
+    @DisplayName("POST /api/v1/accommodation/{id}/images")
+    class UploadImage {
+
+        @Test
+        @DisplayName("debe subir una imagen correctamente si está autenticado")
+        @WithMockUser(username = "test@colivi.com")
+        void shouldUploadImageSuccessfully() throws Exception {
+            org.springframework.mock.web.MockMultipartFile mockFile = new org.springframework.mock.web.MockMultipartFile(
+                    "file", "test.jpg", MediaType.IMAGE_JPEG_VALUE, "image content".getBytes());
+
+            when(accommodationService.addImageToAccommodation(eq(accommodation.getId()), any(), any()))
+                    .thenReturn(new com.vvu981.colivibackend.features.accommodation.dto.AccommodationResponse(accommodation));
+
+            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/api/v1/accommodation/{id}/images", accommodation.getId())
+                    .file(mockFile)
+                    .with(csrf()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.address").value("Calle Gran Via 12"));
+        }
+
+        @Test
+        @DisplayName("debe retornar 403 si no hay autenticación al subir imagen")
+        void shouldReturn403WhenUnauthenticated() throws Exception {
+            org.springframework.mock.web.MockMultipartFile mockFile = new org.springframework.mock.web.MockMultipartFile(
+                    "file", "test.jpg", MediaType.IMAGE_JPEG_VALUE, "image content".getBytes());
+
+            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/api/v1/accommodation/{id}/images", accommodation.getId())
+                    .file(mockFile)
+                    .with(csrf()))
+                    .andExpect(status().isForbidden());
+        }
+    }
 }
