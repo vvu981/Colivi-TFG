@@ -159,6 +159,17 @@
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.12</version>
+                <configuration>
+                    <!-- Excluimos clases que no tienen lógica testable globalmente -->
+                    <excludes>
+                        <exclude>com/vvu981/colivibackend/ColiviBackendApplication.class</exclude>
+                        <exclude>com/vvu981/colivibackend/features/user/domain/**</exclude>
+                        <exclude>com/vvu981/colivibackend/features/user/dto/**</exclude>
+                        <exclude>com/vvu981/colivibackend/features/user/mapper/**Impl.class</exclude>
+                        <exclude>com/vvu981/colivibackend/core/storage/**</exclude>
+                        <exclude>com/vvu981/colivibackend/features/accommodation/dto/**</exclude>
+                    </excludes>
+                </configuration>
                 <executions>
                     <!-- 1. Prepara el agente de instrumentación antes de los tests -->
                     <execution>
@@ -200,15 +211,6 @@
                                     </limits>
                                 </rule>
                             </rules>
-                            <!-- Excluimos clases que no tienen lógica testable -->
-                            <excludes>
-                                <exclude>com/vvu981/colivibackend/ColiviBackendApplication.class</exclude>
-                                <exclude>com/vvu981/colivibackend/features/user/domain/**</exclude>
-                                <exclude>com/vvu981/colivibackend/features/user/dto/**</exclude>
-                                <exclude>com/vvu981/colivibackend/features/user/mapper/**Impl.class</exclude>
-                                <exclude>com/vvu981/colivibackend/core/storage/**</exclude>
-                                <exclude>com/vvu981/colivibackend/features/accommodation/dto/**</exclude>
-                            </excludes>
                         </configuration>
                     </execution>
                 </executions>
