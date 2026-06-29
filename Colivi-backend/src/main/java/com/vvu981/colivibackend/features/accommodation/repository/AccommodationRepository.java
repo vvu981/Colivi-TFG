@@ -6,17 +6,24 @@ import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
 import com.vvu981.colivibackend.features.accommodation.domain.Accommodation;
-import com.vvu981.colivibackend.features.user.domain.User;
 
+@Repository
 public interface AccommodationRepository extends JpaRepository<Accommodation, UUID> {
 
-    Optional<Accommodation> findByIdAndDeletedAtIsNull(UUID id);
+        Optional<Accommodation> findByIdAndDeletedAtIsNull(UUID id);
 
-    Page<Accommodation> findByOwnerAndDeletedAtIsNull(User owner, Pageable pageable);
-
-    Page<Accommodation> findByDeletedAtIsNull(Pageable pageable);
-
-    Page<Accommodation> findByDeletedAtIsNotNull(Pageable pageable);
+        @Query("SELECT a FROM Accommodation a WHERE " +
+                        "(:ownerId IS NULL OR a.owner.id = :ownerId) AND (" +
+                        "(:visibility = 'ALL') OR " +
+                        "(:visibility = 'AVAILABLE' AND a.deletedAt IS NULL) OR " +
+                        "(:visibility = 'DELETED' AND a.deletedAt IS NOT NULL))")
+        Page<Accommodation> findByFields(
+                        @Param("ownerId") UUID ownerId,
+                        @Param("visibility") String visibility,
+                        Pageable pageable);
 }

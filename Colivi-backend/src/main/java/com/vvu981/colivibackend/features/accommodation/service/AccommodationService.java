@@ -5,6 +5,7 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 
 import com.vvu981.colivibackend.features.accommodation.domain.Accommodation;
+import com.vvu981.colivibackend.features.accommodation.domain.AccommodationVisibility;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationRequest;
 import com.vvu981.colivibackend.features.user.domain.User;
 
@@ -16,11 +17,9 @@ public interface AccommodationService {
 
     void deleteAccommodationHard(UUID accommodationId, User currUser);
 
-    Accommodation updateAccommodation(UUID id, AccommodationRequest dto, User currentUser);
+    Accommodation updateAccommodation(UUID id, AccommodationRequest dto, User currUser);
 
     Accommodation getAccommodation(UUID id);
 
-    Page<Accommodation> getDeletedAccommodations(int page, int size); // solo ADMIN
-
-    Page<Accommodation> getAccommodationsByUser(User owner, int page, int size);
+    Page<Accommodation> getAccommodationsCatalog(UUID ownerId, AccommodationVisibility visibility, int page, int size);
 }

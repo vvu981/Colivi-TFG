@@ -75,11 +75,12 @@ public class Accommodation {
         this.longitude = dto.longitude();
         this.owner = owner;
 
+        this.setCreatedAt(LocalDateTime.now());
+
         // Inicializamos y copiamos las amenities de forma segura
         this.amenities = new HashSet<>();
         if (dto.amenities() != null) {
             this.amenities.addAll(dto.amenities());
         }
     }
-
 }

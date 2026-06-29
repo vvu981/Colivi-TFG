@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.vvu981.colivibackend.features.accommodation.domain.Accommodation;
+import com.vvu981.colivibackend.features.accommodation.domain.AccommodationVisibility;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationRequest;
 import com.vvu981.colivibackend.features.accommodation.repository.AccommodationRepository;
 import com.vvu981.colivibackend.features.accommodation.service.AccommodationService;
@@ -85,6 +86,14 @@ public class AccommodationServiceImpl implements AccommodationService {
         return findAccommodationByIdAndDeletedAtIsNull(id);
     }
 
+    @Override
+    public Page<Accommodation> getAccommodationsCatalog(UUID userId, AccommodationVisibility visibility, int page,
+            int size) {
+        // Ordenamos siempre cronológicamente de la más nueva a la más antigua
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        return accommodationRepository.findByFields(userId, visibility.name(), pageable);
+    }
+
     private Accommodation findAccommodationByIdAndDeletedAtIsNull(UUID id) {
         return accommodationRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new RuntimeException("Error: Accommodation with id: " + id + " not found."));
@@ -98,17 +107,5 @@ public class AccommodationServiceImpl implements AccommodationService {
                                                                    // entidad User
 
         return isOwner || isAdmin;
-    }
-
-    @Override
-    public Page<Accommodation> getDeletedAccommodations(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        return accommodationRepository.findByDeletedAtIsNotNull(pageable);
-    }
-
-    @Override
-    public Page<Accommodation> getAccommodationsByUser(User owner, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        return accommodationRepository.findByOwnerAndDeletedAtIsNull(owner, pageable);
     }
 }

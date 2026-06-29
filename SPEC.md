@@ -49,6 +49,16 @@ Cada anuncio publicado debe contener obligatoriamente los siguientes datos valid
 * Precio mensual de alquiler (expresado en moneda local/Euros).
 * Identificador y nickname del propietario del alojamiento.
 * Estado del anuncio (`PENDIENTE`, `ACTIVO`, `RECHAZADO`, `FINALIZADO`).
+* Visibilidad del anuncio (`AVAILABLE`, `DELETED`, `ALL`).
+
+#### C. Listado y Catálogo Unificado
+Para evitar la redundancia de código y cumplir con los principios SOLID, todas las consultas y búsquedas del catálogo de alojamientos se centralizan en una única consulta JPQL dinámica parametrizada:
+* **Método de Servicio:** `Page<Accommodation> getAccommodationsCatalog(User owner, AccommodationVisibility visibility, int page, int size)`
+* **Filtros de Visibilidad (`AccommodationVisibility`):**
+    * `AVAILABLE`: Retorna únicamente anuncios activos (no eliminados logicamente, `deletedAt IS NULL`).
+    * `DELETED`: Retorna únicamente anuncios con borrado lógico (`deletedAt IS NOT NULL`) en la papelera del administrador o usuario.
+    * `ALL`: Retorna todo el historial de alojamientos de forma incondicional.
+* **Filtro de Propietario (`owner`):** Si es `null`, se realiza una búsqueda global; si se informa, se limita a las propiedades publicadas por dicho usuario.
 
 ---
 

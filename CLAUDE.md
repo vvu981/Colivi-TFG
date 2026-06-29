@@ -49,6 +49,7 @@ Servidor independiente que implementa el Model Context Protocol (MCP) y actúa c
 | **Moderación manual** | Un Administrador puede eliminar cualquier anuncio, comentario o valoración. Solo un Administrador puede aprobar o rechazar solicitudes de publicación. |
 | **Auto-moderación preventiva** | Si un anuncio acumula más de **5 denuncias únicas** en estado `PENDING` (en tabla `ACCOMMODATION_REPORT`), el sistema cambia automáticamente su estado a `PENDIENTE` y genera una alerta prioritaria en la bandeja del Administrador. Esta acción es atómica y gestionada por `AccommodationReportService`. |
 | **Denuncias de anuncios** | Cualquier usuario (registrado o anónimo) puede enviar una denuncia vía `POST /api/v1/accommodations/{id}/reports`. Los motivos posibles son: `SPAM`, `SCAM`, `INAPPROPRIATE`, `MISLEADING`. El estado de la denuncia sigue el ciclo: `PENDING → REVIEWED → DISMISSED`. |
+| **Listado dinámico y catálogo** | Unificación en `getAccommodationsCatalog(owner, visibility, page, size)` con estados `AVAILABLE` (activos), `DELETED` (borrado lógico) y `ALL` (todo el histórico) para evitar duplicidad de consultas JPA y optimizar filtrados. |
 
 ### 2.2 Motor de Gastos Compartidos
 
