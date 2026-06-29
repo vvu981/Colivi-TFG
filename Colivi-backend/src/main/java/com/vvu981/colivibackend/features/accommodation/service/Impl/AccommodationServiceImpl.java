@@ -17,6 +17,7 @@ import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import lombok.RequiredArgsConstructor;
 
@@ -44,11 +45,11 @@ public class AccommodationServiceImpl implements AccommodationService {
 
     @Override
     @Transactional
+    @PreAuthorize("hasAuthority('ADMIN')")
     public void deleteAccommodationHard(UUID accommodationId, User currentUser) {
 
-        Accommodation accommodationToDelete = findAccommodationByIdAndDeletedAtIsNull(accommodationId);
-        if (!canEdit(accommodationToDelete, currentUser))
-            throw new RuntimeException("Error: no puedes eliminar");
+        Accommodation accommodationToDelete = accommodationRepository.findById(accommodationId)
+                .orElseThrow(() -> new RuntimeException("Error: Accommodation not found."));
         accommodationRepository.delete(accommodationToDelete);
     }
 

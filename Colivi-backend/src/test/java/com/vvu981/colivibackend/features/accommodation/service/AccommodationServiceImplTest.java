@@ -171,24 +171,10 @@ class AccommodationServiceImplTest {
     class DeleteAccommodationHard {
 
         @Test
-        @DisplayName("debe eliminar físicamente si el usuario es el dueño")
-        void shouldHardDeleteIfUserIsOwner() {
+        @DisplayName("debe eliminar físicamente el alojamiento si existe")
+        void shouldHardDeleteSuccessfully() {
             // Arrange
-            when(accommodationRepository.findByIdAndDeletedAtIsNull(accommodation.getId()))
-                    .thenReturn(Optional.of(accommodation));
-
-            // Act
-            accommodationService.deleteAccommodationHard(accommodation.getId(), owner);
-
-            // Assert
-            verify(accommodationRepository, times(1)).delete(accommodation);
-        }
-
-        @Test
-        @DisplayName("debe eliminar físicamente si el usuario es administrador")
-        void shouldHardDeleteIfUserIsAdmin() {
-            // Arrange
-            when(accommodationRepository.findByIdAndDeletedAtIsNull(accommodation.getId()))
+            when(accommodationRepository.findById(accommodation.getId()))
                     .thenReturn(Optional.of(accommodation));
 
             // Act
@@ -199,16 +185,16 @@ class AccommodationServiceImplTest {
         }
 
         @Test
-        @DisplayName("debe lanzar excepción si el usuario no está autorizado")
-        void shouldThrowExceptionIfUserNotAuthorized() {
+        @DisplayName("debe lanzar excepción si el alojamiento no existe al eliminar físicamente")
+        void shouldThrowExceptionIfAccommodationNotFound() {
             // Arrange
-            when(accommodationRepository.findByIdAndDeletedAtIsNull(accommodation.getId()))
-                    .thenReturn(Optional.of(accommodation));
+            when(accommodationRepository.findById(any(UUID.class)))
+                    .thenReturn(Optional.empty());
 
             // Act & Assert
-            assertThatThrownBy(() -> accommodationService.deleteAccommodationHard(accommodation.getId(), otherUser))
+            assertThatThrownBy(() -> accommodationService.deleteAccommodationHard(UUID.randomUUID(), admin))
                     .isInstanceOf(RuntimeException.class)
-                    .hasMessageContaining("no puedes eliminar");
+                    .hasMessageContaining("Accommodation not found");
             verify(accommodationRepository, never()).delete(any(Accommodation.class));
         }
     }
