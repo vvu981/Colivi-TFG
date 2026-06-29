@@ -79,7 +79,8 @@ class UserTest {
         // Act (AllArgsConstructor)
         User userAllArgs = new User(
                 id, "nickname", "email@test.com", "hash", "John", "Doe", "Smith",
-                "123456789", "http://pic", UserRole.USER, now, now, now, 1, now, "reason"
+                "123456789", "http://pic", UserRole.USER, now, now, now, 1, now, "reason",
+                "reactivation-token-uuid", now
         );
 
         // Act (NoArgsConstructor & Setters)
@@ -100,6 +101,8 @@ class UserTest {
         user.setTokenVersion(1);
         user.setBannedUntil(now);
         user.setBanReason("reason");
+        user.setReactivationToken("reactivation-token-uuid");
+        user.setReactivationTokenExpiresAt(now);
 
         // Assert (Getters)
         assertAll("Verify getters and setters",
@@ -118,7 +121,9 @@ class UserTest {
                 () -> assertEquals(now, user.getCreatedAt()),
                 () -> assertEquals(1, user.getTokenVersion()),
                 () -> assertEquals(now, user.getBannedUntil()),
-                () -> assertEquals("reason", user.getBanReason())
+                () -> assertEquals("reason", user.getBanReason()),
+                () -> assertEquals("reactivation-token-uuid", user.getReactivationToken()),
+                () -> assertEquals(now, user.getReactivationTokenExpiresAt())
         );
 
         // Assert matching between constructors
