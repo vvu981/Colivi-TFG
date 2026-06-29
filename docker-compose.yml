@@ -50,7 +50,7 @@ services:
       mailpit:           # El backend arranca después de que Mailpit esté listo
         condition: service_started
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/tfg_db
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/tfg_db?stringtype=unspecified
       SPRING_DATASOURCE_USERNAME: tfg_user
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
