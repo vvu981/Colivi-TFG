@@ -96,7 +96,7 @@ class AccommodationControllerTest {
             Page<Accommodation> pageResult = new PageImpl<>(Collections.singletonList(accommodation));
 
             when(accommodationService.getAccommodationsCatalog(
-                    any(UUID.class),
+                    any(),
                     any(AccommodationVisibility.class),
                     anyInt(),
                     anyInt())).thenReturn(pageResult);
@@ -109,6 +109,26 @@ class AccommodationControllerTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.content").isArray())
                     .andExpect(jsonPath("$.content[0].address").value("Calle Gran Via 12"));
+        }
+
+        @Test
+        @DisplayName("debe retornar 200 sin ownerId (parámetro opcional)")
+        @WithMockUser
+        void shouldReturnOkWithoutOwnerId() throws Exception {
+            Page<Accommodation> pageResult = new PageImpl<>(Collections.emptyList());
+
+            when(accommodationService.getAccommodationsCatalog(
+                    any(),
+                    any(AccommodationVisibility.class),
+                    anyInt(),
+                    anyInt())).thenReturn(pageResult);
+
+            mockMvc.perform(get("/api/v1/accommodation")
+                    .param("visibility", "AVAILABLE")
+                    .param("page", "0")
+                    .param("size", "10"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content").isArray());
         }
     }
 
@@ -129,6 +149,16 @@ class AccommodationControllerTest {
                     .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.address").value("Calle Gran Via 12"));
+        }
+
+        @Test
+        @DisplayName("debe retornar 403 si no hay autenticación")
+        void shouldReturn403WhenUnauthenticated() throws Exception {
+            mockMvc.perform(post("/api/v1/accommodation")
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isForbidden());
         }
     }
 }

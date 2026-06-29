@@ -264,6 +264,57 @@ class AccommodationServiceImplTest {
                     .hasMessageContaining("no puedes editar");
             verify(accommodationRepository, never()).save(any(Accommodation.class));
         }
+
+        @Test
+        @DisplayName("debe actualizar correctamente si el usuario es administrador")
+        void shouldUpdateSuccessfullyIfAdmin() {
+            // Arrange
+            when(accommodationRepository.findByIdAndDeletedAtIsNull(accommodation.getId()))
+                    .thenReturn(Optional.of(accommodation));
+            when(accommodationRepository.save(any(Accommodation.class))).thenReturn(accommodation);
+
+            // Act
+            Accommodation result = accommodationService.updateAccommodation(accommodation.getId(), request, admin);
+
+            // Assert
+            assertThat(result).isNotNull();
+            verify(accommodationRepository, times(1)).save(accommodation);
+        }
+
+        @Test
+        @DisplayName("debe manejar amenities null en el request de actualización")
+        void shouldHandleNullAmenitiesInUpdateRequest() {
+            // Arrange
+            AccommodationRequest updateRequestNullAmenities = new AccommodationRequest(
+                    "New Address", 5, 3, 3, 150, "Barcelona", "Spain", "Barcelona", 41.3851, 2.1734,
+                    null  // amenities null
+            );
+            when(accommodationRepository.findByIdAndDeletedAtIsNull(accommodation.getId()))
+                    .thenReturn(Optional.of(accommodation));
+            when(accommodationRepository.save(any(Accommodation.class))).thenReturn(accommodation);
+
+            // Act - no debe lanzar excepción
+            Accommodation result = accommodationService.updateAccommodation(
+                    accommodation.getId(), updateRequestNullAmenities, owner);
+
+            // Assert
+            assertThat(result).isNotNull();
+            verify(accommodationRepository, times(1)).save(accommodation);
+        }
+
+        @Test
+        @DisplayName("debe lanzar excepción si el alojamiento no existe al actualizar")
+        void shouldThrowExceptionIfAccommodationNotFoundOnUpdate() {
+            // Arrange
+            when(accommodationRepository.findByIdAndDeletedAtIsNull(any(UUID.class)))
+                    .thenReturn(Optional.empty());
+
+            // Act & Assert
+            assertThatThrownBy(
+                    () -> accommodationService.updateAccommodation(UUID.randomUUID(), request, owner))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("not found");
+        }
     }
 
     @Nested
@@ -283,6 +334,20 @@ class AccommodationServiceImplTest {
             // Assert
             assertThat(result).isNotNull();
             assertThat(result.getId()).isEqualTo(accommodation.getId());
+        }
+
+        @Test
+        @DisplayName("debe lanzar excepción si el alojamiento no existe")
+        void shouldThrowExceptionIfAccommodationNotFound() {
+            // Arrange
+            when(accommodationRepository.findByIdAndDeletedAtIsNull(any(UUID.class)))
+                    .thenReturn(Optional.empty());
+
+            // Act & Assert
+            UUID randomId = UUID.randomUUID();
+            assertThatThrownBy(() -> accommodationService.getAccommodation(randomId))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("not found");
         }
     }
 
