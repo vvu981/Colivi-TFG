@@ -7,7 +7,6 @@ import com.vvu981.colivibackend.features.user.domain.UserRole;
 import com.vvu981.colivibackend.features.user.dto.*;
 import com.vvu981.colivibackend.features.user.exception.AccountAlreadyActiveException;
 import com.vvu981.colivibackend.features.user.exception.InvalidReactivationTokenException;
-import com.vvu981.colivibackend.features.user.exception.InvalidTokenException;
 import com.vvu981.colivibackend.features.user.mapper.UserMapper;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,7 +31,8 @@ import static org.mockito.Mockito.*;
 
 /**
  * Tests unitarios de UserServiceImpl.
- * Todas las dependencias externas están mockeadas. No se levanta contexto Spring.
+ * Todas las dependencias externas están mockeadas. No se levanta contexto
+ * Spring.
  *
  * HISTORIAL DE BUGS: Este test suite detectó un bug crítico en producción:
  * UserServiceImpl.updateSensibleData() tenía la condición de guarda INVERTIDA.
