@@ -40,7 +40,7 @@ services:
   # ──────────────────────────────────────────────
   backend:
     build:
-      context: ./backend
+      context: ./Colivi-backend
       dockerfile: Dockerfile
     container_name: tfg_backend
     restart: unless-stopped
