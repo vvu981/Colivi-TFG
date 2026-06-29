@@ -315,6 +315,23 @@ class UserServiceImplTest {
                                         .isInstanceOf(RuntimeException.class)
                                         .hasMessageContaining("Usuario no encontrado");
                 }
+
+                @Test
+                @DisplayName("versión del token discrepante lanza StaleSessionException")
+                void givenMismatchingTokenVersion_whenRefresh_thenThrowsStaleSessionException() {
+                        // Arrange
+                        RefreshTokenRequest request = new RefreshTokenRequest("mismatch.version.token");
+                        when(jwtTokenProvider.isTokenValid("mismatch.version.token")).thenReturn(true);
+                        when(jwtTokenProvider.extractEmail("mismatch.version.token")).thenReturn("victor@colivi.com");
+                        when(userRepository.findByEmailAndDeletedAtIsNull("victor@colivi.com"))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(jwtTokenProvider.extractTokenVersion("mismatch.version.token")).thenReturn(99); // Versión en DB es 1
+
+                        // Act & Assert
+                        assertThatThrownBy(() -> userService.refreshToken(request))
+                                        .isInstanceOf(com.vvu981.colivibackend.features.user.exception.StaleSessionException.class)
+                                        .hasMessageContaining("La sesión ha expirado");
+                }
         }
 
         // =========================================================================
@@ -975,4 +992,48 @@ class UserServiceImplTest {
                                         .hasMessageContaining("caducado");
                 }
         }
+
+    @Nested
+    @DisplayName("getUserProfile")
+    class GetUserProfile {
+        @Test
+        @DisplayName("happy path: retorna el perfil del usuario")
+        void givenExistingUserId_whenGetUserProfile_thenReturnsUserProfile() {
+            // Arrange
+            UUID userId = persistedUser.getId();
+            UserProfileResponse expectedDto = new UserProfileResponse();
+            when(userRepository.findByIdAndDeletedAtIsNull(userId)).thenReturn(Optional.of(persistedUser));
+            when(userMapper.toUserProfileDto(persistedUser)).thenReturn(expectedDto);
+
+            // Act
+            UserProfileResponse result = userService.getUserProfile(userId);
+
+            // Assert
+            assertThat(result).isEqualTo(expectedDto);
+            verify(userRepository).findByIdAndDeletedAtIsNull(userId);
+            verify(userMapper).toUserProfileDto(persistedUser);
+        }
+    }
+
+    @Nested
+    @DisplayName("getMyProfile")
+    class GetMyProfile {
+        @Test
+        @DisplayName("happy path: retorna el propio perfil del usuario")
+        void givenExistingUserId_whenGetMyProfile_thenReturnsUserProfile() {
+            // Arrange
+            UUID userId = persistedUser.getId();
+            UserProfileResponse expectedDto = new UserProfileResponse();
+            when(userRepository.findByIdAndDeletedAtIsNull(userId)).thenReturn(Optional.of(persistedUser));
+            when(userMapper.toUserProfileDto(persistedUser)).thenReturn(expectedDto);
+
+            // Act
+            UserProfileResponse result = userService.getMyProfile(userId);
+
+            // Assert
+            assertThat(result).isEqualTo(expectedDto);
+            verify(userRepository).findByIdAndDeletedAtIsNull(userId);
+            verify(userMapper).toUserProfileDto(persistedUser);
+        }
+    }
 }
