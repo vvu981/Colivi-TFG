@@ -35,6 +35,8 @@ import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -199,6 +201,71 @@ class AccommodationControllerTest {
                     .file(mockFile)
                     .with(csrf()))
                     .andExpect(status().isForbidden());
+        }
+    }
+
+    @Nested
+    @DisplayName("PUT /api/v1/accommodation/{id}")
+    class UpdateAccommodation {
+        @Test
+        @DisplayName("debe actualizar el alojamiento si está autenticado")
+        @WithMockUser
+        void shouldUpdateSuccessfully() throws Exception {
+            when(accommodationService.updateAccommodation(eq(accommodation.getId()), any(), any()))
+                    .thenReturn(new com.vvu981.colivibackend.features.accommodation.dto.AccommodationResponse(accommodation));
+
+            mockMvc.perform(put("/api/v1/accommodation/{id}", accommodation.getId())
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.address").value("Calle Gran Via 12"));
+        }
+    }
+
+    @Nested
+    @DisplayName("PUT /api/v1/accommodation/delete/{id}")
+    class DeleteSoft {
+        @Test
+        @DisplayName("debe borrar lógicamente si está autenticado")
+        @WithMockUser
+        void shouldSoftDeleteSuccessfully() throws Exception {
+            when(accommodationService.deleteAccommodationSoft(eq(accommodation.getId()), any()))
+                    .thenReturn(new com.vvu981.colivibackend.features.accommodation.dto.AccommodationResponse(accommodation));
+
+            mockMvc.perform(put("/api/v1/accommodation/delete/{id}", accommodation.getId())
+                    .with(csrf()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.address").value("Calle Gran Via 12"));
+        }
+    }
+
+    @Nested
+    @DisplayName("DELETE /api/v1/accommodation/hardDelete/{id}")
+    class DeleteHard {
+        @Test
+        @DisplayName("debe borrar físicamente si está autenticado")
+        @WithMockUser(authorities = "ADMIN")
+        void shouldHardDeleteSuccessfully() throws Exception {
+            mockMvc.perform(delete("/api/v1/accommodation/hardDelete/{id}", accommodation.getId())
+                    .with(csrf()))
+                    .andExpect(status().isNoContent());
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/v1/accommodation/{id}")
+    class GetAccommodationDetails {
+        @Test
+        @DisplayName("debe retornar los detalles del alojamiento")
+        @WithMockUser
+        void shouldGetSuccessfully() throws Exception {
+            when(accommodationService.getAccommodation(eq(accommodation.getId())))
+                    .thenReturn(new com.vvu981.colivibackend.features.accommodation.dto.AccommodationResponse(accommodation));
+
+            mockMvc.perform(get("/api/v1/accommodation/{id}", accommodation.getId()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.address").value("Calle Gran Via 12"));
         }
     }
 }
