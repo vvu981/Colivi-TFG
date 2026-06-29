@@ -107,4 +107,56 @@ class AccommodationTest {
         assertThat(accommodation.getOwner()).isEqualTo(owner);
         assertThat(accommodation.getAmenities()).isNotNull().isEmpty();
     }
+
+    @Test
+    @DisplayName("debe permitir configurar todos los campos en el builder para cobertura completa")
+    void shouldAllowSettingAllFieldsInBuilder() {
+        User owner = new User();
+        UUID id = UUID.randomUUID();
+        LocalDateTime now = LocalDateTime.now();
+        Set<AmenityType> amenities = Set.of(AmenityType.WIFI);
+
+        Accommodation accommodation = Accommodation.builder()
+                .id(id)
+                .address("Built Address")
+                .totalRooms(5)
+                .totalBathrooms(3)
+                .freeRooms(2)
+                .squareMeters(120)
+                .city("Madrid")
+                .country("Spain")
+                .province("Madrid")
+                .latitude(40.0)
+                .longitude(-3.0)
+                .createdAt(now)
+                .updatedAt(now)
+                .deletedAt(now)
+                .amenities(amenities)
+                .owner(owner)
+                .build();
+
+        assertThat(accommodation.getId()).isEqualTo(id);
+        assertThat(accommodation.getAddress()).isEqualTo("Built Address");
+        assertThat(accommodation.getTotalRooms()).isEqualTo(5);
+        assertThat(accommodation.getTotalBathrooms()).isEqualTo(3);
+        assertThat(accommodation.getFreeRooms()).isEqualTo(2);
+        assertThat(accommodation.getSquareMeters()).isEqualTo(120);
+        assertThat(accommodation.getCity()).isEqualTo("Madrid");
+        assertThat(accommodation.getCountry()).isEqualTo("Spain");
+        assertThat(accommodation.getProvince()).isEqualTo("Madrid");
+        assertThat(accommodation.getLatitude()).isEqualTo(40.0);
+        assertThat(accommodation.getLongitude()).isEqualTo(-3.0);
+        assertThat(accommodation.getCreatedAt()).isEqualTo(now);
+        assertThat(accommodation.getUpdatedAt()).isEqualTo(now);
+        assertThat(accommodation.getDeletedAt()).isEqualTo(now);
+        assertThat(accommodation.getAmenities()).isEqualTo(amenities);
+        assertThat(accommodation.getOwner()).isEqualTo(owner);
+    }
+
+    @Test
+    @DisplayName("debe cubrir el toString generado por lombok/builder si aplica")
+    void shouldCoverToString() {
+        String builderToString = Accommodation.builder().toString();
+        assertThat(builderToString).contains("AccommodationBuilder");
+    }
 }

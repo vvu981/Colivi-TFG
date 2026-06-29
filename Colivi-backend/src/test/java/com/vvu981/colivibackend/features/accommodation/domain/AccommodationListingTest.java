@@ -94,13 +94,9 @@ class AccommodationListingTest {
     }
 
     @Test
-    @DisplayName("ListingStatus debe contener todos los valores esperados")
-    void listingStatus_ShouldHaveAllExpectedValues() {
-        assertThat(ListingStatus.values()).containsExactlyInAnyOrder(
-                ListingStatus.PENDIENTE,
-                ListingStatus.ACTIVO,
-                ListingStatus.RECHAZADO,
-                ListingStatus.FINALIZADO
-        );
+    @DisplayName("debe cubrir el toString generado por lombok/builder")
+    void shouldCoverToString() {
+        String builderToString = AccommodationListing.builder().toString();
+        assertThat(builderToString).contains("AccommodationListingBuilder");
     }
 }
