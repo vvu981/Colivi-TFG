@@ -1,5 +1,7 @@
 package com.vvu981.colivibackend.core.exception;
 
+import com.vvu981.colivibackend.features.user.exception.AccountAlreadyActiveException;
+import com.vvu981.colivibackend.features.user.exception.InvalidReactivationTokenException;
 import com.vvu981.colivibackend.features.user.exception.InvalidTokenException;
 import com.vvu981.colivibackend.features.user.exception.StaleSessionException;
 import com.vvu981.colivibackend.features.user.exception.UserNotFoundException;
@@ -15,8 +17,7 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // Captura tanto tokens inválidos como sesiones obsoletas y devuelve 401
-    // Unauthorized
+    // Tokens JWT de sesión inválidos/caducados → 401 Unauthorized
     @ExceptionHandler({ InvalidTokenException.class, StaleSessionException.class })
     public ResponseEntity<Map<String, Object>> handleUnauthorizedExceptions(RuntimeException ex) {
         Map<String, Object> body = new HashMap<>();
@@ -28,7 +29,7 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.UNAUTHORIZED);
     }
 
-    // Captura cuando un recurso no existe y devuelve 404 Not Found
+    // Recurso no existe → 404 Not Found
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleNotFoundExceptions(UserNotFoundException ex) {
         Map<String, Object> body = new HashMap<>();
@@ -39,4 +40,32 @@ public class GlobalExceptionHandler {
 
         return new ResponseEntity<>(body, HttpStatus.NOT_FOUND);
     }
-}
+
+    // Token de reactivación inválido o caducado → 400 Bad Request
+    // Distinto de InvalidTokenException (401): el enlace de reactivación es público,
+    // su invalidez es un error de solicitud, no de autenticación.
+    @ExceptionHandler(InvalidReactivationTokenException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidReactivationToken(
+            InvalidReactivationTokenException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.BAD_REQUEST.value());
+        body.put("error", "Bad Request");
+        body.put("message", ex.getMessage());
+
+        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+    }
+
+    // Cuenta ya activa cuando se intenta reactivar → 400 Bad Request
+    @ExceptionHandler(AccountAlreadyActiveException.class)
+    public ResponseEntity<Map<String, Object>> handleAccountAlreadyActive(
+            AccountAlreadyActiveException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.BAD_REQUEST.value());
+        body.put("error", "Bad Request");
+        body.put("message", ex.getMessage());
+
+        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+    }
+}

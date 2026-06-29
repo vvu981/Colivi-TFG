@@ -32,4 +32,32 @@ public interface UserService {
     UserProfileResponse getUserProfile(UUID userId);
 
     UserProfileResponse getMyProfile(UUID userId);
+
+    /**
+     * Paso 1 del flujo de reactivación.
+     *
+     * <p>Localiza la cuenta por email (incluso si está soft-deleted), genera un
+     * token UUID con TTL de 24 horas, lo persiste en base de datos y envía un
+     * correo al usuario con el enlace de reactivación.</p>
+     *
+     * <p>Si la cuenta ya está activa, lanza {@code AccountAlreadyActiveException}.
+     * Si el email no existe, por seguridad no se revela el error (respuesta silenciosa).</p>
+     *
+     * @param email dirección de correo del usuario que quiere reactivar su cuenta.
+     */
+    void requestReactivation(String email);
+
+    /**
+     * Paso 2 del flujo de reactivación.
+     *
+     * <p>Valida el token recibido, comprueba que no ha caducado, restaura la cuenta
+     * (limpia {@code deletedAt}), limpia el token y devuelve un {@link AuthResponse}
+     * para que el usuario quede autenticado sin necesidad de hacer login adicional.</p>
+     *
+     * @param token token UUID de reactivación enviado por email al usuario.
+     * @return tokens JWT de acceso y refresco listos para usar.
+     * @throws com.vvu981.colivibackend.features.user.exception.InvalidTokenException
+     *         si el token no existe o ya ha caducado.
+     */
+    AuthResponse reactivateAccount(String token);
 }
