@@ -62,6 +62,18 @@ public class User {
 
     private String banReason;
 
+    /**
+     * Token UUID generado al solicitar la reactivación de la cuenta.
+     * Se limpia a {@code null} una vez que el usuario completa el proceso o caduca.
+     */
+    private String reactivationToken;
+
+    /**
+     * Marca de tiempo en la que el {@link #reactivationToken} deja de ser válido.
+     * Se establece a 24 horas desde la solicitud.
+     */
+    private LocalDateTime reactivationTokenExpiresAt;
+
     public boolean isBanned() {
         if (bannedAt == null) {
             return false;

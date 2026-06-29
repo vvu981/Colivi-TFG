@@ -23,6 +23,19 @@ services:
       retries: 5
 
   # ──────────────────────────────────────────────
+  # MAILPIT — Servidor SMTP local (intercepta correos en dev)
+  # SMTP:  puerto 1025
+  # Web UI: http://localhost:8025
+  # ──────────────────────────────────────────────
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: tfg_mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI de inspección
+
+  # ──────────────────────────────────────────────
   # BACKEND — Java Spring Boot
   # ──────────────────────────────────────────────
   backend:
@@ -34,6 +47,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      mailpit:           # El backend arranca después de que Mailpit esté listo
+        condition: service_started
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/tfg_db
       SPRING_DATASOURCE_USERNAME: tfg_user
@@ -42,6 +57,11 @@ services:
       JWT_EXPIRATION_MS: 86400000
       CLOUD_STORAGE_URL: ${CLOUD_STORAGE_URL}
       CLOUD_STORAGE_API_KEY: ${CLOUD_STORAGE_API_KEY}
+      # ── Mail (Mailpit) ──
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
+      MAIL_FROM: ${MAIL_FROM}
+      MAIL_REACTIVATION_URL: ${MAIL_REACTIVATION_URL}
     ports:
       - "8080:8080"
     healthcheck:

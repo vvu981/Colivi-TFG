@@ -1,9 +1,13 @@
 package com.vvu981.colivibackend.features.user.service;
 
 import com.vvu981.colivibackend.core.security.JwtTokenProvider;
+import com.vvu981.colivibackend.features.auth.service.EmailService;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
 import com.vvu981.colivibackend.features.user.dto.*;
+import com.vvu981.colivibackend.features.user.exception.AccountAlreadyActiveException;
+import com.vvu981.colivibackend.features.user.exception.InvalidReactivationTokenException;
+import com.vvu981.colivibackend.features.user.exception.InvalidTokenException;
 import com.vvu981.colivibackend.features.user.mapper.UserMapper;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -11,11 +15,13 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -26,8 +32,7 @@ import static org.mockito.Mockito.*;
 
 /**
  * Tests unitarios de UserServiceImpl.
- * Todas las dependencias externas están mockeadas. No se levanta contexto
- * Spring.
+ * Todas las dependencias externas están mockeadas. No se levanta contexto Spring.
  *
  * HISTORIAL DE BUGS: Este test suite detectó un bug crítico en producción:
  * UserServiceImpl.updateSensibleData() tenía la condición de guarda INVERTIDA.
@@ -51,6 +56,8 @@ class UserServiceImplTest {
         private PasswordEncoder passwordEncoder;
         @Mock
         private UserMapper userMapper;
+        @Mock
+        private EmailService emailService;
 
         @InjectMocks
         private UserServiceImpl userService;
@@ -408,8 +415,6 @@ class UserServiceImplTest {
                                         .thenReturn(false); // contraseña incorrecta
 
                         // Act & Assert
-                        // Con el código actual (bug): NO lanza excepción cuando debería hacerlo.
-                        // Este test captura el comportamiento CORRECTO esperado.
                         assertThatThrownBy(() -> userService.updateSensibleData(persistedUser.getId(), request))
                                         .isInstanceOf(RuntimeException.class)
                                         .hasMessageContaining("contraseña es incorrecta");
@@ -527,12 +532,12 @@ class UserServiceImplTest {
                                         .thenReturn(Optional.of(persistedUser));
                         when(userRepository.save(persistedUser)).thenReturn(persistedUser);
 
-                        java.time.LocalDateTime before = java.time.LocalDateTime.now();
+                        LocalDateTime before = LocalDateTime.now();
 
                         // Act
                         userService.deleteUserSoft(userId);
 
-                        java.time.LocalDateTime after = java.time.LocalDateTime.now();
+                        LocalDateTime after = LocalDateTime.now();
 
                         // Assert — el timestamp debe estar en el rango [before, after]
                         assertThat(persistedUser.getDeletedAt())
@@ -596,107 +601,378 @@ class UserServiceImplTest {
 
                         verify(userRepository, never()).delete(any());
                 }
-                // =========================================================================
-                // logout
-                // =========================================================================
+        }
 
-                @Nested
-                @DisplayName("logout")
-                class Logout {
+        // =========================================================================
+        // logout
+        // =========================================================================
 
-                        @Test
-                        @DisplayName("happy path: incrementa tokenVersion y guarda usuario")
-                        void givenAuthenticatedUser_whenLogout_thenTokenVersionIncrementedAndSaved() {
-                                // Arrange
-                                UUID userId = persistedUser.getId();
-                                Integer originalVersion = persistedUser.getTokenVersion();
-                                when(userRepository.findByIdAndDeletedAtIsNull(userId))
-                                                .thenReturn(Optional.of(persistedUser));
-                                when(userRepository.save(persistedUser)).thenReturn(persistedUser);
+        @Nested
+        @DisplayName("logout")
+        class Logout {
 
-                                // Act
-                                userService.logout(persistedUser.getId());
+                @Test
+                @DisplayName("happy path: incrementa tokenVersion y guarda usuario")
+                void givenAuthenticatedUser_whenLogout_thenTokenVersionIncrementedAndSaved() {
+                        // Arrange
+                        UUID userId = persistedUser.getId();
+                        Integer originalVersion = persistedUser.getTokenVersion();
+                        when(userRepository.findByIdAndDeletedAtIsNull(userId))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(userRepository.save(persistedUser)).thenReturn(persistedUser);
 
-                                // Assert
-                                assertThat(persistedUser.getTokenVersion()).isEqualTo(originalVersion + 1);
-                                verify(userRepository).save(persistedUser);
-                        }
+                        // Act
+                        userService.logout(persistedUser.getId());
 
-                        @Test
-                        @DisplayName("usuario no encontrado lanza RuntimeException")
-                        void givenNonExistentUser_whenLogout_thenThrowsRuntimeException() {
-                                // Arrange
-                                UUID unknownId = UUID.randomUUID();
-                                User unknownUser = new User();
-                                unknownUser.setId(unknownId);
-
-                                when(userRepository.findByIdAndDeletedAtIsNull(unknownId))
-                                                .thenReturn(Optional.empty());
-
-                                // Act & Assert
-                                assertThatThrownBy(() -> userService.logout(unknownId))
-                                                .isInstanceOf(RuntimeException.class)
-                                                .hasMessageContaining("Usuario no encontrado");
-
-                                verify(userRepository, never()).save(any());
-                        }
+                        // Assert
+                        assertThat(persistedUser.getTokenVersion()).isEqualTo(originalVersion + 1);
+                        verify(userRepository).save(persistedUser);
                 }
 
-                // =========================================================================
-                // banUser
-                // =========================================================================
+                @Test
+                @DisplayName("usuario no encontrado lanza RuntimeException")
+                void givenNonExistentUser_whenLogout_thenThrowsRuntimeException() {
+                        // Arrange
+                        UUID unknownId = UUID.randomUUID();
+                        when(userRepository.findByIdAndDeletedAtIsNull(unknownId))
+                                        .thenReturn(Optional.empty());
 
-                @Nested
-                @DisplayName("banUser")
-                class BanUser {
+                        // Act & Assert
+                        assertThatThrownBy(() -> userService.logout(unknownId))
+                                        .isInstanceOf(RuntimeException.class)
+                                        .hasMessageContaining("Usuario no encontrado");
 
-                        @Test
-                        @DisplayName("happy path: usuario se banea con la fecha y motivo correctos")
-                        void givenExistingUser_whenBanUser_thenBannedAndSaved() {
-                                // Arrange
-                                UUID userId = persistedUser.getId();
-                                when(userRepository.findByIdAndDeletedAtIsNull(userId))
-                                                .thenReturn(Optional.of(persistedUser));
-                                when(userRepository.save(persistedUser)).thenReturn(persistedUser);
+                        verify(userRepository, never()).save(any());
+                }
+        }
 
-                                // Act
-                                userService.banUser(userId, "Mal comportamiento",
-                                                java.time.LocalDateTime.now().plusDays(5));
+        // =========================================================================
+        // banUser
+        // =========================================================================
 
-                                // Assert
-                                assertThat(persistedUser.getBannedAt()).isNotNull();
-                                assertThat(persistedUser.getBanReason()).isEqualTo("Mal comportamiento");
-                                assertThat(persistedUser.getBannedUntil())
-                                                .isAfter(java.time.LocalDateTime.now().plusDays(4));
-                                verify(userRepository).save(persistedUser);
-                        }
+        @Nested
+        @DisplayName("banUser")
+        class BanUser {
+
+                @Test
+                @DisplayName("happy path: usuario se banea con la fecha y motivo correctos")
+                void givenExistingUser_whenBanUser_thenBannedAndSaved() {
+                        // Arrange
+                        UUID userId = persistedUser.getId();
+                        when(userRepository.findByIdAndDeletedAtIsNull(userId))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(userRepository.save(persistedUser)).thenReturn(persistedUser);
+
+                        // Act
+                        userService.banUser(userId, "Mal comportamiento",
+                                        LocalDateTime.now().plusDays(5));
+
+                        // Assert
+                        assertThat(persistedUser.getBannedAt()).isNotNull();
+                        assertThat(persistedUser.getBanReason()).isEqualTo("Mal comportamiento");
+                        assertThat(persistedUser.getBannedUntil())
+                                        .isAfter(LocalDateTime.now().plusDays(4));
+                        verify(userRepository).save(persistedUser);
+                }
+        }
+
+        // =========================================================================
+        // unbanUser
+        // =========================================================================
+
+        @Nested
+        @DisplayName("unbanUser")
+        class UnbanUser {
+
+                @Test
+                @DisplayName("happy path: usuario se desbanea limpiando bannedAt")
+                void givenExistingUser_whenUnbanUser_thenUnbannedAndSaved() {
+                        // Arrange
+                        UUID userId = persistedUser.getId();
+                        persistedUser.setBannedAt(LocalDateTime.now());
+                        when(userRepository.findByIdAndDeletedAtIsNull(userId))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(userRepository.save(persistedUser)).thenReturn(persistedUser);
+
+                        // Act
+                        userService.unbanUser(userId);
+
+                        // Assert
+                        assertThat(persistedUser.getBannedAt()).isNull();
+                        verify(userRepository).save(persistedUser);
+                }
+        }
+
+        // =========================================================================
+        // requestReactivation
+        // =========================================================================
+
+        @Nested
+        @DisplayName("requestReactivation")
+        class RequestReactivation {
+
+                @Test
+                @DisplayName("happy path: cuenta eliminada genera token, persiste y envía correo")
+                void givenSoftDeletedAccount_whenRequestReactivation_thenTokenSavedAndEmailSent() {
+                        // Arrange — cuenta con soft-delete
+                        persistedUser.setDeletedAt(LocalDateTime.now().minusDays(1));
+                        when(userRepository.findByEmailIgnoreCase("victor@colivi.com"))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(userRepository.save(any(User.class))).thenReturn(persistedUser);
+
+                        // Act
+                        userService.requestReactivation("victor@colivi.com");
+
+                        // Assert — el token fue generado y el correo enviado
+                        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+                        verify(userRepository).save(userCaptor.capture());
+
+                        User savedUser = userCaptor.getValue();
+                        assertThat(savedUser.getReactivationToken()).isNotNull().isNotBlank();
+                        assertThat(savedUser.getReactivationTokenExpiresAt())
+                                        .isAfter(LocalDateTime.now().plusHours(23));
+
+                        verify(emailService).sendReactivationEmail(
+                                        eq("victor@colivi.com"),
+                                        eq(savedUser.getReactivationToken()));
                 }
 
-                // =========================================================================
-                // unbanUser
-                // =========================================================================
+                @Test
+                @DisplayName("email desconocido: retorna silenciosamente sin lanzar excepción (anti user-enumeration)")
+                void givenUnknownEmail_whenRequestReactivation_thenSilentReturn() {
+                        // Arrange
+                        when(userRepository.findByEmailIgnoreCase("unknown@colivi.com"))
+                                        .thenReturn(Optional.empty());
 
-                @Nested
-                @DisplayName("unbanUser")
-                class UnbanUser {
+                        // Act — no debe lanzar ninguna excepción
+                        assertThatCode(() -> userService.requestReactivation("unknown@colivi.com"))
+                                        .doesNotThrowAnyException();
 
-                        @Test
-                        @DisplayName("happy path: usuario se desbanea limpiando bannedAt")
-                        void givenExistingUser_whenUnbanUser_thenUnbannedAndSaved() {
-                                // Arrange
-                                UUID userId = persistedUser.getId();
-                                persistedUser.setBannedAt(java.time.LocalDateTime.now());
-                                when(userRepository.findByIdAndDeletedAtIsNull(userId))
-                                                .thenReturn(Optional.of(persistedUser));
-                                when(userRepository.save(persistedUser)).thenReturn(persistedUser);
+                        // Assert — no se generó token ni se envió correo
+                        verify(userRepository, never()).save(any());
+                        verifyNoInteractions(emailService);
+                }
 
-                                // Act
-                                userService.unbanUser(userId);
+                @Test
+                @DisplayName("cuenta ya activa (sin deletedAt) lanza AccountAlreadyActiveException")
+                void givenActiveAccount_whenRequestReactivation_thenThrowsAccountAlreadyActiveException() {
+                        // Arrange — cuenta activa (deletedAt == null)
+                        assertThat(persistedUser.getDeletedAt()).isNull(); // precondición
+                        when(userRepository.findByEmailIgnoreCase("victor@colivi.com"))
+                                        .thenReturn(Optional.of(persistedUser));
 
-                                // Assert
-                                assertThat(persistedUser.getBannedAt()).isNull();
-                                verify(userRepository).save(persistedUser);
-                        }
+                        // Act & Assert
+                        assertThatThrownBy(() -> userService.requestReactivation("victor@colivi.com"))
+                                        .isInstanceOf(AccountAlreadyActiveException.class)
+                                        .hasMessageContaining("ya está activa");
+
+                        verify(userRepository, never()).save(any());
+                        verifyNoInteractions(emailService);
+                }
+
+                @Test
+                @DisplayName("el token de reactivación generado es un UUID válido")
+                void givenSoftDeletedAccount_whenRequestReactivation_thenTokenIsValidUuid() {
+                        // Arrange
+                        persistedUser.setDeletedAt(LocalDateTime.now().minusDays(1));
+                        when(userRepository.findByEmailIgnoreCase("victor@colivi.com"))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+                        // Act
+                        userService.requestReactivation("victor@colivi.com");
+
+                        // Assert — el token tiene formato UUID (36 caracteres con guiones)
+                        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+                        verify(userRepository).save(captor.capture());
+
+                        String token = captor.getValue().getReactivationToken();
+                        assertThatCode(() -> UUID.fromString(token)).doesNotThrowAnyException();
+                }
+
+                @Test
+                @DisplayName("el TTL del token de reactivación es de aproximadamente 24 horas")
+                void givenSoftDeletedAccount_whenRequestReactivation_thenTokenExpiresInApprox24Hours() {
+                        // Arrange
+                        persistedUser.setDeletedAt(LocalDateTime.now().minusDays(1));
+                        when(userRepository.findByEmailIgnoreCase("victor@colivi.com"))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+                        LocalDateTime before = LocalDateTime.now().plusHours(23).plusMinutes(59);
+
+                        // Act
+                        userService.requestReactivation("victor@colivi.com");
+
+                        LocalDateTime after = LocalDateTime.now().plusHours(24).plusMinutes(1);
+
+                        // Assert
+                        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+                        verify(userRepository).save(captor.capture());
+
+                        LocalDateTime expiresAt = captor.getValue().getReactivationTokenExpiresAt();
+                        assertThat(expiresAt).isAfter(before).isBefore(after);
+                }
+        }
+
+        // =========================================================================
+        // reactivateAccount
+        // =========================================================================
+
+        @Nested
+        @DisplayName("reactivateAccount")
+        class ReactivateAccount {
+
+                private static final String VALID_TOKEN = "550e8400-e29b-41d4-a716-446655440000";
+
+                @BeforeEach
+                void setUpDeletedUser() {
+                        // El usuario tiene la cuenta eliminada y un token de reactivación válido
+                        persistedUser.setDeletedAt(LocalDateTime.now().minusDays(1));
+                        persistedUser.setReactivationToken(VALID_TOKEN);
+                        persistedUser.setReactivationTokenExpiresAt(LocalDateTime.now().plusHours(23));
+                }
+
+                @Test
+                @DisplayName("happy path: token válido reactiva cuenta y devuelve AuthResponse con JWT")
+                void givenValidToken_whenReactivateAccount_thenAccountReactivatedAndAuthResponseReturned() {
+                        // Arrange
+                        when(userRepository.findByReactivationToken(VALID_TOKEN))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(userRepository.save(any(User.class))).thenReturn(persistedUser);
+                        when(jwtTokenProvider.generateAccessToken(persistedUser)).thenReturn("react.access");
+                        when(jwtTokenProvider.generateRefreshToken(persistedUser)).thenReturn("react.refresh");
+
+                        // Act
+                        AuthResponse response = userService.reactivateAccount(VALID_TOKEN);
+
+                        // Assert — JWT devueltos
+                        assertThat(response.accessToken()).isEqualTo("react.access");
+                        assertThat(response.refreshToken()).isEqualTo("react.refresh");
+                        assertThat(response.expiresIn()).isEqualTo(86_400_000L);
+                }
+
+                @Test
+                @DisplayName("la cuenta queda con deletedAt = null tras reactivar")
+                void givenValidToken_whenReactivateAccount_thenDeletedAtClearedToNull() {
+                        // Arrange
+                        assertThat(persistedUser.getDeletedAt()).isNotNull(); // precondición
+                        when(userRepository.findByReactivationToken(VALID_TOKEN))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+                        when(jwtTokenProvider.generateAccessToken(any())).thenReturn("tok");
+                        when(jwtTokenProvider.generateRefreshToken(any())).thenReturn("ref");
+
+                        // Act
+                        userService.reactivateAccount(VALID_TOKEN);
+
+                        // Assert
+                        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+                        verify(userRepository).save(captor.capture());
+                        assertThat(captor.getValue().getDeletedAt()).isNull();
+                }
+
+                @Test
+                @DisplayName("el token se limpia (null) tras reactivar: tokens de un solo uso")
+                void givenValidToken_whenReactivateAccount_thenTokenClearedAfterUse() {
+                        // Arrange
+                        when(userRepository.findByReactivationToken(VALID_TOKEN))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+                        when(jwtTokenProvider.generateAccessToken(any())).thenReturn("tok");
+                        when(jwtTokenProvider.generateRefreshToken(any())).thenReturn("ref");
+
+                        // Act
+                        userService.reactivateAccount(VALID_TOKEN);
+
+                        // Assert — token y expiración limpios
+                        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+                        verify(userRepository).save(captor.capture());
+                        assertThat(captor.getValue().getReactivationToken()).isNull();
+                        assertThat(captor.getValue().getReactivationTokenExpiresAt()).isNull();
+                }
+
+                @Test
+                @DisplayName("el tokenVersion se incrementa para invalidar sesiones anteriores al borrado")
+                void givenValidToken_whenReactivateAccount_thenTokenVersionIncremented() {
+                        // Arrange
+                        int originalVersion = persistedUser.getTokenVersion(); // = 1
+                        when(userRepository.findByReactivationToken(VALID_TOKEN))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+                        when(jwtTokenProvider.generateAccessToken(any())).thenReturn("tok");
+                        when(jwtTokenProvider.generateRefreshToken(any())).thenReturn("ref");
+
+                        // Act
+                        userService.reactivateAccount(VALID_TOKEN);
+
+                        // Assert
+                        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+                        verify(userRepository).save(captor.capture());
+                        assertThat(captor.getValue().getTokenVersion()).isEqualTo(originalVersion + 1);
+                }
+
+                @Test
+                @DisplayName("token inexistente lanza InvalidTokenException")
+                void givenNonExistentToken_whenReactivateAccount_thenThrowsInvalidTokenException() {
+                        // Arrange
+                        when(userRepository.findByReactivationToken("bad-token"))
+                                        .thenReturn(Optional.empty());
+
+                        // Act & Assert
+                        assertThatThrownBy(() -> userService.reactivateAccount("bad-token"))
+                                        .isInstanceOf(InvalidReactivationTokenException.class)
+                                        .hasMessageContaining("no es válido");
+
+                        verify(userRepository, never()).save(any());
+                        verifyNoInteractions(emailService);
+                }
+
+                @Test
+                @DisplayName("token caducado lanza InvalidTokenException y no reactiva la cuenta")
+                void givenExpiredToken_whenReactivateAccount_thenThrowsInvalidTokenException() {
+                        // Arrange — token caducado (expiró hace 1 hora)
+                        persistedUser.setReactivationTokenExpiresAt(LocalDateTime.now().minusHours(1));
+                        when(userRepository.findByReactivationToken(VALID_TOKEN))
+                                        .thenReturn(Optional.of(persistedUser));
+
+                        // Act & Assert
+                        assertThatThrownBy(() -> userService.reactivateAccount(VALID_TOKEN))
+                                        .isInstanceOf(InvalidReactivationTokenException.class)
+                                        .hasMessageContaining("caducado");
+
+                        // La cuenta NO debe reactivarse
+                        verify(userRepository, never()).save(any());
+                        assertThat(persistedUser.getDeletedAt()).isNotNull(); // sigue eliminada
+                }
+
+                @Test
+                @DisplayName("token con expiresAt = null (estado inconsistente) lanza InvalidTokenException")
+                void givenTokenWithNullExpiry_whenReactivateAccount_thenThrowsInvalidTokenException() {
+                        // Arrange — estado de BD inconsistente: token sin TTL
+                        persistedUser.setReactivationTokenExpiresAt(null);
+                        when(userRepository.findByReactivationToken(VALID_TOKEN))
+                                        .thenReturn(Optional.of(persistedUser));
+
+                        // Act & Assert
+                        assertThatThrownBy(() -> userService.reactivateAccount(VALID_TOKEN))
+                                        .isInstanceOf(InvalidReactivationTokenException.class);
+
+                        verify(userRepository, never()).save(any());
+                }
+
+                @Test
+                @DisplayName("token que expira exactamente ahora es rechazado (boundary)")
+                void givenTokenExpiringExactlyNow_whenReactivateAccount_thenThrowsInvalidTokenException() {
+                        // Arrange — el token expira en el pasado inmediato
+                        persistedUser.setReactivationTokenExpiresAt(LocalDateTime.now().minusNanos(1));
+                        when(userRepository.findByReactivationToken(VALID_TOKEN))
+                                        .thenReturn(Optional.of(persistedUser));
+
+                        // Act & Assert
+                        assertThatThrownBy(() -> userService.reactivateAccount(VALID_TOKEN))
+                                        .isInstanceOf(InvalidReactivationTokenException.class)
+                                        .hasMessageContaining("caducado");
                 }
         }
 }
