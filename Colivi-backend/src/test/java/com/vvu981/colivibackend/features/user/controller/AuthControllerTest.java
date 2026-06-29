@@ -24,7 +24,6 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
@@ -35,9 +34,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Tests de capa web (slice test) para {@link AuthController}.
  *
- * <p>Se levanta únicamente el contexto MVC con MockMvc. El {@link UserService}
+ * <p>
+ * Se levanta únicamente el contexto MVC con MockMvc. El {@link UserService}
  * está mockeado: solo verificamos que el controlador mapea correctamente
- * las rutas, delega al servicio y retorna los códigos HTTP esperados.</p>
+ * las rutas, delega al servicio y retorna los códigos HTTP esperados.
+ * </p>
  */
 @WebMvcTest(controllers = AuthController.class)
 @Import(SecurityConfig.class)
@@ -182,7 +183,8 @@ class AuthControllerTest {
         @Test
         @DisplayName("email vacío en payload devuelve 400 (validación Bean Validation)")
         void givenBlankEmail_whenRequestReactivation_thenReturns400() throws Exception {
-            // El record tiene @NotBlank, la validación debe cortar antes de llegar al servicio
+            // El record tiene @NotBlank, la validación debe cortar antes de llegar al
+            // servicio
             String invalidBody = "{\"email\": \"\"}";
 
             mockMvc.perform(post("/api/v1/auth/reactivation-request")
