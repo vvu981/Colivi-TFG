@@ -50,6 +50,9 @@ public class AccommodationListing {
     @Version
     private Integer version; // Control de concurrencia optimista exigido en tu SPEC
 
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -57,7 +60,7 @@ public class AccommodationListing {
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
         if (this.status == null) {
-            this.status = ListingStatus.PENDIENTE; // Todo anuncio nace pendiente de aprobación por Admin
+            this.status = ListingStatus.PENDING; // Todo anuncio nace pendiente de aprobación por Admin
         }
     }
 }

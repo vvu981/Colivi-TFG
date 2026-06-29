@@ -7,10 +7,14 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import com.vvu981.colivibackend.core.storage.service.IImageStorageService;
 import com.vvu981.colivibackend.features.accommodation.domain.Accommodation;
+import com.vvu981.colivibackend.features.accommodation.domain.AccommodationImage;
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationVisibility;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationRequest;
+import com.vvu981.colivibackend.features.accommodation.dto.AccommodationResponse;
 import com.vvu981.colivibackend.features.accommodation.repository.AccommodationRepository;
 import com.vvu981.colivibackend.features.accommodation.service.AccommodationService;
 import com.vvu981.colivibackend.features.user.domain.User;
@@ -27,26 +31,34 @@ public class AccommodationServiceImpl implements AccommodationService {
 
     private final AccommodationRepository accommodationRepository;
 
+    private final IImageStorageService imageStorageService;
+
     @Override
-    public Accommodation createAccommodation(AccommodationRequest accommodation, User owner) {
+    @Transactional
+    public AccommodationResponse createAccommodation(AccommodationRequest accommodation, User owner) {
         Accommodation accommodationToCreate = new Accommodation(accommodation, owner);
-        return accommodationRepository.save(accommodationToCreate);
+
+        Accommodation accommodationSaved = accommodationRepository.save(accommodationToCreate);
+
+        return new AccommodationResponse(accommodationSaved);
     }
 
     @Override
     @Transactional
-    public Accommodation deleteAccommodationSoft(UUID accommodationId, User currUser) {
+    public AccommodationResponse deleteAccommodationSoft(UUID accommodationId, User currUser) {
         Accommodation accommodationToSoftDelete = findAccommodationByIdAndDeletedAtIsNull(accommodationId);
         if (!canEdit(accommodationToSoftDelete, currUser))
             throw new RuntimeException("Error: no puedes editar");
         accommodationToSoftDelete.setDeletedAt(LocalDateTime.now());
-        return accommodationRepository.save(accommodationToSoftDelete);
+        Accommodation accommodationDeleted = accommodationRepository.save(accommodationToSoftDelete);
+
+        return new AccommodationResponse(accommodationDeleted);
     }
 
     @Override
     @Transactional
     @PreAuthorize("hasAuthority('ADMIN')")
-    public void deleteAccommodationHard(UUID accommodationId, User currentUser) {
+    public void deleteAccommodationHard(UUID accommodationId, User currUser) {
 
         Accommodation accommodationToDelete = accommodationRepository.findById(accommodationId)
                 .orElseThrow(() -> new RuntimeException("Error: Accommodation not found."));
@@ -55,9 +67,9 @@ public class AccommodationServiceImpl implements AccommodationService {
 
     @Override
     @Transactional
-    public Accommodation updateAccommodation(UUID id, AccommodationRequest dto, User currentUser) {
+    public AccommodationResponse updateAccommodation(UUID id, AccommodationRequest dto, User currUser) {
         Accommodation accommodationToUpdate = findAccommodationByIdAndDeletedAtIsNull(id);
-        if (!canEdit(accommodationToUpdate, currentUser))
+        if (!canEdit(accommodationToUpdate, currUser))
             throw new RuntimeException("Error: no puedes editar");
 
         accommodationToUpdate.setAddress(dto.address());
@@ -78,21 +90,57 @@ public class AccommodationServiceImpl implements AccommodationService {
         if (dto.amenities() != null) {
             accommodationToUpdate.getAmenities().addAll(dto.amenities());
         }
-
-        return accommodationRepository.save(accommodationToUpdate);
+        Accommodation accommodationUpdated = accommodationRepository.save(accommodationToUpdate);
+        return new AccommodationResponse(accommodationUpdated);
     }
 
     @Override
-    public Accommodation getAccommodation(UUID id) {
-        return findAccommodationByIdAndDeletedAtIsNull(id);
+    @Transactional(readOnly = true)
+    public AccommodationResponse getAccommodation(UUID id) {
+        // CORREGIDO: Buscamos la entidad interna y la empaquetamos en el objeto de
+        // respuesta limpia
+        Accommodation accommodation = findAccommodationByIdAndDeletedAtIsNull(id);
+        return new AccommodationResponse(accommodation);
     }
 
     @Override
-    public Page<Accommodation> getAccommodationsCatalog(UUID userId, AccommodationVisibility visibility, int page,
-            int size) {
+    @Transactional(readOnly = true)
+    public Page<AccommodationResponse> getAccommodationsCatalog(UUID userId, AccommodationVisibility visibility,
+            int page, int size) {
         // Ordenamos siempre cronológicamente de la más nueva a la más antigua
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        return accommodationRepository.findByFields(userId, visibility.name(), pageable);
+
+        // 1. Obtenemos la página original con las entidades de la base de datos
+        Page<Accommodation> accommodationEntities = accommodationRepository.findByFields(userId, visibility.name(),
+                pageable);
+
+        // 2. CORREGIDO: Transformamos cada elemento de la página usando nuestro
+        // constructor de respuesta
+        return accommodationEntities.map(AccommodationResponse::new);
+    }
+
+    @Override
+    @Transactional
+    public AccommodationResponse addImageToAccommodation(UUID accommodationId, MultipartFile image, User currUser) {
+        Accommodation accommodationToAdd = findAccommodationByIdAndDeletedAtIsNull(accommodationId);
+
+        if (!canEdit(accommodationToAdd, currUser)) {
+            throw new RuntimeException("Error: no tienes permiso para añadir imágenes");
+        }
+
+        String secureUrl = imageStorageService.uploadImage(image);
+
+        AccommodationImage accommodationImageEntity = AccommodationImage.builder()
+                .imageUrl(secureUrl)
+                .accommodation(accommodationToAdd)
+                .displayOrder(accommodationToAdd.getImages().size() + 1)
+                .build();
+
+        accommodationToAdd.getImages().add(accommodationImageEntity);
+
+        Accommodation accommodationAdded = accommodationRepository.save(accommodationToAdd);
+
+        return new AccommodationResponse(accommodationAdded);
     }
 
     private Accommodation findAccommodationByIdAndDeletedAtIsNull(UUID id) {
@@ -100,13 +148,14 @@ public class AccommodationServiceImpl implements AccommodationService {
                 .orElseThrow(() -> new RuntimeException("Error: Accommodation with id: " + id + " not found."));
     }
 
-    private boolean canEdit(Accommodation accommodationToUpdate, User currentUser) {
+    private boolean canEdit(Accommodation accommodationToUpdate, User currUser) {
         // Permitimos la acción si es el dueño real O si el usuario actual es un
         // ADMINISTRADOR
-        boolean isOwner = accommodationToUpdate.getOwner().getId().equals(currentUser.getId());
-        boolean isAdmin = currentUser.getRole() == UserRole.ADMIN; // Ajusta esto según cómo tengas tus roles en la
-                                                                   // entidad User
+        boolean isOwner = accommodationToUpdate.getOwner().getId().equals(currUser.getId());
+        boolean isAdmin = currUser.getRole() == UserRole.ADMIN; // Ajusta esto según cómo tengas tus roles en la
+                                                                // entidad User
 
         return isOwner || isAdmin;
     }
+
 }

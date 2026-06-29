@@ -193,35 +193,35 @@ Servidor independiente que implementa el Model Context Protocol (MCP) y actúa c
 │    latitude       NUMERIC    │                                   │
 │    longitude      NUMERIC    │                                   │
 │    created_at     TIMESTAMP  │                                   │
-└──────────────┬───────────────┘                                   │
-               │ 1:N  (una propiedad puede tener varios anuncios)  │
-               ▼                                                   │
-┌──────────────────────────────────────┐                           │
-│         ACCOMMODATION_LISTING        │  ← Anuncio Comercial      │
-├──────────────────────────────────────┤                           │
-│ PK id                UUID            │                           │
-│ FK accommodation_id  UUID ───────────┘  (propiedad física)       │
-│ FK host_id           UUID ───────────────────────────────────────┤
-│    title             VARCHAR         │  (propietario/anunciante) │
-│    description       TEXT            │                           │
-│    price_per_month   NUMERIC         │                           │
-│    status            ENUM            │  (PENDING, ACTIVE,        │
-│    version           INT             │   REJECTED, FINISHED)     │
-│    created_at        TIMESTAMP       │                           │
-└──────────────┬───────────────────────┘                           │
-               │                     │                             │
-               │ 1:N                 │ 1:N                         │
-               ▼                     ▼                             │
-┌──────────────────────┐  ┌─────────────────────────────┐         │
-│  ACCOMMODATION_IMAGE │  │    ACCOMMODATION_REVIEW     │         │
-├──────────────────────┤  ├─────────────────────────────┤         │
-│ PK id    UUID        │  │ PK id          UUID          │         │
-│ FK listing_id  UUID  │  │ FK author_id ───────────────┼─────────┤
-│ image_url TEXT       │  │ FK listing_id  UUID          │         │
-│ display_order INT    │  │ rating         INT (1-5)     │         │
-└──────────────────────┘  │ comment        TEXT NULL     │         │
-                          │ created_at     TIMESTAMP     │         │
-                          └─────────────────────────────┘         │
+└─────────┬──────────────┬─────┘                                   │
+          │              │ 1:N  (propiedad → varios anuncios)      │
+          │              ▼                                         │
+          │        ┌──────────────────────────────────────┐        │
+          │        │         ACCOMMODATION_LISTING        │        │
+          │        ├──────────────────────────────────────┤        │
+          │        │ PK id                UUID            │        │
+          │        │ FK accommodation_id  UUID ───────────┘        │
+          │        │ FK host_id           UUID ────────────────────┤
+          │        │    title             VARCHAR         │        │
+          │        │    description       TEXT            │        │
+          │        │    price_per_month   NUMERIC         │        │
+          │        │    status            ENUM            │        │
+          │        │    version           INT             │        │
+          │        │    created_at        TIMESTAMP       │        │
+          │        └──────────────────────┬───────────────┘        │
+          │                               │                        │
+          │ 1:N                           │ 1:N                    │
+          ▼                               ▼                        │
+┌──────────────────────────┐    ┌─────────────────────────────┐    │
+│  ACCOMMODATION_IMAGE     │    │    ACCOMMODATION_REVIEW     │    │
+├──────────────────────────┤    ├─────────────────────────────┤    │
+│ PK id    UUID            │    │ PK id          UUID          │    │
+│ FK accommodation_id UUID │    │ FK author_id ───────────────┼────┤
+│ image_url TEXT           │    │ FK listing_id  UUID          │    │
+│ display_order INT        │    │ rating         INT (1-5)     │    │
+└──────────────────────────┘    │ comment        TEXT NULL     │    │
+                                │ created_at     TIMESTAMP     │    │
+                                └─────────────────────────────┘    │
                                                                    │
 ┌──────────────────────────────┐                                   │
 │          HOGAR               │                                   │
@@ -380,8 +380,8 @@ CREATE TYPE report_status   AS ENUM ('PENDING', 'REVIEWED', 'DISMISSED');
 | `POST` | `/accommodations` | 🔒 | Crear solicitud de anuncio (queda en `PENDIENTE`) |
 | `PUT` | `/accommodations/{id}` | 🔒 | Actualizar anuncio propio (si sigue en `PENDIENTE`) |
 | `DELETE` | `/accommodations/{id}` | 🔒 | Eliminar anuncio propio o cualquiera (ADMIN) |
-| `POST` | `/accommodations/{id}/images` | 🔒 | Añadir URL de imagen al anuncio |
-| `DELETE` | `/accommodations/{id}/images/{imageId}` | 🔒 | Eliminar imagen del anuncio |
+| `POST` | `/accommodations/{id}/images` | 🔒 | Añadir URL de imagen a la propiedad física |
+| `DELETE` | `/accommodations/{id}/images/{imageId}` | 🔒 | Eliminar imagen de la propiedad física |
 | `GET` | `/accommodations/{id}/reviews` | ❌ | Valoraciones del alojamiento |
 | `POST` | `/accommodations/{id}/reviews` | 🔒 | Publicar valoración sobre el alojamiento |
 | `DELETE` | `/accommodations/{id}/reviews/{reviewId}` | 🔒 ADMIN | Moderar y eliminar valoración |
@@ -1034,10 +1034,8 @@ CMD ["node", "server.js"]
 
 **Tareas — Backend:**
 
-- [ ] Crear entidad JPA `Accommodation` (propiedad física): campos `id` (UUID, PK), `address`, `totalRooms`, `squareMeters`, `city`, `locality`, `country`, `latitude`, `longitude`, `createdAt`
-- [ ] Crear entidad JPA `AccommodationListing` (anuncio comercial): campos `id` (UUID, PK), `accommodation` (FK → `Accommodation`, relación `@ManyToOne`), `host` (FK → `User`), `title`, `description`, `pricePerMonth`, `status` (`ListingStatus` ENUM: `PENDING`, `ACTIVE`, `REJECTED`, `FINISHED`), `version` (`@Version`), `createdAt`
-- [ ] Crear entidades JPA `AccommodationImage` (FK → `AccommodationListing`), `AccommodationReview` (FK → `AccommodationListing`), `Message`
-- [ ] Crear entidad JPA `AccommodationReport` con campos: `id` (UUID), `listingId` (UUID FK → `AccommodationListing`), `reporterId` (UUID FK, nullable), `reason` (ENUM), `description` (Text), `status` (ENUM, default `PENDING`), `createdAt` (Timestamp)
+- [ ] Crear entidades JPA `Accommodation` (física), `AccommodationListing` (comercial), `AccommodationImage` (FK → `Accommodation`), `AccommodationReview` y `AccommodationReport`.
+- [ ] Crear entidad JPA `Message`.
 - [ ] Crear migraciones Flyway: tablas `accommodation` y `accommodation_listing`, índices `idx_listing_city_price`, índices B-Tree sobre `(latitude, longitude)` en `accommodation`, índice `idx_listing_accommodation_id`, índice `idx_listing_host_id`, índice parcial sobre `accommodation_report(listing_id, status) WHERE status='PENDING'`
 - [ ] Añadir enumerados PostgreSQL: `listing_status` (`PENDING`, `ACTIVE`, `REJECTED`, `FINISHED`), `report_reason` y `report_status` en migración Flyway
 - [ ] Añadir campos `bannedUntil (LocalDateTime, nullable)` y `banReason (String, nullable)` a la entidad JPA `User` y su migración Flyway correspondiente

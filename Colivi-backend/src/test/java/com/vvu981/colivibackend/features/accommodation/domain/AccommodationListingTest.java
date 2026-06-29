@@ -22,18 +22,18 @@ class AccommodationListingTest {
         listing.onCreate();
 
         assertThat(listing.getCreatedAt()).isNotNull();
-        assertThat(listing.getStatus()).isEqualTo(ListingStatus.PENDIENTE);
+        assertThat(listing.getStatus()).isEqualTo(ListingStatus.PENDING);
     }
 
     @Test
     @DisplayName("debe mantener el status original si ya estaba definido antes de onCreate")
     void shouldKeepExistingStatus_WhenStatusAlreadySet() {
         AccommodationListing listing = new AccommodationListing();
-        listing.setStatus(ListingStatus.ACTIVO);
+        listing.setStatus(ListingStatus.AVAILABLE);
 
         listing.onCreate();
 
-        assertThat(listing.getStatus()).isEqualTo(ListingStatus.ACTIVO);
+        assertThat(listing.getStatus()).isEqualTo(ListingStatus.AVAILABLE);
         assertThat(listing.getCreatedAt()).isNotNull();
     }
 
@@ -52,7 +52,7 @@ class AccommodationListingTest {
                 .title("Test Title")
                 .description("Test Description")
                 .pricePerMonth(BigDecimal.valueOf(500.00))
-                .status(ListingStatus.ACTIVO)
+                .status(ListingStatus.AVAILABLE)
                 .version(1)
                 .createdAt(now)
                 .build();
@@ -63,7 +63,7 @@ class AccommodationListingTest {
         assertThat(listing.getTitle()).isEqualTo("Test Title");
         assertThat(listing.getDescription()).isEqualTo("Test Description");
         assertThat(listing.getPricePerMonth()).isEqualByComparingTo(BigDecimal.valueOf(500.00));
-        assertThat(listing.getStatus()).isEqualTo(ListingStatus.ACTIVO);
+        assertThat(listing.getStatus()).isEqualTo(ListingStatus.AVAILABLE);
         assertThat(listing.getVersion()).isEqualTo(1);
         assertThat(listing.getCreatedAt()).isEqualTo(now);
     }
@@ -83,13 +83,13 @@ class AccommodationListingTest {
         listing.setTitle("Another Title");
         listing.setDescription("Another Description");
         listing.setPricePerMonth(BigDecimal.valueOf(750));
-        listing.setStatus(ListingStatus.RECHAZADO);
+        listing.setStatus(ListingStatus.DENIED);
         listing.setVersion(2);
         listing.setCreatedAt(now);
 
         assertThat(listing.getId()).isEqualTo(id);
         assertThat(listing.getTitle()).isEqualTo("Another Title");
-        assertThat(listing.getStatus()).isEqualTo(ListingStatus.RECHAZADO);
+        assertThat(listing.getStatus()).isEqualTo(ListingStatus.DENIED);
         assertThat(listing.getVersion()).isEqualTo(2);
     }
 

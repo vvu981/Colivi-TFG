@@ -4,7 +4,9 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -25,30 +27,43 @@ public class Accommodation {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @Column(name = "address")
     private String address;
 
+    @Column(name = "total_rooms")
     private Integer totalRooms;
 
+    @Column(name = "total_bathrooms")
     private Integer totalBathrooms;
 
+    @Column(name = "free_rooms")
     private Integer freeRooms;
 
+    @Column(name = "square_meters")
     private Integer squareMeters;
 
+    @Column(name = "city")
     private String city;
 
+    @Column(name = "country")
     private String country;
 
+    @Column(name = "province")
     private String province;
 
+    @Column(name = "latitude")
     private Double latitude;
 
+    @Column(name = "longitude")
     private Double longitude;
 
+    @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
+    @Column(name = "created_at")
     private LocalDateTime createdAt;
 
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
     @ElementCollection(targetClass = AmenityType.class, fetch = FetchType.LAZY)
@@ -61,6 +76,10 @@ public class Accommodation {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
+
+    @Builder.Default
+    @OneToMany(mappedBy = "accommodation", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<AccommodationImage> images = new ArrayList<>();
 
     public Accommodation(AccommodationRequest dto, User owner) {
         this.address = dto.address();

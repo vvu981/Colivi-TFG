@@ -34,9 +34,10 @@ public class User {
     @Column(nullable = false)
     private String firstName;
 
-    @Column(nullable = false)
+    @Column(name = "last_name_1", nullable = false)
     private String lastName1;
 
+    @Column(name = "last_name_2")
     private String lastName2;
 
     private String phone;

@@ -4,6 +4,7 @@ import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -16,10 +17,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
-import com.vvu981.colivibackend.features.accommodation.domain.Accommodation;
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationVisibility;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationRequest;
+import com.vvu981.colivibackend.features.accommodation.dto.AccommodationResponse;
 import com.vvu981.colivibackend.features.accommodation.service.AccommodationService;
 import com.vvu981.colivibackend.features.user.domain.User;
 
@@ -33,38 +35,39 @@ public class AccommodationController {
     private final AccommodationService accommodationService;
 
     @GetMapping
-    public ResponseEntity<Page<Accommodation>> getCatalog(
+    public ResponseEntity<Page<AccommodationResponse>> getCatalog(
             @RequestParam(required = false) UUID ownerId,
             @RequestParam(defaultValue = "AVAILABLE") AccommodationVisibility visibility,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
-        Page<Accommodation> catalog = accommodationService.getAccommodationsCatalog(ownerId, visibility, page, size);
+        Page<AccommodationResponse> catalog = accommodationService.getAccommodationsCatalog(ownerId, visibility, page,
+                size);
         return ResponseEntity.ok(catalog);
     }
 
     @PostMapping
-    public ResponseEntity<Accommodation> create(
+    public ResponseEntity<AccommodationResponse> create(
             @RequestBody AccommodationRequest request,
             @AuthenticationPrincipal User currentUser) {
-        Accommodation created = accommodationService.createAccommodation(request, currentUser);
+        AccommodationResponse created = accommodationService.createAccommodation(request, currentUser);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Accommodation> update(
+    public ResponseEntity<AccommodationResponse> update(
             @PathVariable("id") UUID accommodationId,
             @RequestBody AccommodationRequest request,
             @AuthenticationPrincipal User currentUser) {
 
-        Accommodation updated = accommodationService.updateAccommodation(accommodationId, request, currentUser);
+        AccommodationResponse updated = accommodationService.updateAccommodation(accommodationId, request, currentUser);
         return ResponseEntity.ok(updated);
     }
 
     @PutMapping("/delete/{id}")
-    public ResponseEntity<Accommodation> softDelete(@PathVariable("id") UUID accommodationId,
+    public ResponseEntity<AccommodationResponse> softDelete(@PathVariable("id") UUID accommodationId,
             @AuthenticationPrincipal User currentUser) {
-        Accommodation deleted = accommodationService.deleteAccommodationSoft(accommodationId, currentUser);
+        AccommodationResponse deleted = accommodationService.deleteAccommodationSoft(accommodationId, currentUser);
         return ResponseEntity.ok(deleted);
     }
 
@@ -78,8 +81,19 @@ public class AccommodationController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Accommodation> getAccommodation(@PathVariable("id") UUID accommodationId) {
-        Accommodation accommodation = accommodationService.getAccommodation(accommodationId);
+    public ResponseEntity<AccommodationResponse> getAccommodation(@PathVariable("id") UUID accommodationId) {
+        AccommodationResponse accommodation = accommodationService.getAccommodation(accommodationId);
         return ResponseEntity.ok(accommodation);
+    }
+
+    @PostMapping(value = "/{id}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<AccommodationResponse> uploadImage(
+            @PathVariable("id") UUID accommodationId,
+            @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal User currentUser) {
+
+        AccommodationResponse updatedAccommodation = accommodationService.addImageToAccommodation(accommodationId, file,
+                currentUser);
+        return ResponseEntity.ok(updatedAccommodation);
     }
 }

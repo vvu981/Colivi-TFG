@@ -24,6 +24,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import com.vvu981.colivibackend.features.accommodation.dto.AccommodationResponse;
 
 import java.util.Collections;
 import java.util.Set;
@@ -93,7 +94,10 @@ class AccommodationControllerTest {
         @DisplayName("debe retornar 200 con el catálogo paginado")
         @WithMockUser
         void shouldReturnOkAndCatalog() throws Exception {
-            Page<Accommodation> pageResult = new PageImpl<>(Collections.singletonList(accommodation));
+            Page<AccommodationResponse> pageResult = new PageImpl<>(
+                    Collections.singletonList(
+                            new com.vvu981.colivibackend.features.accommodation.dto.AccommodationResponse(
+                                    accommodation)));
 
             when(accommodationService.getAccommodationsCatalog(
                     any(),
@@ -115,7 +119,8 @@ class AccommodationControllerTest {
         @DisplayName("debe retornar 200 sin ownerId (parámetro opcional)")
         @WithMockUser
         void shouldReturnOkWithoutOwnerId() throws Exception {
-            Page<Accommodation> pageResult = new PageImpl<>(Collections.emptyList());
+            Page<com.vvu981.colivibackend.features.accommodation.dto.AccommodationResponse> pageResult = new PageImpl<>(
+                    Collections.emptyList());
 
             when(accommodationService.getAccommodationsCatalog(
                     any(),
@@ -141,7 +146,8 @@ class AccommodationControllerTest {
         @WithMockUser(username = "test@colivi.com")
         void shouldCreateAccommodationAndReturn201() throws Exception {
             when(accommodationService.createAccommodation(any(AccommodationRequest.class), any()))
-                    .thenReturn(accommodation);
+                    .thenReturn(new com.vvu981.colivibackend.features.accommodation.dto.AccommodationResponse(
+                            accommodation));
 
             mockMvc.perform(post("/api/v1/accommodation")
                     .with(csrf())

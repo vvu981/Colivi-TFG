@@ -4,10 +4,13 @@ import com.vvu981.colivibackend.features.accommodation.domain.Accommodation;
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationVisibility;
 import com.vvu981.colivibackend.features.accommodation.domain.AmenityType;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationRequest;
+import com.vvu981.colivibackend.features.accommodation.dto.AccommodationResponse;
 import com.vvu981.colivibackend.features.accommodation.repository.AccommodationRepository;
 import com.vvu981.colivibackend.features.accommodation.service.Impl.AccommodationServiceImpl;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
+import com.vvu981.colivibackend.core.storage.service.IImageStorageService;
+import org.springframework.web.multipart.MultipartFile;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -34,6 +37,9 @@ class AccommodationServiceImplTest {
 
     @Mock
     private AccommodationRepository accommodationRepository;
+
+    @Mock
+    private IImageStorageService imageStorageService;
 
     @InjectMocks
     private AccommodationServiceImpl accommodationService;
@@ -89,12 +95,12 @@ class AccommodationServiceImplTest {
             when(accommodationRepository.save(any(Accommodation.class))).thenReturn(accommodation);
 
             // Act
-            Accommodation result = accommodationService.createAccommodation(request, owner);
+            AccommodationResponse result = accommodationService.createAccommodation(request, owner);
 
             // Assert
             assertThat(result).isNotNull();
             assertThat(result.getAddress()).isEqualTo(request.address());
-            assertThat(result.getOwner()).isEqualTo(owner);
+            assertThat(result.getOwnerId()).isEqualTo(owner.getId());
             verify(accommodationRepository, times(1)).save(any(Accommodation.class));
         }
     }
@@ -112,7 +118,7 @@ class AccommodationServiceImplTest {
             when(accommodationRepository.save(any(Accommodation.class))).thenReturn(accommodation);
 
             // Act
-            Accommodation result = accommodationService.deleteAccommodationSoft(accommodation.getId(), owner);
+            AccommodationResponse result = accommodationService.deleteAccommodationSoft(accommodation.getId(), owner);
 
             // Assert
             assertThat(result).isNotNull();
@@ -129,7 +135,7 @@ class AccommodationServiceImplTest {
             when(accommodationRepository.save(any(Accommodation.class))).thenReturn(accommodation);
 
             // Act
-            Accommodation result = accommodationService.deleteAccommodationSoft(accommodation.getId(), admin);
+            AccommodationResponse result = accommodationService.deleteAccommodationSoft(accommodation.getId(), admin);
 
             // Assert
             assertThat(result).isNotNull();
@@ -225,7 +231,7 @@ class AccommodationServiceImplTest {
                     Set.of(AmenityType.BALCONY));
 
             // Act
-            Accommodation result = accommodationService.updateAccommodation(accommodation.getId(), updateRequest,
+            AccommodationResponse result = accommodationService.updateAccommodation(accommodation.getId(), updateRequest,
                     owner);
 
             // Assert
@@ -260,7 +266,7 @@ class AccommodationServiceImplTest {
             when(accommodationRepository.save(any(Accommodation.class))).thenReturn(accommodation);
 
             // Act
-            Accommodation result = accommodationService.updateAccommodation(accommodation.getId(), request, admin);
+            AccommodationResponse result = accommodationService.updateAccommodation(accommodation.getId(), request, admin);
 
             // Assert
             assertThat(result).isNotNull();
@@ -280,7 +286,7 @@ class AccommodationServiceImplTest {
             when(accommodationRepository.save(any(Accommodation.class))).thenReturn(accommodation);
 
             // Act - no debe lanzar excepción
-            Accommodation result = accommodationService.updateAccommodation(
+            AccommodationResponse result = accommodationService.updateAccommodation(
                     accommodation.getId(), updateRequestNullAmenities, owner);
 
             // Assert
@@ -315,7 +321,7 @@ class AccommodationServiceImplTest {
                     .thenReturn(Optional.of(accommodation));
 
             // Act
-            Accommodation result = accommodationService.getAccommodation(accommodation.getId());
+            AccommodationResponse result = accommodationService.getAccommodation(accommodation.getId());
 
             // Assert
             assertThat(result).isNotNull();
@@ -354,7 +360,7 @@ class AccommodationServiceImplTest {
                     any(Pageable.class))).thenReturn(pageResult);
 
             // Act
-            Page<Accommodation> result = accommodationService.getAccommodationsCatalog(
+            Page<AccommodationResponse> result = accommodationService.getAccommodationsCatalog(
                     owner.getId(),
                     AccommodationVisibility.AVAILABLE,
                     0,
@@ -367,6 +373,63 @@ class AccommodationServiceImplTest {
                     eq(owner.getId()),
                     eq("AVAILABLE"),
                     any(Pageable.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("addImageToAccommodation")
+    class AddImageToAccommodation {
+
+        @Test
+        @DisplayName("debe añadir una imagen correctamente si el usuario es el dueño")
+        void shouldAddImageSuccessfullyIfOwner() {
+            // Arrange
+            MultipartFile mockFile = mock(MultipartFile.class);
+            accommodation.setImages(new ArrayList<>());
+            when(accommodationRepository.findByIdAndDeletedAtIsNull(accommodation.getId()))
+                    .thenReturn(Optional.of(accommodation));
+            when(imageStorageService.uploadImage(mockFile)).thenReturn("http://example.com/image.jpg");
+            when(accommodationRepository.save(any(Accommodation.class))).thenReturn(accommodation);
+
+            // Act
+            AccommodationResponse result = accommodationService.addImageToAccommodation(accommodation.getId(), mockFile, owner);
+
+            // Assert
+            assertThat(result).isNotNull();
+            verify(imageStorageService, times(1)).uploadImage(mockFile);
+            verify(accommodationRepository, times(1)).save(accommodation);
+        }
+
+        @Test
+        @DisplayName("debe lanzar excepción al añadir imagen si el usuario no tiene permisos")
+        void shouldThrowExceptionIfUserNotAuthorized() {
+            // Arrange
+            MultipartFile mockFile = mock(MultipartFile.class);
+            when(accommodationRepository.findByIdAndDeletedAtIsNull(accommodation.getId()))
+                    .thenReturn(Optional.of(accommodation));
+
+            // Act & Assert
+            assertThatThrownBy(() -> accommodationService.addImageToAccommodation(accommodation.getId(), mockFile, otherUser))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("no tienes permiso");
+            verify(imageStorageService, never()).uploadImage(any());
+            verify(accommodationRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("debe lanzar excepción si el alojamiento no existe al añadir imagen")
+        void shouldThrowExceptionIfAccommodationNotFound() {
+            // Arrange
+            MultipartFile mockFile = mock(MultipartFile.class);
+            when(accommodationRepository.findByIdAndDeletedAtIsNull(any(UUID.class)))
+                    .thenReturn(Optional.empty());
+
+            // Act & Assert
+            assertThatThrownBy(() -> accommodationService.addImageToAccommodation(UUID.randomUUID(), mockFile, owner))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("not found");
+            verify(imageStorageService, never()).uploadImage(any());
+            verify(accommodationRepository, never()).save(any());
         }
     }
 }
