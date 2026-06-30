@@ -42,6 +42,7 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**").permitAll() // Rutas públicas (Login y Registro)
+                        .requestMatchers("/error").permitAll() // Permitir la ruta de errores por defecto de Spring Boot
                         .anyRequest().authenticated() // Todo lo demás requiere estar logueado
                 )
 

@@ -52,6 +52,7 @@ Servidor independiente que implementa el Model Context Protocol (MCP) y actúa c
 | **Auto-moderación preventiva** | Si un anuncio comercial (`AccommodationListing`) acumula más de **5 denuncias únicas** en estado `PENDING` (en tabla `ACCOMMODATION_REPORT`), el sistema cambia automáticamente su estado de moderación a `PENDIENTE`, retira su visibilidad comercial del catálogo y genera una alerta prioritaria en la bandeja del Administrador. Acción atómica y gestionada por `AccommodationReportService`. |
 | **Denuncias de anuncios** | Cualquier usuario (registrado o anónimo) puede enviar una denuncia contra un anuncio comercial vía `POST /api/v1/listings/{id}/reports`. Los motivos posibles son: `SPAM`, `SCAM`, `INAPPROPRIATE`, `MISLEADING`. El estado de la denuncia sigue el ciclo: `PENDING → REVIEWED → DISMISSED`. |
 | **Listado dinámico y catálogo** | Unificación en `getListingsCatalog(owner, visibility, page, size)` con estados de visibilidad (`AVAILABLE`, `PAUSED`, `RENTED`) e histórico para evitar duplicidad de consultas JPA y optimizar filtrados. |
+| **Listado dinámico y catálogo** | Unificación en `getAccommodationsCatalog(owner, visibility, page, size)` con estados `AVAILABLE` (activos), `DELETED` (borrado lógico) y `ALL` (todo el histórico) para evitar duplicidad de consultas JPA y optimizar filtrados. |
 
 ### 2.2 Motor de Gastos Compartidos
 
@@ -201,58 +202,51 @@ Servidor independiente que implementa el Model Context Protocol (MCP) y actúa c
 │    longitude      NUMERIC    │                                   │
 │    amenities      VARCHAR[]  │  (Set<AmenityType> estructural)   │
 │    created_at     TIMESTAMP  │                                   │
-└─────────┬──────────┬─────────┘                                   │
-          │          └────────────────────┐                        │
+└─────────┬──────────────┬─────┘                                   │
+          │              │ 1:N  (propiedad → varios anuncios)      │
+          │              ▼                                         │
+          │        ┌──────────────────────────────────────┐        │
+          │        │         ACCOMMODATION_LISTING        │        │
+          │        ├──────────────────────────────────────┤        │
+          │        │ PK id                UUID            │        │
+          │        │ FK accommodation_id  UUID ───────────┘        │
+          │        │ FK host_id           UUID ────────────────────┤
+          │        │    title             VARCHAR         │        │
+          │        │    description       TEXT            │        │
+          │        │    price_per_month   NUMERIC         │        │
+          │        │    status            ENUM            │        │
+          │        │    version           INT             │        │
+          │        │    created_at        TIMESTAMP       │        │
+          │        └──────────────────────┬───────────────┘        │
+          │                               │                        │
           │ 1:N                           │ 1:N                    │
-          ▼                               │                        │
-┌──────────────────────────────┐          │                        │
-│    ACCOMMODATION_LISTING     │          │  ← Publicación Comercial│
-├──────────────────────────────┤          │                        │
-│ PK id             UUID       │          │                        │
-│ FK accommodation_id UUID ────┘          │                        │
-│ FK host_id        UUID ─────────────────┼────────────────────────┤
-│    title          VARCHAR    │          │                        │
-│    description    TEXT       │          │                        │
-│    price_per_month NUMERIC   │          │                        │
-│    deposit        NUMERIC    │          │  ← Fianza              │
-│    available_from DATE       │          │  ← Fechas de disp.     │
-│    available_to   DATE       │          │                        │
-│    house_rules    TEXT       │          │  ← Reglas convivencia  │
-│    status         ENUM       │          │  (AVAILABLE, PAUSED...)│
-│    moderation_status ENUM    │          │  (PENDING, APPROVED...)│
-│    version        INT        │          │                        │
-│    created_at     TIMESTAMP  │          │                        │
-└──────────────┬───────────────┘          │                        │
-               │                          │                        │
-               │ 1:N                      │                        │
-               ▼                          ▼                        │
-┌─────────────────────────────┐    ┌──────────────────────────┐    │
-│    ACCOMMODATION_REVIEW     │    │  ACCOMMODATION_IMAGE     │    │
-├─────────────────────────────┤    ├──────────────────────────┤    │
-│ PK id          UUID          │    │ PK id    UUID            │    │
-│ FK author_id ────────────────┼────┼──────────────────────────┼────┤
-│ FK listing_id  UUID          │    │ FK accommodation_id UUID │    │
-│ rating         INT (1-5)     │    │ image_url TEXT           │    │
-│ comment        TEXT NULL     │    │ display_order INT        │    │
-│ created_at     TIMESTAMP     │    └──────────────────────────┘    │
-└─────────────────────────────┘                                     │
-
-
-┌──────────────────────────────┐
-│          HOGAR               │
-├──────────────────────────────┤
-│ PK id         UUID           │◄──────────────┐
-│    name       VARCHAR        │               │
-│    version    INT            │               │
-│    created_at TIMESTAMP      │               │
-└──────────────────────────────┘               │
-         │              │                      │
-         │ 1:N          │ 1:N                  │
-         ▼              ▼                  ┌───┴──────────────────┐
-┌──────────────┐  ┌───────────────┐        │    HOGAR_MEMBER      │
-│   EXPENSE    │  │     TASK      │        ├──────────────────────┤
-├──────────────┤  ├───────────────┤        │ FK hogar_id          │
-│ PK id  UUID  │  │ PK id  UUID   │        │ FK user_id ──────────┼┐
+          ▼                               ▼                        │
+┌──────────────────────────┐    ┌─────────────────────────────┐    │
+│  ACCOMMODATION_IMAGE     │    │    ACCOMMODATION_REVIEW     │    │
+├──────────────────────────┤    ├─────────────────────────────┤    │
+│ PK id    UUID            │    │ PK id          UUID          │    │
+│ FK accommodation_id UUID │    │ FK author_id ───────────────┼────┤
+│ image_url TEXT           │    │ FK listing_id  UUID          │    │
+│ display_order INT        │    │ rating         INT (1-5)     │    │
+└──────────────────────────┘    │ comment        TEXT NULL     │    │
+                                │ created_at     TIMESTAMP     │    │
+                                └─────────────────────────────┘    │
+                                                                   │
+┌──────────────────────────────┐                                   │
+│          HOGAR               │                                   │
+├──────────────────────────────┤                                   │
+│ PK id         UUID           │◄──────────────┐                   │
+│    name       VARCHAR        │               │                   │
+│    version    INT            │               │                   │
+│    created_at TIMESTAMP      │               │                   │
+└──────────────────────────────┘               │                   │
+         │              │                      │                   │
+         │ 1:N          │ 1:N                  │                   │
+         ▼              ▼                  ┌───┴──────────────────┐│
+┌──────────────┐  ┌───────────────┐        │    HOGAR_MEMBER      ││
+│   EXPENSE    │  │     TASK      │        ├──────────────────────┤│
+├──────────────┤  ├───────────────┤        │ FK hogar_id          ││
+│ PK id  UUID  │  │ PK id  UUID   │        │ FK user_id ──────────┼┘
 │ FK hogar_id  │  │ FK hogar_id   │        │    is_admin BOOLEAN  │
 │ FK payer_id  │  │ FK assigned_to│        │    joined_at TIMESTAMP│
 │ amount NUMERIC│ │ title VARCHAR │        └──────────────────────┘

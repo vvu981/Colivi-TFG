@@ -31,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -112,16 +113,16 @@ class UserControllerTest {
     class SetAdminEndpoint {
 
         @Test
-        @DisplayName("usuario con rol ADMIN recibe 200 OK")
+        @DisplayName("usuario con rol ADMIN recibe 204 No Content")
         @WithMockUser(authorities = "ADMIN")
-        void givenAdminUser_whenSetAdmin_thenReturns200() throws Exception {
+        void givenAdminUser_whenSetAdmin_thenReturns204() throws Exception {
             // Arrange
             UUID targetId = UUID.randomUUID();
             doNothing().when(userService).setAdmin(any(UUID.class));
 
             // Act & Assert
             mockMvc.perform(patch("/api/v1/users/{userId}/admin", targetId))
-                    .andExpect(status().isOk());
+                    .andExpect(status().isNoContent());
 
             verify(userService).setAdmin(targetId);
         }
@@ -227,8 +228,8 @@ class UserControllerTest {
     class UpdateCredentialsEndpoint {
 
         @Test
-        @DisplayName("usuario autenticado actualiza credenciales y recibe 200 OK")
-        void givenAuthenticatedUser_whenUpdateCredentials_thenReturns200() throws Exception {
+        @DisplayName("usuario autenticado actualiza credenciales y recibe 204 No Content")
+        void givenAuthenticatedUser_whenUpdateCredentials_thenReturns204() throws Exception {
             // Arrange
             UpdateSensible requestDto = new UpdateSensible("currentPass", "new@email.com", null);
             doNothing().when(userService).updateSensibleData(any(UUID.class), any(UpdateSensible.class));
@@ -238,7 +239,7 @@ class UserControllerTest {
                     .with(authentication(buildAuth(authenticatedUser)))
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(requestDto)))
-                    .andExpect(status().isOk());
+                    .andExpect(status().isNoContent());
 
             verify(userService).updateSensibleData(
                     argThat(u -> authenticatedUser.getId().equals(u)),
@@ -288,13 +289,13 @@ class UserControllerTest {
     @DisplayName("PATCH /me/logout")
     class LogoutEndpoint {
         @Test
-        @DisplayName("Returns 200 OK")
-        void givenAuthenticatedUser_whenLogout_thenReturns200() throws Exception {
+        @DisplayName("Returns 204 No Content")
+        void givenAuthenticatedUser_whenLogout_thenReturns204() throws Exception {
             doNothing().when(userService).logout(any(UUID.class));
 
             mockMvc.perform(patch("/api/v1/users/me/logout")
                     .with(authentication(buildAuth(authenticatedUser))))
-                    .andExpect(status().isOk());
+                    .andExpect(status().isNoContent());
 
             verify(userService).logout(argThat(u -> authenticatedUser.getId().equals(u)));
         }
@@ -307,33 +308,33 @@ class UserControllerTest {
     @DisplayName("PATCH /me/delete/soft")
     class DeleteSoftEndpoint {
         @Test
-        @DisplayName("Returns 200 OK")
-        void givenAuthenticatedUser_whenDeleteSoft_thenReturns200() throws Exception {
+        @DisplayName("Returns 204 No Content")
+        void givenAuthenticatedUser_whenDeleteSoft_thenReturns204() throws Exception {
             doNothing().when(userService).deleteUserSoft(any(UUID.class));
 
             mockMvc.perform(patch("/api/v1/users/me/delete/soft")
                     .with(authentication(buildAuth(authenticatedUser))))
-                    .andExpect(status().isOk());
+                    .andExpect(status().isNoContent());
 
             verify(userService).deleteUserSoft(authenticatedUser.getId());
         }
     }
 
     // =========================================================================
-    // PATCH /api/v1/users/{userId}/delete/hard
+    // DELETE /api/v1/users/hard/{userId}
     // =========================================================================
     @Nested
-    @DisplayName("PATCH /{userId}/delete/hard")
+    @DisplayName("DELETE /hard/{userId}")
     class DeleteHardEndpoint {
         @Test
-        @DisplayName("Returns 200 OK for ADMIN")
+        @DisplayName("Returns 204 No Content for ADMIN")
         @WithMockUser(authorities = "ADMIN")
-        void givenAdminUser_whenDeleteHard_thenReturns200() throws Exception {
+        void givenAdminUser_whenDeleteHard_thenReturns204() throws Exception {
             UUID targetId = UUID.randomUUID();
             doNothing().when(userService).deleteUserHard(any(UUID.class));
 
-            mockMvc.perform(patch("/api/v1/users/{userId}/delete/hard", targetId))
-                    .andExpect(status().isOk());
+            mockMvc.perform(delete("/api/v1/users/hard/{userId}", targetId))
+                    .andExpect(status().isNoContent());
 
             verify(userService).deleteUserHard(targetId);
         }
@@ -348,7 +349,7 @@ class UserControllerTest {
         @Test
         @DisplayName("Returns 200 OK for ADMIN")
         @WithMockUser(authorities = "ADMIN")
-        void givenAdminUser_whenBanUser_thenReturns200() throws Exception {
+        void givenAdminUser_whenBanUser_thenReturns204() throws Exception {
             UUID targetId = UUID.randomUUID();
             doNothing().when(userService).banUser(any(UUID.class), anyString(), any(LocalDateTime.class));
 
@@ -358,7 +359,7 @@ class UserControllerTest {
             mockMvc.perform(patch("/api/v1/users/{userId}/ban", targetId)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(req)))
-                    .andExpect(status().isOk());
+                    .andExpect(status().isNoContent());
 
             verify(userService).banUser(eq(targetId), eq("bad behavior"), any(LocalDateTime.class));
         }
@@ -371,14 +372,14 @@ class UserControllerTest {
     @DisplayName("PATCH /{userId}/unban")
     class UnbanUserEndpoint {
         @Test
-        @DisplayName("Returns 200 OK for ADMIN")
+        @DisplayName("Returns 204 No Content for ADMIN")
         @WithMockUser(authorities = "ADMIN")
-        void givenAdminUser_whenUnbanUser_thenReturns200() throws Exception {
+        void givenAdminUser_whenUnbanUser_thenReturns204() throws Exception {
             UUID targetId = UUID.randomUUID();
             doNothing().when(userService).unbanUser(any(UUID.class));
 
             mockMvc.perform(patch("/api/v1/users/{userId}/unban", targetId))
-                    .andExpect(status().isOk());
+                    .andExpect(status().isNoContent());
 
             verify(userService).unbanUser(targetId);
         }
