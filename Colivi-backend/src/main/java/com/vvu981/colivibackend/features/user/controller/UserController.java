@@ -67,7 +67,7 @@ public class UserController {
     }
 
     @PreAuthorize("hasAuthority('ADMIN')")
-    @PatchMapping("/{userId}/delete/hard")
+    @DeleteMapping("/hard/{userId}")
     public ResponseEntity<Void> deleteUserHard(@PathVariable UUID userId) {
         userService.deleteUserHard(userId);
         return ResponseEntity.ok().build();
@@ -78,7 +78,7 @@ public class UserController {
     public ResponseEntity<Void> banUser(@PathVariable UUID userId,
             @Valid @RequestBody BanRequest request) {
         userService.banUser(userId, request.message(), request.bannedUntil());
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 
     @PreAuthorize("hasAuthority('ADMIN')")
