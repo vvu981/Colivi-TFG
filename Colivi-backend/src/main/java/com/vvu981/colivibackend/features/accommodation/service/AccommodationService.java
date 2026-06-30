@@ -26,4 +26,6 @@ public interface AccommodationService {
             int size);
 
     AccommodationResponse addImageToAccommodation(UUID accommodationId, MultipartFile file, User currUser);
+
+    void removeImageFromAccommodation(UUID accommodationId, UUID imageId, User currentUser);
 }

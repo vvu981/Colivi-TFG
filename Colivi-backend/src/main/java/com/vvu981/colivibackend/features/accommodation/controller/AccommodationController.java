@@ -96,4 +96,16 @@ public class AccommodationController {
                 currentUser);
         return ResponseEntity.ok(updatedAccommodation);
     }
+
+    // ELIMINAR IMAGEN: Endpoint semántico, seguro y bien enrutado
+    @DeleteMapping("/{id}/images/{imageId}")
+    public ResponseEntity<Void> deleteImage(
+            @PathVariable("id") UUID accommodationId,
+            @PathVariable("imageId") UUID imageId,
+            @AuthenticationPrincipal User currentUser) {
+
+        accommodationService.removeImageFromAccommodation(accommodationId, imageId, currentUser);
+        return ResponseEntity.noContent().build();
+    }
+
 }

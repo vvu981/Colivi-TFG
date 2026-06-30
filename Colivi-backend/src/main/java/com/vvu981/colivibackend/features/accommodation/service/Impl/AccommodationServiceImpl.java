@@ -15,6 +15,7 @@ import com.vvu981.colivibackend.features.accommodation.domain.AccommodationImage
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationVisibility;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationRequest;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationResponse;
+import com.vvu981.colivibackend.features.accommodation.repository.AccommodationImageRepository;
 import com.vvu981.colivibackend.features.accommodation.repository.AccommodationRepository;
 import com.vvu981.colivibackend.features.accommodation.service.AccommodationService;
 import com.vvu981.colivibackend.features.user.domain.User;
@@ -32,6 +33,8 @@ public class AccommodationServiceImpl implements AccommodationService {
     private final AccommodationRepository accommodationRepository;
 
     private final IImageStorageService imageStorageService;
+
+    private final AccommodationImageRepository accommodationImageRepository;
 
     @Override
     @Transactional
@@ -141,6 +144,30 @@ public class AccommodationServiceImpl implements AccommodationService {
         Accommodation accommodationAdded = accommodationRepository.save(accommodationToAdd);
 
         return new AccommodationResponse(accommodationAdded);
+    }
+
+    @Override
+    @Transactional
+    public void removeImageFromAccommodation(UUID accommodationId, UUID imageId, User currentUser) {
+        Accommodation accommodation = findAccommodationByIdAndDeletedAtIsNull(accommodationId);
+
+        if (!canEdit(accommodation, currentUser)) {
+            throw new RuntimeException("Error: no tienes permiso para eliminar imágenes de este alojamiento");
+        }
+
+        AccommodationImage imageToDelete = accommodationImageRepository.findById(imageId)
+                .orElseThrow(() -> new RuntimeException(
+                        "Error: no se ha podido obtener la imagen a eliminar con el id: " + imageId + "."));
+
+        if (!imageToDelete.getAccommodation().getId().equals(accommodationId)) {
+            throw new RuntimeException("Error: La imagen no pertenece al alojamiento especificado");
+        }
+
+        imageStorageService.deleteImage(imageToDelete.getImageUrl());
+
+        accommodation.getImages().remove(imageToDelete);
+
+        accommodationRepository.save(accommodation);
     }
 
     private Accommodation findAccommodationByIdAndDeletedAtIsNull(UUID id) {
