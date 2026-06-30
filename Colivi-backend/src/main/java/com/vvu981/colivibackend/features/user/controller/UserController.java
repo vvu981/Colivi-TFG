@@ -30,8 +30,8 @@ public class UserController {
         // Simplemente delegamos el trabajo al cerebro (UserService)
         userService.setAdmin(userId);
 
-        // Devolvemos un simple "200 OK" sin cuerpo, indicando éxito.
-        return ResponseEntity.ok().build();
+        // Devolvemos un 204 No Content sin cuerpo, indicando éxito.
+        return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/me/profile")
@@ -51,26 +51,26 @@ public class UserController {
     public ResponseEntity<Void> updateMyCredentials(
             @Valid @RequestBody UpdateSensible request, @AuthenticationPrincipal(expression = "id") UUID userId) {
         userService.updateSensibleData(userId, request);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/me/logout")
     public ResponseEntity<Void> logout(@AuthenticationPrincipal(expression = "id") UUID userId) {
         userService.logout(userId);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/me/delete/soft")
     public ResponseEntity<Void> deleteUserSoft(@AuthenticationPrincipal(expression = "id") UUID userId) {
         userService.deleteUserSoft(userId);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 
     @PreAuthorize("hasAuthority('ADMIN')")
     @DeleteMapping("/hard/{userId}")
     public ResponseEntity<Void> deleteUserHard(@PathVariable UUID userId) {
         userService.deleteUserHard(userId);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 
     @PreAuthorize("hasAuthority('ADMIN')")
@@ -85,6 +85,6 @@ public class UserController {
     @PatchMapping("/{userId}/unban")
     public ResponseEntity<Void> unbanUser(@PathVariable UUID userId) {
         userService.unbanUser(userId);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 }
