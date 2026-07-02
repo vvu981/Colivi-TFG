@@ -3,37 +3,38 @@ package com.vvu981.colivibackend.features.accommodation.repository.specification
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.lang.NonNull;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
-import static org.mockito.ArgumentMatchers.*;
 
 @DisplayName("ListingSpecificationBuilder Unit Tests")
 class ListingSpecificationBuilderTest {
 
     @Test
     @DisplayName("debe construir la especificacion base y evaluar filtros aplicables")
-    @SuppressWarnings({"rawtypes", "unchecked"})
+    @SuppressWarnings({ "unchecked" })
     void shouldBuildSpecificationWithApplicableFilters() {
         ListingFilter filter1 = mock(ListingFilter.class);
         ListingFilter filter2 = mock(ListingFilter.class);
-        
+
         Map<String, String> params = new HashMap<>();
         params.put("param1", "val1");
 
         Predicate spec1Predicate = mock(Predicate.class);
         Specification<AccommodationListing> spec1 = new Specification<AccommodationListing>() {
             @Override
-            public Predicate toPredicate(Root<AccommodationListing> r, CriteriaQuery<?> q, CriteriaBuilder c) {
+            public Predicate toPredicate(@NonNull Root<AccommodationListing> r, @NonNull CriteriaQuery<?> q,
+                    @NonNull CriteriaBuilder c) {
                 return spec1Predicate;
             }
         };

@@ -11,7 +11,6 @@ import java.util.HashMap;
 import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
-import static org.mockito.ArgumentMatchers.*;
 
 @DisplayName("Listing Filters Unit Tests")
 class ListingFiltersTest {
@@ -40,7 +39,7 @@ class ListingFiltersTest {
 
     @Test
     @DisplayName("CityFilter apply debe generar la condicion like correcta")
-    @SuppressWarnings({"rawtypes", "unchecked"})
+    @SuppressWarnings({ "rawtypes", "unchecked" })
     void testCityFilterApply() {
         Map<String, String> params = Map.of("city", "Madrid");
         Specification<AccommodationListing> spec = cityFilter.apply(params);
@@ -80,7 +79,7 @@ class ListingFiltersTest {
 
     @Test
     @DisplayName("MaxPriceFilter apply debe generar la condicion lessThanOrEqualTo correcta")
-    @SuppressWarnings({"rawtypes", "unchecked"})
+    @SuppressWarnings({ "rawtypes", "unchecked" })
     void testMaxPriceFilterApply() {
         Map<String, String> params = Map.of("maxPrice", "750");
         Specification<AccommodationListing> spec = maxPriceFilter.apply(params);
