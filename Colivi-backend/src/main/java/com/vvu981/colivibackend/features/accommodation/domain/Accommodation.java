@@ -20,7 +20,6 @@ import com.vvu981.colivibackend.features.user.domain.User;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-
 public class Accommodation {
 
     @Id

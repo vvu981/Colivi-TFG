@@ -1,5 +1,6 @@
 package com.vvu981.colivibackend.features.accommodation.controller;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
@@ -10,6 +11,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationVisibility;
+import com.vvu981.colivibackend.features.accommodation.dto.AccommodationImageOrderRequest;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationRequest;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationResponse;
 import com.vvu981.colivibackend.features.accommodation.service.AccommodationService;
@@ -64,7 +67,7 @@ public class AccommodationController {
         return ResponseEntity.ok(updated);
     }
 
-    @PutMapping("/delete/{id}")
+    @PatchMapping("/delete/{id}")
     public ResponseEntity<AccommodationResponse> softDelete(@PathVariable("id") UUID accommodationId,
             @AuthenticationPrincipal User currentUser) {
         AccommodationResponse deleted = accommodationService.deleteAccommodationSoft(accommodationId, currentUser);
@@ -106,6 +109,17 @@ public class AccommodationController {
 
         accommodationService.removeImageFromAccommodation(accommodationId, imageId, currentUser);
         return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{id}/images/order")
+    public ResponseEntity<AccommodationResponse> reorderImages(
+            @PathVariable("id") UUID accommodationId,
+            @RequestBody List<AccommodationImageOrderRequest> orderRequests,
+            @AuthenticationPrincipal User currentUser) {
+
+        AccommodationResponse updated = accommodationService.updateImagesOrder(accommodationId, orderRequests,
+                currentUser);
+        return ResponseEntity.ok(updated);
     }
 
 }

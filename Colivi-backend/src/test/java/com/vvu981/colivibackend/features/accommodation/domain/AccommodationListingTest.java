@@ -1,5 +1,6 @@
 package com.vvu981.colivibackend.features.accommodation.domain;
 
+import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingRequest;
 import com.vvu981.colivibackend.features.user.domain.User;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,7 +23,7 @@ class AccommodationListingTest {
         listing.onCreate();
 
         assertThat(listing.getCreatedAt()).isNotNull();
-        assertThat(listing.getStatus()).isEqualTo(ListingStatus.PENDING);
+        assertThat(listing.getStatus()).isEqualTo(ListingStatus.AVAILABLE);
     }
 
     @Test
@@ -83,13 +84,13 @@ class AccommodationListingTest {
         listing.setTitle("Another Title");
         listing.setDescription("Another Description");
         listing.setPricePerMonth(BigDecimal.valueOf(750));
-        listing.setStatus(ListingStatus.DENIED);
+        listing.setStatus(ListingStatus.AVAILABLE);
         listing.setVersion(2);
         listing.setCreatedAt(now);
 
         assertThat(listing.getId()).isEqualTo(id);
         assertThat(listing.getTitle()).isEqualTo("Another Title");
-        assertThat(listing.getStatus()).isEqualTo(ListingStatus.DENIED);
+        assertThat(listing.getStatus()).isEqualTo(ListingStatus.AVAILABLE);
         assertThat(listing.getVersion()).isEqualTo(2);
     }
 
@@ -98,5 +99,87 @@ class AccommodationListingTest {
     void shouldCoverToString() {
         String builderToString = AccommodationListing.builder().toString();
         assertThat(builderToString).contains("AccommodationListingBuilder");
+    }
+
+    @Test
+    @DisplayName("debe crear la entidad desde el DTO y el alojamiento fisico")
+    void shouldCreateEntityFromDtoAndAccommodation() {
+        User host = new User();
+        Accommodation accommodation = new Accommodation();
+        accommodation.setOwner(host);
+
+        AccommodationListingRequest requestDto = new AccommodationListingRequest(
+                UUID.randomUUID(), "Nice Room", "Good room", BigDecimal.valueOf(300));
+
+        AccommodationListing listing = new AccommodationListing(requestDto, accommodation);
+
+        assertThat(listing.getAccommodation()).isEqualTo(accommodation);
+        assertThat(listing.getHost()).isEqualTo(host);
+        assertThat(listing.getTitle()).isEqualTo("Nice Room");
+        assertThat(listing.getDescription()).isEqualTo("Good room");
+        assertThat(listing.getPricePerMonth()).isEqualTo(BigDecimal.valueOf(300));
+    }
+
+    @Test
+    @DisplayName("debe banear un anuncio si no está baneado")
+    void shouldBanListing() {
+        AccommodationListing listing = new AccommodationListing();
+        listing.setStatus(ListingStatus.AVAILABLE);
+
+        listing.ban();
+
+        assertThat(listing.getStatus()).isEqualTo(ListingStatus.BANNED);
+        assertThat(listing.getBannedAt()).isNotNull();
+        assertThat(listing.getPreviousStatus()).isEqualTo(ListingStatus.AVAILABLE);
+    }
+
+    @Test
+    @DisplayName("no debe cambiar nada si ya está baneado")
+    void shouldNotBanIfAlreadyBanned() {
+        AccommodationListing listing = new AccommodationListing();
+        listing.setStatus(ListingStatus.BANNED);
+        LocalDateTime fixedTime = LocalDateTime.now().minusDays(1);
+        listing.setBannedAt(fixedTime);
+
+        listing.ban();
+
+        assertThat(listing.getStatus()).isEqualTo(ListingStatus.BANNED);
+        assertThat(listing.getBannedAt()).isEqualTo(fixedTime);
+    }
+
+    @Test
+    @DisplayName("debe desbanear un anuncio si está baneado")
+    void shouldUnbanListing() {
+        AccommodationListing listing = new AccommodationListing();
+        listing.setStatus(ListingStatus.BANNED);
+        listing.setPreviousStatus(ListingStatus.AVAILABLE);
+        listing.setBannedAt(LocalDateTime.now());
+
+        listing.unBan();
+
+        assertThat(listing.getStatus()).isEqualTo(ListingStatus.AVAILABLE);
+        assertThat(listing.getBannedAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("no debe desbanear un anuncio si no está baneado")
+    void shouldNotUnbanIfNotBanned() {
+        AccommodationListing listing = new AccommodationListing();
+        listing.setStatus(ListingStatus.AVAILABLE);
+
+        listing.unBan();
+
+        assertThat(listing.getStatus()).isEqualTo(ListingStatus.AVAILABLE);
+    }
+
+    @Test
+    @DisplayName("debe actualizar updatedAt al invocar onUpdate")
+    void shouldUpdateTimestampOnPreUpdate() {
+        AccommodationListing listing = new AccommodationListing();
+        assertThat(listing.getUpdatedAt()).isNull();
+
+        listing.onUpdate();
+
+        assertThat(listing.getUpdatedAt()).isNotNull();
     }
 }

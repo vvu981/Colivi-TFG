@@ -1,5 +1,6 @@
 package com.vvu981.colivibackend.features.accommodation.domain;
 
+import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingRequest;
 import com.vvu981.colivibackend.features.user.domain.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -47,6 +48,10 @@ public class AccommodationListing {
     @Column(nullable = false)
     private ListingStatus status; // PENDIENTE, ACTIVO, RECHAZADO, FINALIZADO
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ListingStatus previousStatus;
+
     @Version
     private Integer version; // Control de concurrencia optimista exigido en tu SPEC
 
@@ -56,11 +61,46 @@ public class AccommodationListing {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    @Column(name = "banned_at")
+    private LocalDateTime bannedAt;
+
+    public AccommodationListing(AccommodationListingRequest dto, Accommodation accommodation) {
+        this.accommodation = accommodation;
+        this.host = accommodation.getOwner();
+        this.title = dto.title();
+        this.description = dto.description();
+        this.pricePerMonth = dto.pricePerMonth();
+    }
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
         if (this.status == null) {
-            this.status = ListingStatus.PENDING; // Todo anuncio nace pendiente de aprobación por Admin
+            this.status = ListingStatus.AVAILABLE; // Red de seguridad técnica impecable
         }
     }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public void ban() {
+        if (!this.status.equals(ListingStatus.BANNED)) {
+            this.previousStatus = this.status;
+            this.status = ListingStatus.BANNED;
+            this.bannedAt = LocalDateTime.now();
+        }
+    }
+
+    public void unBan() {
+        if (this.status.equals(ListingStatus.BANNED)) {
+            this.status = this.previousStatus;
+            this.bannedAt = null;
+        }
+    }
+
 }

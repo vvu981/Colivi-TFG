@@ -15,7 +15,7 @@ class AccommodationDtoAndDomainTest {
     void testAccommodationResponseConstructorNulls() {
         // Caso 1: Accommodation nulo
         AccommodationResponse responseNull = new AccommodationResponse((Accommodation) null);
-        assertNull(responseNull.getId());
+        assertNull(responseNull.id());
 
         // Caso 2: Accommodation con propiedades internas nulas
         Accommodation accommodation = new Accommodation();
@@ -24,11 +24,11 @@ class AccommodationDtoAndDomainTest {
         accommodation.setImages(null);
 
         AccommodationResponse response = new AccommodationResponse(accommodation);
-        assertNotNull(response.getAmenities());
-        assertTrue(response.getAmenities().isEmpty());
-        assertNull(response.getOwnerId());
-        assertNotNull(response.getImages());
-        assertTrue(response.getImages().isEmpty());
+        assertNotNull(response.amenities());
+        assertTrue(response.amenities().isEmpty());
+        assertNull(response.ownerId());
+        assertNotNull(response.images());
+        assertTrue(response.images().isEmpty());
     }
 
     @Test

@@ -13,20 +13,20 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 public interface AccommodationListingRepository
-        extends JpaRepository<AccommodationListing, UUID>, JpaSpecificationExecutor<AccommodationListing> {
-    Page<AccommodationListing> findByDeletedAtIsNull(Pageable pageable);
+                extends JpaRepository<AccommodationListing, UUID>, JpaSpecificationExecutor<AccommodationListing> {
+        Page<AccommodationListing> findByDeletedAtIsNull(Pageable pageable);
 
-    Page<AccommodationListing> findByHostAndDeletedAtIsNull(User host, Pageable pageable);
+        Page<AccommodationListing> findByHostAndDeletedAtIsNull(User host, Pageable pageable);
 
-    Page<AccommodationListing> findByPricePerMonthBetweenAndDeletedAtIsNull(
-            BigDecimal minPrice,
-            BigDecimal maxPrice,
-            Pageable pageable);
+        Page<AccommodationListing> findByPricePerMonthBetweenAndDeletedAtIsNull(
+                        BigDecimal minPrice,
+                        BigDecimal maxPrice,
+                        Pageable pageable);
 
-    Page<AccommodationListing> findByStatusAndDeletedAtIsNull(ListingStatus status, Pageable pageable);
+        Page<AccommodationListing> findByStatusAndDeletedAtIsNull(ListingStatus status, Pageable pageable);
 
-    Page<AccommodationListing> findByDeletedAtIsNotNull(Pageable pageable);
+        Page<AccommodationListing> findByDeletedAtIsNotNull(Pageable pageable);
 
-    Page<AccommodationListing> findByTitle(String title, Pageable pageable);
+        Page<AccommodationListing> findByTitle(String title, Pageable pageable);
 
 }
