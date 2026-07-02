@@ -26,12 +26,15 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationRequest;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationResponse;
+import com.vvu981.colivibackend.features.accommodation.dto.AccommodationImageOrderRequest;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -274,6 +277,48 @@ class AccommodationControllerTest {
                         mockMvc.perform(get("/api/v1/accommodation/{id}", accommodation.getId()))
                                         .andExpect(status().isOk())
                                         .andExpect(jsonPath("$.address").value("Calle Gran Via 12"));
+                }
+        }
+
+        @Nested
+        @DisplayName("DELETE /api/v1/accommodation/{id}/images/{imageId}")
+        class DeleteImage {
+                @Test
+                @DisplayName("debe borrar la imagen correctamente si está autenticado")
+                @WithMockUser
+                void shouldDeleteImageSuccessfully() throws Exception {
+                        UUID imageId = UUID.randomUUID();
+                        doNothing().when(accommodationService).removeImageFromAccommodation(eq(accommodation.getId()),
+                                        eq(imageId), any());
+
+                        mockMvc.perform(delete("/api/v1/accommodation/{id}/images/{imageId}", accommodation.getId(),
+                                        imageId)
+                                        .with(csrf()))
+                                        .andExpect(status().isNoContent());
+
+                        verify(accommodationService, times(1)).removeImageFromAccommodation(eq(accommodation.getId()),
+                                        eq(imageId), any());
+                }
+        }
+
+        @Nested
+        @DisplayName("PUT /api/v1/accommodation/{id}/images/order")
+        class ReorderImages {
+                @Test
+                @DisplayName("debe reordenar las imágenes correctamente si está autenticado")
+                @WithMockUser
+                void shouldReorderImagesSuccessfully() throws Exception {
+                        List<AccommodationImageOrderRequest> orderRequests = List.of(
+                                        new AccommodationImageOrderRequest(UUID.randomUUID(), 1));
+                        when(accommodationService.updateImagesOrder(eq(accommodation.getId()), anyList(), any()))
+                                        .thenReturn(new com.vvu981.colivibackend.features.accommodation.dto.AccommodationResponse(
+                                                        accommodation));
+
+                        mockMvc.perform(put("/api/v1/accommodation/{id}/images/order", accommodation.getId())
+                                        .with(csrf())
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content(objectMapper.writeValueAsString(orderRequests)))
+                                        .andExpect(status().isOk());
                 }
         }
 }

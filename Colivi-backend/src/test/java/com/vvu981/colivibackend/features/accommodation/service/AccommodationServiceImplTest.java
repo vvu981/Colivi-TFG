@@ -1,11 +1,14 @@
 package com.vvu981.colivibackend.features.accommodation.service;
 
 import com.vvu981.colivibackend.features.accommodation.domain.Accommodation;
+import com.vvu981.colivibackend.features.accommodation.domain.AccommodationImage;
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationVisibility;
 import com.vvu981.colivibackend.features.accommodation.domain.AmenityType;
+import com.vvu981.colivibackend.features.accommodation.dto.AccommodationImageOrderRequest;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationRequest;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationResponse;
 import com.vvu981.colivibackend.features.accommodation.repository.AccommodationRepository;
+import com.vvu981.colivibackend.features.accommodation.repository.AccommodationImageRepository;
 import com.vvu981.colivibackend.features.accommodation.service.Impl.AccommodationServiceImpl;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
@@ -40,6 +43,9 @@ class AccommodationServiceImplTest {
 
         @Mock
         private IImageStorageService imageStorageService;
+
+        @Mock
+        private AccommodationImageRepository accommodationImageRepository;
 
         @InjectMocks
         private AccommodationServiceImpl accommodationService;
@@ -82,6 +88,7 @@ class AccommodationServiceImplTest {
 
                 accommodation = new Accommodation(request, owner);
                 accommodation.setId(UUID.randomUUID());
+                accommodation.setImages(new ArrayList<>());
         }
 
         @Nested
@@ -440,6 +447,149 @@ class AccommodationServiceImplTest {
                                         .hasMessageContaining("not found");
                         verify(imageStorageService, never()).uploadImage(any());
                         verify(accommodationRepository, never()).save(any());
+                }
+        }
+
+        @Nested
+        @DisplayName("removeImageFromAccommodation")
+        class RemoveImageFromAccommodation {
+
+                @Test
+                @DisplayName("debe eliminar una imagen del alojamiento correctamente")
+                void shouldRemoveImageSuccessfully() {
+                        // Arrange
+                        AccommodationImage image = new AccommodationImage();
+                        image.setId(UUID.randomUUID());
+                        image.setImageUrl("http://secure-url.com/img.png");
+                        image.setAccommodation(accommodation);
+                        accommodation.getImages().add(image);
+
+                        when(accommodationRepository.findByIdAndDeletedAtIsNull(accommodation.getId()))
+                                        .thenReturn(Optional.of(accommodation));
+                        when(accommodationImageRepository.findById(image.getId()))
+                                        .thenReturn(Optional.of(image));
+
+                        // Act
+                        accommodationService.removeImageFromAccommodation(accommodation.getId(), image.getId(), owner);
+
+                        // Assert
+                        assertThat(accommodation.getImages()).doesNotContain(image);
+                        verify(imageStorageService, times(1)).deleteImage("http://secure-url.com/img.png");
+                        verify(accommodationRepository, times(1)).save(accommodation);
+                }
+
+                @Test
+                @DisplayName("debe permitir a un ADMIN eliminar la imagen aunque no sea owner")
+                void shouldAllowAdminToRemoveImage() {
+                        AccommodationImage image = new AccommodationImage();
+                        image.setId(UUID.randomUUID());
+                        image.setImageUrl("http://secure-url.com/img.png");
+                        image.setAccommodation(accommodation);
+                        accommodation.getImages().add(image);
+
+                        when(accommodationRepository.findByIdAndDeletedAtIsNull(accommodation.getId()))
+                                        .thenReturn(Optional.of(accommodation));
+                        when(accommodationImageRepository.findById(image.getId()))
+                                        .thenReturn(Optional.of(image));
+
+                        accommodationService.removeImageFromAccommodation(accommodation.getId(), image.getId(), admin);
+
+                        assertThat(accommodation.getImages()).doesNotContain(image);
+                        verify(imageStorageService, times(1)).deleteImage("http://secure-url.com/img.png");
+                }
+
+                @Test
+                @DisplayName("debe lanzar excepcion si el usuario no tiene permisos")
+                void shouldThrowIfNotAuthorizedToRemove() {
+                        when(accommodationRepository.findByIdAndDeletedAtIsNull(accommodation.getId()))
+                                        .thenReturn(Optional.of(accommodation));
+
+                        assertThatThrownBy(() -> accommodationService.removeImageFromAccommodation(
+                                        accommodation.getId(), UUID.randomUUID(), otherUser))
+                                        .isInstanceOf(RuntimeException.class)
+                                        .hasMessageContaining("no tienes permiso");
+                }
+
+                @Test
+                @DisplayName("debe lanzar excepcion si la imagen no existe")
+                void shouldThrowIfImageNotFound() {
+                        UUID imgId = UUID.randomUUID();
+                        when(accommodationRepository.findByIdAndDeletedAtIsNull(accommodation.getId()))
+                                        .thenReturn(Optional.of(accommodation));
+                        when(accommodationImageRepository.findById(imgId))
+                                        .thenReturn(Optional.empty());
+
+                        assertThatThrownBy(() -> accommodationService
+                                        .removeImageFromAccommodation(accommodation.getId(), imgId, owner))
+                                        .isInstanceOf(RuntimeException.class)
+                                        .hasMessageContaining("no se ha podido obtener la imagen");
+                }
+
+                @Test
+                @DisplayName("debe lanzar excepcion si la imagen no pertenece al alojamiento")
+                void shouldThrowIfImageDoesNotBelongToAccommodation() {
+                        Accommodation otherAcc = new Accommodation();
+                        otherAcc.setId(UUID.randomUUID());
+
+                        AccommodationImage image = new AccommodationImage();
+                        image.setId(UUID.randomUUID());
+                        image.setAccommodation(otherAcc);
+
+                        when(accommodationRepository.findByIdAndDeletedAtIsNull(accommodation.getId()))
+                                        .thenReturn(Optional.of(accommodation));
+                        when(accommodationImageRepository.findById(image.getId()))
+                                        .thenReturn(Optional.of(image));
+
+                        assertThatThrownBy(() -> accommodationService
+                                        .removeImageFromAccommodation(accommodation.getId(), image.getId(), owner))
+                                        .isInstanceOf(RuntimeException.class)
+                                        .hasMessageContaining("La imagen no pertenece al alojamiento especificado");
+                }
+        }
+
+        @Nested
+        @DisplayName("updateImagesOrder")
+        class UpdateImagesOrder {
+
+                @Test
+                @DisplayName("debe actualizar el orden de las imagenes correctamente")
+                void shouldUpdateImagesOrderSuccessfully() {
+                        AccommodationImage img1 = new AccommodationImage();
+                        img1.setId(UUID.randomUUID());
+                        img1.setDisplayOrder(1);
+
+                        AccommodationImage img2 = new AccommodationImage();
+                        img2.setId(UUID.randomUUID());
+                        img2.setDisplayOrder(2);
+
+                        accommodation.getImages().addAll(List.of(img1, img2));
+
+                        when(accommodationRepository.findByIdAndDeletedAtIsNull(accommodation.getId()))
+                                        .thenReturn(Optional.of(accommodation));
+                        when(accommodationRepository.save(accommodation)).thenReturn(accommodation);
+
+                        List<AccommodationImageOrderRequest> orderRequests = List.of(
+                                        new AccommodationImageOrderRequest(img1.getId(), 2),
+                                        new AccommodationImageOrderRequest(img2.getId(), 1));
+
+                        AccommodationResponse response = accommodationService.updateImagesOrder(accommodation.getId(),
+                                        orderRequests, owner);
+
+                        assertThat(response).isNotNull();
+                        assertThat(img1.getDisplayOrder()).isEqualTo(2);
+                        assertThat(img2.getDisplayOrder()).isEqualTo(1);
+                }
+
+                @Test
+                @DisplayName("debe lanzar excepcion al reordenar si no esta autorizado")
+                void shouldThrowIfNotAuthorizedToReorder() {
+                        when(accommodationRepository.findByIdAndDeletedAtIsNull(accommodation.getId()))
+                                        .thenReturn(Optional.of(accommodation));
+
+                        assertThatThrownBy(() -> accommodationService.updateImagesOrder(accommodation.getId(),
+                                        List.of(), otherUser))
+                                        .isInstanceOf(RuntimeException.class)
+                                        .hasMessageContaining("no tienes permiso");
                 }
         }
 }

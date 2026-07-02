@@ -168,6 +168,42 @@ class AccommodationListingServiceImplTest {
                     .isInstanceOf(RuntimeException.class)
                     .hasMessageContaining("no puedes eliminar el anuncio");
         }
+
+        @Test
+        @DisplayName("debe lanzar excepcion si el usuario es owner pero no host del anuncio")
+        void shouldThrowIfOwnerButNotHost() {
+            User ownerNotHost = new User();
+            ownerNotHost.setId(accommodation.getOwner().getId()); // same owner
+            ownerNotHost.setRole(UserRole.USER);
+
+            User distinctHost = new User();
+            distinctHost.setId(UUID.randomUUID());
+            listing.setHost(distinctHost); // different host
+
+            when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
+
+            assertThatThrownBy(() -> listingServiceImpl.deleteAccommodationListingSoft(listing.getId(), ownerNotHost))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("no puedes eliminar el anuncio");
+        }
+
+        @Test
+        @DisplayName("debe lanzar excepcion si el usuario es host pero no owner de la casa")
+        void shouldThrowIfHostButNotOwner() {
+            User hostNotOwner = new User();
+            hostNotOwner.setId(listing.getHost().getId()); // same host
+            hostNotOwner.setRole(UserRole.USER);
+
+            User distinctOwner = new User();
+            distinctOwner.setId(UUID.randomUUID());
+            accommodation.setOwner(distinctOwner); // different owner
+
+            when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
+
+            assertThatThrownBy(() -> listingServiceImpl.deleteAccommodationListingSoft(listing.getId(), hostNotOwner))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("no puedes eliminar el anuncio");
+        }
     }
 
     @Nested
