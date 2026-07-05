@@ -110,180 +110,149 @@ Este componente técnico transversal responde de manera directa a las restriccio
 
 A continuación se detalla la estructura de entidades e índices necesaria en la base de datos PostgreSQL para dar soporte al sistema y garantizar el cumplimiento de las restricciones funcionales.
 
-```plantuml
-@startuml
-skinparam linetype ortho
-skinparam nodesep 50
-skinparam ranksep 50
+```mermaid
+erDiagram
+    USER ||--o{ ACCOMMODATION : "owns"
+    ACCOMMODATION ||--o{ ACCOMMODATION_LISTING : "has"
+    USER ||--o{ ACCOMMODATION_LISTING : "hosts"
+    ACCOMMODATION_LISTING ||--o{ ACCOMMODATION_REVIEW : "receives"
+    USER ||--o{ ACCOMMODATION_REVIEW : "writes"
+    ACCOMMODATION ||--o{ ACCOMMODATION_IMAGE : "contains"
+    ACCOMMODATION_LISTING ||--o{ ACCOMMODATION_REPORT : "reported_in"
+    USER |o--o{ ACCOMMODATION_REPORT : "reports"
+    USER ||--o{ MESSAGE : "sends"
+    ACCOMMODATION_LISTING |o--o{ MESSAGE : "related_to"
+    USER ||--o{ HOGAR_MEMBER : "belongs_to"
+    HOGAR ||--o{ HOGAR_MEMBER : "has_members"
+    HOGAR ||--o{ EXPENSE : "registers"
+    USER ||--o{ EXPENSE : "pays"
+    EXPENSE ||--o{ EXPENSE_AFFECTED : "affects"
+    USER ||--o{ EXPENSE_AFFECTED : "owes"
+    HOGAR ||--o{ TASK : "has"
+    USER |o--o{ TASK : "assigned_to"
+    USER ||--o{ AUDIT_SNAPSHOT_LOG : "generates"
 
-entity "USER" as user {
-  * id : UUID <<PK>>
-  --
-  nickname : VARCHAR
-  email : VARCHAR
-  password_hash : TEXT
-  first_name : VARCHAR
-  last_name_1 : VARCHAR
-  last_name_2 : VARCHAR
-  phone : VARCHAR
-  profile_pic_url : TEXT
-  role : ENUM
-  created_at : TIMESTAMP
-  bannedUntil : TIMESTAMP
-  banReason : TEXT
-}
-
-entity "ACCOMMODATION" as accommodation {
-  * id : UUID <<PK>>
-  * owner_id : UUID <<FK>>
-  --
-  address : VARCHAR
-  city : VARCHAR
-  province : VARCHAR
-  country : VARCHAR
-  total_rooms : INT
-  free_rooms : INT
-  bathrooms : INT
-  square_meters : NUMERIC
-  latitude : NUMERIC
-  longitude : NUMERIC
-  amenities : VARCHAR[]
-  created_at : TIMESTAMP
-}
-
-entity "ACCOMMODATION_LISTING" as listing {
-  * id : UUID <<PK>>
-  * accommodation_id : UUID <<FK>>
-  * host_id : UUID <<FK>>
-  --
-  title : VARCHAR
-  description : TEXT
-  price_per_month : NUMERIC
-  status : ENUM
-  version : INT
-  created_at : TIMESTAMP
-}
-
-entity "ACCOMMODATION_IMAGE" as image {
-  * id : UUID <<PK>>
-  * accommodation_id : UUID <<FK>>
-  --
-  image_url : TEXT
-  display_order : INT
-}
-
-entity "ACCOMMODATION_REVIEW" as review {
-  * id : UUID <<PK>>
-  * author_id : UUID <<FK>>
-  * listing_id : UUID <<FK>>
-  --
-  rating : INT
-  comment : TEXT
-  created_at : TIMESTAMP
-}
-
-entity "ACCOMMODATION_REPORT" as report {
-  * id : UUID <<PK>>
-  * listing_id : UUID <<FK>>
-  reporter_id : UUID <<FK>>
-  --
-  reason : ENUM
-  description : TEXT
-  status : ENUM
-  created_at : TIMESTAMP
-}
-
-entity "MESSAGE" as message {
-  * id : UUID <<PK>>
-  * sender_id : UUID <<FK>>
-  * receiver_id : UUID <<FK>>
-  listing_id : UUID <<FK>>
-  --
-  content : TEXT
-  offer_amount : NUMERIC
-  is_offer : BOOLEAN
-  created_at : TIMESTAMP
-}
-
-entity "HOGAR" as hogar {
-  * id : UUID <<PK>>
-  --
-  name : VARCHAR
-  version : INT
-  created_at : TIMESTAMP
-}
-
-entity "HOGAR_MEMBER" as hogar_member {
-  * hogar_id : UUID <<FK>>
-  * user_id : UUID <<FK>>
-  --
-  is_admin : BOOLEAN
-  joined_at : TIMESTAMP
-}
-
-entity "EXPENSE" as expense {
-  * id : UUID <<PK>>
-  * hogar_id : UUID <<FK>>
-  * payer_id : UUID <<FK>>
-  --
-  amount : NUMERIC
-  description : VARCHAR
-  version : INT
-  created_at : TIMESTAMP
-}
-
-entity "EXPENSE_AFFECTED" as expense_affected {
-  * expense_id : UUID <<FK>>
-  * user_id : UUID <<FK>>
-  --
-  percentage : NUMERIC
-}
-
-entity "TASK" as task {
-  * id : UUID <<PK>>
-  * hogar_id : UUID <<FK>>
-  assigned_to : UUID <<FK>>
-  --
-  title : VARCHAR
-  description : TEXT
-  is_completed : BOOLEAN
-  version : INT
-  created_at : TIMESTAMP
-}
-
-entity "AUDIT_SNAPSHOT_LOG" as audit {
-  * id : UUID <<PK>>
-  * user_id : UUID <<FK>>
-  --
-  entity_type : VARCHAR
-  entity_id : UUID
-  action_type : ENUM
-  snapshot_before : JSONB
-  snapshot_after : JSONB
-  server_timestamp : TIMESTAMP
-}
-
-user ||--o{ accommodation
-accommodation ||--o{ listing
-user ||--o{ listing
-user ||--o{ review
-listing ||--o{ review
-accommodation ||--o{ image
-listing ||--o{ report
-user |o--o{ report
-user ||--o{ message
-listing |o--o{ message
-user ||--o{ hogar_member
-hogar ||--o{ hogar_member
-hogar ||--o{ expense
-user ||--o{ expense
-expense ||--o{ expense_affected
-user ||--o{ expense_affected
-hogar ||--o{ task
-user |o--o{ task
-user ||--o{ audit
-
-@enduml
+    USER {
+        UUID id PK
+        VARCHAR nickname
+        VARCHAR email
+        TEXT password_hash
+        VARCHAR first_name
+        VARCHAR last_name_1
+        VARCHAR last_name_2
+        VARCHAR phone
+        TEXT profile_pic_url
+        ENUM role
+        TIMESTAMP created_at
+        TIMESTAMP bannedUntil
+        TEXT banReason
+    }
+    ACCOMMODATION {
+        UUID id PK
+        UUID owner_id FK
+        VARCHAR address
+        VARCHAR city
+        VARCHAR province
+        VARCHAR country
+        INT total_rooms
+        INT free_rooms
+        INT bathrooms
+        NUMERIC square_meters
+        NUMERIC latitude
+        NUMERIC longitude
+        VARCHAR_ARRAY amenities
+        TIMESTAMP created_at
+    }
+    ACCOMMODATION_LISTING {
+        UUID id PK
+        UUID accommodation_id FK
+        UUID host_id FK
+        VARCHAR title
+        TEXT description
+        NUMERIC price_per_month
+        ENUM status
+        INT version
+        TIMESTAMP created_at
+    }
+    ACCOMMODATION_IMAGE {
+        UUID id PK
+        UUID accommodation_id FK
+        TEXT image_url
+        INT display_order
+    }
+    ACCOMMODATION_REVIEW {
+        UUID id PK
+        UUID author_id FK
+        UUID listing_id FK
+        INT rating
+        TEXT comment
+        TIMESTAMP created_at
+    }
+    ACCOMMODATION_REPORT {
+        UUID id PK
+        UUID listing_id FK
+        UUID reporter_id FK
+        ENUM reason
+        TEXT description
+        ENUM status
+        TIMESTAMP created_at
+    }
+    MESSAGE {
+        UUID id PK
+        UUID sender_id FK
+        UUID receiver_id FK
+        UUID listing_id FK
+        TEXT content
+        NUMERIC offer_amount
+        BOOLEAN is_offer
+        TIMESTAMP created_at
+    }
+    HOGAR {
+        UUID id PK
+        VARCHAR name
+        INT version
+        TIMESTAMP created_at
+    }
+    HOGAR_MEMBER {
+        UUID hogar_id FK
+        UUID user_id FK
+        BOOLEAN is_admin
+        TIMESTAMP joined_at
+    }
+    EXPENSE {
+        UUID id PK
+        UUID hogar_id FK
+        UUID payer_id FK
+        NUMERIC amount
+        VARCHAR description
+        INT version
+        TIMESTAMP created_at
+    }
+    EXPENSE_AFFECTED {
+        UUID expense_id FK
+        UUID user_id FK
+        NUMERIC percentage
+    }
+    TASK {
+        UUID id PK
+        UUID hogar_id FK
+        UUID assigned_to FK
+        VARCHAR title
+        TEXT description
+        BOOLEAN is_completed
+        INT version
+        TIMESTAMP created_at
+    }
+    AUDIT_SNAPSHOT_LOG {
+        UUID id PK
+        UUID user_id FK
+        VARCHAR entity_type
+        UUID entity_id
+        ENUM action_type
+        JSONB snapshot_before
+        JSONB snapshot_after
+        TIMESTAMP server_timestamp
+    }
 ```
 
 ### Reglas Críticas de Integridad y Restricciones de Base de Datos
