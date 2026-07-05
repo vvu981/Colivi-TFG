@@ -106,4 +106,50 @@ class TransitDebtSimplifierTest {
         List<DebtTransfer> result = simplifierEngine.simplify(balances);
         assertEquals(1, result.size());
     }
+
+    @Test
+    void escenario_6_lista_vacia() {
+        // Sin balances, no debe haber transferencias
+        List<Balance> balances = List.of();
+
+        List<DebtTransfer> result = simplifierEngine.simplify(balances);
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void escenario_7_deudores_se_agotan_antes_que_acreedores() {
+        // Un deudor con deuda menor que la de los acreedores
+        // userA debe 30, userB y userC deben recibir 50 cada uno
+        // -> i++ se ejecuta antes que j++
+        List<Balance> balances = List.of(
+                new Balance("userA", -30.0),
+                new Balance("userB", 50.0),
+                new Balance("userC", 50.0)
+        );
+
+        List<DebtTransfer> result = simplifierEngine.simplify(balances);
+
+        // Solo una transferencia: userA paga 30 a userB
+        assertEquals(1, result.size());
+        assertEquals("userA", result.get(0).fromUserId());
+        assertEquals(30.0, result.get(0).amount());
+    }
+
+    @Test
+    void escenario_8_multiples_deudores_y_acreedores() {
+        // Escenario complejo: 2 deudores y 2 acreedores con saldos distintos
+        List<Balance> balances = List.of(
+                new Balance("deudorA", -70.0),
+                new Balance("deudorB", -30.0),
+                new Balance("acreedorX", 60.0),
+                new Balance("acreedorY", 40.0)
+        );
+
+        List<DebtTransfer> result = simplifierEngine.simplify(balances);
+
+        // Verificar que el total de transferencias es correcto (100 total)
+        double totalTransferido = result.stream().mapToDouble(DebtTransfer::amount).sum();
+        assertEquals(100.0, totalTransferido, 0.001);
+    }
 }

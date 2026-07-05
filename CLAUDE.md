@@ -23,9 +23,11 @@
 
 La plataforma es un sistema web full-stack de tres capas independientes que cubre dos grandes necesidades:
 
-### 1.1 Módulo de Alojamiento (Mercado de Clasificados)
+### 1.1 Módulo de Alojamiento (Físico y Comercial)
 
-Marketplace de alquiler residencial con flujos diferenciados por rol (Invitado, Usuario Registrado, Administrador). Permite publicar, moderar y buscar anuncios de alojamiento, incluyendo un mapa interactivo con geolocalización, un sistema cruzado de valoraciones (usuario ↔ alojamiento, usuario ↔ usuario) y mensajería privada con soporte para ofertas económicas formales.
+El marketplace de alquiler residencial se divide en dos submódulos bien diferenciados por rol (Invitado, Usuario Registrado, Administrador) para garantizar alta cohesión y bajo acoplamiento:
+- **Estructura Física (Accommodation)**: Representa la propiedad física inmutable asociada a su propietario. Contiene dirección, ciudad, provincia, país, habitaciones totales/libres, baños, metros cuadrados, coordenadas (latitud/longitud), "amenities" estructurales (Set de `AmenityType`) y la gestión de imágenes físicas integradas en la nube con Cloudinary. Su ciclo de vida depende del propietario.
+- **Publicación Comercial (AccommodationListing)**: Representa el anuncio, la oferta o publicación en el catálogo para alquilar. Depende de un `Accommodation` (relación 1:N o 1:1, un alojamiento físico puede poseer históricos de anuncios). Contiene el precio mensual, fechas de disponibilidad, reglas de convivencia (house_rules), fianza y el estado de visibilidad comercial (`AVAILABLE`, `PAUSED`, `RENTED`).
 
 ### 1.2 Módulo de Hogar (Gestión Privada de Convivencia)
 
@@ -39,16 +41,17 @@ Servidor independiente que implementa el Model Context Protocol (MCP) y actúa c
 
 ## 2. Reglas de Negocio y Restricciones
 
-### 2.1 Gestión de Anuncios
+### 2.1 Gestión de Alojamientos y Anuncios Comerciales
 
 | Regla | Detalle |
 |---|---|
-| **Mínimo de imágenes** | Un anuncio no puede pasar a estado `ACTIVO` si tiene menos de 2 imágenes asociadas. Validación en `AccommodationService` y a nivel de base de datos. |
-| **Ciclo de vida del anuncio** | Estados: `PENDIENTE → ACTIVO` (aprobado por admin) · `PENDIENTE → RECHAZADO` · `ACTIVO → FINALIZADO` |
-| **Almacenamiento de imágenes** | Las imágenes se suben a un proveedor cloud (S3 / GCS / Cloudinary). El backend persiste únicamente las URLs absolutas públicas. Nunca se almacenan binarios en el servidor Spring Boot. |
-| **Moderación manual** | Un Administrador puede eliminar cualquier anuncio, comentario o valoración. Solo un Administrador puede aprobar o rechazar solicitudes de publicación. |
-| **Auto-moderación preventiva** | Si un anuncio acumula más de **5 denuncias únicas** en estado `PENDING` (en tabla `ACCOMMODATION_REPORT`), el sistema cambia automáticamente su estado a `PENDIENTE` y genera una alerta prioritaria en la bandeja del Administrador. Esta acción es atómica y gestionada por `AccommodationReportService`. |
-| **Denuncias de anuncios** | Cualquier usuario (registrado o anónimo) puede enviar una denuncia vía `POST /api/v1/accommodations/{id}/reports`. Los motivos posibles son: `SPAM`, `SCAM`, `INAPPROPRIATE`, `MISLEADING`. El estado de la denuncia sigue el ciclo: `PENDING → REVIEWED → DISMISSED`. |
+| **Mínimo de imágenes** | Un anuncio comercial (`AccommodationListing`) no puede pasar a estado de visibilidad activa (`AVAILABLE` y moderación `APPROVED`) si la propiedad física (`Accommodation`) asociada tiene menos de 2 imágenes registradas en Cloudinary. Validación en `AccommodationListingService` y a nivel de base de datos. |
+| **Ciclo de vida del anuncio** | Moderación: `PENDIENTE → APROBADO` · `PENDIENTE → RECHAZADO`. Visibilidad Comercial (tras aprobación): `AVAILABLE` (disponible y visible en catálogo) · `PAUSED` (pausado temporalmente por el host) · `RENTED` (alquilado). |
+| **Almacenamiento de imágenes** | Asociadas al alojamiento físico (`Accommodation`). Las imágenes se suben a Cloudinary. El backend persiste únicamente las URLs absolutas públicas de las imágenes físicas. Nunca se almacenan binarios en el servidor Spring Boot. |
+| **Moderación manual** | Un Administrador puede eliminar cualquier alojamiento físico o anuncio comercial, comentario o valoración. Solo un Administrador puede aprobar o rechazar solicitudes de publicación en estado `PENDIENTE`. |
+| **Auto-moderación preventiva** | Si un anuncio comercial (`AccommodationListing`) acumula más de **5 denuncias únicas** en estado `PENDING` (en tabla `ACCOMMODATION_REPORT`), el sistema cambia automáticamente su estado de moderación a `PENDIENTE`, retira su visibilidad comercial del catálogo y genera una alerta prioritaria en la bandeja del Administrador. Acción atómica y gestionada por `AccommodationReportService`. |
+| **Denuncias de anuncios** | Cualquier usuario (registrado o anónimo) puede enviar una denuncia contra un anuncio comercial vía `POST /api/v1/listings/{id}/reports`. Los motivos posibles son: `SPAM`, `SCAM`, `INAPPROPRIATE`, `MISLEADING`. El estado de la denuncia sigue el ciclo: `PENDING → REVIEWED → DISMISSED`. |
+| **Listado dinámico y catálogo** | Unificación en `getListingsCatalog(owner, visibility, page, size)` con estados de visibilidad (`AVAILABLE`, `PAUSED`, `RENTED`) e histórico para evitar duplicidad de consultas JPA y optimizar filtrados. |
 | **Listado dinámico y catálogo** | Unificación en `getAccommodationsCatalog(owner, visibility, page, size)` con estados `AVAILABLE` (activos), `DELETED` (borrado lógico) y `ALL` (todo el histórico) para evitar duplicidad de consultas JPA y optimizar filtrados. |
 
 ### 2.2 Motor de Gastos Compartidos
@@ -105,6 +108,8 @@ Servidor independiente que implementa el Model Context Protocol (MCP) y actúa c
 │                                                                  │
 │   Java 21 · Spring Boot 3.x · Spring Security · Spring Data JPA  │
 │   - Arquitectura limpia: Controller → Service → Repository       │
+│   - Dominio de Alojamientos separado en Estructura (Accommodation)│
+│     y Publicación Comercial (AccommodationListing) (SOLID)       │
 │   - Lógica de negocio, validaciones, control de acceso           │
 │   - Algoritmo de simplificación de deudas (en memoria)           │
 │   - Generación de snapshots de auditoría (Append-Only)           │
@@ -178,20 +183,24 @@ Servidor independiente que implementa el Model Context Protocol (MCP) y actúa c
 │    banReason      TEXT NULL  │  ← motivo de la sanción           │
 └──────────────────────────────┘                                   │
          │                                                         │
-         │ 1:N  (un usuario puede poseer varias propiedades)       │
+         │ 1:N  (un usuario es propietario de alojamientos)        │
          ▼                                                         │
 ┌──────────────────────────────┐                                   │
 │        ACCOMMODATION         │  ← Propiedad Física               │
 ├──────────────────────────────┤                                   │
 │ PK id             UUID       │                                   │
+│ FK owner_id       UUID ──────┼───────────────────────────────────┤
 │    address        VARCHAR    │                                   │
-│    total_rooms    INT        │                                   │
-│    square_meters  NUMERIC    │                                   │
 │    city           VARCHAR    │                                   │
-│    locality       VARCHAR    │                                   │
+│    province       VARCHAR    │                                   │
 │    country        VARCHAR    │                                   │
+│    total_rooms    INT        │                                   │
+│    free_rooms     INT        │                                   │
+│    bathrooms      INT        │                                   │
+│    square_meters  NUMERIC    │                                   │
 │    latitude       NUMERIC    │                                   │
 │    longitude      NUMERIC    │                                   │
+│    amenities      VARCHAR[]  │  (Set<AmenityType> estructural)   │
 │    created_at     TIMESTAMP  │                                   │
 └─────────┬──────────────┬─────┘                                   │
           │              │ 1:N  (propiedad → varios anuncios)      │
@@ -271,12 +280,24 @@ Servidor independiente que implementa el Model Context Protocol (MCP) y actúa c
 └───────────────────────────────────────────────────────────┘
 
 ┌───────────────────────────────────────────────────────────┐
+│                   ACCOMMODATION_REPORT                    │
+├───────────────────────────────────────────────────────────┤
+│ PK id               UUID                                  │
+│ FK listing_id       UUID                                  │
+│ FK reporter_id      UUID NULL                             │
+│    reason           ENUM      (SPAM, SCAM, etc.)          │
+│    description      TEXT                                  │
+│    status           ENUM      (PENDING, REVIEWED, etc.)   │
+│    created_at       TIMESTAMP                             │
+└───────────────────────────────────────────────────────────┘
+
+┌───────────────────────────────────────────────────────────┐
 │                      MESSAGE                              │
 ├───────────────────────────────────────────────────────────┤
 │ PK id               UUID                                  │
 │ FK sender_id        UUID                                  │
 │ FK receiver_id      UUID                                  │
-│ FK accommodation_id UUID NULL                             │
+│ FK listing_id       UUID NULL                             │
 │    content          TEXT                                  │
 │    offer_amount     NUMERIC NULL  (si es oferta formal)   │
 │    is_offer         BOOLEAN                               │
@@ -287,14 +308,16 @@ Servidor independiente que implementa el Model Context Protocol (MCP) y actúa c
 ### 4.2 Índices Críticos
 
 ```sql
--- Búsqueda de anuncios activos por ciudad y precio (sobre el anuncio comercial)
-CREATE INDEX idx_listing_city_price
-    ON accommodation_listing(city, price_per_month)
-    WHERE status = 'ACTIVE';
+-- Búsqueda de anuncios comerciales activos por ciudad y precio (en catálogo)
+-- Nota: La ciudad se obtiene de la relación con la propiedad física (Accommodation)
+CREATE INDEX idx_listing_status_price
+    ON accommodation_listing(price_per_month)
+    WHERE moderation_status = 'APPROVED' AND status = 'AVAILABLE';
 
 -- Geolocalización (consultas de radio por mapa, sobre la propiedad física)
 CREATE INDEX idx_accommodation_lat  ON accommodation(latitude);
 CREATE INDEX idx_accommodation_lng  ON accommodation(longitude);
+CREATE INDEX idx_accommodation_city ON accommodation(city);
 
 -- Búsqueda de todos los anuncios de una propiedad física
 CREATE INDEX idx_listing_accommodation_id
@@ -307,11 +330,11 @@ CREATE INDEX idx_listing_host_id
 -- Auditoría: consultas por hogar (a través de entity_id)
 CREATE INDEX idx_audit_entity       ON audit_snapshot_log(entity_id, server_timestamp DESC);
 
--- Mensajería privada
+-- Mensajería privada vinculada a anuncios comerciales
 CREATE INDEX idx_message_receiver   ON message(receiver_id, created_at DESC);
 CREATE INDEX idx_message_sender     ON message(sender_id, created_at DESC);
 
--- Denuncias: contar denuncias pendientes por anuncio (clave para la regla de auto-moderación)
+-- Denuncias: contar denuncias pendientes por anuncio comercial (clave para la regla de auto-moderación)
 CREATE INDEX idx_report_listing_status
     ON accommodation_report(listing_id, status)
     WHERE status = 'PENDING';
@@ -338,11 +361,12 @@ CREATE TRIGGER trg_audit_immutable
 ### 4.4 Enumerados de Base de Datos
 
 ```sql
-CREATE TYPE user_role       AS ENUM ('ADMIN', 'USER');
-CREATE TYPE listing_status  AS ENUM ('PENDING', 'ACTIVE', 'REJECTED', 'FINISHED');
-CREATE TYPE audit_action    AS ENUM ('CREATE', 'UPDATE', 'DELETE');
-CREATE TYPE report_reason   AS ENUM ('SPAM', 'SCAM', 'INAPPROPRIATE', 'MISLEADING');
-CREATE TYPE report_status   AS ENUM ('PENDING', 'REVIEWED', 'DISMISSED');
+CREATE TYPE user_role           AS ENUM ('ADMIN', 'USER');
+CREATE TYPE listing_status      AS ENUM ('AVAILABLE', 'PAUSED', 'RENTED');
+CREATE TYPE moderation_status   AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
+CREATE TYPE audit_action        AS ENUM ('CREATE', 'UPDATE', 'DELETE');
+CREATE TYPE report_reason       AS ENUM ('SPAM', 'SCAM', 'INAPPROPRIATE', 'MISLEADING');
+CREATE TYPE report_status       AS ENUM ('PENDING', 'REVIEWED', 'DISMISSED');
 ```
 
 ---
@@ -371,39 +395,52 @@ CREATE TYPE report_status   AS ENUM ('PENDING', 'REVIEWED', 'DISMISSED');
 | `GET` | `/users/{userId}/reviews` | 🔒 | Valoraciones recibidas por un usuario |
 | `POST` | `/users/{userId}/reviews` | 🔒 | Emitir valoración sobre un usuario |
 
-### 5.3 Alojamientos (`/accommodations`)
+### 5.3 Alojamientos Físicos (`/accommodations`)
 
 | Método | Endpoint | Auth | Descripción |
 |---|---|---|---|
-| `GET` | `/accommodations` | ❌ | Listar anuncios activos. Query params: `city`, `minPrice`, `maxPrice`, `page`, `size` |
-| `GET` | `/accommodations/{id}` | ❌ | Detalle de un anuncio |
-| `POST` | `/accommodations` | 🔒 | Crear solicitud de anuncio (queda en `PENDIENTE`) |
-| `PUT` | `/accommodations/{id}` | 🔒 | Actualizar anuncio propio (si sigue en `PENDIENTE`) |
-| `DELETE` | `/accommodations/{id}` | 🔒 | Eliminar anuncio propio o cualquiera (ADMIN) |
-| `POST` | `/accommodations/{id}/images` | 🔒 | Añadir URL de imagen a la propiedad física |
-| `DELETE` | `/accommodations/{id}/images/{imageId}` | 🔒 | Eliminar imagen de la propiedad física |
-| `GET` | `/accommodations/{id}/reviews` | ❌ | Valoraciones del alojamiento |
-| `POST` | `/accommodations/{id}/reviews` | 🔒 | Publicar valoración sobre el alojamiento |
-| `DELETE` | `/accommodations/{id}/reviews/{reviewId}` | 🔒 ADMIN | Moderar y eliminar valoración |
-| `POST` | `/accommodations/{id}/reports` | ❌/🔒 | Enviar denuncia sobre el anuncio. Body: `{reason, description}`. Anonymous si no se adjunta JWT. Desencadena auto-moderación si el contador PENDING supera 5. |
+| `POST` | `/accommodations` | 🔒 | Registrar una propiedad física. Body: `{address, city, province, country, totalRooms, freeRooms, bathrooms, squareMeters, latitude, longitude, amenities[]}` |
+| `GET` | `/accommodations/{id}` | 🔒 | Obtener los detalles de una propiedad física |
+| `PUT` | `/accommodations/{id}` | 🔒 | Actualizar la propiedad física propia |
+| `DELETE` | `/accommodations/{id}` | 🔒 | Eliminar propiedad física (solo si no tiene listings activos/pendientes) |
+| `POST` | `/accommodations/{id}/images` | 🔒 | Añadir URL de imagen física subida en Cloudinary. Body: `{imageUrl, displayOrder}` |
+| `DELETE` | `/accommodations/{id}/images/{imageId}` | 🔒 | Eliminar imagen física del alojamiento |
 
-#### Endpoints de Administración de Anuncios
+### 5.4 Publicaciones Comerciales (`/listings`)
 
 | Método | Endpoint | Auth | Descripción |
 |---|---|---|---|
-| `GET` | `/admin/accommodations/pending` | 🔒 ADMIN | Listar anuncios en estado `PENDIENTE` |
-| `POST` | `/admin/accommodations/{id}/approve` | 🔒 ADMIN | Aprobar anuncio → `ACTIVO` |
-| `POST` | `/admin/accommodations/{id}/reject` | 🔒 ADMIN | Rechazar anuncio → `RECHAZADO` |
+| `GET` | `/listings` | ❌ | Listar anuncios del catálogo activos (`AVAILABLE` y `APPROVED`). Query params: `city`, `minPrice`, `maxPrice`, `page`, `size` |
+| `GET` | `/listings/{id}` | ❌ | Detalle del anuncio (incluye datos del alojamiento físico `Accommodation`) |
+| `POST` | `/accommodations/{accommodationId}/listings` | 🔒 | Publicar anuncio comercial para una propiedad propia. Queda en `PENDIENTE` de moderación. Body: `{title, description, pricePerMonth, deposit, availableFrom, availableTo, houseRules}` |
+| `PUT` | `/listings/{id}` | 🔒 | Actualizar anuncio propio (solo si sigue en `PENDIENTE` o visible en catálogo) |
+| `DELETE` | `/listings/{id}` | 🔒 | Eliminar (borrado lógico) del anuncio propio o cualquiera (ADMIN) |
+| `GET` | `/listings/{id}/reviews` | ❌ | Valoraciones recibidas por este anuncio comercial |
+| `POST` | `/listings/{id}/reviews` | 🔒 | Publicar valoración sobre la estancia en este anuncio |
+| `DELETE` | `/listings/{id}/reviews/{reviewId}` | 🔒 ADMIN | Moderar y eliminar valoración del catálogo |
+| `POST` | `/listings/{id}/reports` | ❌/🔒 | Enviar denuncia sobre el anuncio. Body: `{reason, description}`. Anonymous si no se adjunta JWT. |
 
-### 5.4 Mensajería (`/messages`)
+#### Endpoints de Administración y Moderación
+
+| Método | Endpoint | Auth | Descripción |
+|---|---|---|---|
+| `GET` | `/admin/listings/pending` | 🔒 ADMIN | Listar anuncios comerciales en estado de moderación `PENDIENTE` |
+| `POST` | `/admin/listings/{id}/approve` | 🔒 ADMIN | Aprobar anuncio → Cambia a moderación `APPROVED` y visibilidad `AVAILABLE` |
+| `POST` | `/admin/listings/{id}/reject` | 🔒 ADMIN | Rechazar anuncio → Cambia a moderación `REJECTED` |
+| `GET` | `/admin/listings/{id}/reports` | 🔒 ADMIN | Listar las denuncias recibidas por un anuncio comercial |
+| `POST` | `/admin/listings/{id}/reports/{reportId}/review` | 🔒 ADMIN | Marcar denuncia como revisada (`REVIEWED`) |
+| `POST` | `/admin/listings/{id}/reports/{reportId}/dismiss` | 🔒 ADMIN | Desestimar denuncia (`DISMISSED`) |
+| `POST` | `/admin/users/{userId}/ban` | 🔒 ADMIN | Banear temporalmente a un usuario. Body: `{bannedUntil, banReason}` |
+
+### 5.5 Mensajería (`/messages`)
 
 | Método | Endpoint | Auth | Descripción |
 |---|---|---|---|
 | `GET` | `/messages/conversations` | 🔒 | Listar conversaciones del usuario |
 | `GET` | `/messages/conversations/{userId}` | 🔒 | Mensajes con un usuario concreto |
-| `POST` | `/messages` | 🔒 | Enviar mensaje (texto o con `isOffer: true` y `offerAmount`) |
+| `POST` | `/messages` | 🔒 | Enviar mensaje vinculando `listingId` (texto o con `isOffer: true` y `offerAmount`) |
 
-### 5.5 Hogares (`/home`)
+### 5.6 Hogares (`/home`)
 
 | Método | Endpoint | Auth | Descripción |
 |---|---|---|---|
@@ -414,7 +451,7 @@ CREATE TYPE report_status   AS ENUM ('PENDING', 'REVIEWED', 'DISMISSED');
 | `DELETE` | `/home/{hogarId}/members/{userId}` | 🔒 HOGAR-ADMIN | Eliminar miembro (solo si balance neto = 0) |
 | `GET` | `/home/{hogarId}/balances` | 🔒 | Balances actuales y grafo de deudas simplificado |
 
-### 5.6 Gastos (`/home/{hogarId}/expenses`)
+### 5.7 Gastos (`/home/{hogarId}/expenses`)
 
 | Método | Endpoint | Auth | Descripción |
 |---|---|---|---|
@@ -424,7 +461,7 @@ CREATE TYPE report_status   AS ENUM ('PENDING', 'REVIEWED', 'DISMISSED');
 | `PUT` | `/home/{hogarId}/expenses/{expenseId}` | 🔒 | Modificar gasto (genera snapshot de auditoría) |
 | `DELETE` | `/home/{hogarId}/expenses/{expenseId}` | 🔒 | Eliminar gasto (genera snapshot de auditoría) |
 
-### 5.7 Tareas (`/home/{hogarId}/tasks`)
+### 5.8 Tareas (`/home/{hogarId}/tasks`)
 
 | Método | Endpoint | Auth | Descripción |
 |---|---|---|---|
@@ -434,7 +471,7 @@ CREATE TYPE report_status   AS ENUM ('PENDING', 'REVIEWED', 'DISMISSED');
 | `PATCH` | `/home/{hogarId}/tasks/{taskId}/toggle` | 🔒 | Conmutar estado `COMPLETADA` / `PENDIENTE` |
 | `DELETE` | `/home/{hogarId}/tasks/{taskId}` | 🔒 | Eliminar tarea |
 
-### 5.8 Auditoría (`/audit`)
+### 5.9 Auditoría (`/audit`)
 
 | Método | Endpoint | Auth | Descripción |
 |---|---|---|---|
@@ -442,7 +479,7 @@ CREATE TYPE report_status   AS ENUM ('PENDING', 'REVIEWED', 'DISMISSED');
 | `GET` | `/audit/home/{homeId}/expense/{expenseId}` | 🔒 | Historial completo de cambios de un gasto |
 | `GET` | `/audit/home/{homeId}/task/{taskId}` | 🔒 | Historial completo de cambios de una tarea |
 
-### 5.9 Codificación de Respuestas de Error
+### 5.10 Codificación de Respuestas de Error
 
 ```json
 {
@@ -471,27 +508,27 @@ CREATE TYPE report_status   AS ENUM ('PENDING', 'REVIEWED', 'DISMISSED');
 
 ```
  ┌────────────────────────────────────────────────────────────────┐
- │  CLIENTE NEXT.JS (Interfaz de Chat)                           │
- │  - Captura input del usuario                                   │
- │  - Inyecta JWT en metadatos del contexto MCP                   │
- └────────────────────────┬───────────────────────────────────────┘
-                          │ JSON-RPC 2.0 sobre SSE / stdio
-                          │ Contexto: { jwt: "Bearer eyJ..." }
- ┌────────────────────────▼───────────────────────────────────────┐
- │  SERVIDOR MCP (Node.js / TypeScript)                          │
- │  - Parsea la petición JSON-RPC                                 │
- │  - Extrae JWT del contexto                                     │
- │  - Selecciona la herramienta (tool) apropiada                  │
- │  - Llama al endpoint REST del Backend con el JWT               │
- └────────────────────────┬───────────────────────────────────────┘
-                          │ HTTP REST
-                          │ Authorization: Bearer <JWT>
- ┌────────────────────────▼───────────────────────────────────────┐
- │  API SPRING BOOT (Backend)                                    │
- │  - Valida JWT                                                  │
- │  - Verifica pertenencia al hogar_id solicitado                 │
- │  - Devuelve datos o 403 Forbidden                              │
- └────────────────────────────────────────────────────────────────┘
+  │  CLIENTE NEXT.JS (Interfaz de Chat)                           │
+  │  - Captura input del usuario                                   │
+  │  - Inyecta JWT en metadatos del contexto MCP                   │
+  └────────────────────────┬───────────────────────────────────────┘
+                           │ JSON-RPC 2.0 sobre SSE / stdio
+                           │ Contexto: { jwt: "Bearer eyJ..." }
+  ┌────────────────────────▼───────────────────────────────────────┐
+  │  SERVIDOR MCP (Node.js / TypeScript)                          │
+  │  - Parsea la petición JSON-RPC                                 │
+  │  - Extrae JWT del contexto                                     │
+  │  - Selecciona la herramienta (tool) apropiada                  │
+  │  - Llama al endpoint REST del Backend con el JWT               │
+  └────────────────────────┬───────────────────────────────────────┘
+                           │ HTTP REST
+                           │ Authorization: Bearer <JWT>
+  ┌────────────────────────▼───────────────────────────────────────┐
+  │  API SPRING BOOT (Backend)                                    │
+  │  - Valida JWT                                                  │
+  │  - Verifica pertenencia al hogar_id solicitado                 │
+  │  - Devuelve datos o 403 Forbidden                              │
+  └────────────────────────────────────────────────────────────────┘
 ```
 
 ### 6.2 Protocolo de Seguridad Multi-Tenant
@@ -608,7 +645,7 @@ Authorization: Bearer <JWT propagado>
 **Proceso interno del LLM:**
 
 1. Recibe el listado de alojamientos con sus descripciones y comentarios de usuarios.
-2. Evalúa cualitativamente qué inmuebles o propietarios encajan con el `criterioSemantico`.
+2. Evaluá cualitativamente qué inmuebles o propietarios encajan con el `criterioSemantico`.
 3. Devuelve un ranking razonado con justificaciones basadas en experiencias reales de otros usuarios.
 
 **Caso de uso LLM de ejemplo:**
@@ -638,8 +675,8 @@ Authorization: Bearer <JWT propagado>
 app/
 ├── (public)/
 │   ├── page.tsx                    # Home — listado de anuncios + mapa
-│   ├── accommodations/
-│   │   └── [id]/page.tsx           # Detalle del anuncio
+│   ├── listings/
+│   │   └── [id]/page.tsx           # Detalle de la publicación (anuncio)
 │   └── auth/
 │       ├── login/page.tsx          # Login
 │       └── register/page.tsx       # Registro
@@ -648,7 +685,10 @@ app/
 │   ├── layout.tsx                  # Layout con guard de autenticación
 │   ├── dashboard/page.tsx          # Panel del usuario autenticado
 │   ├── accommodations/
-│   │   └── new/page.tsx            # Formulario de nueva solicitud de anuncio
+│   │   ├── new/page.tsx            # Formulario de alta de propiedad física
+│   │   └── page.tsx                # Listado de mis propiedades físicas
+│   ├── listings/
+│   │   └── new/page.tsx            # Crear un anuncio a partir de una propiedad propia
 │   ├── messages/
 │   │   └── [userId]/page.tsx       # Conversación con un usuario
 │   ├── hogar/
@@ -666,7 +706,7 @@ app/
 └── (admin)/
     ├── layout.tsx                  # Layout con guard de rol ADMIN
     └── moderation/
-        ├── pending/page.tsx        # Anuncios pendientes de aprobación
+        ├── pending/page.tsx        # Anuncios comerciales pendientes de moderación
         └── reviews/page.tsx        # Moderación de valoraciones
 ```
 
@@ -676,9 +716,9 @@ app/
 
 **Componentes:**
 - `<SearchBar />` — Filtros de ciudad, precio mínimo y máximo.
-- `<AccommodationMap />` — Mapa Leaflet con marcadores geolocalizados. Al hacer clic en un marcador, muestra una `<PopupCard />` con foto, título y precio.
+- `<AccommodationMap />` — Mapa Leaflet con marcadores geolocalizados de anuncios disponibles. Al hacer clic en un marcador, muestra una `<PopupCard />` con foto, título y precio.
 - `<AccommodationGrid />` — Grid de tarjetas de anuncios sincronizado con los filtros del mapa.
-- `<AccommodationCard />` — Tarjeta individual con foto principal, título, precio, ciudad y rating medio.
+- `<AccommodationCard />` — Tarjeta individual del anuncio con foto principal (Cloudinary), título, precio, ciudad y rating medio de valoraciones.
 
 **Comportamiento:**
 - Los filtros actualizan el mapa y la cuadrícula de forma reactiva mediante React Query.
@@ -732,7 +772,7 @@ app/
 | `<StarRating rating onChange? />` | Selector de valoración de 1 a 5 estrellas |
 | `<UserAvatar userId size />` | Avatar con fallback a iniciales |
 | `<PriceTag amount currency />` | Formateo de moneda consistente |
-| `<StatusBadge status />` | Badge de color para estados de anuncio |
+| `<StatusBadge status />` | Badge de color para estados de anuncio/moderación |
 | `<ConfirmationModal />` | Modal reutilizable para acciones destructivas |
 | `<Pagination page total onChange />` | Componente de paginación estándar |
 | `<LoadingSpinner />` | Indicador de carga |
@@ -1021,117 +1061,112 @@ CMD ["node", "server.js"]
 
 ---
 
-### Fase 4 — Mercado de Alojamientos (Semanas 6-7)
+### Fase 4 — Módulo de Alojamiento: Estructura Física e Imágenes (Semana 6)
 
-**Objetivo:** Implementar el módulo de clasificados completo con moderación, imágenes en cloud, mapa y valoraciones.
+**Objetivo:** Implementar la base de datos de las propiedades físicas (`Accommodation`) y la integración del almacenamiento cloud en Cloudinary para las imágenes.
 
 **Principios SOLID aplicados:**
-- `IAccommodationService` gestiona exclusivamente el inventario físico de propiedades → SRP
-- `IAccommodationListingService` encapsula el ciclo de vida comercial del anuncio (publicar, aprobar, rechazar, finalizar, buscar) → SRP
-- `IImageStorageService` (interfaz): la implementación concreta (S3, Cloudinary) es intercambiable sin tocar ningún servicio de dominio → OCP
-- `IReviewService` separado de `IAccommodationListingService` → SRP
-- Todos los servicios de dominio se consumen a través de interfaces → DIP
+- `IAccommodationService` gestiona exclusivamente el inventario físico e inmutable de propiedades → SRP
+- `IImageStorageService` (interfaz) de almacenamiento cloud: permite intercambiar proveedores fácilmente sin alterar la lógica de negocio → OCP / DIP
 
 **Tareas — Backend:**
 
-- [ ] Crear entidades JPA `Accommodation` (física), `AccommodationListing` (comercial), `AccommodationImage` (FK → `Accommodation`), `AccommodationReview` y `AccommodationReport`.
-- [ ] Crear entidad JPA `Message`.
-- [ ] Crear migraciones Flyway: tablas `accommodation` y `accommodation_listing`, índices `idx_listing_city_price`, índices B-Tree sobre `(latitude, longitude)` en `accommodation`, índice `idx_listing_accommodation_id`, índice `idx_listing_host_id`, índice parcial sobre `accommodation_report(listing_id, status) WHERE status='PENDING'`
-- [ ] Añadir enumerados PostgreSQL: `listing_status` (`PENDING`, `ACTIVE`, `REJECTED`, `FINISHED`), `report_reason` y `report_status` en migración Flyway
-- [ ] Añadir campos `bannedUntil (LocalDateTime, nullable)` y `banReason (String, nullable)` a la entidad JPA `User` y su migración Flyway correspondiente
-- [ ] Implementar método de negocio `isBanned()` en la entidad `User` que compara `bannedUntil` con `LocalDateTime.now()` dinámicamente (sin flag booleano persistido)
-- [ ] Actualizar `JwtAuthenticationFilter` para invocar `isBanned()` tras validar el JWT y rechazar con `403 Forbidden` si el resultado es `true`, incluyendo `bannedUntil` en el cuerpo del error
-- [ ] Diseñar interfaz `IImageStorageService`: `uploadImage(file): String` (devuelve URL pública)
-- [ ] Implementar `CloudinaryImageStorageService implements IImageStorageService` (o S3)
-- [ ] Diseñar interfaz `IAccommodationService` — Gestión del inventario físico:
-  - `registerProperty(CreateAccommodationRequest): AccommodationDto`
-  - `findById(UUID): AccommodationDto`
-  - `updateProperty(UUID, UpdateAccommodationRequest): AccommodationDto`
-  - `deleteProperty(UUID): void` *(solo si no tiene listings ACTIVE o PENDING)*
-- [ ] Implementar `AccommodationServiceImpl implements IAccommodationService`
-- [ ] Diseñar interfaz `IAccommodationListingService` — Ciclo de vida comercial del anuncio:
-  - `publishListing(UUID accommodationId, CreateListingRequest): AccommodationListingDto`
-  - `approveListing(UUID listingId): AccommodationListingDto` *(valida mínimo 2 imágenes)*
-  - `rejectListing(UUID listingId, String reason): AccommodationListingDto`
-  - `finishListing(UUID listingId): AccommodationListingDto`
-  - `updateListing(UUID listingId, UpdateListingRequest): AccommodationListingDto` *(solo en PENDING)*
-  - `deleteListing(UUID listingId): void`
-  - `searchListings(String city, BigDecimal minPrice, BigDecimal maxPrice, Pageable): Page<AccommodationListingDto>`
-- [ ] Implementar `AccommodationListingServiceImpl implements IAccommodationListingService` con validación de mínimo 2 imágenes antes de aprobar
-- [ ] Diseñar interfaz `IAccommodationReportService` con métodos: `createReport`, `getPendingReports`, `reviewReport`, `dismissReport`
-- [ ] Implementar `AccommodationReportServiceImpl` que, tras persistir una nueva denuncia, cuenta las denuncias únicas en `PENDING` para ese `listingId`. Si el contador supera 5, cambia atómicamente el estado del listing a `PENDING` y genera la alerta de administrador
-- [ ] Diseñar interfaz `IAccommodationReportRepository` exponiendo exclusivamente: `save`, `countByListingIdAndStatus`, `findByListingId` (sin métodos de mutación masiva — ISP)
-- [ ] Implementar `AccommodationReportController` con endpoint: `POST /accommodations/{id}/reports` (abierto a anónimos y autenticados)
-- [ ] Implementar `IReviewService` / `ReviewServiceImpl` para valoraciones de anuncio y de usuario
-- [ ] Implementar `IMessageService` / `MessageServiceImpl` con soporte para ofertas económicas
-- [ ] Implementar `AccommodationController`, `AccommodationListingController`, `ReviewController`, `MessageController`
-- [ ] Implementar `AdminController` con endpoints de moderación (protegidos por rol `ADMIN`), incluyendo endpoints para listar y revisar denuncias: `GET /admin/listings/{id}/reports`, `POST /admin/listings/{id}/reports/{reportId}/review`, `POST /admin/listings/{id}/reports/{reportId}/dismiss`
-- [ ] Implementar endpoint de baneo de usuario: `POST /admin/users/{userId}/ban` con body `{bannedUntil, banReason}` (solo ADMIN)
+- [ ] Crear entidades JPA `Accommodation` (propiedad física) y `AccommodationImage` (imágenes de Cloudinary asociadas a una propiedad física)
+- [ ] Crear migraciones Flyway: tabla `accommodation` con índices B-Tree geoespaciales sobre `(latitude, longitude)` y `city`, y tabla `accommodation_image`
+- [ ] Diseñar interfaz `IImageStorageService` con métodos `uploadImage(file): String` y `deleteImage(publicId): void`
+- [ ] Implementar `CloudinaryImageStorageService implements IImageStorageService`
+- [ ] Diseñar interfaz `IAccommodationService` para administración física: `registerProperty`, `findById`, `updateProperty`, `deleteProperty`, `addImage`, `deleteImage`
+- [ ] Implementar `AccommodationServiceImpl implements IAccommodationService` inyectando `IImageStorageService`
+- [ ] Implementar `AccommodationController` con los endpoints de gestión física (`POST /accommodations`, `GET /accommodations/{id}`, `PUT /accommodations/{id}`, `DELETE /accommodations/{id}`) y de subida de imágenes (`POST /accommodations/{id}/images`, `DELETE /accommodations/{id}/images/{imageId}`)
 
-**Tests:**
+**Tareas — Tests:**
 
-- [ ] Test unitario: `AccommodationServiceImpl.approveListing` con 1 imagen lanza `InsufficientImagesException`
-- [ ] Test unitario: `AccommodationServiceImpl.approveListing` con 2+ imágenes cambia estado a `ACTIVO`
-- [ ] Test unitario: `User.isBanned()` — `bannedUntil` en el futuro devuelve `true`; `bannedUntil` en el pasado o `null` devuelve `false`
-- [ ] Test unitario: `AccommodationReportServiceImpl` con 5 denuncias PENDING no activa auto-moderación; con 6 sí la activa y cambia estado del anuncio a `PENDIENTE`
-- [ ] Test de integración: `JwtAuthenticationFilter` rechaza con `403` una petición de usuario baneado con JWT válido
-- [ ] Test de integración: búsqueda por `city` y `maxPrice` devuelve solo anuncios `ACTIVO` dentro del rango
+- [ ] Test unitario: `CloudinaryImageStorageServiceTest` mockeando el SDK de Cloudinary
+- [ ] Test de integración: crear alojamiento, subir imágenes y validar que las URLs e índices de orden de visualización persisten correctamente en la BD
 
-**Entregable verificable:** Un usuario puede crear un anuncio, subir 2 imágenes, esperar aprobación del admin, y aparecer en el mapa con la localización correcta.
+**Entregable verificable:** Un propietario autenticado puede registrar su propiedad física, geolocalizarla con coordenadas latitud/longitud y subir múltiples imágenes que quedan persistidas con su URL pública de Cloudinary.
 
 ---
 
-### Fase 5 — Frontend Core (Semanas 6-7, paralelo a Fase 4)
+### Fase 5 — Publicación y Catálogo Comercial (Listings) (Semana 7)
 
-> Esta fase puede desarrollarse en paralelo parcial con la Fase 4 una vez los contratos de la API están definidos. Usar mocks (MSW — Mock Service Worker) para no bloquear el desarrollo.
+**Objetivo:** Implementar la publicación de anuncios comerciales (`AccommodationListing`), el buscador catalogado con filtros y geolocalización, la lógica de moderación por administrador y el sistema de reportes/valoraciones.
+
+**Principios SOLID aplicados:**
+- `IAccommodationListingService` encapsula exclusivamente el ciclo de vida del anuncio y el catálogo → SRP
+- `IAccommodationReportService` e `IReviewService` desacoplados en servicios independientes de la publicación comercial → SRP
+
+**Tareas — Backend:**
+
+- [ ] Crear entidades JPA `AccommodationListing`, `AccommodationReview`, `AccommodationReport` y `Message` (con soporte para ofertas económicas)
+- [ ] Crear migraciones Flyway: tablas `accommodation_listing`, `accommodation_review`, `accommodation_report`, y `message`
+- [ ] Agregar índices críticos `idx_listing_status_price`, `idx_report_listing_status`, etc.
+- [ ] Añadir campos `bannedUntil` y `banReason` a `User`, implementando `isBanned()` e integrándolo en `JwtAuthenticationFilter` para rechazar con `403` a usuarios baneados
+- [ ] Diseñar interfaz `IAccommodationListingService` para la gestión comercial: `publishListing`, `approveListing`, `rejectListing`, `finishListing`, `updateListing`, `searchListings`
+- [ ] Implementar `AccommodationListingServiceImpl implements IAccommodationListingService` (valida mínimo 2 imágenes físicas asociadas a la propiedad antes de permitir que pase a `APPROVED` / `AVAILABLE`)
+- [ ] Implementar `AccommodationReportServiceImpl` que, tras cada reporte persistido, cuenta las denuncias `PENDING` del `listingId`. Si supera 5 denuncias, cambia el estado del anuncio a `PENDIENTE` atómicamente
+- [ ] Implementar servicios para valoraciones (`ReviewServiceImpl`) y mensajería con ofertas (`MessageServiceImpl`)
+- [ ] Implementar `AccommodationListingController`, `ReviewController`, `MessageController`, `AccommodationReportController` y `AdminController` (moderación de anuncios, gestión de reportes y baneo de usuarios)
+
+**Tareas — Tests:**
+
+- [ ] Test unitario: intentar aprobar un listing con < 2 imágenes lanza `InsufficientImagesException`
+- [ ] Test unitario: `AccommodationReportServiceImpl` activa auto-moderación atómicamente al llegar a la sexta denuncia
+- [ ] Test de integración: realizar búsquedas y validar que los filtros de geolocalización, rango de precios y disponibilidad devuelven los anuncios aprobados correspondientes
+
+**Entregable verificable:** Un propietario con una propiedad y al menos 2 imágenes puede solicitar publicar un anuncio. Tras la aprobación del administrador, el anuncio entra en estado `AVAILABLE` en el catálogo y es localizable mediante el mapa y filtros.
+
+---
+
+### Fase 6 — Frontend Core (Semanas 6-7, paralelo a Fases 4 y 5)
+
+**Objetivo:** Desarrollar la interfaz web completa para usuarios y administradores, consumiendo los nuevos endpoints de forma reactiva.
 
 **Tareas:**
 
 - [ ] Configurar Next.js App Router con layout base, fuentes y Tailwind
-- [ ] Implementar `authStore` (Zustand) con persistencia de JWT en `httpOnly` cookies o `localStorage` según estrategia elegida
+- [ ] Implementar `authStore` (Zustand) con persistencia de JWT
 - [ ] Crear cliente HTTP centralizado con interceptor de JWT (`lib/apiClient.ts`)
-- [ ] Implementar vista `Home` con `<SearchBar />`, `<AccommodationMap />` (Leaflet) y `<AccommodationGrid />`
-- [ ] Implementar páginas de login y registro con validación de formularios (React Hook Form + Zod)
-- [ ] Implementar vista de detalle de alojamiento con galería de imágenes y formulario de valoración
+- [ ] Implementar vista `Home` con `<SearchBar />`, `<AccommodationMap />` (Leaflet) y `<AccommodationGrid />` para listar publicaciones (`listings`)
+- [ ] Implementar páginas de login y registro de usuarios
+- [ ] Implementar vistas de gestión física (`/accommodations` y `/accommodations/new` con subida a Cloudinary)
+- [ ] Implementar creación de anuncio comercial (`/listings/new`) y vista de detalle de publicación con comentarios y formulario de ofertas
 - [ ] Implementar dashboard del hogar con `<BalanceSummaryWidget />`, `<RecentExpensesList />` y `<PendingTasksList />`
-- [ ] Implementar vista de gastos con formulario de creación (pagador, afectados, porcentajes dinámicos)
-- [ ] Implementar vista de balances con colores verde/rojo y panel de deudas simplificadas
+- [ ] Implementar vista de gastos (prorrateo dinámico) y balances con panel de deudas simplificadas
 - [ ] Implementar feed de actividad de auditoría con filtros
-- [ ] Implementar vista de mensajería con soporte para ofertas económicas
-- [ ] Implementar panel de administración con bandeja de anuncios pendientes
+- [ ] Implementar panel de administración para moderación de anuncios pendientes, bandeja de reportes y control de baneos
 
-**Entregable verificable:** Flujo completo de usuario: registro → login → crear hogar → añadir gasto → ver balances → ver feed de auditoría.
+**Entregable verificable:** Flujo visual y navegable completo de usuario y administrador en el frontend Next.js consumiendo los servicios del backend Spring Boot.
 
 ---
 
-### Fase 6 — Servidor MCP e Integración IA (Semana 8)
+### Fase 7 — Servidor MCP e Integración IA (Semana 8)
 
-**Objetivo:** Construir el servidor MCP independiente y conectar la interfaz de chat del frontend.
+**Objetivo:** Construir el servidor MCP independiente y conectar la interfaz de chat del frontend para consultas en lenguaje natural.
 
 **Tareas — Servidor MCP (Node.js / TypeScript):**
 
-- [ ] Inicializar proyecto con SDK oficial de MCP
+- [ ] Inicializar proyecto con el SDK oficial de MCP
 - [ ] Implementar transporte SSE (o stdio para desarrollo local)
 - [ ] Implementar middleware de extracción de JWT desde el contexto JSON-RPC
 - [ ] Implementar cliente HTTP tipado para llamadas al backend (`BackendApiClient`)
 - [ ] Implementar tool `auditar_conflictos_hogar` con esquema de parámetros validado con Zod
 - [ ] Implementar tool `analizar_balances_y_deudas` con esquema de parámetros validado con Zod
-- [ ] Implementar tool `busqueda_semantica_alojamientos` con esquema de parámetros validado con Zod
+- [ ] Implementar tool `busqueda_semantica_alojamientos` con esquema de parámetros validado con Zod (para buscar anuncios comerciales mediante lenguaje natural)
 - [ ] Implementar propagación de errores `403` / `401` del backend hacia el LLM
-- [ ] Escribir tests de integración del servidor MCP contra un backend mockeado (nock)
 
 **Tareas — Frontend (Integración de Chat):**
 
 - [ ] Implementar componente `<ChatWindow />` con historial de mensajes
-- [ ] Implementar llamada al LLM (Anthropic API / OpenAI) con inyección del JWT en el contexto MCP
+- [ ] Implementar llamada al LLM con inyección del JWT en el contexto MCP
 - [ ] Implementar `<ToolCallIndicator />` que muestra qué herramienta MCP está usando el modelo
 - [ ] Conectar el chat a la ruta `/home/[homeId]/chat`
 
-**Entregable verificable:** El usuario puede abrir el chat en su hogar y preguntar *"¿Quién ha tocado el gasto de la luz?"*. El LLM invoca `auditar_conflictos_hogar`, recibe los snapshots del backend con el JWT del usuario y responde con una explicación en lenguaje natural.
+**Entregable verificable:** El usuario puede preguntar *"¿Quién ha tocado el gasto de la luz?"* o *"Busca alojamientos luminosos cerca de Barcelona"* y el LLM resuelve la consulta llamando a las herramientas MCP correspondientes con seguridad multi-tenant.
 
 ---
 
-### Fase 7 — Hardening, Documentación y Despliegue (Semana 9)
+### Fase 8 — Hardening, Documentación y Despliegue (Semana 9)
 
 **Objetivo:** Preparar el proyecto para entrega académica con calidad de producción.
 
@@ -1174,11 +1209,13 @@ CMD ["node", "server.js"]
 | 1-2 | Fase 1 | Autenticación JWT y gestión de usuarios |
 | 3-4 | Fase 2 | Motor financiero (TDD) — Gastos y deudas |
 | 5 | Fase 3 | Auditoría inmutable y feed de actividad |
-| 6-7 | Fase 4 + 5 | Alojamientos (backend) + Frontend core |
-| 8 | Fase 6 | Servidor MCP e integración del chat IA |
-| 9 | Fase 7 | Hardening, documentación y despliegue |
+| 6 | Fase 4 | Módulo físico de alojamientos (Accommodation) e imágenes Cloudinary |
+| 7 | Fase 5 | Publicación comercial (AccommodationListing) y moderación |
+| 6-7 | Fase 6 | Frontend Core (desarrollado en paralelo a Fases 4 y 5) |
+| 8 | Fase 7 | Servidor MCP e integración del chat IA |
+| 9 | Fase 8 | Hardening, documentación y despliegue |
 
 ---
 
 *Documento generado como plan maestro de desarrollo para TFG de desarrollador único.*
-*Versión 1.0 — Arquitectura: Next.js 15 · Java Spring Boot 3.x · PostgreSQL 15 · Node.js MCP Server*
+*Versión 1.1 — Arquitectura: Next.js 15 · Java Spring Boot 3.x · PostgreSQL 15 · Node.js MCP Server*

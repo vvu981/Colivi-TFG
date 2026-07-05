@@ -1,5 +1,7 @@
 package com.vvu981.colivibackend.core.exception;
 
+import com.vvu981.colivibackend.features.user.exception.AccountAlreadyActiveException;
+import com.vvu981.colivibackend.features.user.exception.InvalidReactivationTokenException;
 import com.vvu981.colivibackend.features.user.exception.InvalidTokenException;
 import com.vvu981.colivibackend.features.user.exception.StaleSessionException;
 import com.vvu981.colivibackend.features.user.exception.UserNotFoundException;
@@ -71,6 +73,44 @@ class GlobalExceptionHandlerTest {
         assertEquals("Not Found", body.get("error"));
         assertEquals("User not found error", body.get("message"));
         assertEquals(HttpStatus.NOT_FOUND.value(), body.get("status"));
+        assertNotNull(body.get("timestamp"));
+    }
+
+    @Test
+    @DisplayName("should Return BadRequest_When InvalidReactivationTokenException")
+    void shouldReturnBadRequest_WhenInvalidReactivationTokenException() {
+        // Arrange
+        InvalidReactivationTokenException exception = new InvalidReactivationTokenException("Token inválido");
+
+        // Act
+        ResponseEntity<Map<String, Object>> response = handler.handleInvalidReactivationToken(exception);
+
+        // Assert
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        Map<String, Object> body = response.getBody();
+        assertNotNull(body);
+        assertEquals("Bad Request", body.get("error"));
+        assertEquals("Token inválido", body.get("message"));
+        assertEquals(HttpStatus.BAD_REQUEST.value(), body.get("status"));
+        assertNotNull(body.get("timestamp"));
+    }
+
+    @Test
+    @DisplayName("should Return BadRequest_When AccountAlreadyActiveException")
+    void shouldReturnBadRequest_WhenAccountAlreadyActiveException() {
+        // Arrange
+        AccountAlreadyActiveException exception = new AccountAlreadyActiveException("Cuenta ya activa");
+
+        // Act
+        ResponseEntity<Map<String, Object>> response = handler.handleAccountAlreadyActive(exception);
+
+        // Assert
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        Map<String, Object> body = response.getBody();
+        assertNotNull(body);
+        assertEquals("Bad Request", body.get("error"));
+        assertEquals("Cuenta ya activa", body.get("message"));
+        assertEquals(HttpStatus.BAD_REQUEST.value(), body.get("status"));
         assertNotNull(body.get("timestamp"));
     }
 }

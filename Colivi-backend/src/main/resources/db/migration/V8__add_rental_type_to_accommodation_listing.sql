@@ -1,0 +1,2 @@
+ALTER TABLE accommodation_listing
+ADD COLUMN rental_type VARCHAR(50) NOT NULL DEFAULT 'ENTIRE_PLACE';

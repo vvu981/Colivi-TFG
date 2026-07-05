@@ -49,6 +49,16 @@ Cada anuncio publicado debe contener obligatoriamente los siguientes datos valid
 * Precio mensual de alquiler (expresado en moneda local/Euros).
 * Identificador y nickname del propietario del alojamiento.
 * Estado del anuncio (`PENDIENTE`, `ACTIVO`, `RECHAZADO`, `FINALIZADO`).
+* Visibilidad del anuncio (`AVAILABLE`, `DELETED`, `ALL`).
+
+#### C. Listado y Catálogo Unificado
+Para evitar la redundancia de código y cumplir con los principios SOLID, todas las consultas y búsquedas del catálogo de alojamientos se centralizan en una única consulta JPQL dinámica parametrizada:
+* **Método de Servicio:** `Page<Accommodation> getAccommodationsCatalog(User owner, AccommodationVisibility visibility, int page, int size)`
+* **Filtros de Visibilidad (`AccommodationVisibility`):**
+    * `AVAILABLE`: Retorna únicamente anuncios activos (no eliminados logicamente, `deletedAt IS NULL`).
+    * `DELETED`: Retorna únicamente anuncios con borrado lógico (`deletedAt IS NOT NULL`) en la papelera del administrador o usuario.
+    * `ALL`: Retorna todo el historial de alojamientos de forma incondicional.
+* **Filtro de Propietario (`owner`):** Si es `null`, se realiza una búsqueda global; si se informa, se limita a las propiedades publicadas por dicho usuario.
 
 ---
 
@@ -100,115 +110,7 @@ Este componente técnico transversal responde de manera directa a las restriccio
 
 A continuación se detalla la estructura de entidades e índices necesaria en la base de datos PostgreSQL para dar soporte al sistema y garantizar el cumplimiento de las restricciones funcionales.
 
-```
-                                  +--------------------------+
-                                  |          USER            |
-                                  +--------------------------+
-                                  | PK: id (UUID)            |<----+
-                                  | nickname (VARCHAR)       |     |
-                                  | email (VARCHAR)          |     |
-                                  | password_hash (TEXT)     |     |
-                                  | first_name (VARCHAR)     |     |
-                                  | last_name_1 (VARCHAR)    |     |
-                                  | last_name_2 (VARCHAR)    |     |
-                                  | phone (VARCHAR)          |     |
-                                  | profile_pic_url (TEXT)   |     |
-                                  | role (ENUM)              |     |
-                                  | bannedUntil (TIMESTAMP)  |     | ← penalización temporal
-                                  | banReason (TEXT, NULL)   |     | ← motivo de la sanción
-                                  +--------------------------+     |
-                                   /     |           \         |
-                                  /      |            \        |
-                                 /       |             \       |
-  +-----------------------------+        |             //       |
-  |    ACCOMMODATION_REVIEW     |        |            //        |
-  +-----------------------------+        |           //         |
-  | PK: id (UUID)               |        |          //          |
-  | FK: author_id ------------->|        |         //           |
-  | FK: accommodation_id -------|----+   |        //            |
-  | rating (INT)                |    |   |       //             |
-  | comment (TEXT, NULL)        |    |   |      //              |
-  +-----------------------------+    |   |     //               |
-                                     v   v    v                 |
-  +-----------------------------+ +-----------------------+     |
-  |        ACCOMMODATION        | |     HOGAR_MEMBER      |     |
-  +-----------------------------+ +-----------------------+     |
-  | PK: id (UUID)               | | FK: hogar_id ---------|--+  |
-  | FK: owner_id -------------->| | FK: user_id ----------|--+--+
-  +-----------------------------+ +-----------------------+  |
-  | title (VARCHAR)                                          |
-  | description (TEXT)                                       |
-  | price_per_month (NUMERIC)                                 |
-  | address (VARCHAR)                                        |
-  | locality (VARCHAR)                                       |
-  | city (VARCHAR)                                           |
-  | country (VARCHAR)                                        |
-  | latitude (NUMERIC)                                       |
-  | longitude (NUMERIC)                                      |
-  | status (ENUM)                                            |
-  +-----------------------------+                            |
-                 |                                           |
-                 v  1:N                                      v
-   +-------------------------------------+                   |
-   |       ACCOMMODATION_REPORT          |                   |
-   +-------------------------------------+                   |
-   | PK: id           (UUID)             |                   |
-   | FK: accommodation_id (UUID)         |                   |
-   | FK: reporter_id  (UUID, NULL)       | ← null = reporte anónimo
-   | reason (ENUM: SPAM|SCAM|           |                   |
-   |         INAPPROPRIATE|MISLEADING)  |                   |
-   | description (TEXT)                  |                   |
-   | status (ENUM: PENDING|             |                   |
-   |         REVIEWED|DISMISSED)        |                   |
-   | created_at (TIMESTAMP)              |                   |
-   +-------------------------------------+                   |
-                 |                                           |
-                 v                                           v
-  +-----------------------------+             +-----------------------+
-  |     ACCOMMODATION_IMAGE     |             |         HOGAR         |
-  +-----------------------------+             +-----------------------+
-  | PK: id (UUID)               |             | PK: id (UUID)         |
-  | FK: accommodation_id        |             | name (VARCHAR)        |
-  | image_url (TEXT)            |             | version (INT)         |
-  +-----------------------------+             | created_at (TIMESTAMP)|
-                                              +-----------------------+
-                                                  |           |
-                                         +--------+           +--------+
-                                         |                             |
-                                         v                             v
-                              +-----------------------+     +-----------------------+
-                              |        EXPENSE        |     |         TASK          |
-                              +-----------------------+     +-----------------------+
-                              | PK: id (UUID)         |     | PK: id (UUID)         |
-                              | FK: hogar_id ---------|---->| FK: hogar_id          |
-                              | FK: payer_id ---------|---->| title (VARCHAR)       |
-                              | amount (NUMERIC)      |     | description (TEXT)    |
-                              | description (VARCHAR) |     | is_completed (BOOLEAN)|
-                              | version (INT)         |     | version (INT)         |
-                              | created_at (TIMESTAMP)|     +-----------------------+
-                              +-----------------------+                 |
-                                   |            |                       |
-                                   v            |                       |
-                      +-----------------------+ |                       |
-                      |   EXPENSE_AFFECTED    | |                       |
-                      +-----------------------+ |                       |
-                      | FK: expense_id        | |                       |
-                      | FK: user_id ----------|-+-----------------------+
-                      +-----------------------+ |                       |
-                                                v                       v
-                                      +-----------------------------------+
-                                      |         AUDIT_SNAPSHOT_LOG        |
-                                      +-----------------------------------+
-                                      | PK: id (UUID)                     |
-                                      | FK: user_id (Autor)               |
-                                      | entity_type (VARCHAR)             |
-                                      | entity_id (UUID)                  |
-                                      | action_type (ENUM)                |
-                                      | snapshot_before (JSONB)           |
-                                      | snapshot_after (JSONB)            |
-                                      | server_timestamp (TIMESTAMP)      |
-                                      +-----------------------------------+
-```
+![Diagrama Entidad-Relación](./docs/db_schema.svg)
 
 ### Reglas Críticas de Integridad y Restricciones de Base de Datos
 1.  **Inmutabilidad de Auditoría:** La tabla `AUDIT_SNAPSHOT_LOG` contará con un trigger a nivel de base de datos o una restricción interceptora en Spring Boot (`@PreUpdate` y `@PreRemove`) que lanzará una excepción crítica si se intenta modificar o eliminar un registro existente.

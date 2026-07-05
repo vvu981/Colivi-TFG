@@ -67,6 +67,19 @@
             <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Testcontainers -->
+        <dependency>
+            <groupId>io.zonky.test</groupId>
+            <artifactId>embedded-database-spring-test</artifactId>
+            <version>2.5.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.zonky.test</groupId>
+            <artifactId>embedded-postgres</artifactId>
+            <version>2.0.7</version>
+            <scope>test</scope>
+        </dependency>
         <!-- H2 in-memory database for unit/slice tests (no PostgreSQL required) -->
         <dependency>
             <groupId>com.h2database</groupId>
@@ -107,6 +120,13 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>com.cloudinary</groupId>
+            <artifactId>cloudinary-http44</artifactId>
+            <version>1.36.0</version>
+        </dependency>
+        
     </dependencies>
 
     <build>
@@ -122,6 +142,10 @@
                         </exclude>
                     </excludes>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -152,6 +176,17 @@
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.12</version>
+                <configuration>
+                    <!-- Excluimos clases que no tienen lógica testable globalmente -->
+                    <excludes>
+                        <exclude>com/vvu981/colivibackend/ColiviBackendApplication.class</exclude>
+                        <exclude>com/vvu981/colivibackend/features/user/domain/**</exclude>
+                        <exclude>com/vvu981/colivibackend/features/user/dto/**</exclude>
+                        <exclude>com/vvu981/colivibackend/features/user/mapper/**Impl.class</exclude>
+                        <exclude>com/vvu981/colivibackend/core/storage/**</exclude>
+                        <exclude>com/vvu981/colivibackend/features/accommodation/dto/**</exclude>
+                    </excludes>
+                </configuration>
                 <executions>
                     <!-- 1. Prepara el agente de instrumentación antes de los tests -->
                     <execution>
@@ -193,13 +228,6 @@
                                     </limits>
                                 </rule>
                             </rules>
-                            <!-- Excluimos clases que no tienen lógica testable -->
-                            <excludes>
-                                <exclude>com/vvu981/colivibackend/ColiviBackendApplication.class</exclude>
-                                <exclude>com/vvu981/colivibackend/features/user/domain/**</exclude>
-                                <exclude>com/vvu981/colivibackend/features/user/dto/**</exclude>
-                                <exclude>com/vvu981/colivibackend/features/user/mapper/**Impl.class</exclude>
-                            </excludes>
                         </configuration>
                     </execution>
                 </executions>
