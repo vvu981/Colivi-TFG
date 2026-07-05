@@ -279,8 +279,16 @@ public class ApiE2EIntegrationTest extends BaseIntegrationTest {
         @Test
         @Order(11)
         void step11_uploadImages() throws Exception {
+                MockMultipartFile file1 = new MockMultipartFile("file", "room1.png", "image/png",
+                                new byte[] { 1, 2, 3 });
                 MockMultipartFile file2 = new MockMultipartFile("file", "room2.png", "image/png",
                                 new byte[] { 1, 2, 3 });
+
+                MvcResult res1 = mockMvc.perform(multipart("/api/v1/accommodation/" + accommodationId + "/images")
+                                .file(file1)
+                                .header("Authorization", "Bearer " + userToken))
+                                .andExpect(status().isOk())
+                                .andReturn();
 
                 MvcResult res2 = mockMvc.perform(multipart("/api/v1/accommodation/" + accommodationId + "/images")
                                 .file(file2)
