@@ -99,4 +99,63 @@ class ListingFiltersTest {
         verify(root, times(1)).get("pricePerMonth");
         verify(cb, times(1)).lessThanOrEqualTo(eq(pricePath), eq(new BigDecimal("750")));
     }
+
+    @Test
+    @DisplayName("RentalTypeFilter debe ser aplicable si existe el parametro 'rentalType' no vacio")
+    void testRentalTypeFilterApplicability() {
+        RentalTypeFilter rentalTypeFilter = new RentalTypeFilter();
+        Map<String, String> params = new HashMap<>();
+        assertThat(rentalTypeFilter.isApplicable(params)).isFalse();
+
+        params.put("rentalType", "");
+        assertThat(rentalTypeFilter.isApplicable(params)).isFalse();
+
+        params.put("rentalType", "ROOM");
+        assertThat(rentalTypeFilter.isApplicable(params)).isTrue();
+    }
+
+    @Test
+    @DisplayName("RentalTypeFilter apply debe generar la condicion equal correcta para enum valido")
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    void testRentalTypeFilterApplyValid() {
+        RentalTypeFilter rentalTypeFilter = new RentalTypeFilter();
+        Map<String, String> params = Map.of("rentalType", "ENTIRE_PLACE");
+        Specification<AccommodationListing> spec = rentalTypeFilter.apply(params);
+
+        Root root = mock(Root.class);
+        CriteriaQuery query = mock(CriteriaQuery.class);
+        CriteriaBuilder cb = mock(CriteriaBuilder.class);
+        Path path = mock(Path.class);
+        Predicate equalPredicate = mock(Predicate.class);
+
+        when(root.get("rentalType")).thenReturn(path);
+        when(cb.equal(eq(path), any(com.vvu981.colivibackend.features.accommodation.domain.RentalType.class))).thenReturn(equalPredicate);
+
+        Predicate result = spec.toPredicate(root, query, cb);
+
+        assertThat(result).isEqualTo(equalPredicate);
+        verify(root, times(1)).get("rentalType");
+        verify(cb, times(1)).equal(eq(path), eq(com.vvu981.colivibackend.features.accommodation.domain.RentalType.ENTIRE_PLACE));
+    }
+
+    @Test
+    @DisplayName("RentalTypeFilter apply debe devolver conjunction (noop) si enum es invalido")
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    void testRentalTypeFilterApplyInvalid() {
+        RentalTypeFilter rentalTypeFilter = new RentalTypeFilter();
+        Map<String, String> params = Map.of("rentalType", "INVALID_ENUM");
+        Specification<AccommodationListing> spec = rentalTypeFilter.apply(params);
+
+        Root root = mock(Root.class);
+        CriteriaQuery query = mock(CriteriaQuery.class);
+        CriteriaBuilder cb = mock(CriteriaBuilder.class);
+        Predicate conjunctionPredicate = mock(Predicate.class);
+
+        when(cb.conjunction()).thenReturn(conjunctionPredicate);
+
+        Predicate result = spec.toPredicate(root, query, cb);
+
+        assertThat(result).isEqualTo(conjunctionPredicate);
+        verify(cb, times(1)).conjunction();
+    }
 }

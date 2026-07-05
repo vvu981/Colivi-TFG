@@ -382,6 +382,7 @@ public class ApiE2EIntegrationTest extends BaseIntegrationTest {
                 mockMvc.perform(get("/api/v1/listings")
                                 .header("Authorization", "Bearer " + userToken)
                                 .param("city", "Madrid")
+                                .param("rentalType", "ROOM")
                                 .param("page", "0")
                                 .param("size", "10"))
                                 .andExpect(status().isOk());
@@ -389,7 +390,7 @@ public class ApiE2EIntegrationTest extends BaseIntegrationTest {
 
         @Test
         @Order(19)
-        void step14_softDeleteAccommodation() throws Exception { // moved here per python script
+        void step14_softDeleteAccommodation() throws Exception {
                 mockMvc.perform(patch("/api/v1/accommodation/delete/" + accommodationId)
                                 .header("Authorization", "Bearer " + userToken))
                                 .andExpect(status().isOk());
