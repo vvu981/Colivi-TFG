@@ -25,7 +25,7 @@ public interface AccommodationService {
 
         AccommodationResponse getAccommodation(UUID id);
 
-        Page<AccommodationResponse> getAccommodationsCatalog(UUID ownerId, AccommodationVisibility visibility, int page,
+        Page<AccommodationResponse> getMyAccommodations(UUID ownerId, AccommodationVisibility visibility, int page,
                         int size, User currentUser);
 
         AccommodationResponse addImageToAccommodation(UUID accommodationId, MultipartFile file, User currentUser);

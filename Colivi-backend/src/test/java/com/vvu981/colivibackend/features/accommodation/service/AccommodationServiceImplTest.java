@@ -361,8 +361,8 @@ class AccommodationServiceImplTest {
         }
 
         @Nested
-        @DisplayName("getAccommodationsCatalog")
-        class GetAccommodationsCatalog {
+        @DisplayName("getMyAccommodations")
+        class GetMyAccommodations {
 
                 @Test
                 @DisplayName("debe delegar la búsqueda al repositorio con los parámetros mapeados correctamente")
@@ -377,7 +377,7 @@ class AccommodationServiceImplTest {
                                         any(Pageable.class))).thenReturn(pageResult);
 
                         // Act
-                        Page<AccommodationResponse> result = accommodationService.getAccommodationsCatalog(
+                        Page<AccommodationResponse> result = accommodationService.getMyAccommodations(
                                         owner.getId(),
                                         AccommodationVisibility.AVAILABLE,
                                         0,

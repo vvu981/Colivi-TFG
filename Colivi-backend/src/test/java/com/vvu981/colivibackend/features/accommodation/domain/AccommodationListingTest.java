@@ -109,7 +109,7 @@ class AccommodationListingTest {
         accommodation.setOwner(host);
 
         AccommodationListingRequest requestDto = new AccommodationListingRequest(
-                UUID.randomUUID(), "Nice Room", "Good room", BigDecimal.valueOf(300));
+                UUID.randomUUID(), "Nice Room", "Good room", BigDecimal.valueOf(300), RentalType.ENTIRE_PLACE);
 
         AccommodationListing listing = new AccommodationListing(requestDto, accommodation);
 

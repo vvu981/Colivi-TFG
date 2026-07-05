@@ -139,7 +139,7 @@ public class AccommodationServiceImpl implements AccommodationService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<AccommodationResponse> getAccommodationsCatalog(UUID ownerId, AccommodationVisibility visibility,
+    public Page<AccommodationResponse> getMyAccommodations(UUID ownerId, AccommodationVisibility visibility,
             int page, int size, User currentUser) {
 
         UUID searchId = ownerId;

@@ -243,8 +243,8 @@ public class ApiE2EIntegrationTest extends BaseIntegrationTest {
 
         @Test
         @Order(9)
-        void step9_getAccommodationsCatalog() throws Exception {
-                mockMvc.perform(get("/api/v1/accommodation")
+        void step9_getMyAccommodations() throws Exception {
+                mockMvc.perform(get("/api/v1/accommodation/me")
                                 .header("Authorization", "Bearer " + userToken)
                                 .param("ownerId", userId.toString())
                                 .param("visibility", "AVAILABLE")
@@ -336,7 +336,8 @@ public class ApiE2EIntegrationTest extends BaseIntegrationTest {
                                 "accommodationId", accommodationId,
                                 "title", "Habitación centro",
                                 "description", "Preciosa",
-                                "pricePerMonth", 450.00);
+                                "pricePerMonth", 450.00,
+                                "rentalType", "ENTIRE_PLACE");
 
                 MvcResult result = mockMvc.perform(post("/api/v1/listings")
                                 .header("Authorization", "Bearer " + userToken)
@@ -365,7 +366,8 @@ public class ApiE2EIntegrationTest extends BaseIntegrationTest {
                 Map<String, Object> payload = Map.of(
                                 "title", "Habitación de lujo",
                                 "description", "Spacious",
-                                "pricePerMonth", 600.00);
+                                "pricePerMonth", 600.00,
+                                "rentalType", "ROOM");
 
                 mockMvc.perform(put("/api/v1/listings/" + listingId)
                                 .header("Authorization", "Bearer " + userToken)

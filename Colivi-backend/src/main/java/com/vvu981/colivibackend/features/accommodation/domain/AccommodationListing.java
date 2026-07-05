@@ -55,6 +55,10 @@ public class AccommodationListing {
     @Version
     private Integer version; // Control de concurrencia optimista exigido en tu SPEC
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "rental_type", nullable = false)
+    private RentalType rentalType;
+
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
@@ -73,6 +77,7 @@ public class AccommodationListing {
         this.title = dto.title();
         this.description = dto.description();
         this.pricePerMonth = dto.pricePerMonth();
+        this.rentalType = dto.rentalType();
     }
 
     @PrePersist

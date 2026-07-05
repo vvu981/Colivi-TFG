@@ -92,6 +92,7 @@ class AccommodationListingControllerTest {
                 "Nice and warm room in city center",
                 BigDecimal.valueOf(450.0),
                 ListingStatus.AVAILABLE,
+                "ENTIRE_PLACE",
                 LocalDateTime.now(),
                 null,
                 hostUser.getId(),
@@ -148,7 +149,8 @@ class AccommodationListingControllerTest {
         void shouldCreateListing() throws Exception {
             AccommodationListingRequest request = new AccommodationListingRequest(
                     accommodationId, "Cozy Room in Center", "Nice and warm room in city center",
-                    BigDecimal.valueOf(450.0));
+                    BigDecimal.valueOf(450.0),
+                    com.vvu981.colivibackend.features.accommodation.domain.RentalType.ENTIRE_PLACE);
             when(listingService.createAccommodationListing(any(AccommodationListingRequest.class), any(User.class)))
                     .thenReturn(listingResponse);
 
@@ -177,6 +179,7 @@ class AccommodationListingControllerTest {
                     "Updated Description",
                     BigDecimal.valueOf(500.0),
                     ListingStatus.AVAILABLE,
+                    "ENTIRE_PLACE",
                     LocalDateTime.now(),
                     null,
                     hostUser.getId(),
@@ -315,12 +318,12 @@ class AccommodationListingControllerTest {
             when(listingService.recoverAccommodationListing(eq(listingId), any(User.class)))
                     .thenThrow(new RuntimeException("Error: no tienes permisos para esta accion."));
 
-            org.assertj.core.api.Assertions.assertThatThrownBy(() ->
-                    mockMvc.perform(patch("/api/v1/listings/recover/{id}", listingId)
+            org.assertj.core.api.Assertions
+                    .assertThatThrownBy(() -> mockMvc.perform(patch("/api/v1/listings/recover/{id}", listingId)
                             .with(csrf())
-                            .with(authentication(buildAuth(hostUser))))
-            ).hasCauseInstanceOf(RuntimeException.class)
-             .hasMessageContaining("no tienes permisos para esta accion");
+                            .with(authentication(buildAuth(hostUser)))))
+                    .hasCauseInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("no tienes permisos para esta accion");
         }
     }
 }

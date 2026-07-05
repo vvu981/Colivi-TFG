@@ -106,14 +106,14 @@ class AccommodationControllerTest {
                                                         new com.vvu981.colivibackend.features.accommodation.dto.AccommodationResponse(
                                                                         accommodation)));
 
-                        when(accommodationService.getAccommodationsCatalog(
+                        when(accommodationService.getMyAccommodations(
                                         any(),
                                         any(AccommodationVisibility.class),
                                         anyInt(),
                                         anyInt(),
                                         any())).thenReturn(pageResult);
 
-                        mockMvc.perform(get("/api/v1/accommodation")
+                        mockMvc.perform(get("/api/v1/accommodation/me")
                                         .param("ownerId", UUID.randomUUID().toString())
                                         .param("visibility", "AVAILABLE")
                                         .param("page", "0")
@@ -130,14 +130,14 @@ class AccommodationControllerTest {
                         Page<com.vvu981.colivibackend.features.accommodation.dto.AccommodationResponse> pageResult = new PageImpl<>(
                                         Collections.emptyList());
 
-                        when(accommodationService.getAccommodationsCatalog(
+                        when(accommodationService.getMyAccommodations(
                                         any(),
                                         any(AccommodationVisibility.class),
                                         anyInt(),
                                         anyInt(),
                                         any())).thenReturn(pageResult);
 
-                        mockMvc.perform(get("/api/v1/accommodation")
+                        mockMvc.perform(get("/api/v1/accommodation/me")
                                         .param("visibility", "AVAILABLE")
                                         .param("page", "0")
                                         .param("size", "10"))

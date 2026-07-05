@@ -37,15 +37,15 @@ public class AccommodationController {
 
     private final AccommodationService accommodationService;
 
-    @GetMapping
-    public ResponseEntity<Page<AccommodationResponse>> getCatalog(
+    @GetMapping("/me")
+    public ResponseEntity<Page<AccommodationResponse>> getMyAccommodations(
             @RequestParam(required = false) UUID ownerId,
             @RequestParam(defaultValue = "AVAILABLE") AccommodationVisibility visibility,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @AuthenticationPrincipal User currentUser) {
 
-        Page<AccommodationResponse> catalog = accommodationService.getAccommodationsCatalog(ownerId, visibility, page,
+        Page<AccommodationResponse> catalog = accommodationService.getMyAccommodations(ownerId, visibility, page,
                 size, currentUser);
         return ResponseEntity.ok(catalog);
     }

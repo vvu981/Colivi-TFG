@@ -3,6 +3,7 @@ package com.vvu981.colivibackend.features.accommodation.service;
 import com.vvu981.colivibackend.features.accommodation.domain.Accommodation;
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing;
 import com.vvu981.colivibackend.features.accommodation.domain.ListingStatus;
+import com.vvu981.colivibackend.features.accommodation.domain.RentalType;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingRequest;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingResponse;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingUpdateRequest;
@@ -79,6 +80,7 @@ class AccommodationListingServiceImplTest {
                 .title("Beautiful Room")
                 .description("Nice place to live")
                 .pricePerMonth(BigDecimal.valueOf(600.0))
+                .rentalType(RentalType.ENTIRE_PLACE)
                 .status(ListingStatus.AVAILABLE)
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -92,10 +94,12 @@ class AccommodationListingServiceImplTest {
         @DisplayName("debe crear el anuncio si el usuario actual es el propietario de la casa")
         void shouldCreateListingWhenOwner() {
             AccommodationListingRequest request = new AccommodationListingRequest(
-                    accommodation.getId(), "Title", "Desc", BigDecimal.valueOf(500)
-            );
-            when(accommodationService.findAccommodationByIdAndDeletedAtIsNull(accommodation.getId())).thenReturn(accommodation);
-            when(listingRepository.save(any(AccommodationListing.class))).thenAnswer(invocation -> invocation.getArgument(0));
+                    accommodation.getId(), "Title", "Desc", BigDecimal.valueOf(500),
+                    com.vvu981.colivibackend.features.accommodation.domain.RentalType.ENTIRE_PLACE);
+            when(accommodationService.findAccommodationByIdAndDeletedAtIsNull(accommodation.getId()))
+                    .thenReturn(accommodation);
+            when(listingRepository.save(any(AccommodationListing.class)))
+                    .thenAnswer(invocation -> invocation.getArgument(0));
 
             AccommodationListingResponse response = listingServiceImpl.createAccommodationListing(request, host);
 
@@ -108,10 +112,12 @@ class AccommodationListingServiceImplTest {
         @DisplayName("debe crear el anuncio si el usuario actual es admin")
         void shouldCreateListingWhenAdmin() {
             AccommodationListingRequest request = new AccommodationListingRequest(
-                    accommodation.getId(), "Title", "Desc", BigDecimal.valueOf(500)
-            );
-            when(accommodationService.findAccommodationByIdAndDeletedAtIsNull(accommodation.getId())).thenReturn(accommodation);
-            when(listingRepository.save(any(AccommodationListing.class))).thenAnswer(invocation -> invocation.getArgument(0));
+                    accommodation.getId(), "Title", "Desc", BigDecimal.valueOf(500),
+                    com.vvu981.colivibackend.features.accommodation.domain.RentalType.ENTIRE_PLACE);
+            when(accommodationService.findAccommodationByIdAndDeletedAtIsNull(accommodation.getId()))
+                    .thenReturn(accommodation);
+            when(listingRepository.save(any(AccommodationListing.class)))
+                    .thenAnswer(invocation -> invocation.getArgument(0));
 
             AccommodationListingResponse response = listingServiceImpl.createAccommodationListing(request, admin);
 
@@ -123,9 +129,10 @@ class AccommodationListingServiceImplTest {
         @DisplayName("debe lanzar excepcion si el usuario actual no es propietario ni admin")
         void shouldThrowExceptionWhenNotOwnerNorAdmin() {
             AccommodationListingRequest request = new AccommodationListingRequest(
-                    accommodation.getId(), "Title", "Desc", BigDecimal.valueOf(500)
-            );
-            when(accommodationService.findAccommodationByIdAndDeletedAtIsNull(accommodation.getId())).thenReturn(accommodation);
+                    accommodation.getId(), "Title", "Desc", BigDecimal.valueOf(500),
+                    com.vvu981.colivibackend.features.accommodation.domain.RentalType.ENTIRE_PLACE);
+            when(accommodationService.findAccommodationByIdAndDeletedAtIsNull(accommodation.getId()))
+                    .thenReturn(accommodation);
 
             assertThatThrownBy(() -> listingServiceImpl.createAccommodationListing(request, otherUser))
                     .isInstanceOf(RuntimeException.class)
@@ -238,11 +245,14 @@ class AccommodationListingServiceImplTest {
         @Test
         @DisplayName("debe actualizar los datos del anuncio correctamente")
         void shouldUpdateListing() {
-            AccommodationListingUpdateRequest updateDto = new AccommodationListingUpdateRequest("New Title", "New Desc", BigDecimal.valueOf(700));
+            AccommodationListingUpdateRequest updateDto = new AccommodationListingUpdateRequest("New Title", "New Desc",
+                    BigDecimal.valueOf(700));
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
-            when(listingRepository.save(any(AccommodationListing.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(listingRepository.save(any(AccommodationListing.class)))
+                    .thenAnswer(invocation -> invocation.getArgument(0));
 
-            AccommodationListingResponse response = listingServiceImpl.updateAccommodationListing(listing.getId(), updateDto, host);
+            AccommodationListingResponse response = listingServiceImpl.updateAccommodationListing(listing.getId(),
+                    updateDto, host);
 
             assertThat(response.title()).isEqualTo("New Title");
             assertThat(response.description()).isEqualTo("New Desc");
@@ -252,10 +262,12 @@ class AccommodationListingServiceImplTest {
         @Test
         @DisplayName("debe lanzar excepcion si no es el host o owner ni admin")
         void shouldThrowIfNoPermissionToUpdate() {
-            AccommodationListingUpdateRequest updateDto = new AccommodationListingUpdateRequest("New Title", "New Desc", BigDecimal.valueOf(700));
+            AccommodationListingUpdateRequest updateDto = new AccommodationListingUpdateRequest("New Title", "New Desc",
+                    BigDecimal.valueOf(700));
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
-            assertThatThrownBy(() -> listingServiceImpl.updateAccommodationListing(listing.getId(), updateDto, otherUser))
+            assertThatThrownBy(
+                    () -> listingServiceImpl.updateAccommodationListing(listing.getId(), updateDto, otherUser))
                     .isInstanceOf(RuntimeException.class)
                     .hasMessageContaining("No tienes permiso para editar este anuncio");
         }
@@ -365,7 +377,8 @@ class AccommodationListingServiceImplTest {
             listing.setDeletedAt(LocalDateTime.now());
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
-            AccommodationListingResponse response = listingServiceImpl.recoverAccommodationListing(listing.getId(), admin);
+            AccommodationListingResponse response = listingServiceImpl.recoverAccommodationListing(listing.getId(),
+                    admin);
 
             assertThat(listing.getDeletedAt()).isNull();
             assertThat(response.id()).isEqualTo(listing.getId());
@@ -432,7 +445,8 @@ class AccommodationListingServiceImplTest {
             when(listingRepository.findByStatusAndDeletedAtIsNull(eq(ListingStatus.BANNED), any(Pageable.class)))
                     .thenReturn(page);
 
-            Page<AccommodationListingResponse> response = listingServiceImpl.getBannedAccommodationListings(0, 10, admin);
+            Page<AccommodationListingResponse> response = listingServiceImpl.getBannedAccommodationListings(0, 10,
+                    admin);
 
             assertThat(response).isNotNull();
             assertThat(response.getContent()).hasSize(1);
