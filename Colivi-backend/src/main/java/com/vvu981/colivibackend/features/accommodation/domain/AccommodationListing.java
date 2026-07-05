@@ -81,6 +81,9 @@ public class AccommodationListing {
         if (this.status == null) {
             this.status = ListingStatus.AVAILABLE; // Red de seguridad técnica impecable
         }
+        if (this.previousStatus == null) {
+            this.previousStatus = ListingStatus.AVAILABLE;
+        }
     }
 
     @PreUpdate
