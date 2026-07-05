@@ -284,11 +284,10 @@ public class ApiE2EIntegrationTest extends BaseIntegrationTest {
                 MockMultipartFile file2 = new MockMultipartFile("file", "room2.png", "image/png",
                                 new byte[] { 1, 2, 3 });
 
-                MvcResult res1 = mockMvc.perform(multipart("/api/v1/accommodation/" + accommodationId + "/images")
+                mockMvc.perform(multipart("/api/v1/accommodation/" + accommodationId + "/images")
                                 .file(file1)
                                 .header("Authorization", "Bearer " + userToken))
-                                .andExpect(status().isOk())
-                                .andReturn();
+                                .andExpect(status().isOk());
 
                 MvcResult res2 = mockMvc.perform(multipart("/api/v1/accommodation/" + accommodationId + "/images")
                                 .file(file2)
