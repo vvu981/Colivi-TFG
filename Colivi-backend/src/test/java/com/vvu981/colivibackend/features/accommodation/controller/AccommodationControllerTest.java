@@ -110,7 +110,8 @@ class AccommodationControllerTest {
                                         any(),
                                         any(AccommodationVisibility.class),
                                         anyInt(),
-                                        anyInt())).thenReturn(pageResult);
+                                        anyInt(),
+                                        any())).thenReturn(pageResult);
 
                         mockMvc.perform(get("/api/v1/accommodation")
                                         .param("ownerId", UUID.randomUUID().toString())
@@ -133,7 +134,8 @@ class AccommodationControllerTest {
                                         any(),
                                         any(AccommodationVisibility.class),
                                         anyInt(),
-                                        anyInt())).thenReturn(pageResult);
+                                        anyInt(),
+                                        any())).thenReturn(pageResult);
 
                         mockMvc.perform(get("/api/v1/accommodation")
                                         .param("visibility", "AVAILABLE")

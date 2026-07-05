@@ -10,6 +10,7 @@ import com.vvu981.colivibackend.features.accommodation.domain.ListingStatus;
 import com.vvu981.colivibackend.features.user.domain.User;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 public interface AccommodationListingRepository
@@ -28,5 +29,7 @@ public interface AccommodationListingRepository
         Page<AccommodationListing> findByDeletedAtIsNotNull(Pageable pageable);
 
         Page<AccommodationListing> findByTitle(String title, Pageable pageable);
+
+        List<AccommodationListing> findByAccommodationIdAndDeletedAtIsNull(UUID accommodationId);
 
 }

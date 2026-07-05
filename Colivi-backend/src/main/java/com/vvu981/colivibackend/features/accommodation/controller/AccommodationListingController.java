@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.vvu981.colivibackend.features.accommodation.domain.ListingStatus;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingRequest;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingResponse;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingUpdateRequest;
@@ -99,7 +100,6 @@ public class AccommodationListingController {
         return ResponseEntity.noContent().build();
     }
 
-    @PreAuthorize("hasAuthority('ADMIN')")
     @PatchMapping("/recover/{id}")
     public ResponseEntity<AccommodationListingResponse> recoverAccommodationListing(
             @PathVariable("id") UUID listingId,
@@ -114,6 +114,14 @@ public class AccommodationListingController {
     public ResponseEntity<AccommodationListingResponse> getAccommodationListing(@PathVariable("id") UUID listingId) {
         AccommodationListingResponse listingResponse = listingService.getAccommodationListing(listingId);
         return ResponseEntity.ok(listingResponse);
+
+    }
+
+    @PatchMapping("/status/{id}")
+    public ResponseEntity<Void> changeStatus(@PathVariable("id") UUID listingId,
+            @RequestBody ListingStatus listingStatus, @AuthenticationPrincipal User currentUser) {
+        listingService.changeStatusListing(listingId, listingStatus, currentUser);
+        return ResponseEntity.noContent().build();
 
     }
 

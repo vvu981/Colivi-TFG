@@ -384,11 +384,11 @@ class AccommodationListingServiceImplTest {
         }
 
         @Test
-        @DisplayName("debe lanzar excepcion si intenta recuperar y no es admin")
-        void shouldThrowIfNotAdminToRecover() {
+        @DisplayName("debe lanzar excepcion si intenta recuperar y no es owner ni admin")
+        void shouldThrowIfNotOwnerOrAdminToRecover() {
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
-            assertThatThrownBy(() -> listingServiceImpl.recoverAccommodationListing(listing.getId(), host))
+            assertThatThrownBy(() -> listingServiceImpl.recoverAccommodationListing(listing.getId(), otherUser))
                     .isInstanceOf(RuntimeException.class)
                     .hasMessageContaining("no tienes permisos para esta accion");
         }

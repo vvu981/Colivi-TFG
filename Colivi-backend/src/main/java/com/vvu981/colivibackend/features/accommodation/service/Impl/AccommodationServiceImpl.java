@@ -13,12 +13,14 @@ import org.springframework.web.multipart.MultipartFile;
 import com.vvu981.colivibackend.core.storage.service.IImageStorageService;
 import com.vvu981.colivibackend.features.accommodation.domain.Accommodation;
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationImage;
+import com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing;
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationVisibility;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationImageOrderRequest;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationRequest;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationResponse;
 import com.vvu981.colivibackend.features.accommodation.repository.AccommodationImageRepository;
 import com.vvu981.colivibackend.features.accommodation.repository.AccommodationRepository;
+import com.vvu981.colivibackend.features.accommodation.service.AccommodationListingService;
 import com.vvu981.colivibackend.features.accommodation.service.AccommodationService;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
@@ -26,10 +28,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.access.prepost.PreAuthorize;
 
-import lombok.RequiredArgsConstructor;
-
 @Service
-@RequiredArgsConstructor
 public class AccommodationServiceImpl implements AccommodationService {
 
     private final AccommodationRepository accommodationRepository;
@@ -37,6 +36,20 @@ public class AccommodationServiceImpl implements AccommodationService {
     private final IImageStorageService imageStorageService;
 
     private final AccommodationImageRepository accommodationImageRepository;
+
+    private final AccommodationListingService listingService;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public AccommodationServiceImpl(
+            AccommodationRepository accommodationRepository,
+            IImageStorageService imageStorageService,
+            AccommodationImageRepository accommodationImageRepository,
+            @org.springframework.context.annotation.Lazy AccommodationListingService listingService) {
+        this.accommodationRepository = accommodationRepository;
+        this.imageStorageService = imageStorageService;
+        this.accommodationImageRepository = accommodationImageRepository;
+        this.listingService = listingService;
+    }
 
     @Override
     @Transactional
@@ -57,6 +70,13 @@ public class AccommodationServiceImpl implements AccommodationService {
         accommodationToSoftDelete.setDeletedAt(LocalDateTime.now());
         Accommodation accommodationDeleted = accommodationRepository.save(accommodationToSoftDelete);
 
+        List<AccommodationListing> associatedListings = listingService
+                .findListingsByAccommodationId(accommodationDeleted.getId());
+
+        for (AccommodationListing listing : associatedListings) {
+            listingService.deleteAccommodationListingSoft(listing.getId(), currentUser);
+        }
+
         return new AccommodationResponse(accommodationDeleted);
     }
 
@@ -67,7 +87,16 @@ public class AccommodationServiceImpl implements AccommodationService {
 
         Accommodation accommodationToDelete = accommodationRepository.findById(accommodationId)
                 .orElseThrow(() -> new RuntimeException("Error: Accommodation not found."));
+
+        List<AccommodationListing> associatedListings = listingService
+                .findListingsByAccommodationId(accommodationToDelete.getId());
+
+        for (AccommodationListing listing : associatedListings) {
+            listingService.deleteAccommodationListingHard(listing.getId(), currentUser);
+        }
+
         accommodationRepository.delete(accommodationToDelete);
+
     }
 
     @Override
@@ -110,11 +139,18 @@ public class AccommodationServiceImpl implements AccommodationService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<AccommodationResponse> getAccommodationsCatalog(UUID userId, AccommodationVisibility visibility,
-            int page, int size) {
+    public Page<AccommodationResponse> getAccommodationsCatalog(UUID ownerId, AccommodationVisibility visibility,
+            int page, int size, User currentUser) {
+
+        UUID searchId = ownerId;
+
+        if (currentUser.getRole() != UserRole.ADMIN) {
+            searchId = currentUser.getId();
+        }
+
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
-        Page<Accommodation> accommodationEntities = accommodationRepository.findByFields(userId, visibility.name(),
+        Page<Accommodation> accommodationEntities = accommodationRepository.findByFields(searchId, visibility.name(),
                 pageable);
 
         return accommodationEntities.map(AccommodationResponse::new);

@@ -47,6 +47,9 @@ class AccommodationServiceImplTest {
         @Mock
         private AccommodationImageRepository accommodationImageRepository;
 
+        @Mock
+        private AccommodationListingService listingService;
+
         @InjectMocks
         private AccommodationServiceImpl accommodationService;
 
@@ -378,7 +381,8 @@ class AccommodationServiceImplTest {
                                         owner.getId(),
                                         AccommodationVisibility.AVAILABLE,
                                         0,
-                                        10);
+                                        10,
+                                        owner);
 
                         // Assert
                         assertThat(result).isNotNull();

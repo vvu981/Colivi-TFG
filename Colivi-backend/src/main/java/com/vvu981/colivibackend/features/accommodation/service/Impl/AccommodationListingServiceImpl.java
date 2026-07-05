@@ -1,6 +1,7 @@
 package com.vvu981.colivibackend.features.accommodation.service.Impl;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -148,11 +149,17 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
     @Override
     public AccommodationListingResponse recoverAccommodationListing(UUID accommodationId, User currentUser) {
         AccommodationListing accommodationListing = findAccommodationListingById(accommodationId);
-        if (!isAdmin(currentUser))
+        if (!canEdit(accommodationListing, currentUser))
             throw new RuntimeException("Error: no tienes permisos para esta accion.");
 
         if (accommodationListing.getDeletedAt() == null)
             throw new RuntimeException("Error: el anuncio con id: " + accommodationId + " no esta eliminado.");
+
+        if (accommodationListing.getBannedAt() != null)
+            throw new RuntimeException("Error: el anuncio con id: " + accommodationId + " esta baneado.");
+
+        if (accommodationListing.getDeletedAt().plusDays(7).isBefore(LocalDateTime.now()))
+            throw new RuntimeException("Error: se te ha pasado el tiempo de recuperacion.");
 
         accommodationListing.setDeletedAt(null);
         listingRepository.save(accommodationListing);
@@ -165,12 +172,43 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
         return new AccommodationListingResponse(findAccommodationListingById(accommodationId));
     }
 
-    private AccommodationListing findAccommodationListingById(UUID accommodationListingId) {
+    @Override
+    public Page<AccommodationListingResponse> getBannedAccommodationListings(int page, int size, User currentUser) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("bannedAt").descending());
+
+        Page<AccommodationListing> bannedListings = listingRepository
+                .findByStatusAndDeletedAtIsNull(ListingStatus.BANNED, pageable);
+
+        return bannedListings.map(AccommodationListingResponse::new);
+    }
+
+    @Override
+    public void changeStatusListing(UUID accommodationId, ListingStatus listingStatus, User currentUser) {
+        if (listingStatus.equals(ListingStatus.BANNED))
+            throw new RuntimeException("Donde ibas pillin?");
+
+        AccommodationListing accommodationListing = findAccommodationListingById(accommodationId);
+        if (!canEdit(accommodationListing, currentUser))
+            throw new RuntimeException("Error: No tienes permiso para editar este anuncio");
+
+        if (accommodationListing.getStatus().equals(listingStatus))
+            throw new RuntimeException("Error: Este anuncio ya esta " + listingStatus.toString());
+
+        accommodationListing.setStatus(listingStatus);
+        listingRepository.save(accommodationListing);
+    }
+
+    @Override
+    public AccommodationListing findAccommodationListingById(UUID accommodationListingId) {
         AccommodationListing accommodationListing = listingRepository.findById(accommodationListingId)
                 .orElseThrow(() -> new RuntimeException(
                         "Error: no se encuentra el anuncio con id: " + accommodationListingId + "."));
-
         return accommodationListing;
+    }
+
+    @Override
+    public List<AccommodationListing> findListingsByAccommodationId(UUID accommodationId) {
+        return listingRepository.findByAccommodationIdAndDeletedAtIsNull(accommodationId);
     }
 
     private boolean isAdmin(User currentUser) {
@@ -182,16 +220,6 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
         boolean isOwner = accommodationListing.getAccommodation().getOwner().getId().equals(currentUser.getId());
         boolean isHost = accommodationListing.getHost().getId().equals(currentUser.getId());
         return isAdmin || (isOwner && isHost);
-    }
-
-    @Override
-    public Page<AccommodationListingResponse> getBannedAccommodationListings(int page, int size, User currentUser) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("bannedAt").descending());
-
-        Page<AccommodationListing> bannedListings = listingRepository
-                .findByStatusAndDeletedAtIsNull(ListingStatus.BANNED, pageable);
-
-        return bannedListings.map(AccommodationListingResponse::new);
     }
 
 }

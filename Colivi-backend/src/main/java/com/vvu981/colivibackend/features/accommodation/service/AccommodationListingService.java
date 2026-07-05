@@ -1,11 +1,14 @@
 package com.vvu981.colivibackend.features.accommodation.service;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 
+import com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing;
+import com.vvu981.colivibackend.features.accommodation.domain.ListingStatus;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingRequest;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingResponse;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingUpdateRequest;
@@ -36,5 +39,11 @@ public interface AccommodationListingService {
         Page<AccommodationListingResponse> getBannedAccommodationListings(int page, int size, User currentUser);
 
         AccommodationListingResponse getAccommodationListing(UUID accommodationId);
+
+        void changeStatusListing(UUID accommodationId, ListingStatus listingStatus, User currentUser);
+
+        AccommodationListing findAccommodationListingById(UUID accommodationListingId);
+
+        List<AccommodationListing> findListingsByAccommodationId(UUID accommodationId);
 
 }

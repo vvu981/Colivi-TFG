@@ -310,12 +310,17 @@ class AccommodationListingControllerTest {
         }
 
         @Test
-        @DisplayName("debe retornar 403 si intenta recuperar y no es admin")
-        void shouldDenyRecoverIfNotAdmin() throws Exception {
-            mockMvc.perform(patch("/api/v1/listings/recover/{id}", listingId)
-                    .with(csrf())
-                    .with(authentication(buildAuth(hostUser))))
-                    .andExpect(status().isForbidden());
+        @DisplayName("debe arrojar excepcion si el servicio lanza error por no tener permisos")
+        void shouldDenyRecoverIfNotOwnerOrAdmin() throws Exception {
+            when(listingService.recoverAccommodationListing(eq(listingId), any(User.class)))
+                    .thenThrow(new RuntimeException("Error: no tienes permisos para esta accion."));
+
+            org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                    mockMvc.perform(patch("/api/v1/listings/recover/{id}", listingId)
+                            .with(csrf())
+                            .with(authentication(buildAuth(hostUser))))
+            ).hasCauseInstanceOf(RuntimeException.class)
+             .hasMessageContaining("no tienes permisos para esta accion");
         }
     }
 }

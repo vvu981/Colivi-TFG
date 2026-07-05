@@ -42,10 +42,11 @@ public class AccommodationController {
             @RequestParam(required = false) UUID ownerId,
             @RequestParam(defaultValue = "AVAILABLE") AccommodationVisibility visibility,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            @AuthenticationPrincipal User currentUser) {
 
         Page<AccommodationResponse> catalog = accommodationService.getAccommodationsCatalog(ownerId, visibility, page,
-                size);
+                size, currentUser);
         return ResponseEntity.ok(catalog);
     }
 
