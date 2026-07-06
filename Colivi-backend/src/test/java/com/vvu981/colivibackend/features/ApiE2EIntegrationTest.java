@@ -2,6 +2,8 @@ package com.vvu981.colivibackend.features;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.vvu981.colivibackend.core.BaseIntegrationTest;
+import com.vvu981.colivibackend.features.accommodation.dto.AccommodationResponse;
+import com.vvu981.colivibackend.features.accommodation.dto.AccommodationImageResponse;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
 import org.junit.jupiter.api.*;
@@ -295,12 +297,11 @@ public class ApiE2EIntegrationTest extends BaseIntegrationTest {
                                 .andExpect(status().isOk())
                                 .andReturn();
 
-                Map<String, Object> response = objectMapper.readValue(res2.getResponse().getContentAsString(),
-                                new TypeReference<>() {
-                                });
-                List<Map<String, Object>> images = (List<Map<String, Object>>) response.get("images");
-                imageId1 = images.get(0).get("id").toString();
-                imageId2 = images.get(1).get("id").toString();
+                AccommodationResponse response = objectMapper.readValue(res2.getResponse().getContentAsString(),
+                                AccommodationResponse.class);
+                List<AccommodationImageResponse> images = response.images();
+                imageId1 = images.get(0).id().toString();
+                imageId2 = images.get(1).id().toString();
         }
 
         @Test
