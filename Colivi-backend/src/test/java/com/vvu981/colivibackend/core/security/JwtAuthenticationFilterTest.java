@@ -1,5 +1,6 @@
 package com.vvu981.colivibackend.core.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
@@ -46,6 +47,8 @@ class JwtAuthenticationFilterTest {
     private HttpServletResponse response;
     @Mock
     private FilterChain filterChain;
+    @Mock
+    private ObjectMapper objectMapper;
 
     @InjectMocks
     private JwtAuthenticationFilter filter;
@@ -322,22 +325,62 @@ class JwtAuthenticationFilterTest {
         class BannedUser {
 
             @Test
-            @DisplayName("isBanned es true → no autentica, cadena continúa")
-            void givenBannedUser_whenFilter_thenNoAuthentication() throws Exception {
+            @DisplayName("isBanned es true → responde 403 Forbidden y aborta la cadena")
+            void givenBannedUser_whenFilter_thenForbiddenResponseAndChainAborted() throws Exception {
                 // Arrange
                 activeUser.setBannedAt(java.time.LocalDateTime.now());
+                activeUser.setBanReason("Spamming");
+                activeUser.setBannedUntil(java.time.LocalDateTime.now().plusDays(5));
+ 
+                java.io.PrintWriter writer = mock(java.io.PrintWriter.class);
+                when(response.getWriter()).thenReturn(writer);
                 when(request.getHeader("Authorization")).thenReturn("Bearer valid.token");
                 when(jwtTokenProvider.extractEmail(anyString())).thenReturn("victor@colivi.com");
                 when(jwtTokenProvider.isTokenValid(anyString())).thenReturn(true);
                 when(jwtTokenProvider.extractTokenVersion(anyString())).thenReturn(1);
                 when(userRepository.findByEmailAndDeletedAtIsNull("victor@colivi.com"))
                         .thenReturn(Optional.of(activeUser));
-
+                when(request.getRequestURI()).thenReturn("/api/v1/protected");
+                when(objectMapper.writeValueAsString(any())).thenReturn("{\"error\":\"Forbidden\"}");
+ 
                 // Act
                 filter.doFilterInternal(request, response, filterChain);
-
+ 
                 // Assert
-                verify(filterChain).doFilter(request, response);
+                verify(response).setStatus(jakarta.servlet.http.HttpServletResponse.SC_FORBIDDEN);
+                verify(response).setContentType("application/json");
+                verify(response).setCharacterEncoding("UTF-8");
+                verify(writer).write(anyString());
+                verifyNoInteractions(filterChain);
+                assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+            }
+
+            @Test
+            @DisplayName("usuario baneado permanentemente y sin motivo → responde 403 con 'No reason provided' y 'PERMANENT'")
+            void givenPermanentlyBannedUserNoReason_whenFilter_thenForbiddenResponse() throws Exception {
+                // Arrange
+                activeUser.setBannedAt(java.time.LocalDateTime.now());
+                activeUser.setBanReason(null);
+                activeUser.setBannedUntil(null);
+ 
+                java.io.PrintWriter writer = mock(java.io.PrintWriter.class);
+                when(response.getWriter()).thenReturn(writer);
+                when(request.getHeader("Authorization")).thenReturn("Bearer valid.token");
+                when(jwtTokenProvider.extractEmail(anyString())).thenReturn("victor@colivi.com");
+                when(jwtTokenProvider.isTokenValid(anyString())).thenReturn(true);
+                when(jwtTokenProvider.extractTokenVersion(anyString())).thenReturn(1);
+                when(userRepository.findByEmailAndDeletedAtIsNull("victor@colivi.com"))
+                        .thenReturn(Optional.of(activeUser));
+                when(request.getRequestURI()).thenReturn("/api/v1/protected");
+                when(objectMapper.writeValueAsString(any())).thenReturn("{\"error\":\"Forbidden\"}");
+ 
+                // Act
+                filter.doFilterInternal(request, response, filterChain);
+ 
+                // Assert
+                verify(response).setStatus(jakarta.servlet.http.HttpServletResponse.SC_FORBIDDEN);
+                verify(writer).write(anyString());
+                verifyNoInteractions(filterChain);
                 assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
             }
         }
