@@ -31,7 +31,7 @@ Este módulo gestiona el mercado de alquileres de corta y larga duración, permi
     * Visualización del mapa interactivo con marcadores geolocalizados de los anuncios filtrados.
 * **Usuario Registrado:**
     * Hereda los permisos del Invitado.
-    * **Solicitud de Publicación:** Puede enviar un formulario para dar de alta un anuncio. El anuncio queda en estado `PENDIENTE` y no es visible para el público hasta que un administrador lo apruebe.
+    * **Solicitud de Publicación:** Puede enviar un formulario para dar de alta un anuncio. El anuncio queda por defecto en estado `PENDING`. Como regla de negocio fundamental, el anuncio *sí* es visible públicamente en el catálogo bajo este estado; el DTO de respuesta propaga dicho estado para que el frontend (Next.js) renderice dinámicamente un aviso visual indicando que es un "Anuncio en revisión por la administración".
     * **Sistema de Valoraciones y Comentarios:** Puede emitir una valoración numérica (de 1 a 5 estrellas) acompañada opcionalmente de un único comentario escrito. Este sistema se aplica en dos direcciones:
         * Usuario evalúa a Alojamiento.
         * Usuario evalúa a otro Usuario (perfil de inquilino o propietario).
@@ -48,7 +48,7 @@ Cada anuncio publicado debe contener obligatoriamente los siguientes datos valid
 * Dirección exacta, Localidad, Ciudad y País.
 * Precio mensual de alquiler (expresado en moneda local/Euros).
 * Identificador y nickname del propietario del alojamiento.
-* Estado del anuncio (`PENDIENTE`, `ACTIVO`, `RECHAZADO`, `FINALIZADO`).
+* Estado definitivo del anuncio: `PENDING` (en revisión pero visible), `APPROVED` (validado por admin), `BANNED` (bloqueado por infracciones), `UNAVAILABLE` (alquilado u ocupado).
 * Visibilidad del anuncio (`AVAILABLE`, `DELETED`, `ALL`).
 
 #### C. Listado y Catálogo Unificado
@@ -59,6 +59,21 @@ Para evitar la redundancia de código y cumplir con los principios SOLID, todas 
     * `DELETED`: Retorna únicamente anuncios con borrado lógico (`deletedAt IS NOT NULL`) en la papelera del administrador o usuario.
     * `ALL`: Retorna todo el historial de alojamientos de forma incondicional.
 * **Filtro de Propietario (`owner`):** Si es `null`, se realiza una búsqueda global; si se informa, se limita a las propiedades publicadas por dicho usuario.
+
+#### D. Gestión de Solicitudes de Reserva (BookingRequests)
+Este submódulo orquesta el ciclo de vida de las reservas entre inquilinos y propietarios mediante una máquina de estados determinista, integrando una pasarela de fianza simulada.
+* **Flujo de Estados:**
+    1. `PENDING`: El inquilino candidato envía formalmente la solicitud de reserva de la plaza.
+    2. `ACCEPTED`: El propietario revisa el perfil del candidato y acepta la solicitud. Esta transición notifica a la aplicación cliente (Next.js) para que desbloquee y presente un formulario de pasarela de pago simulada al inquilino.
+    3. `CONFIRMED`: El inquilino introduce datos ficticios de tarjeta de crédito/débito. La transacción simulada se aprueba, el estado conmuta a `CONFIRMED` y la plaza queda oficialmente cerrada (el anuncio pasa a estado `UNAVAILABLE`).
+    4. `REJECTED`: El propietario declina la solicitud de reserva del candidato.
+    5. `CANCELLED`: Cancelación asíncrona por cualquiera de las dos partes antes o después de la confirmación.
+* **Mecanismo de Contingencia por Cancelación:** Si un inquilino ejecuta una cancelación sobre una reserva que ya se encontraba en estado `CONFIRMED`, el backend interviene automáticamente mediante un trigger lógico: revierte el estado del anuncio asociado a `APPROVED` (o a su estado de visibilidad activa) reintroduciendo el inmueble en el catálogo público de forma instantánea. A nivel documental (memoria), se establece que la fianza económica simulada se transfiere al propietario en concepto de penalización y compensación.
+
+#### E. Sistema Inteligente de Sugerencias ("Sugeridos para ti")
+Para maximizar la experiencia de usuario (UX) y optimizar el descubrimiento de inmuebles, la plataforma incorpora una sección dinámica de "Sugeridos para ti".
+* **Estrategia Frontend-First:** Este sistema se gestiona de manera inteligente desde la capa de presentación (Next.js). El cliente almacena el histórico de las últimas búsquedas y visualizaciones del usuario (ej. ciudad de preferencia, rango de precios, tipo de alquiler) utilizando Cookies de navegador o LocalStorage.
+* **Reutilización de Endpoints:** Para alimentar este bloque de sugerencias, el frontend no requiere de una lógica adicional pesada en el backend; simplemente recicla y parametriza los endpoints de filtrado y catálogo ya existentes, inyectando las preferencias almacenadas en el lado del cliente de forma transparente.
 
 ---
 

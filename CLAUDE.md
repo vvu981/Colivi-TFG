@@ -27,7 +27,7 @@ La plataforma es un sistema web full-stack de tres capas independientes que cubr
 
 El marketplace de alquiler residencial se divide en dos submódulos bien diferenciados por rol (Invitado, Usuario Registrado, Administrador) para garantizar alta cohesión y bajo acoplamiento:
 - **Estructura Física (Accommodation)**: Representa la propiedad física inmutable asociada a su propietario. Contiene dirección, ciudad, provincia, país, habitaciones totales/libres, baños, metros cuadrados, coordenadas (latitud/longitud), "amenities" estructurales (Set de `AmenityType`) y la gestión de imágenes físicas integradas en la nube con Cloudinary. Su ciclo de vida depende del propietario.
-- **Publicación Comercial (AccommodationListing)**: Representa el anuncio, la oferta o publicación en el catálogo para alquilar. Depende de un `Accommodation` (relación 1:N o 1:1, un alojamiento físico puede poseer históricos de anuncios). Contiene el precio mensual, fechas de disponibilidad, reglas de convivencia (house_rules), fianza y el estado de visibilidad comercial (`AVAILABLE`, `PAUSED`, `RENTED`).
+- **Publicación Comercial (AccommodationListing)**: Representa el anuncio, la oferta o publicación en el catálogo para alquilar. Depende de un `Accommodation` (relación 1:N o 1:1, un alojamiento físico puede poseer históricos de anuncios). Contiene el precio mensual, fechas de disponibilidad, reglas de convivencia (house_rules), fianza y el estado de la publicación (`PENDING`, `APPROVED`, `BANNED`, `UNAVAILABLE`).
 
 ### 1.2 Módulo de Hogar (Gestión Privada de Convivencia)
 
@@ -36,6 +36,14 @@ Espacio privado multi-tenant para grupos de convivencia. Permite registrar gasto
 ### 1.3 Capa de Inteligencia Artificial (Servidor MCP)
 
 Servidor independiente que implementa el Model Context Protocol (MCP) y actúa como puente seguro entre un LLM (Claude, GPT, etc.) y la API REST del backend. Expone herramientas estructuradas (JSON-RPC) para auditoría conversacional, análisis de deudas y búsqueda semántica de alojamientos, con aislamiento multi-tenant garantizado por propagación de JWT.
+
+### 1.4 Módulo de Reservas y Fianza Simulada (BookingRequests)
+
+Orquesta el ciclo de vida de las solicitudes de alquiler entre inquilinos y caseros. Opera bajo una máquina de estados determinista (`PENDING`, `ACCEPTED`, `CONFIRMED`, `REJECTED`, `CANCELLED`). Incorpora una pasarela de pago simulada donde, tras la aceptación del casero (`ACCEPTED`), el inquilino introduce datos ficticios para confirmar la plaza (`CONFIRMED`), lo que cambia automáticamente el estado del anuncio a `UNAVAILABLE`.
+
+### 1.5 Sistema Inteligente de Sugerencias ("Sugeridos para ti")
+
+Módulo gestionado bajo una estrategia Frontend-First (Next.js). El cliente almacena el histórico de búsquedas y visitas del usuario mediante Cookies/LocalStorage, y reutiliza los endpoints de filtrado del backend inyectando estas preferencias para poblar de forma dinámica y eficiente la sección de sugerencias del catálogo.
 
 ---
 
@@ -46,12 +54,12 @@ Servidor independiente que implementa el Model Context Protocol (MCP) y actúa c
 | Regla | Detalle |
 |---|---|
 | **Mínimo de imágenes** | Un anuncio comercial (`AccommodationListing`) no puede pasar a estado de visibilidad activa (`AVAILABLE` y moderación `APPROVED`) si la propiedad física (`Accommodation`) asociada tiene menos de 2 imágenes registradas en Cloudinary. Validación en `AccommodationListingService` y a nivel de base de datos. |
-| **Ciclo de vida del anuncio** | Moderación: `PENDIENTE → APROBADO` · `PENDIENTE → RECHAZADO`. Visibilidad Comercial (tras aprobación): `AVAILABLE` (disponible y visible en catálogo) · `PAUSED` (pausado temporalmente por el host) · `RENTED` (alquilado). |
+| **Ciclo de vida del anuncio** | Moderación y Estado: `PENDING` (por defecto, en revisión pero visible en catálogo) → `APPROVED` (validado por admin). Estados de finalización o sanción: `UNAVAILABLE` (alquilado/reservado) · `BANNED` (bloqueado por infracciones). El DTO debe exponer este estado para que el frontend (Next.js) renderice un aviso de "Anuncio en revisión". |
 | **Almacenamiento de imágenes** | Asociadas al alojamiento físico (`Accommodation`). Las imágenes se suben a Cloudinary. El backend persiste únicamente las URLs absolutas públicas de las imágenes físicas. Nunca se almacenan binarios en el servidor Spring Boot. |
-| **Moderación manual** | Un Administrador puede eliminar cualquier alojamiento físico o anuncio comercial, comentario o valoración. Solo un Administrador puede aprobar o rechazar solicitudes de publicación en estado `PENDIENTE`. |
-| **Auto-moderación preventiva** | Si un anuncio comercial (`AccommodationListing`) acumula más de **5 denuncias únicas** en estado `PENDING` (en tabla `ACCOMMODATION_REPORT`), el sistema cambia automáticamente su estado de moderación a `PENDIENTE`, retira su visibilidad comercial del catálogo y genera una alerta prioritaria en la bandeja del Administrador. Acción atómica y gestionada por `AccommodationReportService`. |
+| **Moderación manual** | Un Administrador puede eliminar cualquier alojamiento físico o anuncio comercial, comentario o valoración. Solo un Administrador puede aprobar solicitudes de publicación en estado `PENDING` o banearlas pasándolas a `BANNED`. |
+| **Auto-moderación preventiva** | Si un anuncio comercial (`AccommodationListing`) acumula más de **5 denuncias únicas** en estado `PENDING` (en tabla `ACCOMMODATION_REPORT`), el sistema cambia automáticamente su estado a `PENDING` (o `BANNED` preventivo), y genera una alerta prioritaria en la bandeja del Administrador. Acción atómica y gestionada por `AccommodationReportService`. |
 | **Denuncias de anuncios** | Cualquier usuario (registrado o anónimo) puede enviar una denuncia contra un anuncio comercial vía `POST /api/v1/listings/{id}/reports`. Los motivos posibles son: `SPAM`, `SCAM`, `INAPPROPRIATE`, `MISLEADING`. El estado de la denuncia sigue el ciclo: `PENDING → REVIEWED → DISMISSED`. |
-| **Listado dinámico y catálogo** | Unificación en `getListingsCatalog(owner, visibility, page, size)` con estados de visibilidad (`AVAILABLE`, `PAUSED`, `RENTED`) e histórico para evitar duplicidad de consultas JPA y optimizar filtrados. |
+| **Listado dinámico y catálogo** | Unificación en `getListingsCatalog(owner, status, page, size)` con los estados (`PENDING`, `APPROVED`, `UNAVAILABLE`, `BANNED`) para evitar duplicidad de consultas JPA y optimizar filtrados. |
 | **Listado dinámico y catálogo** | Unificación en `getAccommodationsCatalog(owner, visibility, page, size)` con estados `AVAILABLE` (activos), `DELETED` (borrado lógico) y `ALL` (todo el histórico) para evitar duplicidad de consultas JPA y optimizar filtrados. |
 
 ### 2.2 Motor de Gastos Compartidos
@@ -233,6 +241,16 @@ Servidor independiente que implementa el Model Context Protocol (MCP) y actúa c
                                 └─────────────────────────────┘    │
                                                                    │
 ┌──────────────────────────────┐                                   │
+│        BOOKING_REQUEST       │                                   │
+├──────────────────────────────┤                                   │
+│ PK id              UUID      │                                   │
+│ FK listing_id      UUID      │                                   │
+│ FK tenant_id       UUID ─────┼───────────────────────────────────┘
+│    status          ENUM      │  (PENDING, ACCEPTED, CONFIRMED...)│
+│    created_at      TIMESTAMP │                                   │
+└──────────────────────────────┘                                   │
+                                                                   │
+┌──────────────────────────────┐                                   │
 │          HOGAR               │                                   │
 ├──────────────────────────────┤                                   │
 │ PK id         UUID           │◄──────────────┐                   │
@@ -312,7 +330,7 @@ Servidor independiente que implementa el Model Context Protocol (MCP) y actúa c
 -- Nota: La ciudad se obtiene de la relación con la propiedad física (Accommodation)
 CREATE INDEX idx_listing_status_price
     ON accommodation_listing(price_per_month)
-    WHERE moderation_status = 'APPROVED' AND status = 'AVAILABLE';
+    WHERE status IN ('PENDING', 'APPROVED');
 
 -- Geolocalización (consultas de radio por mapa, sobre la propiedad física)
 CREATE INDEX idx_accommodation_lat  ON accommodation(latitude);
@@ -362,8 +380,8 @@ CREATE TRIGGER trg_audit_immutable
 
 ```sql
 CREATE TYPE user_role           AS ENUM ('ADMIN', 'USER');
-CREATE TYPE listing_status      AS ENUM ('AVAILABLE', 'PAUSED', 'RENTED');
-CREATE TYPE moderation_status   AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
+CREATE TYPE listing_status      AS ENUM ('PENDING', 'APPROVED', 'BANNED', 'UNAVAILABLE');
+CREATE TYPE booking_status      AS ENUM ('PENDING', 'ACCEPTED', 'CONFIRMED', 'REJECTED', 'CANCELLED');
 CREATE TYPE audit_action        AS ENUM ('CREATE', 'UPDATE', 'DELETE');
 CREATE TYPE report_reason       AS ENUM ('SPAM', 'SCAM', 'INAPPROPRIATE', 'MISLEADING');
 CREATE TYPE report_status       AS ENUM ('PENDING', 'REVIEWED', 'DISMISSED');
@@ -410,7 +428,7 @@ CREATE TYPE report_status       AS ENUM ('PENDING', 'REVIEWED', 'DISMISSED');
 
 | Método | Endpoint | Auth | Descripción |
 |---|---|---|---|
-| `GET` | `/listings` | ❌ | Listar anuncios del catálogo activos (`AVAILABLE` y `APPROVED`). Query params: `city`, `minPrice`, `maxPrice`, `page`, `size` |
+| `GET` | `/listings` | ❌ | Listar anuncios del catálogo (`PENDING` y `APPROVED`). Query params: `city`, `minPrice`, `maxPrice`, `page`, `size` |
 | `GET` | `/listings/{id}` | ❌ | Detalle del anuncio (incluye datos del alojamiento físico `Accommodation`) |
 | `POST` | `/accommodations/{accommodationId}/listings` | 🔒 | Publicar anuncio comercial para una propiedad propia. Queda en `PENDIENTE` de moderación. Body: `{title, description, pricePerMonth, deposit, availableFrom, availableTo, houseRules}` |
 | `PUT` | `/listings/{id}` | 🔒 | Actualizar anuncio propio (solo si sigue en `PENDIENTE` o visible en catálogo) |
@@ -419,6 +437,17 @@ CREATE TYPE report_status       AS ENUM ('PENDING', 'REVIEWED', 'DISMISSED');
 | `POST` | `/listings/{id}/reviews` | 🔒 | Publicar valoración sobre la estancia en este anuncio |
 | `DELETE` | `/listings/{id}/reviews/{reviewId}` | 🔒 ADMIN | Moderar y eliminar valoración del catálogo |
 | `POST` | `/listings/{id}/reports` | ❌/🔒 | Enviar denuncia sobre el anuncio. Body: `{reason, description}`. Anonymous si no se adjunta JWT. |
+
+
+#### 5.4.1 Reservas (BookingRequests)
+
+| Método | Endpoint | Auth | Descripción |
+|---|---|---|---|
+| `POST` | `/listings/{id}/bookings` | 🔒 | Inquilino solicita reserva (`PENDING`). |
+| `POST` | `/bookings/{id}/accept` | 🔒 | Propietario acepta la reserva (`ACCEPTED`). |
+| `POST` | `/bookings/{id}/confirm` | 🔒 | Inquilino confirma la plaza con fianza (`CONFIRMED`). |
+| `POST` | `/bookings/{id}/reject` | 🔒 | Propietario rechaza candidato (`REJECTED`). |
+| `POST` | `/bookings/{id}/cancel` | 🔒 | Cancelar reserva (`CANCELLED`). Revierte anuncio a `APPROVED` si estaba en `CONFIRMED`. |
 
 #### Endpoints de Administración y Moderación
 
