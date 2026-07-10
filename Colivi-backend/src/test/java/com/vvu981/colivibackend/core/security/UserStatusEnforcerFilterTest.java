@@ -12,7 +12,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -20,7 +19,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.io.PrintWriter;
@@ -31,22 +29,22 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /**
  * Tests unitarios del filtro de verificación de estado de cuenta.
  *
- * <p>Estrategia de cobertura:
+ * <p>
+ * Estrategia de cobertura:
  * <ul>
- *   <li>Sin autenticación → pasa sin intervención.</li>
- *   <li>Principal no es User → pasa sin intervención.</li>
- *   <li>Usuario activo (no baneado, no eliminado) → pasa.</li>
- *   <li>Usuario baneado sin motivo → 403 con mensaje genérico.</li>
- *   <li>Usuario baneado con motivo → 403 con el motivo.</li>
- *   <li>Usuario eliminado en ruta de reactivación → pasa.</li>
- *   <li>Usuario eliminado en ruta de solicitud de reactivación → pasa.</li>
- *   <li>Usuario eliminado en ruta protegida → 403.</li>
+ * <li>Sin autenticación → pasa sin intervención.</li>
+ * <li>Principal no es User → pasa sin intervención.</li>
+ * <li>Usuario activo (no baneado, no eliminado) → pasa.</li>
+ * <li>Usuario baneado sin motivo → 403 con mensaje genérico.</li>
+ * <li>Usuario baneado con motivo → 403 con el motivo.</li>
+ * <li>Usuario eliminado en ruta de reactivación → pasa.</li>
+ * <li>Usuario eliminado en ruta de solicitud de reactivación → pasa.</li>
+ * <li>Usuario eliminado en ruta protegida → 403.</li>
  * </ul>
  */
 @ExtendWith(MockitoExtension.class)
@@ -102,8 +100,8 @@ class UserStatusEnforcerFilterTest {
     // =========================================================================
 
     private void authenticateUser(User user) {
-        UsernamePasswordAuthenticationToken auth =
-                new UsernamePasswordAuthenticationToken(user, null, Collections.emptyList());
+        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(user, null,
+                Collections.emptyList());
         SecurityContextHolder.getContext().setAuthentication(auth);
     }
 
