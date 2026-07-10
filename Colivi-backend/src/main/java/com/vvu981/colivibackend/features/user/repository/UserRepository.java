@@ -47,4 +47,17 @@ public interface UserRepository extends JpaRepository<User, UUID> {
      * @return el usuario, independientemente de su estado de borrado.
      */
     Optional<User> findByEmailIgnoreCase(String email);
-}
+
+    /**
+     * Busca un usuario por su email exacto, sin filtrar por {@code deletedAt}.
+     *
+     * <p>Utilizado exclusivamente por {@code JwtAuthenticationFilter} para cargar
+     * el principal en el {@code SecurityContext} con independencia del estado de la
+     * cuenta. El control de estado (baneado / eliminado) es responsabilidad del
+     * {@code UserStatusEnforcerFilter} posterior.</p>
+     *
+     * @param email dirección de correo del usuario.
+     * @return el usuario, independientemente de su estado de borrado o baneo.
+     */
+    Optional<User> findByEmail(String email);
+}

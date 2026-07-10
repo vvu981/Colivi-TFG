@@ -21,7 +21,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor // Necesario para inyectar nuestro filtro nuevo
 public class SecurityConfig {
 
-    private final JwtAuthenticationFilter jwtAuthFilter; // Tu nuevo escáner
+    private final JwtAuthenticationFilter jwtAuthFilter;
+    private final UserStatusEnforcerFilter userStatusEnforcerFilter;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -46,8 +47,10 @@ public class SecurityConfig {
                         .anyRequest().authenticated() // Todo lo demás requiere estar logueado
                 )
 
-                // LA LÍNEA CLAVE: Instalamos nuestro escáner justo antes del filtro por defecto de Spring
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                // 1. Primero validamos el token JWT (autenticación criptográfica)
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                // 2. Después de autenticar, verificamos el estado operativo del usuario (SRP)
+                .addFilterAfter(userStatusEnforcerFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }
