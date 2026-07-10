@@ -1,6 +1,8 @@
 package com.vvu981.colivibackend.core.exception;
 
 import com.vvu981.colivibackend.features.user.exception.AccountAlreadyActiveException;
+import com.vvu981.colivibackend.features.user.exception.AccountBannedException;
+import com.vvu981.colivibackend.features.user.exception.AccountDeletedException;
 import com.vvu981.colivibackend.features.user.exception.InvalidReactivationTokenException;
 import com.vvu981.colivibackend.features.user.exception.InvalidTokenException;
 import com.vvu981.colivibackend.features.user.exception.StaleSessionException;
@@ -16,6 +18,32 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    // Usuario baneado → 403 Forbidden
+    // Nota: normalmente UserStatusEnforcerFilter escribe la respuesta directamente.
+    // Este handler actúa como red de seguridad si la excepción se lanza desde un servicio.
+    @ExceptionHandler(AccountBannedException.class)
+    public ResponseEntity<Map<String, Object>> handleAccountBanned(AccountBannedException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.FORBIDDEN.value());
+        body.put("error", "Forbidden");
+        body.put("message", ex.getMessage());
+
+        return new ResponseEntity<>(body, HttpStatus.FORBIDDEN);
+    }
+
+    // Usuario eliminado (soft-delete) → 403 Forbidden con mensaje orientativo
+    @ExceptionHandler(AccountDeletedException.class)
+    public ResponseEntity<Map<String, Object>> handleAccountDeleted(AccountDeletedException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.FORBIDDEN.value());
+        body.put("error", "Forbidden");
+        body.put("message", ex.getMessage());
+
+        return new ResponseEntity<>(body, HttpStatus.FORBIDDEN);
+    }
 
     // Tokens JWT de sesión inválidos/caducados → 401 Unauthorized
     @ExceptionHandler({ InvalidTokenException.class, StaleSessionException.class })

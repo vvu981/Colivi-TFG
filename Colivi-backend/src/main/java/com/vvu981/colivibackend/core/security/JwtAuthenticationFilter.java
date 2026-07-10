@@ -72,13 +72,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        userRepository.findByEmailAndDeletedAtIsNull(userEmail).ifPresent(user -> {
+        // Cargamos al usuario independientemente de su estado (baneado / eliminado).
+        // La responsabilidad de filtrar por estado recae en UserStatusEnforcerFilter (SRP).
+        userRepository.findByEmail(userEmail).ifPresent(user -> {
 
-            // Validamos la versión del token
+            // Validamos únicamente la integridad del token: versión actual del usuario.
             if (jwtTokenProvider.extractTokenVersion(jwt).equals(user.getTokenVersion())) {
-                if (user.isBanned()) {
-                    return;
-                }
                 setSecurityContext(user, request);
             }
         });
