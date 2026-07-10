@@ -1,5 +1,6 @@
 package com.vvu981.colivibackend.core.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
@@ -46,6 +47,8 @@ class JwtAuthenticationFilterTest {
     private HttpServletResponse response;
     @Mock
     private FilterChain filterChain;
+    @Mock
+    private ObjectMapper objectMapper;
 
     @InjectMocks
     private JwtAuthenticationFilter filter;
