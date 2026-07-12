@@ -15,8 +15,6 @@ import com.vvu981.colivibackend.features.bookingRequests.domain.RequestStatus;
 public interface BookingRequestRepository
         extends JpaRepository<BookingRequest, UUID>, JpaSpecificationExecutor<BookingRequest> {
 
-    Page<BookingRequest> findByDeletedAtIsNull(Pageable pageable);
-
     Page<BookingRequest> findByRequesterId(UUID currentUserId, Pageable page);
 
     Page<BookingRequest> findByAccommodationListingHostId(UUID currentUserId, Pageable page);
