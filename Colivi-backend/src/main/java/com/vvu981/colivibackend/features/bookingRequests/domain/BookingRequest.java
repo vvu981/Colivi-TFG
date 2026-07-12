@@ -66,7 +66,12 @@ public class BookingRequest {
         this.updatedAt = LocalDateTime.now();
     }
 
-    public BookingRequest(BookingRequestDto requestDTO) {
-
+    public BookingRequest(BookingRequestDto requestDTO, User requester, AccommodationListing listing) {
+        this.requester = requester;
+        this.accommodationListing = listing;
+        this.startDate = requestDTO.startDate();
+        this.durationMonths = requestDTO.durationMonths();
+        this.message = requestDTO.message();
+        this.status = RequestStatus.PENDING;
     }
 }
