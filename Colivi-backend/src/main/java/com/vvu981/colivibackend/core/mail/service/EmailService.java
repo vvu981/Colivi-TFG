@@ -1,4 +1,4 @@
-package com.vvu981.colivibackend.features.auth.service;
+package com.vvu981.colivibackend.core.mail.service;
 
 /**
  * Contrato que define las operaciones de envío de correo electrónico
@@ -20,4 +20,13 @@ public interface EmailService {
      * @param token   token UUID de reactivación generado para este usuario. No debe ser nulo ni vacío.
      */
     void sendReactivationEmail(String toEmail, String token);
+
+    /**
+     * Envía un correo electrónico de notificación sobre el cambio de estado de una reserva.
+     *
+     * @param toEmail      dirección de correo electrónico del inquilino destinatario.
+     * @param listingTitle el título del alojamiento para darle contexto al usuario.
+     * @param isAccepted   true si la reserva fue aceptada, false si fue rechazada.
+     */
+    void sendBookingStatusEmail(String toEmail, String listingTitle, boolean isAccepted);
 }
