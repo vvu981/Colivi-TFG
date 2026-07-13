@@ -3,6 +3,7 @@ package com.vvu981.colivibackend.features.bookingRequests.controller;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -35,9 +36,10 @@ public class BookingRequestController {
     public ResponseEntity<BookingRequestResponseDto> createBookingRequest(
             @RequestBody BookingRequestDto requestDto,
             @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
-        // Si entra por aquí, el dueño de la reserva es el propio usuario logueado
+        // El dueño de la reserva es el propio usuario logueado
         BookingRequestResponseDto response = requestService.createBookingRequest(requestDto, currentUserId);
-        return ResponseEntity.ok(response);
+        // Usamos HttpStatus.CREATED (201) para cumplir con el estándar REST
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PostMapping("/admin/{tenantId}")
@@ -46,9 +48,9 @@ public class BookingRequestController {
             @RequestBody BookingRequestDto requestDto,
             @PathVariable("tenantId") UUID tenantId // Capturamos el ID del inquilino objetivo desde la URL
     ) {
-
         BookingRequestResponseDto response = requestService.createBookingRequest(requestDto, tenantId);
-        return ResponseEntity.ok(response);
+        // Usamos HttpStatus.CREATED (201) para cumplir con el estándar REST
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PatchMapping("/{id}/status")
@@ -56,8 +58,8 @@ public class BookingRequestController {
             @PathVariable("id") UUID requestId,
             @RequestParam RequestStatus status,
             @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
-        BookingRequestResponseDto response = requestService.setStatusBookingRequest(status, requestId,
-                currentUserId);
+        // CORREGIDO: Reordenados los parámetros para coincidir con la firma del Service
+        BookingRequestResponseDto response = requestService.setStatusBookingRequest(status, requestId, currentUserId);
         return ResponseEntity.ok(response);
     }
 
@@ -74,8 +76,7 @@ public class BookingRequestController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
-        Page<BookingRequestResponseDto> response = requestService.getTenantBookingRequests(page, size,
-                currentUserId);
+        Page<BookingRequestResponseDto> response = requestService.getTenantBookingRequests(page, size, currentUserId);
         return ResponseEntity.ok(response);
     }
 
@@ -83,11 +84,11 @@ public class BookingRequestController {
     public ResponseEntity<Page<BookingRequestResponseDto>> getLandlordRequests(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) UUID listingId, // <-- Añadimos este parámetro opcional
+            @RequestParam(required = false) UUID listingId, // Parámetro opcional para filtrar por un coliving
+                                                            // específico
             @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
-        // Se lo pasamos al servicio junto con el ID del casero logueado por seguridad
-        Page<BookingRequestResponseDto> response = requestService.getLandlordBookingRequests(page, size,
-                currentUserId, listingId);
+        Page<BookingRequestResponseDto> response = requestService.getLandlordBookingRequests(page, size, currentUserId,
+                listingId);
         return ResponseEntity.ok(response);
     }
 
@@ -97,8 +98,7 @@ public class BookingRequestController {
             BookingRequestAdminFilterDto filterDto,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        Page<BookingRequestResponseDto> response = requestService.getAllBookingRequestsForAdmin(filterDto, page,
-                size);
+        Page<BookingRequestResponseDto> response = requestService.getAllBookingRequestsForAdmin(filterDto, page, size);
         return ResponseEntity.ok(response);
     }
 }
