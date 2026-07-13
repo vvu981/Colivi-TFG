@@ -29,7 +29,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     /**
      * Busca un usuario por su token de reactivación, independientemente de si la
      * cuenta está activa o eliminada (soft-delete). No filtra por {@code deletedAt}
-     * intencionalmente: precisamente buscamos usuarios que necesitan ser reactivados.
+     * intencionalmente: precisamente buscamos usuarios que necesitan ser
+     * reactivados.
      *
      * @param token el token UUID de reactivación.
      * @return el usuario asociado al token, o vacío si no existe o ya fue limpiado.
@@ -39,9 +40,11 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     /**
      * Busca un usuario por su email incluyendo cuentas soft-deleted.
      *
-     * <p>A diferencia de {@link #findByEmailAndDeletedAtIsNull}, este método no
+     * <p>
+     * A diferencia de {@link #findByEmailAndDeletedAtIsNull}, este método no
      * filtra por {@code deletedAt}, lo que permite localizar cuentas eliminadas
-     * durante el flujo de reactivación.</p>
+     * durante el flujo de reactivación.
+     * </p>
      *
      * @param email dirección de correo del usuario (case-insensitive).
      * @return el usuario, independientemente de su estado de borrado.

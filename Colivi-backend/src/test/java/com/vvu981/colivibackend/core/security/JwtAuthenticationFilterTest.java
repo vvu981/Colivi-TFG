@@ -1,5 +1,6 @@
 package com.vvu981.colivibackend.core.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
@@ -46,6 +47,8 @@ class JwtAuthenticationFilterTest {
     private HttpServletResponse response;
     @Mock
     private FilterChain filterChain;
+    @Mock
+    private ObjectMapper objectMapper;
 
     @InjectMocks
     private JwtAuthenticationFilter filter;
@@ -187,7 +190,7 @@ class JwtAuthenticationFilterTest {
             when(jwtTokenProvider.extractEmail(anyString())).thenReturn("victor@colivi.com");
             when(jwtTokenProvider.isTokenValid(anyString())).thenReturn(true);
             when(jwtTokenProvider.extractTokenVersion(anyString())).thenReturn(1); // token antiguo
-            when(userRepository.findByEmailAndDeletedAtIsNull("victor@colivi.com"))
+            when(userRepository.findByEmail("victor@colivi.com"))
                     .thenReturn(Optional.of(activeUser));
 
             // Act
@@ -208,13 +211,13 @@ class JwtAuthenticationFilterTest {
     class UserNotFound {
 
         @Test
-        @DisplayName("findByEmailAndDeletedAtIsNull vacío → no autentica, cadena continúa")
+        @DisplayName("findByEmail vacío → no autentica, cadena continúa")
         void givenNonExistentUser_whenFilter_thenNoAuthentication() throws Exception {
             // Arrange
             when(request.getHeader("Authorization")).thenReturn("Bearer valid.unknown.token");
             when(jwtTokenProvider.extractEmail(anyString())).thenReturn("ghost@example.com");
             when(jwtTokenProvider.isTokenValid(anyString())).thenReturn(true);
-            when(userRepository.findByEmailAndDeletedAtIsNull("ghost@example.com"))
+            when(userRepository.findByEmail("ghost@example.com"))
                     .thenReturn(Optional.empty());
 
             // Act
@@ -242,7 +245,7 @@ class JwtAuthenticationFilterTest {
             when(jwtTokenProvider.extractEmail(anyString())).thenReturn("victor@colivi.com");
             when(jwtTokenProvider.isTokenValid(anyString())).thenReturn(true);
             when(jwtTokenProvider.extractTokenVersion(anyString())).thenReturn(1);
-            when(userRepository.findByEmailAndDeletedAtIsNull("victor@colivi.com"))
+            when(userRepository.findByEmail("victor@colivi.com"))
                     .thenReturn(Optional.of(activeUser));
 
             // Act
@@ -270,7 +273,7 @@ class JwtAuthenticationFilterTest {
             when(jwtTokenProvider.extractEmail(anyString())).thenReturn("victor@colivi.com");
             when(jwtTokenProvider.isTokenValid(anyString())).thenReturn(true);
             when(jwtTokenProvider.extractTokenVersion(anyString())).thenReturn(1);
-            when(userRepository.findByEmailAndDeletedAtIsNull("victor@colivi.com"))
+            when(userRepository.findByEmail("victor@colivi.com"))
                     .thenReturn(Optional.of(activeUser));
 
             // Act
@@ -312,34 +315,6 @@ class JwtAuthenticationFilterTest {
             verify(filterChain).doFilter(request, response);
             verifyNoInteractions(userRepository);
             assertThat(SecurityContextHolder.getContext().getAuthentication()).isEqualTo(existingAuth);
-        }
-        // =========================================================================
-        // Escenario 8: Usuario baneado
-        // =========================================================================
-
-        @Nested
-        @DisplayName("cuando el usuario está baneado")
-        class BannedUser {
-
-            @Test
-            @DisplayName("isBanned es true → no autentica, cadena continúa")
-            void givenBannedUser_whenFilter_thenNoAuthentication() throws Exception {
-                // Arrange
-                activeUser.setBannedAt(java.time.LocalDateTime.now());
-                when(request.getHeader("Authorization")).thenReturn("Bearer valid.token");
-                when(jwtTokenProvider.extractEmail(anyString())).thenReturn("victor@colivi.com");
-                when(jwtTokenProvider.isTokenValid(anyString())).thenReturn(true);
-                when(jwtTokenProvider.extractTokenVersion(anyString())).thenReturn(1);
-                when(userRepository.findByEmailAndDeletedAtIsNull("victor@colivi.com"))
-                        .thenReturn(Optional.of(activeUser));
-
-                // Act
-                filter.doFilterInternal(request, response, filterChain);
-
-                // Assert
-                verify(filterChain).doFilter(request, response);
-                assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
-            }
         }
 
         // =========================================================================

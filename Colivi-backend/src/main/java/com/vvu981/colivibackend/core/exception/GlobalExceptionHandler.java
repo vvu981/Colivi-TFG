@@ -1,6 +1,8 @@
 package com.vvu981.colivibackend.core.exception;
 
 import com.vvu981.colivibackend.features.user.exception.AccountAlreadyActiveException;
+import com.vvu981.colivibackend.features.user.exception.AccountBannedException;
+import com.vvu981.colivibackend.features.user.exception.AccountDeletedException;
 import com.vvu981.colivibackend.features.user.exception.InvalidReactivationTokenException;
 import com.vvu981.colivibackend.features.user.exception.InvalidTokenException;
 import com.vvu981.colivibackend.features.user.exception.StaleSessionException;
@@ -16,6 +18,33 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    // Usuario baneado → 403 Forbidden
+    // Nota: normalmente UserStatusEnforcerFilter escribe la respuesta directamente.
+    // Este handler actúa como red de seguridad si la excepción se lanza desde un
+    // servicio.
+    @ExceptionHandler(AccountBannedException.class)
+    public ResponseEntity<Map<String, Object>> handleAccountBanned(AccountBannedException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.FORBIDDEN.value());
+        body.put("error", "Forbidden");
+        body.put("message", ex.getMessage());
+
+        return new ResponseEntity<>(body, HttpStatus.FORBIDDEN);
+    }
+
+    // Usuario eliminado (soft-delete) → 403 Forbidden con mensaje orientativo
+    @ExceptionHandler(AccountDeletedException.class)
+    public ResponseEntity<Map<String, Object>> handleAccountDeleted(AccountDeletedException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.FORBIDDEN.value());
+        body.put("error", "Forbidden");
+        body.put("message", ex.getMessage());
+
+        return new ResponseEntity<>(body, HttpStatus.FORBIDDEN);
+    }
 
     // Tokens JWT de sesión inválidos/caducados → 401 Unauthorized
     @ExceptionHandler({ InvalidTokenException.class, StaleSessionException.class })
@@ -42,7 +71,8 @@ public class GlobalExceptionHandler {
     }
 
     // Token de reactivación inválido o caducado → 400 Bad Request
-    // Distinto de InvalidTokenException (401): el enlace de reactivación es público,
+    // Distinto de InvalidTokenException (401): el enlace de reactivación es
+    // público,
     // su invalidez es un error de solicitud, no de autenticación.
     @ExceptionHandler(InvalidReactivationTokenException.class)
     public ResponseEntity<Map<String, Object>> handleInvalidReactivationToken(
@@ -69,7 +99,8 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
 
-    // Errores de validación de campos (@Valid en los controladores) → 400 Bad Request
+    // Errores de validación de campos (@Valid en los controladores) → 400 Bad
+    // Request
     @ExceptionHandler(org.springframework.web.bind.MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidationExceptions(
             org.springframework.web.bind.MethodArgumentNotValidException ex) {
@@ -77,11 +108,10 @@ public class GlobalExceptionHandler {
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.BAD_REQUEST.value());
         body.put("error", "Bad Request");
-        
+
         Map<String, String> errors = new HashMap<>();
-        ex.getBindingResult().getFieldErrors().forEach(error -> 
-            errors.put(error.getField(), error.getDefaultMessage())
-        );
+        ex.getBindingResult().getFieldErrors()
+                .forEach(error -> errors.put(error.getField(), error.getDefaultMessage()));
         body.put("message", "Validation failed");
         body.put("errors", errors);
 

@@ -19,6 +19,20 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Optional;
 
+/**
+ * Responsible solely for JWT authentication: validates the token's signature
+ * and
+ * version, then loads the authenticated
+ * {@link com.vvu981.colivibackend.features.user.domain.User}
+ * into the {@link org.springframework.security.core.context.SecurityContext}.
+ *
+ * <p>
+ * Account state enforcement (banned / soft-deleted) is intentionally delegated
+ * to {@link UserStatusEnforcerFilter}, which runs immediately after this one.
+ * This
+ * separation upholds the Single Responsibility Principle.
+ * </p>
+ */
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -28,8 +42,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(@org.springframework.lang.NonNull HttpServletRequest request,
-                                    @org.springframework.lang.NonNull HttpServletResponse response,
-                                    @org.springframework.lang.NonNull FilterChain filterChain)
+            @org.springframework.lang.NonNull HttpServletResponse response,
+            @org.springframework.lang.NonNull FilterChain filterChain)
             throws ServletException, IOException {
 
         try {
@@ -46,7 +60,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             // controladores.
         }
 
-        // 3. El filtro siempre debe continuar
+        // 3. El filtro siempre debe continuar: el control de estado lo hace
+        // UserStatusEnforcerFilter
         filterChain.doFilter(request, response);
     }
 
@@ -72,13 +87,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        userRepository.findByEmailAndDeletedAtIsNull(userEmail).ifPresent(user -> {
+        // Cargamos al usuario independientemente de su estado (baneado / eliminado).
+        // La responsabilidad de filtrar por estado recae en UserStatusEnforcerFilter
+        // (SRP).
+        userRepository.findByEmail(userEmail).ifPresent(user -> {
 
-            // Validamos la versión del token
+            // Validamos únicamente la integridad del token: versión actual del usuario.
             if (jwtTokenProvider.extractTokenVersion(jwt).equals(user.getTokenVersion())) {
-                if (user.isBanned()) {
-                    return;
-                }
                 setSecurityContext(user, request);
             }
         });
