@@ -13,7 +13,6 @@ import java.util.UUID;
 
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Root;
 
@@ -103,7 +102,7 @@ public class BookingRequestFiltersTest {
         CriteriaBuilder cb = mock(CriteriaBuilder.class);
         Path<LocalDate> datePath = mock(Path.class);
 
-        when(root.get("startDate")).thenReturn((Path) datePath);
+        when(root.<LocalDate>get("startDate")).thenReturn(datePath);
 
         spec.toPredicate(root, query, cb);
 

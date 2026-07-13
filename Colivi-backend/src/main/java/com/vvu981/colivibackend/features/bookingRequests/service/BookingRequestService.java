@@ -22,7 +22,7 @@ public interface BookingRequestService {
     Page<BookingRequestResponseDto> getTenantBookingRequests(int page, int size, UUID currentUserId); // inquilino o
                                                                                                       // arrendatario
 
-    Page<BookingRequestResponseDto> getLandlordBookingRequests(int page, int size, UUID currentUserId); // arrendador
+    Page<BookingRequestResponseDto> getLandlordBookingRequests(int page, int size, UUID landlordId, UUID listingId); // arrendador
 
     Page<BookingRequestResponseDto> getAllBookingRequestsForAdmin(BookingRequestAdminFilterDto filter, int page,
             int size);

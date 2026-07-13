@@ -20,8 +20,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing;
+import com.vvu981.colivibackend.features.accommodation.domain.ListingStatus;
 import com.vvu981.colivibackend.features.accommodation.repository.AccommodationListingRepository;
 import com.vvu981.colivibackend.features.bookingRequests.domain.BookingRequest;
 import com.vvu981.colivibackend.features.bookingRequests.domain.RequestStatus;
@@ -78,6 +80,7 @@ public class BookingRequestServiceImplTest {
         listing = new AccommodationListing();
         listing.setId(UUID.randomUUID());
         listing.setHost(host);
+        listing.setStatus(ListingStatus.AVAILABLE);
 
         requestDto = new BookingRequestDto(listing.getId(), LocalDate.now().plusDays(5), 3, "Hello");
 
@@ -111,7 +114,7 @@ public class BookingRequestServiceImplTest {
             requester.setBannedAt(LocalDateTime.now());
             when(userRepository.findByIdAndDeletedAtIsNull(requester.getId())).thenReturn(Optional.of(requester));
 
-            assertThrows(RuntimeException.class,
+            assertThrows(ResponseStatusException.class,
                     () -> bookingRequestService.createBookingRequest(requestDto, requester.getId()));
         }
 
@@ -121,7 +124,7 @@ public class BookingRequestServiceImplTest {
             listing.setDeletedAt(LocalDateTime.now());
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
-            assertThrows(RuntimeException.class,
+            assertThrows(ResponseStatusException.class,
                     () -> bookingRequestService.createBookingRequest(requestDto, requester.getId()));
         }
 
@@ -129,7 +132,7 @@ public class BookingRequestServiceImplTest {
         void failsIfUserNotFound() {
             when(userRepository.findByIdAndDeletedAtIsNull(requester.getId())).thenReturn(Optional.empty());
 
-            assertThrows(RuntimeException.class,
+            assertThrows(ResponseStatusException.class,
                     () -> bookingRequestService.createBookingRequest(requestDto, requester.getId()));
         }
 
@@ -137,7 +140,7 @@ public class BookingRequestServiceImplTest {
         void failsIfUserDeleted() {
             requester.setDeletedAt(LocalDateTime.now());
             when(userRepository.findByIdAndDeletedAtIsNull(requester.getId())).thenReturn(Optional.of(requester));
-            assertThrows(RuntimeException.class,
+            assertThrows(ResponseStatusException.class,
                     () -> bookingRequestService.createBookingRequest(requestDto, requester.getId()));
         }
 
@@ -146,7 +149,7 @@ public class BookingRequestServiceImplTest {
             when(userRepository.findByIdAndDeletedAtIsNull(requester.getId())).thenReturn(Optional.of(requester));
             listing.setBannedAt(LocalDateTime.now());
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
-            assertThrows(RuntimeException.class,
+            assertThrows(ResponseStatusException.class,
                     () -> bookingRequestService.createBookingRequest(requestDto, requester.getId()));
         }
 
@@ -154,27 +157,66 @@ public class BookingRequestServiceImplTest {
         void failsIfListingNotFound() {
             when(userRepository.findByIdAndDeletedAtIsNull(requester.getId())).thenReturn(Optional.of(requester));
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.empty());
-            assertThrows(RuntimeException.class,
+            assertThrows(ResponseStatusException.class,
                     () -> bookingRequestService.createBookingRequest(requestDto, requester.getId()));
+        }
+
+        @Test
+        void failsIfListingNotAvailable() {
+            listing.setStatus(ListingStatus.BANNED);
+            when(userRepository.findByIdAndDeletedAtIsNull(requester.getId())).thenReturn(Optional.of(requester));
+            when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
+            assertThrows(ResponseStatusException.class,
+                    () -> bookingRequestService.createBookingRequest(requestDto, requester.getId()));
+        }
+
+        @Test
+        void failsIfUserBooksOwnListing() {
+            when(userRepository.findByIdAndDeletedAtIsNull(host.getId())).thenReturn(Optional.of(host));
+            when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
+            assertThrows(ResponseStatusException.class,
+                    () -> bookingRequestService.createBookingRequest(requestDto, host.getId()));
         }
     }
 
     @Nested
     class SetStatusBookingRequest {
+        
         @Test
-        void successAsHost() {
+        void successAsHostAccepting() {
             when(userRepository.findByIdAndDeletedAtIsNull(host.getId())).thenReturn(Optional.of(host));
             when(requestRepository.findById(bookingRequest.getId())).thenReturn(Optional.of(bookingRequest));
 
-            BookingRequestResponseDto result = bookingRequestService.setStatusBookingRequest(RequestStatus.APPROVED,
+            BookingRequestResponseDto result = bookingRequestService.setStatusBookingRequest(RequestStatus.ACCEPTED,
                     bookingRequest.getId(), host.getId());
 
-            assertEquals(RequestStatus.APPROVED, result.status());
+            assertEquals(RequestStatus.ACCEPTED, result.status());
             verify(requestRepository).save(bookingRequest);
         }
 
         @Test
-        void successAsRequester() {
+        void successAsHostRejecting() {
+            when(userRepository.findByIdAndDeletedAtIsNull(host.getId())).thenReturn(Optional.of(host));
+            when(requestRepository.findById(bookingRequest.getId())).thenReturn(Optional.of(bookingRequest));
+
+            BookingRequestResponseDto result = bookingRequestService.setStatusBookingRequest(RequestStatus.REJECTED,
+                    bookingRequest.getId(), host.getId());
+
+            assertEquals(RequestStatus.REJECTED, result.status());
+            verify(requestRepository).save(bookingRequest);
+        }
+
+        @Test
+        void failsIfHostCancels() {
+            when(userRepository.findByIdAndDeletedAtIsNull(host.getId())).thenReturn(Optional.of(host));
+            when(requestRepository.findById(bookingRequest.getId())).thenReturn(Optional.of(bookingRequest));
+
+            assertThrows(ResponseStatusException.class, () -> bookingRequestService
+                    .setStatusBookingRequest(RequestStatus.CANCELLED, bookingRequest.getId(), host.getId()));
+        }
+
+        @Test
+        void successAsRequesterCancelling() {
             when(userRepository.findByIdAndDeletedAtIsNull(requester.getId())).thenReturn(Optional.of(requester));
             when(requestRepository.findById(bookingRequest.getId())).thenReturn(Optional.of(bookingRequest));
 
@@ -182,6 +224,15 @@ public class BookingRequestServiceImplTest {
                     bookingRequest.getId(), requester.getId());
 
             assertEquals(RequestStatus.CANCELLED, result.status());
+        }
+
+        @Test
+        void failsIfRequesterAccepts() {
+            when(userRepository.findByIdAndDeletedAtIsNull(requester.getId())).thenReturn(Optional.of(requester));
+            when(requestRepository.findById(bookingRequest.getId())).thenReturn(Optional.of(bookingRequest));
+
+            assertThrows(ResponseStatusException.class, () -> bookingRequestService
+                    .setStatusBookingRequest(RequestStatus.ACCEPTED, bookingRequest.getId(), requester.getId()));
         }
 
         @Test
@@ -204,16 +255,26 @@ public class BookingRequestServiceImplTest {
             when(userRepository.findByIdAndDeletedAtIsNull(otherUser.getId())).thenReturn(Optional.of(otherUser));
             when(requestRepository.findById(bookingRequest.getId())).thenReturn(Optional.of(bookingRequest));
 
-            assertThrows(RuntimeException.class, () -> bookingRequestService
-                    .setStatusBookingRequest(RequestStatus.APPROVED, bookingRequest.getId(), otherUser.getId()));
+            assertThrows(ResponseStatusException.class, () -> bookingRequestService
+                    .setStatusBookingRequest(RequestStatus.ACCEPTED, bookingRequest.getId(), otherUser.getId()));
         }
 
         @Test
         void failsIfRequestNotFound() {
             when(userRepository.findByIdAndDeletedAtIsNull(host.getId())).thenReturn(Optional.of(host));
             when(requestRepository.findById(bookingRequest.getId())).thenReturn(Optional.empty());
-            assertThrows(RuntimeException.class, () -> bookingRequestService
-                    .setStatusBookingRequest(RequestStatus.APPROVED, bookingRequest.getId(), host.getId()));
+            assertThrows(ResponseStatusException.class, () -> bookingRequestService
+                    .setStatusBookingRequest(RequestStatus.ACCEPTED, bookingRequest.getId(), host.getId()));
+        }
+
+        @Test
+        void failsIfInvalidStateTransition() {
+            bookingRequest.setStatus(RequestStatus.ACCEPTED);
+            when(userRepository.findByIdAndDeletedAtIsNull(host.getId())).thenReturn(Optional.of(host));
+            when(requestRepository.findById(bookingRequest.getId())).thenReturn(Optional.of(bookingRequest));
+
+            assertThrows(ResponseStatusException.class, () -> bookingRequestService
+                    .setStatusBookingRequest(RequestStatus.REJECTED, bookingRequest.getId(), host.getId()));
         }
     }
 
@@ -258,7 +319,7 @@ public class BookingRequestServiceImplTest {
             when(userRepository.findByIdAndDeletedAtIsNull(otherUser.getId())).thenReturn(Optional.of(otherUser));
             when(requestRepository.findById(bookingRequest.getId())).thenReturn(Optional.of(bookingRequest));
 
-            assertThrows(RuntimeException.class,
+            assertThrows(ResponseStatusException.class,
                     () -> bookingRequestService.getBookingRequestById(bookingRequest.getId(), otherUser.getId()));
         }
     }
@@ -276,11 +337,12 @@ public class BookingRequestServiceImplTest {
         }
 
         @Test
+        @SuppressWarnings("unchecked")
         void getLandlordRequests() {
-            when(requestRepository.findByAccommodationListingHostId(eq(host.getId()), any(PageRequest.class)))
+            when(requestRepository.findAll(any(Specification.class), any(PageRequest.class)))
                     .thenReturn(new PageImpl<>(List.of(bookingRequest)));
 
-            Page<BookingRequestResponseDto> res = bookingRequestService.getLandlordBookingRequests(0, 10, host.getId());
+            Page<BookingRequestResponseDto> res = bookingRequestService.getLandlordBookingRequests(0, 10, host.getId(), listing.getId());
             assertEquals(1, res.getTotalElements());
         }
 

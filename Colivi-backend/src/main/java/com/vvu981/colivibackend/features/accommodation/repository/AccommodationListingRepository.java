@@ -32,4 +32,6 @@ public interface AccommodationListingRepository
 
         List<AccommodationListing> findByAccommodationIdAndDeletedAtIsNull(UUID accommodationId);
 
+        boolean existsByIdAndHostId(UUID listingId, UUID landlordId);
+
 }

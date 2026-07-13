@@ -3,6 +3,7 @@ package com.vvu981.colivibackend.features.bookingRequests.domain;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.time.LocalDate;
 import java.util.UUID;
@@ -20,10 +21,10 @@ public class BookingRequestTest {
     void testConstructorWithDto() {
         UUID listingId = UUID.randomUUID();
         BookingRequestDto dto = new BookingRequestDto(listingId, LocalDate.now().plusDays(10), 6, "Hello world");
-        
+
         User requester = new User();
         requester.setId(UUID.randomUUID());
-        
+
         AccommodationListing listing = new AccommodationListing();
         listing.setId(listingId);
 
@@ -61,7 +62,7 @@ public class BookingRequestTest {
         request.setStartDate(LocalDate.now());
         request.setDurationMonths(12);
         request.setMessage("Test message");
-        request.setStatus(RequestStatus.APPROVED);
+        request.setStatus(RequestStatus.ACCEPTED);
         request.onUpdate();
 
         BookingRequestResponseDto responseDto = new BookingRequestResponseDto(request);
@@ -93,5 +94,50 @@ public class BookingRequestTest {
         assertEquals(RequestStatus.PENDING, responseDto.status());
         assertNull(responseDto.createdAt());
         assertNull(responseDto.updatedAt());
+    }
+
+    @Test
+    void accept_ShouldChangeStatus_WhenPending() {
+        BookingRequest request = new BookingRequest();
+        request.setStatus(RequestStatus.PENDING);
+        request.accept();
+        assertEquals(RequestStatus.ACCEPTED, request.getStatus());
+    }
+
+    @Test
+    void reject_ShouldChangeStatus_WhenPending() {
+        BookingRequest request = new BookingRequest();
+        request.setStatus(RequestStatus.PENDING);
+        request.reject();
+        assertEquals(RequestStatus.REJECTED, request.getStatus());
+    }
+
+    @Test
+    void cancel_ShouldChangeStatus_WhenPending() {
+        BookingRequest request = new BookingRequest();
+        request.setStatus(RequestStatus.PENDING);
+        request.cancel();
+        assertEquals(RequestStatus.CANCELLED, request.getStatus());
+    }
+
+    @Test
+    void accept_ShouldThrowException_WhenNotPending() {
+        BookingRequest request = new BookingRequest();
+        request.setStatus(RequestStatus.ACCEPTED);
+        assertThrows(IllegalStateException.class, request::accept);
+    }
+
+    @Test
+    void reject_ShouldThrowException_WhenNotPending() {
+        BookingRequest request = new BookingRequest();
+        request.setStatus(RequestStatus.REJECTED);
+        assertThrows(IllegalStateException.class, request::reject);
+    }
+
+    @Test
+    void cancel_ShouldThrowException_WhenNotPending() {
+        BookingRequest request = new BookingRequest();
+        request.setStatus(RequestStatus.CANCELLED);
+        assertThrows(IllegalStateException.class, request::cancel);
     }
 }

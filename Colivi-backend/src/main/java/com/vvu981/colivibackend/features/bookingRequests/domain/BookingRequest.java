@@ -74,4 +74,27 @@ public class BookingRequest {
         this.message = requestDTO.message();
         this.status = RequestStatus.PENDING;
     }
+
+    // ─── Lógica de Dominio (Transiciones de Estado) ──────────────────────────────
+
+    public void accept() {
+        if (this.status != RequestStatus.PENDING) {
+            throw new IllegalStateException("Solo se pueden aceptar solicitudes pendientes.");
+        }
+        this.status = RequestStatus.ACCEPTED;
+    }
+
+    public void reject() {
+        if (this.status != RequestStatus.PENDING) {
+            throw new IllegalStateException("Solo se pueden rechazar solicitudes pendientes.");
+        }
+        this.status = RequestStatus.REJECTED;
+    }
+
+    public void cancel() {
+        if (this.status != RequestStatus.PENDING) {
+            throw new IllegalStateException("Solo se pueden cancelar solicitudes pendientes.");
+        }
+        this.status = RequestStatus.CANCELLED;
+    }
 }
