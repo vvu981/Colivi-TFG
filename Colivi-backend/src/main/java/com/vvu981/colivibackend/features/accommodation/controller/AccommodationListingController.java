@@ -23,7 +23,6 @@ import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingR
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingResponse;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingUpdateRequest;
 import com.vvu981.colivibackend.features.accommodation.service.AccommodationListingService;
-import com.vvu981.colivibackend.features.user.domain.User;
 
 import lombok.RequiredArgsConstructor;
 
@@ -48,19 +47,19 @@ public class AccommodationListingController {
     public ResponseEntity<AccommodationListingResponse> updateListing(
             @PathVariable("id") UUID listingId, // Atrapamos el ID desde la URL
             @RequestBody AccommodationListingUpdateRequest updateRequest, // Atrapamos los cambios del JSON
-            @AuthenticationPrincipal User currentUser) { // Atrapamos al usuario que navega
+            @AuthenticationPrincipal(expression = "id") UUID currentUserId) { // Atrapamos al usuario que navega
 
         AccommodationListingResponse updated = listingService.updateAccommodationListing(listingId, updateRequest,
-                currentUser);
+                currentUserId);
         return ResponseEntity.ok(updated);
     }
 
     @PostMapping
     public ResponseEntity<AccommodationListingResponse> createAccommodationListing(
             @RequestBody AccommodationListingRequest listingRequest,
-            @AuthenticationPrincipal User currentUser) {
+            @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
 
-        AccommodationListingResponse request = listingService.createAccommodationListing(listingRequest, currentUser);
+        AccommodationListingResponse request = listingService.createAccommodationListing(listingRequest, currentUserId);
 
         return ResponseEntity.ok(request);
     }
@@ -69,8 +68,8 @@ public class AccommodationListingController {
     @PatchMapping("/ban/{id}")
     public ResponseEntity<Void> banAccommodationListing(
             @PathVariable("id") UUID listingId,
-            @AuthenticationPrincipal User currentUser) {
-        listingService.banAccommodationListing(listingId, currentUser);
+            @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
+        listingService.banAccommodationListing(listingId, currentUserId);
 
         return ResponseEntity.noContent().build();
     }
@@ -79,33 +78,33 @@ public class AccommodationListingController {
     @PatchMapping("/unban/{id}")
     public ResponseEntity<Void> unBanAccommodationListing(
             @PathVariable("id") UUID listingId,
-            @AuthenticationPrincipal User currentUser) {
-        listingService.unBanAccommodationListing(listingId, currentUser);
+            @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
+        listingService.unBanAccommodationListing(listingId, currentUserId);
 
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/softDelete/{id}")
     public ResponseEntity<Void> softDeleteAccommodationListing(@PathVariable("id") UUID listingId,
-            @AuthenticationPrincipal User currentUser) {
-        listingService.deleteAccommodationListingSoft(listingId, currentUser);
+            @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
+        listingService.deleteAccommodationListingSoft(listingId, currentUserId);
         return ResponseEntity.noContent().build();
     }
 
     @PreAuthorize("hasAuthority('ADMIN')")
     @DeleteMapping("/hardDelete/{id}")
     public ResponseEntity<Void> hardDeleteAccommodationListing(@PathVariable("id") UUID listingId,
-            @AuthenticationPrincipal User currentUser) {
-        listingService.deleteAccommodationListingHard(listingId, currentUser);
+            @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
+        listingService.deleteAccommodationListingHard(listingId, currentUserId);
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/recover/{id}")
     public ResponseEntity<AccommodationListingResponse> recoverAccommodationListing(
             @PathVariable("id") UUID listingId,
-            @AuthenticationPrincipal User currentUser) {
+            @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
         AccommodationListingResponse listingResponse = listingService.recoverAccommodationListing(listingId,
-                currentUser);
+                currentUserId);
 
         return ResponseEntity.ok(listingResponse);
     }
@@ -119,8 +118,8 @@ public class AccommodationListingController {
 
     @PatchMapping("/status/{id}")
     public ResponseEntity<Void> changeStatus(@PathVariable("id") UUID listingId,
-            @RequestBody ListingStatus listingStatus, @AuthenticationPrincipal User currentUser) {
-        listingService.changeStatusListing(listingId, listingStatus, currentUser);
+            @RequestBody ListingStatus listingStatus, @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
+        listingService.changeStatusListing(listingId, listingStatus, currentUserId);
         return ResponseEntity.noContent().build();
 
     }

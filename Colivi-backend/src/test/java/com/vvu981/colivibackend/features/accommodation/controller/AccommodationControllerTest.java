@@ -3,6 +3,7 @@ package com.vvu981.colivibackend.features.accommodation.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vvu981.colivibackend.core.security.JwtTokenProvider;
 import com.vvu981.colivibackend.core.security.SecurityConfig;
+import com.vvu981.colivibackend.core.security.UserPrincipal;
 import com.vvu981.colivibackend.features.accommodation.domain.Accommodation;
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationVisibility;
 import com.vvu981.colivibackend.features.accommodation.domain.AmenityType;
@@ -21,7 +22,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationRequest;
@@ -36,6 +37,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -66,6 +68,7 @@ class AccommodationControllerTest {
         private ObjectMapper objectMapper;
 
         private User testUser;
+        private User adminUser;
         private AccommodationRequest request;
         private Accommodation accommodation;
 
@@ -75,6 +78,11 @@ class AccommodationControllerTest {
                 testUser.setId(UUID.randomUUID());
                 testUser.setEmail("test@colivi.com");
                 testUser.setRole(UserRole.USER);
+
+                adminUser = new User();
+                adminUser.setId(UUID.randomUUID());
+                adminUser.setEmail("admin@colivi.com");
+                adminUser.setRole(UserRole.ADMIN);
 
                 request = new AccommodationRequest(
                                 "Calle Gran Via 12",
@@ -93,13 +101,17 @@ class AccommodationControllerTest {
                 accommodation.setId(UUID.randomUUID());
         }
 
+        private UsernamePasswordAuthenticationToken buildAuth(User user) {
+                UserPrincipal principal = UserPrincipal.create(user);
+                return new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
+        }
+
         @Nested
         @DisplayName("GET /api/v1/accommodation")
         class GetCatalog {
 
                 @Test
                 @DisplayName("debe retornar 200 con el catálogo paginado")
-                @WithMockUser
                 void shouldReturnOkAndCatalog() throws Exception {
                         Page<AccommodationResponse> pageResult = new PageImpl<>(
                                         Collections.singletonList(
@@ -114,6 +126,7 @@ class AccommodationControllerTest {
                                         any())).thenReturn(pageResult);
 
                         mockMvc.perform(get("/api/v1/accommodation/me")
+                                        .with(authentication(buildAuth(testUser)))
                                         .param("ownerId", UUID.randomUUID().toString())
                                         .param("visibility", "AVAILABLE")
                                         .param("page", "0")
@@ -125,7 +138,6 @@ class AccommodationControllerTest {
 
                 @Test
                 @DisplayName("debe retornar 200 sin ownerId (parámetro opcional)")
-                @WithMockUser
                 void shouldReturnOkWithoutOwnerId() throws Exception {
                         Page<com.vvu981.colivibackend.features.accommodation.dto.AccommodationResponse> pageResult = new PageImpl<>(
                                         Collections.emptyList());
@@ -138,6 +150,7 @@ class AccommodationControllerTest {
                                         any())).thenReturn(pageResult);
 
                         mockMvc.perform(get("/api/v1/accommodation/me")
+                                        .with(authentication(buildAuth(testUser)))
                                         .param("visibility", "AVAILABLE")
                                         .param("page", "0")
                                         .param("size", "10"))
@@ -152,7 +165,6 @@ class AccommodationControllerTest {
 
                 @Test
                 @DisplayName("debe crear un alojamiento si está autenticado")
-                @WithMockUser(username = "test@colivi.com")
                 void shouldCreateAccommodationAndReturn201() throws Exception {
                         when(accommodationService.createAccommodation(any(AccommodationRequest.class), any()))
                                         .thenReturn(new com.vvu981.colivibackend.features.accommodation.dto.AccommodationResponse(
@@ -160,6 +172,7 @@ class AccommodationControllerTest {
 
                         mockMvc.perform(post("/api/v1/accommodation")
                                         .with(csrf())
+                                        .with(authentication(buildAuth(testUser)))
                                         .contentType(MediaType.APPLICATION_JSON)
                                         .content(objectMapper.writeValueAsString(request)))
                                         .andExpect(status().isCreated())
@@ -183,7 +196,6 @@ class AccommodationControllerTest {
 
                 @Test
                 @DisplayName("debe subir una imagen correctamente si está autenticado")
-                @WithMockUser(username = "test@colivi.com")
                 void shouldUploadImageSuccessfully() throws Exception {
                         org.springframework.mock.web.MockMultipartFile mockFile = new org.springframework.mock.web.MockMultipartFile(
                                         "file", "test.jpg", MediaType.IMAGE_JPEG_VALUE, "image content".getBytes());
@@ -195,7 +207,8 @@ class AccommodationControllerTest {
                         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
                                         .multipart("/api/v1/accommodation/{id}/images", accommodation.getId())
                                         .file(mockFile)
-                                        .with(csrf()))
+                                        .with(csrf())
+                                        .with(authentication(buildAuth(testUser))))
                                         .andExpect(status().isOk())
                                         .andExpect(jsonPath("$.address").value("Calle Gran Via 12"));
                 }
@@ -219,7 +232,6 @@ class AccommodationControllerTest {
         class UpdateAccommodation {
                 @Test
                 @DisplayName("debe actualizar el alojamiento si está autenticado")
-                @WithMockUser
                 void shouldUpdateSuccessfully() throws Exception {
                         when(accommodationService.updateAccommodation(eq(accommodation.getId()), any(), any()))
                                         .thenReturn(new com.vvu981.colivibackend.features.accommodation.dto.AccommodationResponse(
@@ -227,6 +239,7 @@ class AccommodationControllerTest {
 
                         mockMvc.perform(put("/api/v1/accommodation/{id}", accommodation.getId())
                                         .with(csrf())
+                                        .with(authentication(buildAuth(testUser)))
                                         .contentType(MediaType.APPLICATION_JSON)
                                         .content(objectMapper.writeValueAsString(request)))
                                         .andExpect(status().isOk())
@@ -239,13 +252,13 @@ class AccommodationControllerTest {
         class DeleteSoft {
                 @Test
                 @DisplayName("debe borrar lógicamente si está autenticado")
-                @WithMockUser
                 void shouldSoftDeleteSuccessfully() throws Exception {
                         when(accommodationService.deleteAccommodationSoft(eq(accommodation.getId()), any()))
                                         .thenReturn(new com.vvu981.colivibackend.features.accommodation.dto.AccommodationResponse(
                                                         accommodation));
 
                         mockMvc.perform(patch("/api/v1/accommodation/delete/{id}", accommodation.getId())
+                                        .with(authentication(buildAuth(testUser)))
                                         .with(csrf()))
                                         .andExpect(status().isOk())
                                         .andExpect(jsonPath("$.address").value("Calle Gran Via 12"));
@@ -257,9 +270,9 @@ class AccommodationControllerTest {
         class DeleteHard {
                 @Test
                 @DisplayName("debe borrar físicamente si está autenticado")
-                @WithMockUser(authorities = "ADMIN")
                 void shouldHardDeleteSuccessfully() throws Exception {
                         mockMvc.perform(delete("/api/v1/accommodation/hardDelete/{id}", accommodation.getId())
+                                        .with(authentication(buildAuth(adminUser)))
                                         .with(csrf()))
                                         .andExpect(status().isNoContent());
                 }
@@ -270,13 +283,13 @@ class AccommodationControllerTest {
         class GetAccommodationDetails {
                 @Test
                 @DisplayName("debe retornar los detalles del alojamiento")
-                @WithMockUser
                 void shouldGetSuccessfully() throws Exception {
                         when(accommodationService.getAccommodation(eq(accommodation.getId())))
                                         .thenReturn(new com.vvu981.colivibackend.features.accommodation.dto.AccommodationResponse(
                                                         accommodation));
 
-                        mockMvc.perform(get("/api/v1/accommodation/{id}", accommodation.getId()))
+                        mockMvc.perform(get("/api/v1/accommodation/{id}", accommodation.getId())
+                                        .with(authentication(buildAuth(testUser))))
                                         .andExpect(status().isOk())
                                         .andExpect(jsonPath("$.address").value("Calle Gran Via 12"));
                 }
@@ -287,7 +300,6 @@ class AccommodationControllerTest {
         class DeleteImage {
                 @Test
                 @DisplayName("debe borrar la imagen correctamente si está autenticado")
-                @WithMockUser
                 void shouldDeleteImageSuccessfully() throws Exception {
                         UUID imageId = UUID.randomUUID();
                         doNothing().when(accommodationService).removeImageFromAccommodation(eq(accommodation.getId()),
@@ -295,6 +307,7 @@ class AccommodationControllerTest {
 
                         mockMvc.perform(delete("/api/v1/accommodation/{id}/images/{imageId}", accommodation.getId(),
                                         imageId)
+                                        .with(authentication(buildAuth(testUser)))
                                         .with(csrf()))
                                         .andExpect(status().isNoContent());
 
@@ -308,7 +321,6 @@ class AccommodationControllerTest {
         class ReorderImages {
                 @Test
                 @DisplayName("debe reordenar las imágenes correctamente si está autenticado")
-                @WithMockUser
                 void shouldReorderImagesSuccessfully() throws Exception {
                         List<AccommodationImageOrderRequest> orderRequests = List.of(
                                         new AccommodationImageOrderRequest(UUID.randomUUID(), 1));
@@ -317,6 +329,7 @@ class AccommodationControllerTest {
                                                         accommodation));
 
                         mockMvc.perform(put("/api/v1/accommodation/{id}/images/order", accommodation.getId())
+                                        .with(authentication(buildAuth(testUser)))
                                         .with(csrf())
                                         .contentType(MediaType.APPLICATION_JSON)
                                         .content(objectMapper.writeValueAsString(orderRequests)))

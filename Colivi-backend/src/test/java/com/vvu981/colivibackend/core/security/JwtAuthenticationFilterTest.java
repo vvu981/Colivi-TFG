@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
+import com.vvu981.colivibackend.core.security.UserPrincipal;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
@@ -257,7 +258,7 @@ class JwtAuthenticationFilterTest {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             assertThat(auth).isNotNull();
             assertThat(auth.isAuthenticated()).isTrue();
-            assertThat(auth.getPrincipal()).isEqualTo(activeUser);
+            assertThat(((UserPrincipal) auth.getPrincipal()).getId()).isEqualTo(activeUser.getId());
             assertThat(auth.getAuthorities())
                     .extracting("authority")
                     .containsExactly("USER");
