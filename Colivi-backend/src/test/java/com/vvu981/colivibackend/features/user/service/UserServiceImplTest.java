@@ -1,7 +1,7 @@
 package com.vvu981.colivibackend.features.user.service;
 
 import com.vvu981.colivibackend.core.security.JwtTokenProvider;
-import com.vvu981.colivibackend.features.auth.service.EmailService;
+import com.vvu981.colivibackend.core.mail.service.EmailService;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
 import com.vvu981.colivibackend.features.user.dto.*;

@@ -21,6 +21,7 @@ import com.vvu981.colivibackend.features.bookingRequests.dto.BookingRequestDto;
 import com.vvu981.colivibackend.features.bookingRequests.dto.BookingRequestResponseDto;
 import com.vvu981.colivibackend.features.bookingRequests.repository.BookingRequestRepository;
 import com.vvu981.colivibackend.features.bookingRequests.repository.filters.BookingRequestFilter;
+import com.vvu981.colivibackend.core.mail.service.EmailService;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
@@ -35,6 +36,7 @@ public class BookingRequestServiceImpl implements BookingRequestService {
     private final BookingRequestRepository requestRepository;
     private final AccommodationListingRepository listingRepository;
     private final UserRepository userRepository;
+    private final EmailService emailService;
 
     private final List<BookingRequestFilter> bookingFilters;
 
@@ -69,6 +71,7 @@ public class BookingRequestServiceImpl implements BookingRequestService {
             UUID currentUser) {
         User currUser = findUser(currentUser);
         BookingRequest request = findById(requestId);
+        RequestStatus oldStatus = request.getStatus();
 
         try {
             processStatusChange(request, requestStatus, currUser);
@@ -77,6 +80,16 @@ public class BookingRequestServiceImpl implements BookingRequestService {
         }
 
         requestRepository.save(request);
+        
+        if (oldStatus == RequestStatus.PENDING && 
+           (request.getStatus() == RequestStatus.ACCEPTED || request.getStatus() == RequestStatus.REJECTED)) {
+            emailService.sendBookingStatusEmail(
+                request.getRequester().getEmail(),
+                request.getAccommodationListing().getTitle(),
+                request.getStatus() == RequestStatus.ACCEPTED
+            );
+        }
+        
         return new BookingRequestResponseDto(request);
     }
 

@@ -32,6 +32,7 @@ import com.vvu981.colivibackend.features.bookingRequests.dto.BookingRequestDto;
 import com.vvu981.colivibackend.features.bookingRequests.dto.BookingRequestResponseDto;
 import com.vvu981.colivibackend.features.bookingRequests.repository.BookingRequestRepository;
 import com.vvu981.colivibackend.features.bookingRequests.repository.filters.BookingRequestFilter;
+import com.vvu981.colivibackend.core.mail.service.EmailService;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
@@ -45,6 +46,8 @@ public class BookingRequestServiceImplTest {
     private AccommodationListingRepository listingRepository;
     @Mock
     private UserRepository userRepository;
+    @Mock
+    private EmailService emailService;
     @Mock
     private BookingRequestFilter mockFilter;
 
@@ -63,11 +66,12 @@ public class BookingRequestServiceImplTest {
     void setUp() {
         bookingFilters = List.of(mockFilter);
         bookingRequestService = new BookingRequestServiceImpl(requestRepository, listingRepository, userRepository,
-                bookingFilters);
+                emailService, bookingFilters);
 
         requester = new User();
         requester.setId(UUID.randomUUID());
         requester.setRole(UserRole.USER);
+        requester.setEmail("tenant@example.com");
 
         host = new User();
         host.setId(UUID.randomUUID());
@@ -81,6 +85,7 @@ public class BookingRequestServiceImplTest {
         listing.setId(UUID.randomUUID());
         listing.setHost(host);
         listing.setStatus(ListingStatus.AVAILABLE);
+        listing.setTitle("Nice Apartment");
 
         requestDto = new BookingRequestDto(listing.getId(), LocalDate.now().plusDays(5), 3, "Hello");
 
@@ -192,6 +197,7 @@ public class BookingRequestServiceImplTest {
 
             assertEquals(RequestStatus.ACCEPTED, result.status());
             verify(requestRepository).save(bookingRequest);
+            verify(emailService).sendBookingStatusEmail(requester.getEmail(), listing.getTitle(), true);
         }
 
         @Test
@@ -204,6 +210,7 @@ public class BookingRequestServiceImplTest {
 
             assertEquals(RequestStatus.REJECTED, result.status());
             verify(requestRepository).save(bookingRequest);
+            verify(emailService).sendBookingStatusEmail(requester.getEmail(), listing.getTitle(), false);
         }
 
         @Test

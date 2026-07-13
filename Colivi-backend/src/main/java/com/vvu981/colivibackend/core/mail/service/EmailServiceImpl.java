@@ -1,4 +1,4 @@
-package com.vvu981.colivibackend.features.auth.service;
+package com.vvu981.colivibackend.core.mail.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -60,6 +60,12 @@ public class EmailServiceImpl implements EmailService {
     @Value("${app.mail.reactivation-url}")
     private String reactivationUrlBase;
 
+    @Value("${app.mail.booking-accepted-subject}")
+    private String bookingAcceptedSubject;
+
+    @Value("${app.mail.booking-rejected-subject}")
+    private String bookingRejectedSubject;
+
     // ─── Implementación de la interfaz ────────────────────────────────────────
 
     /**
@@ -75,6 +81,12 @@ public class EmailServiceImpl implements EmailService {
     @Override
     public void sendReactivationEmail(String toEmail, String token) {
         SimpleMailMessage message = buildReactivationMessage(toEmail, token);
+        mailSender.send(message);
+    }
+
+    @Override
+    public void sendBookingStatusEmail(String toEmail, String listingTitle, boolean isAccepted) {
+        SimpleMailMessage message = buildBookingStatusMessage(toEmail, listingTitle, isAccepted);
         mailSender.send(message);
     }
 
@@ -127,5 +139,36 @@ public class EmailServiceImpl implements EmailService {
                 Este correo ha sido generado automáticamente. Por favor, no respondas a él.
                 © Colivi — Plataforma de alojamiento universitario
                 """.formatted(reactivationUrlBase, token);
+    }
+
+    private SimpleMailMessage buildBookingStatusMessage(String toEmail, String listingTitle, boolean isAccepted) {
+        SimpleMailMessage message = new SimpleMailMessage();
+
+        message.setFrom(fromAddress);
+        message.setTo(toEmail);
+        message.setSubject(isAccepted ? bookingAcceptedSubject : bookingRejectedSubject);
+        message.setText(buildBookingStatusBody(listingTitle, isAccepted));
+
+        return message;
+    }
+
+    private String buildBookingStatusBody(String listingTitle, boolean isAccepted) {
+        String statusText = isAccepted ? "ACEPTADA" : "RECHAZADA";
+        String extraMessage = isAccepted 
+            ? "El anfitrión ha aprobado tu solicitud. ¡Prepárate para tu próxima estancia!" 
+            : "Lamentablemente, el anfitrión no ha podido aprobar tu solicitud en esta ocasión.";
+
+        return """
+                Hola,
+
+                Tenemos novedades sobre tu solicitud de reserva para "%s".
+                Tu solicitud ha sido %s.
+
+                %s
+
+                ─────────────────────────────────────────────
+                Este correo ha sido generado automáticamente. Por favor, no respondas a él.
+                © Colivi — Plataforma de alojamiento universitario
+                """.formatted(listingTitle, statusText, extraMessage);
     }
 }

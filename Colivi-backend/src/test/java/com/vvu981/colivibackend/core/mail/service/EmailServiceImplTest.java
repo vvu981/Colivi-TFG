@@ -1,4 +1,4 @@
-package com.vvu981.colivibackend.features.auth.service;
+package com.vvu981.colivibackend.core.mail.service;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -31,6 +31,8 @@ class EmailServiceImplTest {
         ReflectionTestUtils.setField(emailService, "fromAddress", "noreply@colivi.com");
         ReflectionTestUtils.setField(emailService, "reactivationSubject", "Reactiva tu cuenta en Colivi");
         ReflectionTestUtils.setField(emailService, "reactivationUrlBase", "http://localhost:3000/reactivate?token=");
+        ReflectionTestUtils.setField(emailService, "bookingAcceptedSubject", "¡Tu reserva ha sido aceptada!");
+        ReflectionTestUtils.setField(emailService, "bookingRejectedSubject", "Actualización sobre tu solicitud de reserva");
     }
 
     @Test
@@ -80,5 +82,43 @@ class EmailServiceImplTest {
         verify(mailSender).send(messageCaptor.capture());
 
         assertThat(messageCaptor.getValue().getTo()).containsExactly("recipient@colivi.com");
+    }
+
+    @Test
+    @DisplayName("debe enviar correo de reserva aceptada con asunto y texto correctos")
+    void shouldSendBookingAcceptedEmail() {
+        String toEmail = "tenant@test.com";
+        String listingTitle = "Piso soleado en el centro";
+
+        emailService.sendBookingStatusEmail(toEmail, listingTitle, true);
+
+        ArgumentCaptor<SimpleMailMessage> messageCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(mailSender).send(messageCaptor.capture());
+
+        SimpleMailMessage capturedMessage = messageCaptor.getValue();
+        assertThat(capturedMessage.getTo()).containsExactly("tenant@test.com");
+        assertThat(capturedMessage.getSubject()).isEqualTo("¡Tu reserva ha sido aceptada!");
+        assertThat(capturedMessage.getText()).contains("ACEPTADA");
+        assertThat(capturedMessage.getText()).contains("Piso soleado en el centro");
+        assertThat(capturedMessage.getText()).contains("aprobado tu solicitud");
+    }
+
+    @Test
+    @DisplayName("debe enviar correo de reserva rechazada con asunto y texto correctos")
+    void shouldSendBookingRejectedEmail() {
+        String toEmail = "tenant2@test.com";
+        String listingTitle = "Habitación pequeña";
+
+        emailService.sendBookingStatusEmail(toEmail, listingTitle, false);
+
+        ArgumentCaptor<SimpleMailMessage> messageCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(mailSender).send(messageCaptor.capture());
+
+        SimpleMailMessage capturedMessage = messageCaptor.getValue();
+        assertThat(capturedMessage.getTo()).containsExactly("tenant2@test.com");
+        assertThat(capturedMessage.getSubject()).isEqualTo("Actualización sobre tu solicitud de reserva");
+        assertThat(capturedMessage.getText()).contains("RECHAZADA");
+        assertThat(capturedMessage.getText()).contains("Habitación pequeña");
+        assertThat(capturedMessage.getText()).contains("no ha podido aprobar tu solicitud");
     }
 }
