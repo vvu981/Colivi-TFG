@@ -132,6 +132,31 @@ public class BookingRequestServiceImplTest {
             assertThrows(RuntimeException.class,
                     () -> bookingRequestService.createBookingRequest(requestDto, requester.getId()));
         }
+
+        @Test
+        void failsIfUserDeleted() {
+            requester.setDeletedAt(LocalDateTime.now());
+            when(userRepository.findByIdAndDeletedAtIsNull(requester.getId())).thenReturn(Optional.of(requester));
+            assertThrows(RuntimeException.class,
+                    () -> bookingRequestService.createBookingRequest(requestDto, requester.getId()));
+        }
+
+        @Test
+        void failsIfListingBanned() {
+            when(userRepository.findByIdAndDeletedAtIsNull(requester.getId())).thenReturn(Optional.of(requester));
+            listing.setBannedAt(LocalDateTime.now());
+            when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
+            assertThrows(RuntimeException.class,
+                    () -> bookingRequestService.createBookingRequest(requestDto, requester.getId()));
+        }
+
+        @Test
+        void failsIfListingNotFound() {
+            when(userRepository.findByIdAndDeletedAtIsNull(requester.getId())).thenReturn(Optional.of(requester));
+            when(listingRepository.findById(listing.getId())).thenReturn(Optional.empty());
+            assertThrows(RuntimeException.class,
+                    () -> bookingRequestService.createBookingRequest(requestDto, requester.getId()));
+        }
     }
 
     @Nested
@@ -182,6 +207,14 @@ public class BookingRequestServiceImplTest {
             assertThrows(RuntimeException.class, () -> bookingRequestService
                     .setStatusBookingRequest(RequestStatus.APPROVED, bookingRequest.getId(), otherUser.getId()));
         }
+
+        @Test
+        void failsIfRequestNotFound() {
+            when(userRepository.findByIdAndDeletedAtIsNull(host.getId())).thenReturn(Optional.of(host));
+            when(requestRepository.findById(bookingRequest.getId())).thenReturn(Optional.empty());
+            assertThrows(RuntimeException.class, () -> bookingRequestService
+                    .setStatusBookingRequest(RequestStatus.APPROVED, bookingRequest.getId(), host.getId()));
+        }
     }
 
     @Nested
@@ -193,6 +226,26 @@ public class BookingRequestServiceImplTest {
 
             BookingRequestResponseDto result = bookingRequestService.getBookingRequestById(bookingRequest.getId(),
                     requester.getId());
+            assertNotNull(result);
+        }
+
+        @Test
+        void successAsHost() {
+            when(userRepository.findByIdAndDeletedAtIsNull(host.getId())).thenReturn(Optional.of(host));
+            when(requestRepository.findById(bookingRequest.getId())).thenReturn(Optional.of(bookingRequest));
+
+            BookingRequestResponseDto result = bookingRequestService.getBookingRequestById(bookingRequest.getId(),
+                    host.getId());
+            assertNotNull(result);
+        }
+
+        @Test
+        void successAsAdmin() {
+            when(userRepository.findByIdAndDeletedAtIsNull(admin.getId())).thenReturn(Optional.of(admin));
+            when(requestRepository.findById(bookingRequest.getId())).thenReturn(Optional.of(bookingRequest));
+
+            BookingRequestResponseDto result = bookingRequestService.getBookingRequestById(bookingRequest.getId(),
+                    admin.getId());
             assertNotNull(result);
         }
 
@@ -243,6 +296,20 @@ public class BookingRequestServiceImplTest {
 
             Page<BookingRequestResponseDto> res = bookingRequestService.getAllBookingRequestsForAdmin(filterDto, 0, 10);
             assertEquals(1, res.getTotalElements());
+        }
+
+        @Test
+        @SuppressWarnings("unchecked")
+        void getAllForAdminWhenFilterNotApplicable() {
+            BookingRequestAdminFilterDto filterDto = new BookingRequestAdminFilterDto(null, null, null, null, null);
+            when(mockFilter.isApplicable(filterDto)).thenReturn(false);
+
+            when(requestRepository.findAll(any(Specification.class), any(PageRequest.class)))
+                    .thenReturn(new PageImpl<>(List.of(bookingRequest)));
+
+            Page<BookingRequestResponseDto> res = bookingRequestService.getAllBookingRequestsForAdmin(filterDto, 0, 10);
+            assertEquals(1, res.getTotalElements());
+            verify(mockFilter, never()).buildSpecification(any());
         }
     }
 }
