@@ -43,7 +43,7 @@ public class BookingRequestController {
     }
 
     @PostMapping("/admin/{tenantId}")
-    @PreAuthorize("hasRole('ADMIN')") // Solo los administradores pueden tocar este endpoint
+    @PreAuthorize("hasAuthority('ADMIN')") // Solo los administradores pueden tocar este endpoint
     public ResponseEntity<BookingRequestResponseDto> createBookingRequestByAdmin(
             @RequestBody BookingRequestDto requestDto,
             @PathVariable("tenantId") UUID tenantId // Capturamos el ID del inquilino objetivo desde la URL
@@ -93,7 +93,7 @@ public class BookingRequestController {
     }
 
     @GetMapping("/admin")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<Page<BookingRequestResponseDto>> getAllRequestsForAdmin(
             BookingRequestAdminFilterDto filterDto,
             @RequestParam(defaultValue = "0") int page,
