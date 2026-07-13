@@ -24,6 +24,7 @@ import com.vvu981.colivibackend.features.accommodation.service.AccommodationList
 import com.vvu981.colivibackend.features.accommodation.service.AccommodationService;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
+import com.vvu981.colivibackend.features.user.repository.UserRepository;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -32,28 +33,35 @@ import org.springframework.security.access.prepost.PreAuthorize;
 public class AccommodationServiceImpl implements AccommodationService {
 
     private final AccommodationRepository accommodationRepository;
-
     private final IImageStorageService imageStorageService;
-
     private final AccommodationImageRepository accommodationImageRepository;
-
     private final AccommodationListingService listingService;
+    private final UserRepository userRepository;
 
     @org.springframework.beans.factory.annotation.Autowired
     public AccommodationServiceImpl(
             AccommodationRepository accommodationRepository,
             IImageStorageService imageStorageService,
             AccommodationImageRepository accommodationImageRepository,
-            @org.springframework.context.annotation.Lazy AccommodationListingService listingService) {
+            @org.springframework.context.annotation.Lazy AccommodationListingService listingService,
+            UserRepository userRepository) {
         this.accommodationRepository = accommodationRepository;
         this.imageStorageService = imageStorageService;
         this.accommodationImageRepository = accommodationImageRepository;
         this.listingService = listingService;
+        this.userRepository = userRepository;
+    }
+
+    private User getUser(UUID currentUserId) {
+        return userRepository.findById(currentUserId)
+                .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado"));
     }
 
     @Override
     @Transactional
-    public AccommodationResponse createAccommodation(AccommodationRequest accommodation, User owner) {
+    public AccommodationResponse createAccommodation(AccommodationRequest accommodation, UUID currentUserId) {
+        // En lugar de fetch, podemos usar getReferenceById si no requerimos leer datos:
+        User owner = userRepository.getReferenceById(currentUserId);
         Accommodation accommodationToCreate = new Accommodation(accommodation, owner);
 
         Accommodation accommodationSaved = accommodationRepository.save(accommodationToCreate);
@@ -63,8 +71,9 @@ public class AccommodationServiceImpl implements AccommodationService {
 
     @Override
     @Transactional
-    public AccommodationResponse deleteAccommodationSoft(UUID accommodationId, User currentUser) {
+    public AccommodationResponse deleteAccommodationSoft(UUID accommodationId, UUID currentUserId) {
         Accommodation accommodationToSoftDelete = findAccommodationByIdAndDeletedAtIsNull(accommodationId);
+        User currentUser = getUser(currentUserId);
         if (!canEdit(accommodationToSoftDelete, currentUser))
             throw new RuntimeException("Error: no puedes editar");
         accommodationToSoftDelete.setDeletedAt(LocalDateTime.now());
@@ -74,7 +83,7 @@ public class AccommodationServiceImpl implements AccommodationService {
                 .findListingsByAccommodationId(accommodationDeleted.getId());
 
         for (AccommodationListing listing : associatedListings) {
-            listingService.deleteAccommodationListingSoft(listing.getId(), currentUser);
+            listingService.deleteAccommodationListingSoft(listing.getId(), currentUserId);
         }
 
         return new AccommodationResponse(accommodationDeleted);
@@ -83,7 +92,7 @@ public class AccommodationServiceImpl implements AccommodationService {
     @Override
     @Transactional
     @PreAuthorize("hasAuthority('ADMIN')")
-    public void deleteAccommodationHard(UUID accommodationId, User currentUser) {
+    public void deleteAccommodationHard(UUID accommodationId, UUID currentUserId) {
 
         Accommodation accommodationToDelete = accommodationRepository.findById(accommodationId)
                 .orElseThrow(() -> new RuntimeException("Error: Accommodation not found."));
@@ -92,7 +101,7 @@ public class AccommodationServiceImpl implements AccommodationService {
                 .findListingsByAccommodationId(accommodationToDelete.getId());
 
         for (AccommodationListing listing : associatedListings) {
-            listingService.deleteAccommodationListingHard(listing.getId(), currentUser);
+            listingService.deleteAccommodationListingHard(listing.getId(), currentUserId);
         }
 
         accommodationRepository.delete(accommodationToDelete);
@@ -101,8 +110,9 @@ public class AccommodationServiceImpl implements AccommodationService {
 
     @Override
     @Transactional
-    public AccommodationResponse updateAccommodation(UUID id, AccommodationRequest dto, User currentUser) {
+    public AccommodationResponse updateAccommodation(UUID id, AccommodationRequest dto, UUID currentUserId) {
         Accommodation accommodationToUpdate = findAccommodationByIdAndDeletedAtIsNull(id);
+        User currentUser = getUser(currentUserId);
         if (!canEdit(accommodationToUpdate, currentUser))
             throw new RuntimeException("Error: no puedes editar");
 
@@ -118,7 +128,6 @@ public class AccommodationServiceImpl implements AccommodationService {
         accommodationToUpdate.setTotalRooms(dto.totalRooms());
         accommodationToUpdate.setUpdatedAt(LocalDateTime.now());
 
-        // EN LUGAR DE: accommodationToUpdate.setAmenities(dto.amenities());
         accommodationToUpdate.getAmenities().clear();
 
         if (dto.amenities() != null) {
@@ -131,8 +140,6 @@ public class AccommodationServiceImpl implements AccommodationService {
     @Override
     @Transactional(readOnly = true)
     public AccommodationResponse getAccommodation(UUID id) {
-        // CORREGIDO: Buscamos la entidad interna y la empaquetamos en el objeto de
-        // respuesta limpia
         Accommodation accommodation = findAccommodationByIdAndDeletedAtIsNull(id);
         return new AccommodationResponse(accommodation);
     }
@@ -140,8 +147,9 @@ public class AccommodationServiceImpl implements AccommodationService {
     @Override
     @Transactional(readOnly = true)
     public Page<AccommodationResponse> getMyAccommodations(UUID ownerId, AccommodationVisibility visibility,
-            int page, int size, User currentUser) {
+            int page, int size, UUID currentUserId) {
 
+        User currentUser = getUser(currentUserId);
         UUID searchId = ownerId;
 
         if (currentUser.getRole() != UserRole.ADMIN) {
@@ -158,8 +166,9 @@ public class AccommodationServiceImpl implements AccommodationService {
 
     @Override
     @Transactional
-    public AccommodationResponse addImageToAccommodation(UUID accommodationId, MultipartFile image, User currentUser) {
+    public AccommodationResponse addImageToAccommodation(UUID accommodationId, MultipartFile image, UUID currentUserId) {
         Accommodation accommodationToAdd = findAccommodationByIdAndDeletedAtIsNull(accommodationId);
+        User currentUser = getUser(currentUserId);
 
         if (!canEdit(accommodationToAdd, currentUser)) {
             throw new RuntimeException("Error: no tienes permiso para añadir imágenes");
@@ -182,8 +191,9 @@ public class AccommodationServiceImpl implements AccommodationService {
 
     @Override
     @Transactional
-    public void removeImageFromAccommodation(UUID accommodationId, UUID imageId, User currentUser) {
+    public void removeImageFromAccommodation(UUID accommodationId, UUID imageId, UUID currentUserId) {
         Accommodation accommodation = findAccommodationByIdAndDeletedAtIsNull(accommodationId);
+        User currentUser = getUser(currentUserId);
 
         if (!canEdit(accommodation, currentUser)) {
             throw new RuntimeException("Error: no tienes permiso para eliminar imágenes de este alojamiento");
@@ -207,15 +217,14 @@ public class AccommodationServiceImpl implements AccommodationService {
     @Override
     @Transactional
     public AccommodationResponse updateImagesOrder(UUID accommodationId,
-            List<AccommodationImageOrderRequest> orderRequests, User currentUser) {
+            List<AccommodationImageOrderRequest> orderRequests, UUID currentUserId) {
         Accommodation accommodation = findAccommodationByIdAndDeletedAtIsNull(accommodationId);
+        User currentUser = getUser(currentUserId);
 
         if (!canEdit(accommodation, currentUser)) {
             throw new RuntimeException("Error: no tienes permiso para modificar este alojamiento");
         }
 
-        // Recorremos las peticiones del frontend y actualizamos el orden en la lista
-        // interna
         for (AccommodationImageOrderRequest req : orderRequests) {
             accommodation.getImages().stream()
                     .filter(img -> img.getId().equals(req.imageId()))
@@ -234,10 +243,8 @@ public class AccommodationServiceImpl implements AccommodationService {
     }
 
     private boolean canEdit(Accommodation accommodationToUpdate, User currentUser) {
-
         boolean isOwner = accommodationToUpdate.getOwner().getId().equals(currentUser.getId());
         boolean isAdmin = currentUser.getRole() == UserRole.ADMIN;
-
         return isOwner || isAdmin;
     }
 

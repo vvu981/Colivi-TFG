@@ -23,13 +23,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import com.vvu981.colivibackend.core.security.UserPrincipal;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -100,8 +99,8 @@ class AccommodationListingControllerTest {
     }
 
     private UsernamePasswordAuthenticationToken buildAuth(User user) {
-        SimpleGrantedAuthority authority = new SimpleGrantedAuthority(user.getRole().name());
-        return new UsernamePasswordAuthenticationToken(user, null, Collections.singletonList(authority));
+        UserPrincipal principal = UserPrincipal.create(user);
+        return new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
     }
 
     @Nested
@@ -151,7 +150,7 @@ class AccommodationListingControllerTest {
                     accommodationId, "Cozy Room in Center", "Nice and warm room in city center",
                     BigDecimal.valueOf(450.0),
                     com.vvu981.colivibackend.features.accommodation.domain.RentalType.ENTIRE_PLACE);
-            when(listingService.createAccommodationListing(any(AccommodationListingRequest.class), any(User.class)))
+            when(listingService.createAccommodationListing(any(AccommodationListingRequest.class), any(UUID.class)))
                     .thenReturn(listingResponse);
 
             mockMvc.perform(post("/api/v1/listings")
@@ -185,7 +184,7 @@ class AccommodationListingControllerTest {
                     hostUser.getId(),
                     hostUser.getNickname());
             when(listingService.updateAccommodationListing(eq(listingId), any(AccommodationListingUpdateRequest.class),
-                    any(User.class)))
+                    any(UUID.class)))
                     .thenReturn(updatedResponse);
 
             mockMvc.perform(put("/api/v1/listings/{id}", listingId)
@@ -206,14 +205,14 @@ class AccommodationListingControllerTest {
         @DisplayName("debe banear el anuncio si es admin")
         @WithMockUser(authorities = "ADMIN")
         void shouldBanListing() throws Exception {
-            doNothing().when(listingService).banAccommodationListing(eq(listingId), any(User.class));
+            doNothing().when(listingService).banAccommodationListing(eq(listingId), any(UUID.class));
 
             mockMvc.perform(patch("/api/v1/listings/ban/{id}", listingId)
                     .with(csrf())
                     .with(authentication(buildAuth(adminUser))))
                     .andExpect(status().isNoContent());
 
-            verify(listingService, times(1)).banAccommodationListing(eq(listingId), any(User.class));
+            verify(listingService, times(1)).banAccommodationListing(eq(listingId), any(UUID.class));
         }
 
         @Test
@@ -234,7 +233,7 @@ class AccommodationListingControllerTest {
         @DisplayName("debe desbanear el anuncio si es admin")
         @WithMockUser(authorities = "ADMIN")
         void shouldUnbanListing() throws Exception {
-            doNothing().when(listingService).unBanAccommodationListing(eq(listingId), any(User.class));
+            doNothing().when(listingService).unBanAccommodationListing(eq(listingId), any(UUID.class));
 
             mockMvc.perform(patch("/api/v1/listings/unban/{id}", listingId)
                     .with(csrf())
@@ -259,7 +258,7 @@ class AccommodationListingControllerTest {
         @Test
         @DisplayName("debe marcar como borrado (soft delete)")
         void shouldSoftDeleteListing() throws Exception {
-            doNothing().when(listingService).deleteAccommodationListingSoft(eq(listingId), any(User.class));
+            doNothing().when(listingService).deleteAccommodationListingSoft(eq(listingId), any(UUID.class));
 
             mockMvc.perform(patch("/api/v1/listings/softDelete/{id}", listingId)
                     .with(csrf())
@@ -276,7 +275,7 @@ class AccommodationListingControllerTest {
         @DisplayName("debe eliminar el anuncio físicamente si es admin")
         @WithMockUser(authorities = "ADMIN")
         void shouldHardDeleteListing() throws Exception {
-            doNothing().when(listingService).deleteAccommodationListingHard(eq(listingId), any(User.class));
+            doNothing().when(listingService).deleteAccommodationListingHard(eq(listingId), any(UUID.class));
 
             mockMvc.perform(delete("/api/v1/listings/hardDelete/{id}", listingId)
                     .with(csrf())
@@ -302,7 +301,7 @@ class AccommodationListingControllerTest {
         @DisplayName("debe recuperar el anuncio si es admin")
         @WithMockUser(authorities = "ADMIN")
         void shouldRecoverListing() throws Exception {
-            when(listingService.recoverAccommodationListing(eq(listingId), any(User.class)))
+            when(listingService.recoverAccommodationListing(eq(listingId), any(UUID.class)))
                     .thenReturn(listingResponse);
 
             mockMvc.perform(patch("/api/v1/listings/recover/{id}", listingId)
@@ -315,7 +314,7 @@ class AccommodationListingControllerTest {
         @Test
         @DisplayName("debe arrojar excepcion si el servicio lanza error por no tener permisos")
         void shouldDenyRecoverIfNotOwnerOrAdmin() throws Exception {
-            when(listingService.recoverAccommodationListing(eq(listingId), any(User.class)))
+            when(listingService.recoverAccommodationListing(eq(listingId), any(UUID.class)))
                     .thenThrow(new RuntimeException("Error: no tienes permisos para esta accion."));
 
             org.assertj.core.api.Assertions

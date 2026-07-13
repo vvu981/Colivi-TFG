@@ -12,6 +12,7 @@ import com.vvu981.colivibackend.features.accommodation.repository.AccommodationI
 import com.vvu981.colivibackend.features.accommodation.service.Impl.AccommodationServiceImpl;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
+import com.vvu981.colivibackend.features.user.repository.UserRepository;
 import com.vvu981.colivibackend.core.storage.service.IImageStorageService;
 import org.springframework.web.multipart.MultipartFile;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,6 +50,9 @@ class AccommodationServiceImplTest {
 
         @Mock
         private AccommodationListingService listingService;
+
+        @Mock
+        private UserRepository userRepository;
 
         @InjectMocks
         private AccommodationServiceImpl accommodationService;
@@ -92,6 +96,13 @@ class AccommodationServiceImplTest {
                 accommodation = new Accommodation(request, owner);
                 accommodation.setId(UUID.randomUUID());
                 accommodation.setImages(new ArrayList<>());
+
+                lenient().when(userRepository.findById(owner.getId())).thenReturn(Optional.of(owner));
+                lenient().when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
+                lenient().when(userRepository.findById(otherUser.getId())).thenReturn(Optional.of(otherUser));
+                lenient().when(userRepository.getReferenceById(owner.getId())).thenReturn(owner);
+                lenient().when(userRepository.getReferenceById(admin.getId())).thenReturn(admin);
+                lenient().when(userRepository.getReferenceById(otherUser.getId())).thenReturn(otherUser);
         }
 
         @Nested
@@ -105,7 +116,7 @@ class AccommodationServiceImplTest {
                         when(accommodationRepository.save(any(Accommodation.class))).thenReturn(accommodation);
 
                         // Act
-                        AccommodationResponse result = accommodationService.createAccommodation(request, owner);
+                        AccommodationResponse result = accommodationService.createAccommodation(request, owner.getId());
 
                         // Assert
                         assertThat(result).isNotNull();
@@ -129,7 +140,7 @@ class AccommodationServiceImplTest {
 
                         // Act
                         AccommodationResponse result = accommodationService
-                                        .deleteAccommodationSoft(accommodation.getId(), owner);
+                                        .deleteAccommodationSoft(accommodation.getId(), owner.getId());
 
                         // Assert
                         assertThat(result).isNotNull();
@@ -147,7 +158,7 @@ class AccommodationServiceImplTest {
 
                         // Act
                         AccommodationResponse result = accommodationService
-                                        .deleteAccommodationSoft(accommodation.getId(), admin);
+                                        .deleteAccommodationSoft(accommodation.getId(), admin.getId());
 
                         // Assert
                         assertThat(result).isNotNull();
@@ -164,7 +175,7 @@ class AccommodationServiceImplTest {
 
                         // Act & Assert
                         assertThatThrownBy(() -> accommodationService.deleteAccommodationSoft(accommodation.getId(),
-                                        otherUser))
+                                        otherUser.getId()))
                                         .isInstanceOf(RuntimeException.class)
                                         .hasMessageContaining("no puedes editar");
                         verify(accommodationRepository, never()).save(any(Accommodation.class));
@@ -178,7 +189,7 @@ class AccommodationServiceImplTest {
                                         .thenReturn(Optional.empty());
 
                         // Act & Assert
-                        assertThatThrownBy(() -> accommodationService.deleteAccommodationSoft(UUID.randomUUID(), owner))
+                        assertThatThrownBy(() -> accommodationService.deleteAccommodationSoft(UUID.randomUUID(), owner.getId()))
                                         .isInstanceOf(RuntimeException.class)
                                         .hasMessageContaining("not found");
                         verify(accommodationRepository, never()).save(any(Accommodation.class));
@@ -197,7 +208,7 @@ class AccommodationServiceImplTest {
                                         .thenReturn(Optional.of(accommodation));
 
                         // Act
-                        accommodationService.deleteAccommodationHard(accommodation.getId(), admin);
+                        accommodationService.deleteAccommodationHard(accommodation.getId(), admin.getId());
 
                         // Assert
                         verify(accommodationRepository, times(1)).delete(accommodation);
@@ -211,7 +222,7 @@ class AccommodationServiceImplTest {
                                         .thenReturn(Optional.empty());
 
                         // Act & Assert
-                        assertThatThrownBy(() -> accommodationService.deleteAccommodationHard(UUID.randomUUID(), admin))
+                        assertThatThrownBy(() -> accommodationService.deleteAccommodationHard(UUID.randomUUID(), admin.getId()))
                                         .isInstanceOf(RuntimeException.class)
                                         .hasMessageContaining("Accommodation not found");
                         verify(accommodationRepository, never()).delete(any(Accommodation.class));
@@ -246,7 +257,7 @@ class AccommodationServiceImplTest {
                         // Act
                         AccommodationResponse result = accommodationService.updateAccommodation(accommodation.getId(),
                                         updateRequest,
-                                        owner);
+                                        owner.getId());
 
                         // Assert
                         assertThat(result).isNotNull();
@@ -266,7 +277,7 @@ class AccommodationServiceImplTest {
                         // Act & Assert
                         assertThatThrownBy(
                                         () -> accommodationService.updateAccommodation(accommodation.getId(), request,
-                                                        otherUser))
+                                                        otherUser.getId()))
                                         .isInstanceOf(RuntimeException.class)
                                         .hasMessageContaining("no puedes editar");
                         verify(accommodationRepository, never()).save(any(Accommodation.class));
@@ -282,7 +293,7 @@ class AccommodationServiceImplTest {
 
                         // Act
                         AccommodationResponse result = accommodationService.updateAccommodation(accommodation.getId(),
-                                        request, admin);
+                                        request, admin.getId());
 
                         // Assert
                         assertThat(result).isNotNull();
@@ -303,7 +314,7 @@ class AccommodationServiceImplTest {
 
                         // Act - no debe lanzar excepción
                         AccommodationResponse result = accommodationService.updateAccommodation(
-                                        accommodation.getId(), updateRequestNullAmenities, owner);
+                                        accommodation.getId(), updateRequestNullAmenities, owner.getId());
 
                         // Assert
                         assertThat(result).isNotNull();
@@ -320,7 +331,7 @@ class AccommodationServiceImplTest {
                         // Act & Assert
                         assertThatThrownBy(
                                         () -> accommodationService.updateAccommodation(UUID.randomUUID(), request,
-                                                        owner))
+                                                        owner.getId()))
                                         .isInstanceOf(RuntimeException.class)
                                         .hasMessageContaining("not found");
                 }
@@ -382,13 +393,39 @@ class AccommodationServiceImplTest {
                                         AccommodationVisibility.AVAILABLE,
                                         0,
                                         10,
-                                        owner);
+                                        owner.getId());
 
                         // Assert
                         assertThat(result).isNotNull();
                         assertThat(result.getContent()).hasSize(1);
                         verify(accommodationRepository, times(1)).findByFields(
                                         eq(owner.getId()),
+                                        eq("AVAILABLE"),
+                                        any(Pageable.class));
+                }
+
+                @Test
+                @DisplayName("debe buscar usando ownerId si el usuario es ADMIN")
+                void shouldSearchUsingOwnerIdIfAdmin() {
+                        List<Accommodation> list = Collections.singletonList(accommodation);
+                        Page<Accommodation> pageResult = new PageImpl<>(list);
+
+                        UUID specificOwnerId = UUID.randomUUID();
+                        when(accommodationRepository.findByFields(
+                                        eq(specificOwnerId),
+                                        eq("AVAILABLE"),
+                                        any(Pageable.class))).thenReturn(pageResult);
+
+                        Page<AccommodationResponse> result = accommodationService.getMyAccommodations(
+                                        specificOwnerId,
+                                        AccommodationVisibility.AVAILABLE,
+                                        0,
+                                        10,
+                                        admin.getId());
+
+                        assertThat(result).isNotNull();
+                        verify(accommodationRepository, times(1)).findByFields(
+                                        eq(specificOwnerId),
                                         eq("AVAILABLE"),
                                         any(Pageable.class));
                 }
@@ -411,7 +448,7 @@ class AccommodationServiceImplTest {
 
                         // Act
                         AccommodationResponse result = accommodationService
-                                        .addImageToAccommodation(accommodation.getId(), mockFile, owner);
+                                        .addImageToAccommodation(accommodation.getId(), mockFile, owner.getId());
 
                         // Assert
                         assertThat(result).isNotNull();
@@ -429,7 +466,7 @@ class AccommodationServiceImplTest {
 
                         // Act & Assert
                         assertThatThrownBy(() -> accommodationService.addImageToAccommodation(accommodation.getId(),
-                                        mockFile, otherUser))
+                                        mockFile, otherUser.getId()))
                                         .isInstanceOf(RuntimeException.class)
                                         .hasMessageContaining("no tienes permiso");
                         verify(imageStorageService, never()).uploadImage(any());
@@ -446,7 +483,7 @@ class AccommodationServiceImplTest {
 
                         // Act & Assert
                         assertThatThrownBy(() -> accommodationService.addImageToAccommodation(UUID.randomUUID(),
-                                        mockFile, owner))
+                                        mockFile, owner.getId()))
                                         .isInstanceOf(RuntimeException.class)
                                         .hasMessageContaining("not found");
                         verify(imageStorageService, never()).uploadImage(any());
@@ -474,7 +511,7 @@ class AccommodationServiceImplTest {
                                         .thenReturn(Optional.of(image));
 
                         // Act
-                        accommodationService.removeImageFromAccommodation(accommodation.getId(), image.getId(), owner);
+                        accommodationService.removeImageFromAccommodation(accommodation.getId(), image.getId(), owner.getId());
 
                         // Assert
                         assertThat(accommodation.getImages()).doesNotContain(image);
@@ -496,7 +533,7 @@ class AccommodationServiceImplTest {
                         when(accommodationImageRepository.findById(image.getId()))
                                         .thenReturn(Optional.of(image));
 
-                        accommodationService.removeImageFromAccommodation(accommodation.getId(), image.getId(), admin);
+                        accommodationService.removeImageFromAccommodation(accommodation.getId(), image.getId(), admin.getId());
 
                         assertThat(accommodation.getImages()).doesNotContain(image);
                         verify(imageStorageService, times(1)).deleteImage("http://secure-url.com/img.png");
@@ -509,7 +546,7 @@ class AccommodationServiceImplTest {
                                         .thenReturn(Optional.of(accommodation));
 
                         assertThatThrownBy(() -> accommodationService.removeImageFromAccommodation(
-                                        accommodation.getId(), UUID.randomUUID(), otherUser))
+                                        accommodation.getId(), UUID.randomUUID(), otherUser.getId()))
                                         .isInstanceOf(RuntimeException.class)
                                         .hasMessageContaining("no tienes permiso");
                 }
@@ -524,7 +561,7 @@ class AccommodationServiceImplTest {
                                         .thenReturn(Optional.empty());
 
                         assertThatThrownBy(() -> accommodationService
-                                        .removeImageFromAccommodation(accommodation.getId(), imgId, owner))
+                                        .removeImageFromAccommodation(accommodation.getId(), imgId, owner.getId()))
                                         .isInstanceOf(RuntimeException.class)
                                         .hasMessageContaining("no se ha podido obtener la imagen");
                 }
@@ -545,7 +582,7 @@ class AccommodationServiceImplTest {
                                         .thenReturn(Optional.of(image));
 
                         assertThatThrownBy(() -> accommodationService
-                                        .removeImageFromAccommodation(accommodation.getId(), image.getId(), owner))
+                                        .removeImageFromAccommodation(accommodation.getId(), image.getId(), owner.getId()))
                                         .isInstanceOf(RuntimeException.class)
                                         .hasMessageContaining("La imagen no pertenece al alojamiento especificado");
                 }
@@ -577,7 +614,7 @@ class AccommodationServiceImplTest {
                                         new AccommodationImageOrderRequest(img2.getId(), 1));
 
                         AccommodationResponse response = accommodationService.updateImagesOrder(accommodation.getId(),
-                                        orderRequests, owner);
+                                        orderRequests, owner.getId());
 
                         assertThat(response).isNotNull();
                         assertThat(img1.getDisplayOrder()).isEqualTo(2);
@@ -591,7 +628,7 @@ class AccommodationServiceImplTest {
                                         .thenReturn(Optional.of(accommodation));
 
                         assertThatThrownBy(() -> accommodationService.updateImagesOrder(accommodation.getId(),
-                                        List.of(), otherUser))
+                                        List.of(), otherUser.getId()))
                                         .isInstanceOf(RuntimeException.class)
                                         .hasMessageContaining("no tienes permiso");
                 }

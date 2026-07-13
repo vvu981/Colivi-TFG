@@ -25,6 +25,7 @@ import com.vvu981.colivibackend.features.accommodation.service.AccommodationList
 import com.vvu981.colivibackend.features.accommodation.service.AccommodationService;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
+import com.vvu981.colivibackend.features.user.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -35,13 +36,20 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
     private final AccommodationListingRepository listingRepository;
     private final ListingSpecificationBuilder specificationBuilder;
     private final AccommodationService accommodationService;
+    private final UserRepository userRepository;
+
+    private User getUser(UUID currentUserId) {
+        return userRepository.findById(currentUserId)
+                .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado"));
+    }
 
     public AccommodationListingResponse createAccommodationListing(
-            AccommodationListingRequest accommodationListingRequest, User currentUser) {
+            AccommodationListingRequest accommodationListingRequest, UUID currentUserId) {
 
         Accommodation accommodation = accommodationService
                 .findAccommodationByIdAndDeletedAtIsNull(accommodationListingRequest.accommodationId());
 
+        User currentUser = getUser(currentUserId);
         boolean isOwner = accommodation.getOwner().getId().equals(currentUser.getId());
         boolean isAdmin = isAdmin(currentUser);
 
@@ -59,8 +67,9 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
     }
 
     @Override
-    public void deleteAccommodationListingSoft(UUID accommodationId, User currentUser) {
+    public void deleteAccommodationListingSoft(UUID accommodationId, UUID currentUserId) {
         AccommodationListing accommodationListing = findAccommodationListingById(accommodationId);
+        User currentUser = getUser(currentUserId);
         if (!canEdit(accommodationListing, currentUser))
             throw new RuntimeException("Error: no puedes eliminar el anuncio con id: " + accommodationId + ".");
 
@@ -73,8 +82,9 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
     }
 
     @Override
-    public void deleteAccommodationListingHard(UUID accommodationId, User currentUser) {
+    public void deleteAccommodationListingHard(UUID accommodationId, UUID currentUserId) {
         AccommodationListing accommodationListing = findAccommodationListingById(accommodationId);
+        User currentUser = getUser(currentUserId);
         if (!isAdmin(currentUser))
             throw new RuntimeException("Error: no tienes permisos para esa accion.");
 
@@ -86,9 +96,10 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
     public AccommodationListingResponse updateAccommodationListing(
             UUID listingId,
             AccommodationListingUpdateRequest dto,
-            User currentUser) {
+            UUID currentUserId) {
 
         AccommodationListing listing = findAccommodationListingById(listingId);
+        User currentUser = getUser(currentUserId);
 
         if (!canEdit(listing, currentUser)) {
             throw new RuntimeException("Error: No tienes permiso para editar este anuncio");
@@ -104,7 +115,8 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
     }
 
     @Override
-    public void banAccommodationListing(UUID accommodationListingId, User currentUser) { // solo admin
+    public void banAccommodationListing(UUID accommodationListingId, UUID currentUserId) { // solo admin
+        User currentUser = getUser(currentUserId);
         if (!isAdmin(currentUser)) {
             throw new RuntimeException("Error: no tienes permisos");
         }
@@ -119,7 +131,8 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
     }
 
     @Override
-    public void unBanAccommodationListing(UUID accommodationListingId, User currentUser) { // solo admin
+    public void unBanAccommodationListing(UUID accommodationListingId, UUID currentUserId) { // solo admin
+        User currentUser = getUser(currentUserId);
         if (!isAdmin(currentUser)) {
             throw new RuntimeException("Error: no tienes permisos");
         }
@@ -147,8 +160,9 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
     }
 
     @Override
-    public AccommodationListingResponse recoverAccommodationListing(UUID accommodationId, User currentUser) {
+    public AccommodationListingResponse recoverAccommodationListing(UUID accommodationId, UUID currentUserId) {
         AccommodationListing accommodationListing = findAccommodationListingById(accommodationId);
+        User currentUser = getUser(currentUserId);
         if (!canEdit(accommodationListing, currentUser))
             throw new RuntimeException("Error: no tienes permisos para esta accion.");
 
@@ -173,7 +187,7 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
     }
 
     @Override
-    public Page<AccommodationListingResponse> getBannedAccommodationListings(int page, int size, User currentUser) {
+    public Page<AccommodationListingResponse> getBannedAccommodationListings(int page, int size, UUID currentUserId) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("bannedAt").descending());
 
         Page<AccommodationListing> bannedListings = listingRepository
@@ -183,11 +197,12 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
     }
 
     @Override
-    public void changeStatusListing(UUID accommodationId, ListingStatus listingStatus, User currentUser) {
+    public void changeStatusListing(UUID accommodationId, ListingStatus listingStatus, UUID currentUserId) {
         if (listingStatus.equals(ListingStatus.BANNED))
             throw new RuntimeException("Donde ibas pillin?");
 
         AccommodationListing accommodationListing = findAccommodationListingById(accommodationId);
+        User currentUser = getUser(currentUserId);
         if (!canEdit(accommodationListing, currentUser))
             throw new RuntimeException("Error: No tienes permiso para editar este anuncio");
 

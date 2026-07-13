@@ -11,29 +11,28 @@ import com.vvu981.colivibackend.features.accommodation.domain.AccommodationVisib
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationImageOrderRequest;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationRequest;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationResponse;
-import com.vvu981.colivibackend.features.user.domain.User;
 
 public interface AccommodationService {
 
-        AccommodationResponse createAccommodation(AccommodationRequest accommodation, User owner);
+        AccommodationResponse createAccommodation(AccommodationRequest accommodation, UUID currentUserId);
 
-        AccommodationResponse deleteAccommodationSoft(UUID accommodationId, User currentUser);
+        AccommodationResponse deleteAccommodationSoft(UUID accommodationId, UUID currentUserId);
 
-        void deleteAccommodationHard(UUID accommodationId, User currentUser); // solo admin
+        void deleteAccommodationHard(UUID accommodationId, UUID currentUserId); // solo admin
 
-        AccommodationResponse updateAccommodation(UUID id, AccommodationRequest dto, User currentUser);
+        AccommodationResponse updateAccommodation(UUID id, AccommodationRequest dto, UUID currentUserId);
 
         AccommodationResponse getAccommodation(UUID id);
 
         Page<AccommodationResponse> getMyAccommodations(UUID ownerId, AccommodationVisibility visibility, int page,
-                        int size, User currentUser);
+                        int size, UUID currentUserId);
 
-        AccommodationResponse addImageToAccommodation(UUID accommodationId, MultipartFile file, User currentUser);
+        AccommodationResponse addImageToAccommodation(UUID accommodationId, MultipartFile file, UUID currentUserId);
 
-        void removeImageFromAccommodation(UUID accommodationId, UUID imageId, User currentUser);
+        void removeImageFromAccommodation(UUID accommodationId, UUID imageId, UUID currentUserId);
 
         AccommodationResponse updateImagesOrder(UUID accommodationId,
-                        List<AccommodationImageOrderRequest> orderRequests, User currentUser);
+                        List<AccommodationImageOrderRequest> orderRequests, UUID currentUserId);
 
         Accommodation findAccommodationByIdAndDeletedAtIsNull(UUID id);
 }

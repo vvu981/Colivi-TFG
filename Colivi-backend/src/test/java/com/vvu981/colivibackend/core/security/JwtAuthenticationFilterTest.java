@@ -257,7 +257,7 @@ class JwtAuthenticationFilterTest {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             assertThat(auth).isNotNull();
             assertThat(auth.isAuthenticated()).isTrue();
-            assertThat(auth.getPrincipal()).isEqualTo(activeUser);
+            assertThat(((UserPrincipal) auth.getPrincipal()).getId()).isEqualTo(activeUser.getId());
             assertThat(auth.getAuthorities())
                     .extracting("authority")
                     .containsExactly("USER");

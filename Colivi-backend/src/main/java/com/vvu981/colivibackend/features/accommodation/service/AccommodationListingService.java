@@ -12,35 +12,34 @@ import com.vvu981.colivibackend.features.accommodation.domain.ListingStatus;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingRequest;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingResponse;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingUpdateRequest;
-import com.vvu981.colivibackend.features.user.domain.User;
 
 @Service
 public interface AccommodationListingService {
 
         AccommodationListingResponse createAccommodationListing(
                         AccommodationListingRequest accommodationListingRequest,
-                        User currentUser);
+                        UUID currentUserId);
 
         AccommodationListingResponse updateAccommodationListing(UUID listingId,
-                        AccommodationListingUpdateRequest updateAccommodationListing, User currentUser);
+                        AccommodationListingUpdateRequest updateAccommodationListing, UUID currentUserId);
 
         Page<AccommodationListingResponse> searchListings(Map<String, String> filters, int page, int size);
 
-        void banAccommodationListing(UUID accommodationListingId, User currentUser); // solo admin
+        void banAccommodationListing(UUID accommodationListingId, UUID currentUserId); // solo admin
 
-        void unBanAccommodationListing(UUID accommodationListingId, User currentUser); // solo admin
+        void unBanAccommodationListing(UUID accommodationListingId, UUID currentUserId); // solo admin
 
-        void deleteAccommodationListingSoft(UUID accommodationId, User currentUser);
+        void deleteAccommodationListingSoft(UUID accommodationId, UUID currentUserId);
 
-        void deleteAccommodationListingHard(UUID accommodationId, User currentUser); // solo admin
+        void deleteAccommodationListingHard(UUID accommodationId, UUID currentUserId); // solo admin
 
-        AccommodationListingResponse recoverAccommodationListing(UUID accommodationId, User currentUser); // solo admin
+        AccommodationListingResponse recoverAccommodationListing(UUID accommodationId, UUID currentUserId); // solo admin
 
-        Page<AccommodationListingResponse> getBannedAccommodationListings(int page, int size, User currentUser);
+        Page<AccommodationListingResponse> getBannedAccommodationListings(int page, int size, UUID currentUserId);
 
         AccommodationListingResponse getAccommodationListing(UUID accommodationId);
 
-        void changeStatusListing(UUID accommodationId, ListingStatus listingStatus, User currentUser);
+        void changeStatusListing(UUID accommodationId, ListingStatus listingStatus, UUID currentUserId);
 
         AccommodationListing findAccommodationListingById(UUID accommodationListingId);
 

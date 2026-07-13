@@ -12,6 +12,7 @@ import com.vvu981.colivibackend.features.accommodation.repository.specification.
 import com.vvu981.colivibackend.features.accommodation.service.Impl.AccommodationListingServiceImpl;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
+import com.vvu981.colivibackend.features.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -44,6 +45,9 @@ class AccommodationListingServiceImplTest {
 
     @Mock
     private AccommodationService accommodationService;
+
+    @Mock
+    private UserRepository userRepository;
 
     @InjectMocks
     private AccommodationListingServiceImpl listingServiceImpl;
@@ -84,6 +88,10 @@ class AccommodationListingServiceImplTest {
                 .status(ListingStatus.AVAILABLE)
                 .createdAt(LocalDateTime.now())
                 .build();
+
+        lenient().when(userRepository.findById(host.getId())).thenReturn(Optional.of(host));
+        lenient().when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
+        lenient().when(userRepository.findById(otherUser.getId())).thenReturn(Optional.of(otherUser));
     }
 
     @Nested
@@ -101,7 +109,7 @@ class AccommodationListingServiceImplTest {
             when(listingRepository.save(any(AccommodationListing.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
 
-            AccommodationListingResponse response = listingServiceImpl.createAccommodationListing(request, host);
+            AccommodationListingResponse response = listingServiceImpl.createAccommodationListing(request, host.getId());
 
             assertThat(response).isNotNull();
             assertThat(response.title()).isEqualTo("Title");
@@ -119,7 +127,7 @@ class AccommodationListingServiceImplTest {
             when(listingRepository.save(any(AccommodationListing.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
 
-            AccommodationListingResponse response = listingServiceImpl.createAccommodationListing(request, admin);
+            AccommodationListingResponse response = listingServiceImpl.createAccommodationListing(request, admin.getId());
 
             assertThat(response).isNotNull();
             verify(listingRepository, times(1)).save(any(AccommodationListing.class));
@@ -134,7 +142,7 @@ class AccommodationListingServiceImplTest {
             when(accommodationService.findAccommodationByIdAndDeletedAtIsNull(accommodation.getId()))
                     .thenReturn(accommodation);
 
-            assertThatThrownBy(() -> listingServiceImpl.createAccommodationListing(request, otherUser))
+            assertThatThrownBy(() -> listingServiceImpl.createAccommodationListing(request, otherUser.getId()))
                     .isInstanceOf(RuntimeException.class)
                     .hasMessageContaining("No tienes permisos para publicar un anuncio");
         }
@@ -149,7 +157,7 @@ class AccommodationListingServiceImplTest {
         void shouldSoftDeleteListing() {
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
-            listingServiceImpl.deleteAccommodationListingSoft(listing.getId(), host);
+            listingServiceImpl.deleteAccommodationListingSoft(listing.getId(), host.getId());
 
             assertThat(listing.getDeletedAt()).isNotNull();
             verify(listingRepository, times(1)).save(listing);
@@ -161,7 +169,7 @@ class AccommodationListingServiceImplTest {
             listing.setDeletedAt(LocalDateTime.now());
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
-            assertThatThrownBy(() -> listingServiceImpl.deleteAccommodationListingSoft(listing.getId(), host))
+            assertThatThrownBy(() -> listingServiceImpl.deleteAccommodationListingSoft(listing.getId(), host.getId()))
                     .isInstanceOf(RuntimeException.class)
                     .hasMessageContaining("ya esta eliminado");
         }
@@ -171,7 +179,7 @@ class AccommodationListingServiceImplTest {
         void shouldThrowIfNoPermissionToSoftDelete() {
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
-            assertThatThrownBy(() -> listingServiceImpl.deleteAccommodationListingSoft(listing.getId(), otherUser))
+            assertThatThrownBy(() -> listingServiceImpl.deleteAccommodationListingSoft(listing.getId(), otherUser.getId()))
                     .isInstanceOf(RuntimeException.class)
                     .hasMessageContaining("no puedes eliminar el anuncio");
         }
@@ -182,6 +190,7 @@ class AccommodationListingServiceImplTest {
             User ownerNotHost = new User();
             ownerNotHost.setId(accommodation.getOwner().getId()); // same owner
             ownerNotHost.setRole(UserRole.USER);
+            lenient().when(userRepository.findById(ownerNotHost.getId())).thenReturn(Optional.of(ownerNotHost));
 
             User distinctHost = new User();
             distinctHost.setId(UUID.randomUUID());
@@ -189,7 +198,7 @@ class AccommodationListingServiceImplTest {
 
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
-            assertThatThrownBy(() -> listingServiceImpl.deleteAccommodationListingSoft(listing.getId(), ownerNotHost))
+            assertThatThrownBy(() -> listingServiceImpl.deleteAccommodationListingSoft(listing.getId(), ownerNotHost.getId()))
                     .isInstanceOf(RuntimeException.class)
                     .hasMessageContaining("no puedes eliminar el anuncio");
         }
@@ -200,6 +209,7 @@ class AccommodationListingServiceImplTest {
             User hostNotOwner = new User();
             hostNotOwner.setId(listing.getHost().getId()); // same host
             hostNotOwner.setRole(UserRole.USER);
+            lenient().when(userRepository.findById(hostNotOwner.getId())).thenReturn(Optional.of(hostNotOwner));
 
             User distinctOwner = new User();
             distinctOwner.setId(UUID.randomUUID());
@@ -207,7 +217,7 @@ class AccommodationListingServiceImplTest {
 
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
-            assertThatThrownBy(() -> listingServiceImpl.deleteAccommodationListingSoft(listing.getId(), hostNotOwner))
+            assertThatThrownBy(() -> listingServiceImpl.deleteAccommodationListingSoft(listing.getId(), hostNotOwner.getId()))
                     .isInstanceOf(RuntimeException.class)
                     .hasMessageContaining("no puedes eliminar el anuncio");
         }
@@ -222,7 +232,7 @@ class AccommodationListingServiceImplTest {
         void shouldHardDeleteListingIfAdmin() {
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
-            listingServiceImpl.deleteAccommodationListingHard(listing.getId(), admin);
+            listingServiceImpl.deleteAccommodationListingHard(listing.getId(), admin.getId());
 
             verify(listingRepository, times(1)).delete(listing);
         }
@@ -232,7 +242,7 @@ class AccommodationListingServiceImplTest {
         void shouldThrowIfNotAdmin() {
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
-            assertThatThrownBy(() -> listingServiceImpl.deleteAccommodationListingHard(listing.getId(), host))
+            assertThatThrownBy(() -> listingServiceImpl.deleteAccommodationListingHard(listing.getId(), host.getId()))
                     .isInstanceOf(RuntimeException.class)
                     .hasMessageContaining("no tienes permisos para esa accion");
         }
@@ -252,7 +262,7 @@ class AccommodationListingServiceImplTest {
                     .thenAnswer(invocation -> invocation.getArgument(0));
 
             AccommodationListingResponse response = listingServiceImpl.updateAccommodationListing(listing.getId(),
-                    updateDto, host);
+                    updateDto, host.getId());
 
             assertThat(response.title()).isEqualTo("New Title");
             assertThat(response.description()).isEqualTo("New Desc");
@@ -267,7 +277,7 @@ class AccommodationListingServiceImplTest {
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
             assertThatThrownBy(
-                    () -> listingServiceImpl.updateAccommodationListing(listing.getId(), updateDto, otherUser))
+                    () -> listingServiceImpl.updateAccommodationListing(listing.getId(), updateDto, otherUser.getId()))
                     .isInstanceOf(RuntimeException.class)
                     .hasMessageContaining("No tienes permiso para editar este anuncio");
         }
@@ -282,7 +292,7 @@ class AccommodationListingServiceImplTest {
         void shouldBanListingIfAdmin() {
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
-            listingServiceImpl.banAccommodationListing(listing.getId(), admin);
+            listingServiceImpl.banAccommodationListing(listing.getId(), admin.getId());
 
             assertThat(listing.getStatus()).isEqualTo(ListingStatus.BANNED);
             verify(listingRepository, times(1)).save(listing);
@@ -294,7 +304,7 @@ class AccommodationListingServiceImplTest {
             listing.setStatus(ListingStatus.BANNED);
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
-            assertThatThrownBy(() -> listingServiceImpl.banAccommodationListing(listing.getId(), admin))
+            assertThatThrownBy(() -> listingServiceImpl.banAccommodationListing(listing.getId(), admin.getId()))
                     .isInstanceOf(RuntimeException.class)
                     .hasMessageContaining("ya está baneado");
         }
@@ -302,7 +312,7 @@ class AccommodationListingServiceImplTest {
         @Test
         @DisplayName("debe lanzar excepcion si no es admin")
         void shouldThrowIfNotAdminToBan() {
-            assertThatThrownBy(() -> listingServiceImpl.banAccommodationListing(listing.getId(), host))
+            assertThatThrownBy(() -> listingServiceImpl.banAccommodationListing(listing.getId(), host.getId()))
                     .isInstanceOf(RuntimeException.class)
                     .hasMessageContaining("no tienes permisos");
         }
@@ -319,7 +329,7 @@ class AccommodationListingServiceImplTest {
             listing.setPreviousStatus(ListingStatus.AVAILABLE);
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
-            listingServiceImpl.unBanAccommodationListing(listing.getId(), admin);
+            listingServiceImpl.unBanAccommodationListing(listing.getId(), admin.getId());
 
             assertThat(listing.getStatus()).isEqualTo(ListingStatus.AVAILABLE);
             verify(listingRepository, times(1)).save(listing);
@@ -330,7 +340,7 @@ class AccommodationListingServiceImplTest {
         void shouldThrowIfNotBanned() {
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
-            assertThatThrownBy(() -> listingServiceImpl.unBanAccommodationListing(listing.getId(), admin))
+            assertThatThrownBy(() -> listingServiceImpl.unBanAccommodationListing(listing.getId(), admin.getId()))
                     .isInstanceOf(RuntimeException.class)
                     .hasMessageContaining("este anuncio no está baneado");
         }
@@ -338,7 +348,7 @@ class AccommodationListingServiceImplTest {
         @Test
         @DisplayName("debe lanzar excepcion al intentar desbanear si no es admin")
         void shouldThrowIfNotAdminToUnban() {
-            assertThatThrownBy(() -> listingServiceImpl.unBanAccommodationListing(listing.getId(), host))
+            assertThatThrownBy(() -> listingServiceImpl.unBanAccommodationListing(listing.getId(), host.getId()))
                     .isInstanceOf(RuntimeException.class)
                     .hasMessageContaining("no tienes permisos");
         }
@@ -378,7 +388,7 @@ class AccommodationListingServiceImplTest {
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
             AccommodationListingResponse response = listingServiceImpl.recoverAccommodationListing(listing.getId(),
-                    admin);
+                    admin.getId());
 
             assertThat(listing.getDeletedAt()).isNull();
             assertThat(response.id()).isEqualTo(listing.getId());
@@ -391,7 +401,7 @@ class AccommodationListingServiceImplTest {
             listing.setDeletedAt(null);
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
-            assertThatThrownBy(() -> listingServiceImpl.recoverAccommodationListing(listing.getId(), admin))
+            assertThatThrownBy(() -> listingServiceImpl.recoverAccommodationListing(listing.getId(), admin.getId()))
                     .isInstanceOf(RuntimeException.class)
                     .hasMessageContaining("no esta eliminado");
         }
@@ -401,9 +411,32 @@ class AccommodationListingServiceImplTest {
         void shouldThrowIfNotOwnerOrAdminToRecover() {
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
-            assertThatThrownBy(() -> listingServiceImpl.recoverAccommodationListing(listing.getId(), otherUser))
+            assertThatThrownBy(() -> listingServiceImpl.recoverAccommodationListing(listing.getId(), otherUser.getId()))
                     .isInstanceOf(RuntimeException.class)
                     .hasMessageContaining("no tienes permisos para esta accion");
+        }
+
+        @Test
+        @DisplayName("debe lanzar excepcion si el anuncio esta baneado")
+        void shouldThrowIfListingIsBanned() {
+            listing.setDeletedAt(LocalDateTime.now());
+            listing.setBannedAt(LocalDateTime.now());
+            when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
+
+            assertThatThrownBy(() -> listingServiceImpl.recoverAccommodationListing(listing.getId(), admin.getId()))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("esta baneado");
+        }
+
+        @Test
+        @DisplayName("debe lanzar excepcion si se paso el tiempo de recuperacion")
+        void shouldThrowIfRecoveryTimePassed() {
+            listing.setDeletedAt(LocalDateTime.now().minusDays(8));
+            when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
+
+            assertThatThrownBy(() -> listingServiceImpl.recoverAccommodationListing(listing.getId(), admin.getId()))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("tiempo de recuperacion");
         }
     }
 
@@ -446,10 +479,69 @@ class AccommodationListingServiceImplTest {
                     .thenReturn(page);
 
             Page<AccommodationListingResponse> response = listingServiceImpl.getBannedAccommodationListings(0, 10,
-                    admin);
+                    admin.getId());
 
             assertThat(response).isNotNull();
             assertThat(response.getContent()).hasSize(1);
+        }
+    }
+    @Nested
+    @DisplayName("ChangeStatusListing")
+    class ChangeStatusListingTest {
+
+        @Test
+        @DisplayName("debe cambiar el estado correctamente si tiene permisos")
+        void shouldChangeStatus() {
+            when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
+
+            listingServiceImpl.changeStatusListing(listing.getId(), ListingStatus.UNAVAILABLE, host.getId());
+
+            assertThat(listing.getStatus()).isEqualTo(ListingStatus.UNAVAILABLE);
+            verify(listingRepository, times(1)).save(listing);
+        }
+
+        @Test
+        @DisplayName("debe lanzar excepcion si intenta cambiar a baneado")
+        void shouldThrowIfBannedRequested() {
+            assertThatThrownBy(() -> listingServiceImpl.changeStatusListing(listing.getId(), ListingStatus.BANNED, admin.getId()))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("Donde ibas pillin");
+        }
+
+        @Test
+        @DisplayName("debe lanzar excepcion si no tiene permisos")
+        void shouldThrowIfNoPermissions() {
+            when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
+
+            assertThatThrownBy(() -> listingServiceImpl.changeStatusListing(listing.getId(), ListingStatus.UNAVAILABLE, otherUser.getId()))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("No tienes permiso");
+        }
+
+        @Test
+        @DisplayName("debe lanzar excepcion si ya esta en ese estado")
+        void shouldThrowIfAlreadyInThatStatus() {
+            listing.setStatus(ListingStatus.UNAVAILABLE);
+            when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
+
+            assertThatThrownBy(() -> listingServiceImpl.changeStatusListing(listing.getId(), ListingStatus.UNAVAILABLE, host.getId()))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("ya esta UNAVAILABLE");
+        }
+    }
+
+    @Nested
+    @DisplayName("UserFailures")
+    class UserFailures {
+        @Test
+        @DisplayName("debe lanzar excepcion si el usuario no existe")
+        void shouldThrowIfUserNotFound() {
+            UUID nonExistentId = UUID.randomUUID();
+            when(userRepository.findById(nonExistentId)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> listingServiceImpl.banAccommodationListing(listing.getId(), nonExistentId))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("Usuario no encontrado");
         }
     }
 }
