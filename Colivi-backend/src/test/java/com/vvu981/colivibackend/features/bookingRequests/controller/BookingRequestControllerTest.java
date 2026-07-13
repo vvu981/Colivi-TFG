@@ -75,7 +75,7 @@ public class BookingRequestControllerTest {
         mockMvc.perform(post("/api/v1/booking-requests")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto)))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(requestId.toString()));
     }
 
@@ -87,7 +87,7 @@ public class BookingRequestControllerTest {
         mockMvc.perform(post("/api/v1/booking-requests/admin/{tenantId}", tenantId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDto)))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(requestId.toString()));
     }
 
