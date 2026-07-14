@@ -8,8 +8,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
+import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
+import com.vvu981.colivibackend.core.exception.ResourceNotFoundException;
+import com.vvu981.colivibackend.core.exception.UnauthorizedActionException;
 
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing;
 import com.vvu981.colivibackend.features.accommodation.domain.ListingStatus;
@@ -45,18 +46,18 @@ public class BookingRequestServiceImpl implements BookingRequestService {
         User currUser = findUser(currentUser);
 
         if (currUser.isBanned() || (currUser.getDeletedAt() != null))
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Error: estas baneado o eliminado.");
+            throw new UnauthorizedActionException("Error: estas baneado o eliminado.");
 
         AccommodationListing listing = findListingAssociated(requestDto.accommodationListingId());
         
         if (listing.getBannedAt() != null || listing.getDeletedAt() != null)
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Error: el anuncio esta eliminado o baneado.");
+            throw new BusinessRuleValidationException("Error: el anuncio esta eliminado o baneado.");
             
         if (listing.getStatus() != ListingStatus.AVAILABLE)
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Error: el anuncio no esta disponible actualmente.");
+            throw new BusinessRuleValidationException("Error: el anuncio no esta disponible actualmente.");
 
         if (currUser.getId().equals(listing.getHost().getId())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Error: no puedes solicitar una reserva en tu propio anuncio.");
+            throw new BusinessRuleValidationException("Error: no puedes solicitar una reserva en tu propio anuncio.");
         }
 
         BookingRequest requestToCreate = new BookingRequest(requestDto, currUser, listing);
@@ -76,7 +77,7 @@ public class BookingRequestServiceImpl implements BookingRequestService {
         try {
             processStatusChange(request, requestStatus, currUser);
         } catch (IllegalStateException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+            throw new BusinessRuleValidationException(e.getMessage());
         }
 
         requestRepository.save(request);
@@ -109,12 +110,12 @@ public class BookingRequestServiceImpl implements BookingRequestService {
             return;
         }
 
-        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Error: No tienes permiso para editar esta solicitud.");
+        throw new UnauthorizedActionException("Error: No tienes permiso para editar esta solicitud.");
     }
 
     private void handleTenantStatusChange(BookingRequest request, RequestStatus newStatus) {
         if (newStatus != RequestStatus.CANCELLED) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Error: como inquilino solo puedes cancelar la solicitud.");
+            throw new UnauthorizedActionException("Error: como inquilino solo puedes cancelar la solicitud.");
         }
         request.cancel();
     }
@@ -125,24 +126,23 @@ public class BookingRequestServiceImpl implements BookingRequestService {
         } else if (newStatus == RequestStatus.REJECTED) {
             request.reject();
         } else {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Error: como propietario solo puedes aceptar o rechazar la solicitud.");
+            throw new UnauthorizedActionException("Error: como propietario solo puedes aceptar o rechazar la solicitud.");
         }
     }
 
     private BookingRequest findById(UUID requestId) {
         return requestRepository.findById(requestId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Error: no se encuentra la solicitud con id:" + requestId));
+                .orElseThrow(() -> new ResourceNotFoundException("Error: no se encuentra la solicitud con id:" + requestId));
     }
 
     private AccommodationListing findListingAssociated(UUID listingId) {
         return listingRepository.findById(listingId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "Error: no se encuentra el anuncio con id: " + listingId));
+                .orElseThrow(() -> new ResourceNotFoundException("Error: no se encuentra el anuncio con id: " + listingId));
     }
 
     private User findUser(UUID currentUser) {
         return userRepository.findByIdAndDeletedAtIsNull(currentUser)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Error: no se encuentra el usuario con id: " + currentUser));
+                .orElseThrow(() -> new ResourceNotFoundException("Error: no se encuentra el usuario con id: " + currentUser));
     }
 
     @Override
@@ -155,7 +155,7 @@ public class BookingRequestServiceImpl implements BookingRequestService {
 
         if (!isAdmin && !currUser.getId().equals(listingOwner.getId())
                 && !currUser.getId().equals(requestOwner.getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Error: No tienes permiso para ver esta solicitud.");
+            throw new UnauthorizedActionException("Error: No tienes permiso para ver esta solicitud.");
         }
 
         BookingRequestResponseDto response = new BookingRequestResponseDto(request);

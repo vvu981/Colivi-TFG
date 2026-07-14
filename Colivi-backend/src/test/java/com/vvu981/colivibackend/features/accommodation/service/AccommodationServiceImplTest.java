@@ -26,6 +26,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
+import com.vvu981.colivibackend.core.exception.ResourceNotFoundException;
+import com.vvu981.colivibackend.core.exception.UnauthorizedActionException;
 
 import java.util.*;
 
@@ -176,7 +179,7 @@ class AccommodationServiceImplTest {
                         // Act & Assert
                         assertThatThrownBy(() -> accommodationService.deleteAccommodationSoft(accommodation.getId(),
                                         otherUser.getId()))
-                                        .isInstanceOf(RuntimeException.class)
+                                        .isInstanceOf(UnauthorizedActionException.class)
                                         .hasMessageContaining("no puedes editar");
                         verify(accommodationRepository, never()).save(any(Accommodation.class));
                 }
@@ -190,7 +193,7 @@ class AccommodationServiceImplTest {
 
                         // Act & Assert
                         assertThatThrownBy(() -> accommodationService.deleteAccommodationSoft(UUID.randomUUID(), owner.getId()))
-                                        .isInstanceOf(RuntimeException.class)
+                                        .isInstanceOf(ResourceNotFoundException.class)
                                         .hasMessageContaining("not found");
                         verify(accommodationRepository, never()).save(any(Accommodation.class));
                 }
@@ -223,7 +226,7 @@ class AccommodationServiceImplTest {
 
                         // Act & Assert
                         assertThatThrownBy(() -> accommodationService.deleteAccommodationHard(UUID.randomUUID(), admin.getId()))
-                                        .isInstanceOf(RuntimeException.class)
+                                        .isInstanceOf(ResourceNotFoundException.class)
                                         .hasMessageContaining("Accommodation not found");
                         verify(accommodationRepository, never()).delete(any(Accommodation.class));
                 }
@@ -278,7 +281,7 @@ class AccommodationServiceImplTest {
                         assertThatThrownBy(
                                         () -> accommodationService.updateAccommodation(accommodation.getId(), request,
                                                         otherUser.getId()))
-                                        .isInstanceOf(RuntimeException.class)
+                                        .isInstanceOf(UnauthorizedActionException.class)
                                         .hasMessageContaining("no puedes editar");
                         verify(accommodationRepository, never()).save(any(Accommodation.class));
                 }
@@ -332,7 +335,7 @@ class AccommodationServiceImplTest {
                         assertThatThrownBy(
                                         () -> accommodationService.updateAccommodation(UUID.randomUUID(), request,
                                                         owner.getId()))
-                                        .isInstanceOf(RuntimeException.class)
+                                        .isInstanceOf(ResourceNotFoundException.class)
                                         .hasMessageContaining("not found");
                 }
         }
@@ -366,7 +369,7 @@ class AccommodationServiceImplTest {
                         // Act & Assert
                         UUID randomId = UUID.randomUUID();
                         assertThatThrownBy(() -> accommodationService.getAccommodation(randomId))
-                                        .isInstanceOf(RuntimeException.class)
+                                        .isInstanceOf(ResourceNotFoundException.class)
                                         .hasMessageContaining("not found");
                 }
         }
@@ -467,7 +470,7 @@ class AccommodationServiceImplTest {
                         // Act & Assert
                         assertThatThrownBy(() -> accommodationService.addImageToAccommodation(accommodation.getId(),
                                         mockFile, otherUser.getId()))
-                                        .isInstanceOf(RuntimeException.class)
+                                        .isInstanceOf(UnauthorizedActionException.class)
                                         .hasMessageContaining("no tienes permiso");
                         verify(imageStorageService, never()).uploadImage(any());
                         verify(accommodationRepository, never()).save(any());
@@ -484,7 +487,7 @@ class AccommodationServiceImplTest {
                         // Act & Assert
                         assertThatThrownBy(() -> accommodationService.addImageToAccommodation(UUID.randomUUID(),
                                         mockFile, owner.getId()))
-                                        .isInstanceOf(RuntimeException.class)
+                                        .isInstanceOf(ResourceNotFoundException.class)
                                         .hasMessageContaining("not found");
                         verify(imageStorageService, never()).uploadImage(any());
                         verify(accommodationRepository, never()).save(any());
@@ -547,7 +550,7 @@ class AccommodationServiceImplTest {
 
                         assertThatThrownBy(() -> accommodationService.removeImageFromAccommodation(
                                         accommodation.getId(), UUID.randomUUID(), otherUser.getId()))
-                                        .isInstanceOf(RuntimeException.class)
+                                        .isInstanceOf(UnauthorizedActionException.class)
                                         .hasMessageContaining("no tienes permiso");
                 }
 
@@ -562,7 +565,7 @@ class AccommodationServiceImplTest {
 
                         assertThatThrownBy(() -> accommodationService
                                         .removeImageFromAccommodation(accommodation.getId(), imgId, owner.getId()))
-                                        .isInstanceOf(RuntimeException.class)
+                                        .isInstanceOf(ResourceNotFoundException.class)
                                         .hasMessageContaining("no se ha podido obtener la imagen");
                 }
 
@@ -583,7 +586,7 @@ class AccommodationServiceImplTest {
 
                         assertThatThrownBy(() -> accommodationService
                                         .removeImageFromAccommodation(accommodation.getId(), image.getId(), owner.getId()))
-                                        .isInstanceOf(RuntimeException.class)
+                                        .isInstanceOf(BusinessRuleValidationException.class)
                                         .hasMessageContaining("La imagen no pertenece al alojamiento especificado");
                 }
         }
@@ -629,7 +632,7 @@ class AccommodationServiceImplTest {
 
                         assertThatThrownBy(() -> accommodationService.updateImagesOrder(accommodation.getId(),
                                         List.of(), otherUser.getId()))
-                                        .isInstanceOf(RuntimeException.class)
+                                        .isInstanceOf(UnauthorizedActionException.class)
                                         .hasMessageContaining("no tienes permiso");
                 }
         }

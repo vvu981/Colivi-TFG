@@ -12,6 +12,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
+import com.vvu981.colivibackend.core.exception.ResourceNotFoundException;
+import com.vvu981.colivibackend.core.exception.UnauthorizedActionException;
 
 import com.vvu981.colivibackend.features.accommodation.domain.Accommodation;
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing;
@@ -40,7 +43,7 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
 
     private User getUser(UUID currentUserId) {
         return userRepository.findById(currentUserId)
-                .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Error: Usuario no encontrado"));
     }
 
     public AccommodationListingResponse createAccommodationListing(
@@ -54,7 +57,7 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
         boolean isAdmin = isAdmin(currentUser);
 
         if (!isOwner && !isAdmin) {
-            throw new RuntimeException("Error: No tienes permisos para publicar un anuncio en este alojamiento");
+            throw new UnauthorizedActionException("Error: No tienes permisos para publicar un anuncio en este alojamiento");
         }
 
         AccommodationListing accommodationListingToUpload = new AccommodationListing(accommodationListingRequest,
@@ -71,10 +74,10 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
         AccommodationListing accommodationListing = findAccommodationListingById(accommodationId);
         User currentUser = getUser(currentUserId);
         if (!canEdit(accommodationListing, currentUser))
-            throw new RuntimeException("Error: no puedes eliminar el anuncio con id: " + accommodationId + ".");
+            throw new UnauthorizedActionException("Error: no puedes eliminar el anuncio con id: " + accommodationId + ".");
 
         if (accommodationListing.getDeletedAt() != null)
-            throw new RuntimeException("Error: el anuncio con id: " + accommodationId + " ya esta eliminado.");
+            throw new BusinessRuleValidationException("Error: el anuncio con id: " + accommodationId + " ya esta eliminado.");
 
         accommodationListing.setDeletedAt(LocalDateTime.now());
         listingRepository.save(accommodationListing);
@@ -86,7 +89,7 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
         AccommodationListing accommodationListing = findAccommodationListingById(accommodationId);
         User currentUser = getUser(currentUserId);
         if (!isAdmin(currentUser))
-            throw new RuntimeException("Error: no tienes permisos para esa accion.");
+            throw new UnauthorizedActionException("Error: no tienes permisos para esa accion.");
 
         listingRepository.delete(accommodationListing);
     }
@@ -102,7 +105,7 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
         User currentUser = getUser(currentUserId);
 
         if (!canEdit(listing, currentUser)) {
-            throw new RuntimeException("Error: No tienes permiso para editar este anuncio");
+            throw new UnauthorizedActionException("Error: No tienes permiso para editar este anuncio");
         }
 
         listing.setTitle(dto.title());
@@ -118,12 +121,12 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
     public void banAccommodationListing(UUID accommodationListingId, UUID currentUserId) { // solo admin
         User currentUser = getUser(currentUserId);
         if (!isAdmin(currentUser)) {
-            throw new RuntimeException("Error: no tienes permisos");
+            throw new UnauthorizedActionException("Error: no tienes permisos");
         }
         AccommodationListing accommodationToBan = findAccommodationListingById(accommodationListingId);
 
         if (accommodationToBan.getStatus().equals(ListingStatus.BANNED))
-            throw new RuntimeException("Error: este anuncio ya está baneado.");
+            throw new BusinessRuleValidationException("Error: este anuncio ya está baneado.");
 
         accommodationToBan.ban();
 
@@ -134,12 +137,12 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
     public void unBanAccommodationListing(UUID accommodationListingId, UUID currentUserId) { // solo admin
         User currentUser = getUser(currentUserId);
         if (!isAdmin(currentUser)) {
-            throw new RuntimeException("Error: no tienes permisos");
+            throw new UnauthorizedActionException("Error: no tienes permisos");
         }
         AccommodationListing accommodationToUnBan = findAccommodationListingById(accommodationListingId);
 
         if (!accommodationToUnBan.getStatus().equals(ListingStatus.BANNED))
-            throw new RuntimeException("Error: este anuncio no está baneado.");
+            throw new BusinessRuleValidationException("Error: este anuncio no está baneado.");
 
         accommodationToUnBan.unBan();
 
@@ -164,16 +167,16 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
         AccommodationListing accommodationListing = findAccommodationListingById(accommodationId);
         User currentUser = getUser(currentUserId);
         if (!canEdit(accommodationListing, currentUser))
-            throw new RuntimeException("Error: no tienes permisos para esta accion.");
+            throw new UnauthorizedActionException("Error: no tienes permisos para esta accion.");
 
         if (accommodationListing.getDeletedAt() == null)
-            throw new RuntimeException("Error: el anuncio con id: " + accommodationId + " no esta eliminado.");
+            throw new BusinessRuleValidationException("Error: el anuncio con id: " + accommodationId + " no esta eliminado.");
 
         if (accommodationListing.getBannedAt() != null)
-            throw new RuntimeException("Error: el anuncio con id: " + accommodationId + " esta baneado.");
+            throw new BusinessRuleValidationException("Error: el anuncio con id: " + accommodationId + " esta baneado.");
 
         if (accommodationListing.getDeletedAt().plusDays(7).isBefore(LocalDateTime.now()))
-            throw new RuntimeException("Error: se te ha pasado el tiempo de recuperacion.");
+            throw new BusinessRuleValidationException("Error: se te ha pasado el tiempo de recuperacion.");
 
         accommodationListing.setDeletedAt(null);
         listingRepository.save(accommodationListing);
@@ -199,15 +202,15 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
     @Override
     public void changeStatusListing(UUID accommodationId, ListingStatus listingStatus, UUID currentUserId) {
         if (listingStatus.equals(ListingStatus.BANNED))
-            throw new RuntimeException("Donde ibas pillin?");
+            throw new UnauthorizedActionException("Donde ibas pillin?");
 
         AccommodationListing accommodationListing = findAccommodationListingById(accommodationId);
         User currentUser = getUser(currentUserId);
         if (!canEdit(accommodationListing, currentUser))
-            throw new RuntimeException("Error: No tienes permiso para editar este anuncio");
+            throw new UnauthorizedActionException("Error: No tienes permiso para editar este anuncio");
 
         if (accommodationListing.getStatus().equals(listingStatus))
-            throw new RuntimeException("Error: Este anuncio ya esta " + listingStatus.toString());
+            throw new BusinessRuleValidationException("Error: Este anuncio ya esta " + listingStatus.toString());
 
         accommodationListing.setStatus(listingStatus);
         listingRepository.save(accommodationListing);
@@ -216,7 +219,7 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
     @Override
     public AccommodationListing findAccommodationListingById(UUID accommodationListingId) {
         AccommodationListing accommodationListing = listingRepository.findById(accommodationListingId)
-                .orElseThrow(() -> new RuntimeException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "Error: no se encuentra el anuncio con id: " + accommodationListingId + "."));
         return accommodationListing;
     }

@@ -23,6 +23,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
+import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
+import com.vvu981.colivibackend.core.exception.UnauthorizedActionException;
+import com.vvu981.colivibackend.features.user.exception.InvalidTokenException;
+import com.vvu981.colivibackend.features.user.exception.UserNotFoundException;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -107,8 +111,8 @@ class UserServiceImplTest {
                 }
 
                 @Test
-                @DisplayName("usuario no encontrado lanza RuntimeException con mensaje genérico")
-                void givenNonExistentEmail_whenLogin_thenThrowsRuntimeException() {
+                @DisplayName("usuario no encontrado lanza UnauthorizedActionException con mensaje genérico")
+                void givenNonExistentEmail_whenLogin_thenThrowsUnauthorizedActionException() {
                         // Arrange
                         LoginRequest request = new LoginRequest("ghost@colivi.com", "password123");
                         when(userRepository.findByEmailAndDeletedAtIsNull("ghost@colivi.com"))
@@ -116,13 +120,13 @@ class UserServiceImplTest {
 
                         // Act & Assert
                         assertThatThrownBy(() -> userService.login(request))
-                                        .isInstanceOf(RuntimeException.class)
+                                        .isInstanceOf(UnauthorizedActionException.class)
                                         .hasMessageContaining("Credenciales inválidas");
                 }
 
                 @Test
-                @DisplayName("contraseña incorrecta lanza RuntimeException con mensaje genérico")
-                void givenWrongPassword_whenLogin_thenThrowsRuntimeException() {
+                @DisplayName("contraseña incorrecta lanza UnauthorizedActionException con mensaje genérico")
+                void givenWrongPassword_whenLogin_thenThrowsUnauthorizedActionException() {
                         // Arrange
                         LoginRequest request = new LoginRequest("victor@colivi.com", "wrong_password");
                         when(userRepository.findByEmailAndDeletedAtIsNull("victor@colivi.com"))
@@ -132,7 +136,7 @@ class UserServiceImplTest {
 
                         // Act & Assert
                         assertThatThrownBy(() -> userService.login(request))
-                                        .isInstanceOf(RuntimeException.class)
+                                        .isInstanceOf(UnauthorizedActionException.class)
                                         .hasMessageContaining("Credenciales inválidas");
 
                         // Garantizamos que no se generaron tokens
@@ -204,23 +208,23 @@ class UserServiceImplTest {
                 }
 
                 @Test
-                @DisplayName("email duplicado lanza RuntimeException")
-                void givenDuplicateEmail_whenRegister_thenThrowsRuntimeException() {
+                @DisplayName("email duplicado lanza BusinessRuleValidationException")
+                void givenDuplicateEmail_whenRegister_thenThrowsBusinessRuleValidationException() {
                         // Arrange
                         when(userRepository.findByEmailAndDeletedAtIsNull("nuevo@colivi.com"))
                                         .thenReturn(Optional.of(persistedUser));
 
                         // Act & Assert
                         assertThatThrownBy(() -> userService.register(validRequest))
-                                        .isInstanceOf(RuntimeException.class)
+                                        .isInstanceOf(BusinessRuleValidationException.class)
                                         .hasMessageContaining("email ya está registrado");
 
                         verify(userRepository, never()).save(any());
                 }
 
                 @Test
-                @DisplayName("nickname duplicado lanza RuntimeException")
-                void givenDuplicateNickname_whenRegister_thenThrowsRuntimeException() {
+                @DisplayName("nickname duplicado lanza BusinessRuleValidationException")
+                void givenDuplicateNickname_whenRegister_thenThrowsBusinessRuleValidationException() {
                         // Arrange
                         when(userRepository.findByEmailAndDeletedAtIsNull("nuevo@colivi.com"))
                                         .thenReturn(Optional.empty());
@@ -229,7 +233,7 @@ class UserServiceImplTest {
 
                         // Act & Assert
                         assertThatThrownBy(() -> userService.register(validRequest))
-                                        .isInstanceOf(RuntimeException.class)
+                                        .isInstanceOf(BusinessRuleValidationException.class)
                                         .hasMessageContaining("apodo ya está en uso");
 
                         verify(userRepository, never()).save(any());
@@ -286,23 +290,23 @@ class UserServiceImplTest {
                 }
 
                 @Test
-                @DisplayName("refresh token inválido o expirado lanza RuntimeException")
-                void givenInvalidRefreshToken_whenRefresh_thenThrowsRuntimeException() {
+                @DisplayName("refresh token inválido o expirado lanza InvalidTokenException")
+                void givenInvalidRefreshToken_whenRefresh_thenThrowsInvalidTokenException() {
                         // Arrange
                         RefreshTokenRequest request = new RefreshTokenRequest("expired.or.invalid.token");
                         when(jwtTokenProvider.isTokenValid("expired.or.invalid.token")).thenReturn(false);
 
                         // Act & Assert
                         assertThatThrownBy(() -> userService.refreshToken(request))
-                                        .isInstanceOf(RuntimeException.class)
+                                        .isInstanceOf(InvalidTokenException.class)
                                         .hasMessageContaining("inválido o caducado");
 
                         verifyNoInteractions(userRepository);
                 }
 
                 @Test
-                @DisplayName("usuario del refresh token no existe en BD lanza RuntimeException")
-                void givenTokenWithNonExistentUser_whenRefresh_thenThrowsRuntimeException() {
+                @DisplayName("usuario del refresh token no existe en BD lanza UserNotFoundException")
+                void givenTokenWithNonExistentUser_whenRefresh_thenThrowsUserNotFoundException() {
                         // Arrange
                         RefreshTokenRequest request = new RefreshTokenRequest("valid.token.dead.user");
                         when(jwtTokenProvider.isTokenValid("valid.token.dead.user")).thenReturn(true);
@@ -312,7 +316,7 @@ class UserServiceImplTest {
 
                         // Act & Assert
                         assertThatThrownBy(() -> userService.refreshToken(request))
-                                        .isInstanceOf(RuntimeException.class)
+                                        .isInstanceOf(UserNotFoundException.class)
                                         .hasMessageContaining("Usuario no encontrado");
                 }
 
@@ -360,8 +364,8 @@ class UserServiceImplTest {
                 }
 
                 @Test
-                @DisplayName("usuario no encontrado lanza RuntimeException")
-                void givenNonExistentUserId_whenSetAdmin_thenThrowsRuntimeException() {
+                @DisplayName("usuario no encontrado lanza UserNotFoundException")
+                void givenNonExistentUserId_whenSetAdmin_thenThrowsUserNotFoundException() {
                         // Arrange
                         UUID unknownId = UUID.randomUUID();
                         when(userRepository.findByIdAndDeletedAtIsNull(unknownId))
@@ -369,7 +373,7 @@ class UserServiceImplTest {
 
                         // Act & Assert
                         assertThatThrownBy(() -> userService.setAdmin(unknownId))
-                                        .isInstanceOf(RuntimeException.class)
+                                        .isInstanceOf(UserNotFoundException.class)
                                         .hasMessageContaining("Usuario no encontrado");
 
                         verify(userRepository, never()).save(any());
@@ -422,8 +426,8 @@ class UserServiceImplTest {
                  * donde la condición estaba invertida (matches en lugar de !matches).
                  */
                 @Test
-                @DisplayName("contraseña actual INCORRECTA lanza RuntimeException")
-                void givenWrongCurrentPassword_whenUpdateSensible_thenThrowsRuntimeException() {
+                @DisplayName("contraseña actual INCORRECTA lanza UnauthorizedActionException")
+                void givenWrongCurrentPassword_whenUpdateSensible_thenThrowsUnauthorizedActionException() {
                         // Arrange
                         UpdateSensible request = new UpdateSensible("wrong_current", "new@email.com", null);
                         when(userRepository.findByIdAndDeletedAtIsNull(persistedUser.getId()))
@@ -433,7 +437,7 @@ class UserServiceImplTest {
 
                         // Act & Assert
                         assertThatThrownBy(() -> userService.updateSensibleData(persistedUser.getId(), request))
-                                        .isInstanceOf(RuntimeException.class)
+                                        .isInstanceOf(UnauthorizedActionException.class)
                                         .hasMessageContaining("contraseña es incorrecta");
 
                         verify(userRepository, never()).save(any());
@@ -563,8 +567,8 @@ class UserServiceImplTest {
                 }
 
                 @Test
-                @DisplayName("usuario no encontrado lanza RuntimeException y no persiste nada")
-                void givenNonExistentUserId_whenDeleteUserSoft_thenThrowsRuntimeException() {
+                @DisplayName("usuario no encontrado lanza UserNotFoundException y no persiste nada")
+                void givenNonExistentUserId_whenDeleteUserSoft_thenThrowsUserNotFoundException() {
                         // Arrange
                         UUID unknownId = UUID.randomUUID();
                         when(userRepository.findByIdAndDeletedAtIsNull(unknownId))
@@ -572,7 +576,7 @@ class UserServiceImplTest {
 
                         // Act & Assert
                         assertThatThrownBy(() -> userService.deleteUserSoft(unknownId))
-                                        .isInstanceOf(RuntimeException.class)
+                                        .isInstanceOf(UserNotFoundException.class)
                                         .hasMessageContaining("Usuario no encontrado");
 
                         verify(userRepository, never()).save(any());
@@ -604,8 +608,8 @@ class UserServiceImplTest {
                 }
 
                 @Test
-                @DisplayName("usuario no encontrado lanza RuntimeException y no elimina nada")
-                void givenNonExistentUserId_whenDeleteUserHard_thenThrowsRuntimeException() {
+                @DisplayName("usuario no encontrado lanza UserNotFoundException y no elimina nada")
+                void givenNonExistentUserId_whenDeleteUserHard_thenThrowsUserNotFoundException() {
                         // Arrange
                         UUID unknownId = UUID.randomUUID();
                         when(userRepository.findByIdAndDeletedAtIsNull(unknownId))
@@ -613,7 +617,7 @@ class UserServiceImplTest {
 
                         // Act & Assert
                         assertThatThrownBy(() -> userService.deleteUserHard(unknownId))
-                                        .isInstanceOf(RuntimeException.class)
+                                        .isInstanceOf(UserNotFoundException.class)
                                         .hasMessageContaining("Usuario no encontrado");
 
                         verify(userRepository, never()).delete(any());
@@ -647,8 +651,8 @@ class UserServiceImplTest {
                 }
 
                 @Test
-                @DisplayName("usuario no encontrado lanza RuntimeException")
-                void givenNonExistentUser_whenLogout_thenThrowsRuntimeException() {
+                @DisplayName("usuario no encontrado lanza UserNotFoundException")
+                void givenNonExistentUser_whenLogout_thenThrowsUserNotFoundException() {
                         // Arrange
                         UUID unknownId = UUID.randomUUID();
                         when(userRepository.findByIdAndDeletedAtIsNull(unknownId))
@@ -656,7 +660,7 @@ class UserServiceImplTest {
 
                         // Act & Assert
                         assertThatThrownBy(() -> userService.logout(unknownId))
-                                        .isInstanceOf(RuntimeException.class)
+                                        .isInstanceOf(UserNotFoundException.class)
                                         .hasMessageContaining("Usuario no encontrado");
 
                         verify(userRepository, never()).save(any());

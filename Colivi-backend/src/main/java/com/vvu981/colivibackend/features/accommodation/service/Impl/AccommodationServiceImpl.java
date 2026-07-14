@@ -28,6 +28,9 @@ import com.vvu981.colivibackend.features.user.repository.UserRepository;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.access.prepost.PreAuthorize;
+import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
+import com.vvu981.colivibackend.core.exception.ResourceNotFoundException;
+import com.vvu981.colivibackend.core.exception.UnauthorizedActionException;
 
 @Service
 public class AccommodationServiceImpl implements AccommodationService {
@@ -54,7 +57,7 @@ public class AccommodationServiceImpl implements AccommodationService {
 
     private User getUser(UUID currentUserId) {
         return userRepository.findById(currentUserId)
-                .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Error: Usuario no encontrado"));
     }
 
     @Override
@@ -75,7 +78,7 @@ public class AccommodationServiceImpl implements AccommodationService {
         Accommodation accommodationToSoftDelete = findAccommodationByIdAndDeletedAtIsNull(accommodationId);
         User currentUser = getUser(currentUserId);
         if (!canEdit(accommodationToSoftDelete, currentUser))
-            throw new RuntimeException("Error: no puedes editar");
+            throw new UnauthorizedActionException("Error: no puedes editar");
         accommodationToSoftDelete.setDeletedAt(LocalDateTime.now());
         Accommodation accommodationDeleted = accommodationRepository.save(accommodationToSoftDelete);
 
@@ -95,7 +98,7 @@ public class AccommodationServiceImpl implements AccommodationService {
     public void deleteAccommodationHard(UUID accommodationId, UUID currentUserId) {
 
         Accommodation accommodationToDelete = accommodationRepository.findById(accommodationId)
-                .orElseThrow(() -> new RuntimeException("Error: Accommodation not found."));
+                .orElseThrow(() -> new ResourceNotFoundException("Error: Accommodation not found."));
 
         List<AccommodationListing> associatedListings = listingService
                 .findListingsByAccommodationId(accommodationToDelete.getId());
@@ -114,7 +117,7 @@ public class AccommodationServiceImpl implements AccommodationService {
         Accommodation accommodationToUpdate = findAccommodationByIdAndDeletedAtIsNull(id);
         User currentUser = getUser(currentUserId);
         if (!canEdit(accommodationToUpdate, currentUser))
-            throw new RuntimeException("Error: no puedes editar");
+            throw new UnauthorizedActionException("Error: no puedes editar");
 
         accommodationToUpdate.setAddress(dto.address());
         accommodationToUpdate.setCity(dto.city());
@@ -171,7 +174,7 @@ public class AccommodationServiceImpl implements AccommodationService {
         User currentUser = getUser(currentUserId);
 
         if (!canEdit(accommodationToAdd, currentUser)) {
-            throw new RuntimeException("Error: no tienes permiso para añadir imágenes");
+            throw new UnauthorizedActionException("Error: no tienes permiso para añadir imágenes");
         }
 
         String secureUrl = imageStorageService.uploadImage(image);
@@ -196,15 +199,15 @@ public class AccommodationServiceImpl implements AccommodationService {
         User currentUser = getUser(currentUserId);
 
         if (!canEdit(accommodation, currentUser)) {
-            throw new RuntimeException("Error: no tienes permiso para eliminar imágenes de este alojamiento");
+            throw new UnauthorizedActionException("Error: no tienes permiso para eliminar imágenes de este alojamiento");
         }
 
         AccommodationImage imageToDelete = accommodationImageRepository.findById(imageId)
-                .orElseThrow(() -> new RuntimeException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "Error: no se ha podido obtener la imagen a eliminar con el id: " + imageId + "."));
 
         if (!imageToDelete.getAccommodation().getId().equals(accommodationId)) {
-            throw new RuntimeException("Error: La imagen no pertenece al alojamiento especificado");
+            throw new BusinessRuleValidationException("Error: La imagen no pertenece al alojamiento especificado");
         }
 
         imageStorageService.deleteImage(imageToDelete.getImageUrl());
@@ -222,7 +225,7 @@ public class AccommodationServiceImpl implements AccommodationService {
         User currentUser = getUser(currentUserId);
 
         if (!canEdit(accommodation, currentUser)) {
-            throw new RuntimeException("Error: no tienes permiso para modificar este alojamiento");
+            throw new UnauthorizedActionException("Error: no tienes permiso para modificar este alojamiento");
         }
 
         for (AccommodationImageOrderRequest req : orderRequests) {
@@ -239,7 +242,7 @@ public class AccommodationServiceImpl implements AccommodationService {
     @Override
     public Accommodation findAccommodationByIdAndDeletedAtIsNull(UUID id) {
         return accommodationRepository.findByIdAndDeletedAtIsNull(id)
-                .orElseThrow(() -> new RuntimeException("Error: Accommodation with id: " + id + " not found."));
+                .orElseThrow(() -> new ResourceNotFoundException("Error: Accommodation with id: " + id + " not found."));
     }
 
     private boolean canEdit(Accommodation accommodationToUpdate, User currentUser) {

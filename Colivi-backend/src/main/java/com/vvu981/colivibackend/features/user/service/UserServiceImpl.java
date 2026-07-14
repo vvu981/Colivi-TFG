@@ -12,6 +12,8 @@ import com.vvu981.colivibackend.features.user.exception.StaleSessionException;
 import com.vvu981.colivibackend.features.user.exception.UserNotFoundException;
 import com.vvu981.colivibackend.features.user.mapper.UserMapper;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
+import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
+import com.vvu981.colivibackend.core.exception.UnauthorizedActionException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -42,10 +44,10 @@ public class UserServiceImpl implements UserService {
     @Override
     public AuthResponse login(LoginRequest loginRequest) {
         User user = userRepository.findByEmailAndDeletedAtIsNull(loginRequest.email())
-                .orElseThrow(() -> new RuntimeException("Error: Credenciales inválidas."));
+                .orElseThrow(() -> new UnauthorizedActionException("Error: Credenciales inválidas."));
 
         if (!passwordEncoder.matches(loginRequest.password(), user.getPasswordHash())) {
-            throw new RuntimeException("Error: Credenciales inválidas.");
+            throw new UnauthorizedActionException("Error: Credenciales inválidas.");
         }
 
         String accessToken = jwtTokenProvider.generateAccessToken(user);
@@ -58,11 +60,11 @@ public class UserServiceImpl implements UserService {
     public AuthResponse register(RegisterRequest request) {
 
         if (userRepository.findByEmailAndDeletedAtIsNull(request.email()).isPresent()) {
-            throw new RuntimeException("Error: El email ya está registrado");
+            throw new BusinessRuleValidationException("Error: El email ya está registrado");
         }
 
         if (userRepository.findByNicknameAndDeletedAtIsNull(request.nickname()).isPresent()) {
-            throw new RuntimeException("Error: El apodo ya está en uso");
+            throw new BusinessRuleValidationException("Error: El apodo ya está en uso");
         }
 
         User newUser = new User();
@@ -140,7 +142,7 @@ public class UserServiceImpl implements UserService {
         User currentUser = getActiveUserById(userId);
 
         if (!passwordEncoder.matches(updateSensible.currentPassword(), currentUser.getPasswordHash()))
-            throw new RuntimeException("Error: la contraseña es incorrecta");
+            throw new UnauthorizedActionException("Error: la contraseña es incorrecta");
 
         boolean isModified = false;
 
@@ -162,7 +164,7 @@ public class UserServiceImpl implements UserService {
 
     private User getActiveUserById(UUID userId) {
         return userRepository.findByIdAndDeletedAtIsNull(userId)
-                .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado"));
+                .orElseThrow(() -> new UserNotFoundException("Error: Usuario no encontrado"));
     }
 
     @Override

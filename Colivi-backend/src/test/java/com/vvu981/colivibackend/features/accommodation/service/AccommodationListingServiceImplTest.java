@@ -23,6 +23,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
+import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
+import com.vvu981.colivibackend.core.exception.ResourceNotFoundException;
+import com.vvu981.colivibackend.core.exception.UnauthorizedActionException;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -143,7 +146,7 @@ class AccommodationListingServiceImplTest {
                     .thenReturn(accommodation);
 
             assertThatThrownBy(() -> listingServiceImpl.createAccommodationListing(request, otherUser.getId()))
-                    .isInstanceOf(RuntimeException.class)
+                    .isInstanceOf(UnauthorizedActionException.class)
                     .hasMessageContaining("No tienes permisos para publicar un anuncio");
         }
     }
@@ -170,7 +173,7 @@ class AccommodationListingServiceImplTest {
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
             assertThatThrownBy(() -> listingServiceImpl.deleteAccommodationListingSoft(listing.getId(), host.getId()))
-                    .isInstanceOf(RuntimeException.class)
+                    .isInstanceOf(BusinessRuleValidationException.class)
                     .hasMessageContaining("ya esta eliminado");
         }
 
@@ -180,7 +183,7 @@ class AccommodationListingServiceImplTest {
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
             assertThatThrownBy(() -> listingServiceImpl.deleteAccommodationListingSoft(listing.getId(), otherUser.getId()))
-                    .isInstanceOf(RuntimeException.class)
+                    .isInstanceOf(UnauthorizedActionException.class)
                     .hasMessageContaining("no puedes eliminar el anuncio");
         }
 
@@ -199,7 +202,7 @@ class AccommodationListingServiceImplTest {
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
             assertThatThrownBy(() -> listingServiceImpl.deleteAccommodationListingSoft(listing.getId(), ownerNotHost.getId()))
-                    .isInstanceOf(RuntimeException.class)
+                    .isInstanceOf(UnauthorizedActionException.class)
                     .hasMessageContaining("no puedes eliminar el anuncio");
         }
 
@@ -218,7 +221,7 @@ class AccommodationListingServiceImplTest {
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
             assertThatThrownBy(() -> listingServiceImpl.deleteAccommodationListingSoft(listing.getId(), hostNotOwner.getId()))
-                    .isInstanceOf(RuntimeException.class)
+                    .isInstanceOf(UnauthorizedActionException.class)
                     .hasMessageContaining("no puedes eliminar el anuncio");
         }
     }
@@ -243,7 +246,7 @@ class AccommodationListingServiceImplTest {
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
             assertThatThrownBy(() -> listingServiceImpl.deleteAccommodationListingHard(listing.getId(), host.getId()))
-                    .isInstanceOf(RuntimeException.class)
+                    .isInstanceOf(UnauthorizedActionException.class)
                     .hasMessageContaining("no tienes permisos para esa accion");
         }
     }
@@ -278,7 +281,7 @@ class AccommodationListingServiceImplTest {
 
             assertThatThrownBy(
                     () -> listingServiceImpl.updateAccommodationListing(listing.getId(), updateDto, otherUser.getId()))
-                    .isInstanceOf(RuntimeException.class)
+                    .isInstanceOf(UnauthorizedActionException.class)
                     .hasMessageContaining("No tienes permiso para editar este anuncio");
         }
     }
@@ -305,7 +308,7 @@ class AccommodationListingServiceImplTest {
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
             assertThatThrownBy(() -> listingServiceImpl.banAccommodationListing(listing.getId(), admin.getId()))
-                    .isInstanceOf(RuntimeException.class)
+                    .isInstanceOf(BusinessRuleValidationException.class)
                     .hasMessageContaining("ya está baneado");
         }
 
@@ -313,7 +316,7 @@ class AccommodationListingServiceImplTest {
         @DisplayName("debe lanzar excepcion si no es admin")
         void shouldThrowIfNotAdminToBan() {
             assertThatThrownBy(() -> listingServiceImpl.banAccommodationListing(listing.getId(), host.getId()))
-                    .isInstanceOf(RuntimeException.class)
+                    .isInstanceOf(UnauthorizedActionException.class)
                     .hasMessageContaining("no tienes permisos");
         }
     }
@@ -341,7 +344,7 @@ class AccommodationListingServiceImplTest {
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
             assertThatThrownBy(() -> listingServiceImpl.unBanAccommodationListing(listing.getId(), admin.getId()))
-                    .isInstanceOf(RuntimeException.class)
+                    .isInstanceOf(BusinessRuleValidationException.class)
                     .hasMessageContaining("este anuncio no está baneado");
         }
 
@@ -349,7 +352,7 @@ class AccommodationListingServiceImplTest {
         @DisplayName("debe lanzar excepcion al intentar desbanear si no es admin")
         void shouldThrowIfNotAdminToUnban() {
             assertThatThrownBy(() -> listingServiceImpl.unBanAccommodationListing(listing.getId(), host.getId()))
-                    .isInstanceOf(RuntimeException.class)
+                    .isInstanceOf(UnauthorizedActionException.class)
                     .hasMessageContaining("no tienes permisos");
         }
     }
@@ -402,7 +405,7 @@ class AccommodationListingServiceImplTest {
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
             assertThatThrownBy(() -> listingServiceImpl.recoverAccommodationListing(listing.getId(), admin.getId()))
-                    .isInstanceOf(RuntimeException.class)
+                    .isInstanceOf(BusinessRuleValidationException.class)
                     .hasMessageContaining("no esta eliminado");
         }
 
@@ -412,7 +415,7 @@ class AccommodationListingServiceImplTest {
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
             assertThatThrownBy(() -> listingServiceImpl.recoverAccommodationListing(listing.getId(), otherUser.getId()))
-                    .isInstanceOf(RuntimeException.class)
+                    .isInstanceOf(UnauthorizedActionException.class)
                     .hasMessageContaining("no tienes permisos para esta accion");
         }
 
@@ -424,7 +427,7 @@ class AccommodationListingServiceImplTest {
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
             assertThatThrownBy(() -> listingServiceImpl.recoverAccommodationListing(listing.getId(), admin.getId()))
-                    .isInstanceOf(RuntimeException.class)
+                    .isInstanceOf(BusinessRuleValidationException.class)
                     .hasMessageContaining("esta baneado");
         }
 
@@ -435,7 +438,7 @@ class AccommodationListingServiceImplTest {
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
             assertThatThrownBy(() -> listingServiceImpl.recoverAccommodationListing(listing.getId(), admin.getId()))
-                    .isInstanceOf(RuntimeException.class)
+                    .isInstanceOf(BusinessRuleValidationException.class)
                     .hasMessageContaining("tiempo de recuperacion");
         }
     }
@@ -462,7 +465,7 @@ class AccommodationListingServiceImplTest {
             when(listingRepository.findById(randomId)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> listingServiceImpl.getAccommodationListing(randomId))
-                    .isInstanceOf(RuntimeException.class)
+                    .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("no se encuentra el anuncio con id");
         }
     }
@@ -504,7 +507,7 @@ class AccommodationListingServiceImplTest {
         @DisplayName("debe lanzar excepcion si intenta cambiar a baneado")
         void shouldThrowIfBannedRequested() {
             assertThatThrownBy(() -> listingServiceImpl.changeStatusListing(listing.getId(), ListingStatus.BANNED, admin.getId()))
-                    .isInstanceOf(RuntimeException.class)
+                    .isInstanceOf(UnauthorizedActionException.class)
                     .hasMessageContaining("Donde ibas pillin");
         }
 
@@ -514,7 +517,7 @@ class AccommodationListingServiceImplTest {
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
             assertThatThrownBy(() -> listingServiceImpl.changeStatusListing(listing.getId(), ListingStatus.UNAVAILABLE, otherUser.getId()))
-                    .isInstanceOf(RuntimeException.class)
+                    .isInstanceOf(UnauthorizedActionException.class)
                     .hasMessageContaining("No tienes permiso");
         }
 
@@ -525,7 +528,7 @@ class AccommodationListingServiceImplTest {
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
             assertThatThrownBy(() -> listingServiceImpl.changeStatusListing(listing.getId(), ListingStatus.UNAVAILABLE, host.getId()))
-                    .isInstanceOf(RuntimeException.class)
+                    .isInstanceOf(BusinessRuleValidationException.class)
                     .hasMessageContaining("ya esta UNAVAILABLE");
         }
     }
@@ -540,7 +543,7 @@ class AccommodationListingServiceImplTest {
             when(userRepository.findById(nonExistentId)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> listingServiceImpl.banAccommodationListing(listing.getId(), nonExistentId))
-                    .isInstanceOf(RuntimeException.class)
+                    .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Usuario no encontrado");
         }
     }
