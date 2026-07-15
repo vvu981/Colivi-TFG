@@ -56,6 +56,10 @@ public class Accommodation {
     @Column(name = "longitude")
     private Double longitude;
 
+    @Version
+    @Column(name = "version")
+    private Integer version;
+
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
