@@ -12,4 +12,17 @@ public interface BookingRequestRepository
                 extends JpaRepository<BookingRequest, UUID>, JpaSpecificationExecutor<BookingRequest> {
 
         Page<BookingRequest> findByRequesterId(UUID currentUserId, Pageable page);
+
+        @org.springframework.data.jpa.repository.Query("""
+            SELECT COUNT(b) FROM BookingRequest b 
+            WHERE b.accommodationListing.id = :listingId 
+              AND b.status = 'ACCEPTED' 
+              AND b.startDate <= :endDate 
+              AND b.endDate >= :startDate
+        """)
+        long countOverlappingAcceptedBookings(
+            @org.springframework.data.repository.query.Param("listingId") UUID listingId, 
+            @org.springframework.data.repository.query.Param("startDate") java.time.LocalDate startDate, 
+            @org.springframework.data.repository.query.Param("endDate") java.time.LocalDate endDate
+        );
 }
