@@ -29,6 +29,7 @@ import com.vvu981.colivibackend.features.user.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -39,8 +40,11 @@ public class BookingRequestServiceImpl implements BookingRequestService {
     private final UserRepository userRepository;
     private final EmailService emailService;
 
+    private final BookingRequestValidator bookingRequestValidator;
+
     private final List<BookingRequestFilter> bookingFilters;
 
+    @org.springframework.transaction.annotation.Transactional
     @Override
     public BookingRequestResponseDto createBookingRequest(BookingRequestDto requestDto, UUID currentUser) {
         User currUser = findUser(currentUser);
@@ -48,17 +52,19 @@ public class BookingRequestServiceImpl implements BookingRequestService {
         if (currUser.isBanned() || (currUser.getDeletedAt() != null))
             throw new UnauthorizedActionException("Error: estas baneado o eliminado.");
 
-        AccommodationListing listing = findListingAssociated(requestDto.accommodationListingId());
-        
+        AccommodationListing listing = findListingAssociatedWithLock(requestDto.accommodationListingId());
+
         if (listing.getBannedAt() != null || listing.getDeletedAt() != null)
             throw new BusinessRuleValidationException("Error: el anuncio esta eliminado o baneado.");
-            
+
         if (listing.getStatus() != ListingStatus.AVAILABLE)
             throw new BusinessRuleValidationException("Error: el anuncio no esta disponible actualmente.");
 
         if (currUser.getId().equals(listing.getHost().getId())) {
             throw new BusinessRuleValidationException("Error: no puedes solicitar una reserva en tu propio anuncio.");
         }
+
+        bookingRequestValidator.validateBookingDates(requestDto.startDate(), requestDto.endDate(), listing);
 
         BookingRequest requestToCreate = new BookingRequest(requestDto, currUser, listing);
 
@@ -68,11 +74,26 @@ public class BookingRequestServiceImpl implements BookingRequestService {
     }
 
     @Override
+    @Transactional // Aseguramos que todo ocurra dentro de una transacción para que el bloqueo de
+                   // base de datos sea efectivo
     public BookingRequestResponseDto setStatusBookingRequest(RequestStatus requestStatus, UUID requestId,
             UUID currentUser) {
         User currUser = findUser(currentUser);
         BookingRequest request = findById(requestId);
         RequestStatus oldStatus = request.getStatus();
+
+        // CONTROL DE EXCESO DE RESERVAS EN LA ACEPTACIÓN MANUAL
+        // Si el estado de destino es ACCEPTED, obligamos al sistema a comprobar de
+        // nuevo
+        // si quedan habitaciones libres para este rango de meses.
+        // Esto evita el overbooking si el casero acepta dos solicitudes pendientes
+        // consecutivas.
+        if (requestStatus == RequestStatus.ACCEPTED) {
+            bookingRequestValidator.validateBookingDates(
+                    request.getStartDate(),
+                    request.getEndDate(),
+                    request.getAccommodationListing());
+        }
 
         try {
             processStatusChange(request, requestStatus, currUser);
@@ -81,16 +102,15 @@ public class BookingRequestServiceImpl implements BookingRequestService {
         }
 
         requestRepository.save(request);
-        
-        if (oldStatus == RequestStatus.PENDING && 
-           (request.getStatus() == RequestStatus.ACCEPTED || request.getStatus() == RequestStatus.REJECTED)) {
+
+        if (oldStatus == RequestStatus.PENDING &&
+                (request.getStatus() == RequestStatus.ACCEPTED || request.getStatus() == RequestStatus.REJECTED)) {
             emailService.sendBookingStatusEmail(
-                request.getRequester().getEmail(),
-                request.getAccommodationListing().getTitle(),
-                request.getStatus() == RequestStatus.ACCEPTED
-            );
+                    request.getRequester().getEmail(),
+                    request.getAccommodationListing().getTitle(),
+                    request.getStatus() == RequestStatus.ACCEPTED);
         }
-        
+
         return new BookingRequestResponseDto(request);
     }
 
@@ -126,23 +146,27 @@ public class BookingRequestServiceImpl implements BookingRequestService {
         } else if (newStatus == RequestStatus.REJECTED) {
             request.reject();
         } else {
-            throw new UnauthorizedActionException("Error: como propietario solo puedes aceptar o rechazar la solicitud.");
+            throw new UnauthorizedActionException(
+                    "Error: como propietario solo puedes aceptar o rechazar la solicitud.");
         }
     }
 
     private BookingRequest findById(UUID requestId) {
         return requestRepository.findById(requestId)
-                .orElseThrow(() -> new ResourceNotFoundException("Error: no se encuentra la solicitud con id:" + requestId));
+                .orElseThrow(
+                        () -> new ResourceNotFoundException("Error: no se encuentra la solicitud con id:" + requestId));
     }
 
-    private AccommodationListing findListingAssociated(UUID listingId) {
-        return listingRepository.findById(listingId)
-                .orElseThrow(() -> new ResourceNotFoundException("Error: no se encuentra el anuncio con id: " + listingId));
+    private AccommodationListing findListingAssociatedWithLock(UUID listingId) {
+        return listingRepository.findByIdWithLock(listingId)
+                .orElseThrow(
+                        () -> new ResourceNotFoundException("Error: no se encuentra el anuncio con id: " + listingId));
     }
 
     private User findUser(UUID currentUser) {
         return userRepository.findByIdAndDeletedAtIsNull(currentUser)
-                .orElseThrow(() -> new ResourceNotFoundException("Error: no se encuentra el usuario con id: " + currentUser));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Error: no se encuentra el usuario con id: " + currentUser));
     }
 
     @Override

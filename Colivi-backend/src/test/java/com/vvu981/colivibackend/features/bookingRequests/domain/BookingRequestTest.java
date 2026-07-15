@@ -20,7 +20,7 @@ public class BookingRequestTest {
     @Test
     void testConstructorWithDto() {
         UUID listingId = UUID.randomUUID();
-        BookingRequestDto dto = new BookingRequestDto(listingId, LocalDate.now().plusDays(10), 6, "Hello world");
+        BookingRequestDto dto = new BookingRequestDto(listingId, LocalDate.now().plusDays(10), LocalDate.now().plusMonths(6), "Hello world");
 
         User requester = new User();
         requester.setId(UUID.randomUUID());
@@ -33,7 +33,7 @@ public class BookingRequestTest {
         assertEquals(requester, request.getRequester());
         assertEquals(listing, request.getAccommodationListing());
         assertEquals(dto.startDate(), request.getStartDate());
-        assertEquals(dto.durationMonths(), request.getDurationMonths());
+        assertEquals(dto.endDate(), request.getEndDate());
         assertEquals(dto.message(), request.getMessage());
         assertEquals(RequestStatus.PENDING, request.getStatus());
     }
@@ -60,7 +60,7 @@ public class BookingRequestTest {
         request.setRequester(requester);
         request.setAccommodationListing(listing);
         request.setStartDate(LocalDate.now());
-        request.setDurationMonths(12);
+        request.setEndDate(LocalDate.now().plusMonths(12));
         request.setMessage("Test message");
         request.setStatus(RequestStatus.ACCEPTED);
         request.onUpdate();
@@ -71,7 +71,7 @@ public class BookingRequestTest {
         assertEquals(requester.getId(), responseDto.requesterId());
         assertEquals(listing.getId(), responseDto.accommodationListingId());
         assertEquals(request.getStartDate(), responseDto.startDate());
-        assertEquals(request.getDurationMonths(), responseDto.durationMonths());
+        assertEquals(request.getEndDate(), responseDto.endDate());
         assertEquals(request.getMessage(), responseDto.message());
         assertEquals(request.getStatus(), responseDto.status());
         assertEquals(request.getCreatedAt(), responseDto.createdAt());
@@ -89,7 +89,7 @@ public class BookingRequestTest {
         assertNull(responseDto.requesterId());
         assertNull(responseDto.accommodationListingId());
         assertNull(responseDto.startDate());
-        assertNull(responseDto.durationMonths());
+        assertNull(responseDto.endDate());
         assertNull(responseDto.message());
         assertEquals(RequestStatus.PENDING, responseDto.status());
         assertNull(responseDto.createdAt());
@@ -121,6 +121,14 @@ public class BookingRequestTest {
     }
 
     @Test
+    void cancel_ShouldChangeStatus_WhenAccepted() {
+        BookingRequest request = new BookingRequest();
+        request.setStatus(RequestStatus.ACCEPTED);
+        request.cancel();
+        assertEquals(RequestStatus.CANCELLED, request.getStatus());
+    }
+
+    @Test
     void accept_ShouldThrowException_WhenNotPending() {
         BookingRequest request = new BookingRequest();
         request.setStatus(RequestStatus.ACCEPTED);
@@ -135,9 +143,9 @@ public class BookingRequestTest {
     }
 
     @Test
-    void cancel_ShouldThrowException_WhenNotPending() {
+    void cancel_ShouldThrowException_WhenNotPendingOrAccepted() {
         BookingRequest request = new BookingRequest();
-        request.setStatus(RequestStatus.CANCELLED);
+        request.setStatus(RequestStatus.REJECTED);
         assertThrows(IllegalStateException.class, request::cancel);
     }
 }

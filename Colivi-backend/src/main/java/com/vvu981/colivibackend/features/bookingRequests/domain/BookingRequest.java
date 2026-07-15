@@ -39,8 +39,8 @@ public class BookingRequest {
     @Column(name = "start_date", nullable = false)
     private LocalDate startDate;
 
-    @Column(name = "duration_months", nullable = false)
-    private Integer durationMonths;
+    @Column(name = "end_date", nullable = false)
+    private LocalDate endDate;
 
     @Column(name = "message", columnDefinition = "TEXT")
     private String message;
@@ -70,7 +70,7 @@ public class BookingRequest {
         this.requester = requester;
         this.accommodationListing = listing;
         this.startDate = requestDTO.startDate();
-        this.durationMonths = requestDTO.durationMonths();
+        this.endDate = requestDTO.endDate();
         this.message = requestDTO.message();
         this.status = RequestStatus.PENDING;
     }
@@ -92,8 +92,8 @@ public class BookingRequest {
     }
 
     public void cancel() {
-        if (this.status != RequestStatus.PENDING) {
-            throw new IllegalStateException("Solo se pueden cancelar solicitudes pendientes.");
+        if (this.status != RequestStatus.PENDING && this.status != RequestStatus.ACCEPTED) {
+            throw new IllegalStateException("Solo se pueden cancelar solicitudes pendientes o aceptadas.");
         }
         this.status = RequestStatus.CANCELLED;
     }

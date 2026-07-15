@@ -153,10 +153,13 @@ public class BookingRequestE2EIntegrationTest extends BaseIntegrationTest {
     @Test
     @Order(2)
     void step2_tenantCreatesBookingRequest() throws Exception {
+        LocalDate startDate = LocalDate.now().plusMonths(1).withDayOfMonth(1);
+        LocalDate endDate = startDate.plusMonths(5).withDayOfMonth(startDate.plusMonths(5).lengthOfMonth());
+
         Map<String, Object> payload = Map.of(
                 "accommodationListingId", listingId,
-                "startDate", LocalDate.now().plusDays(10).toString(),
-                "durationMonths", 6,
+                "startDate", startDate.toString(),
+                "endDate", endDate.toString(),
                 "message", "Hi, I want to book this room."
         );
 
@@ -222,10 +225,13 @@ public class BookingRequestE2EIntegrationTest extends BaseIntegrationTest {
     @Test
     @Order(7)
     void step7_adminCreatesRequestForTenant() throws Exception {
+        LocalDate startDate = LocalDate.now().plusMonths(8).withDayOfMonth(1);
+        LocalDate endDate = startDate.plusMonths(2).withDayOfMonth(startDate.plusMonths(2).lengthOfMonth());
+
         Map<String, Object> payload = Map.of(
                 "accommodationListingId", listingId,
-                "startDate", LocalDate.now().plusMonths(1).toString(),
-                "durationMonths", 3,
+                "startDate", startDate.toString(),
+                "endDate", endDate.toString(),
                 "message", "Created by admin."
         );
 

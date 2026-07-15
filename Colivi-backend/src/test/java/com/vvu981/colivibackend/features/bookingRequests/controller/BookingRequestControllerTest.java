@@ -63,9 +63,9 @@ public class BookingRequestControllerTest {
     void setUp() {
         currentUserId = UUID.randomUUID();
         requestId = UUID.randomUUID();
-        requestDto = new BookingRequestDto(UUID.randomUUID(), LocalDate.now().plusDays(5), 3, "Hello");
+        requestDto = new BookingRequestDto(UUID.randomUUID(), LocalDate.now().plusDays(5), LocalDate.now().plusMonths(3), "Hello");
         responseDto = new BookingRequestResponseDto(requestId, currentUserId, UUID.randomUUID(),
-                LocalDate.now(), 3, "Hello", RequestStatus.PENDING, LocalDateTime.now(), null);
+                LocalDate.now(), LocalDate.now().plusMonths(3), "Hello", RequestStatus.PENDING, LocalDateTime.now(), null);
     }
 
     @Test
