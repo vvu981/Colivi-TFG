@@ -6,10 +6,18 @@ import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
+import com.vvu981.colivibackend.core.exception.ResourceNotFoundException;
+import com.vvu981.colivibackend.core.exception.UnauthorizedActionException;
 import com.vvu981.colivibackend.core.storage.service.IImageStorageService;
 import com.vvu981.colivibackend.features.accommodation.domain.Accommodation;
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationImage;
@@ -25,13 +33,10 @@ import com.vvu981.colivibackend.features.accommodation.service.AccommodationServ
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.security.access.prepost.PreAuthorize;
-import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
-import com.vvu981.colivibackend.core.exception.ResourceNotFoundException;
-import com.vvu981.colivibackend.core.exception.UnauthorizedActionException;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Service
 public class AccommodationServiceImpl implements AccommodationService {
 
@@ -63,7 +68,6 @@ public class AccommodationServiceImpl implements AccommodationService {
     @Override
     @Transactional
     public AccommodationResponse createAccommodation(AccommodationRequest accommodation, UUID currentUserId) {
-        // En lugar de fetch, podemos usar getReferenceById si no requerimos leer datos:
         User owner = userRepository.getReferenceById(currentUserId);
         Accommodation accommodationToCreate = new Accommodation(accommodation, owner);
 
@@ -177,7 +181,18 @@ public class AccommodationServiceImpl implements AccommodationService {
             throw new UnauthorizedActionException("Error: no tienes permiso para añadir imágenes");
         }
 
-        String secureUrl = imageStorageService.uploadImage(image);
+        final String secureUrl = imageStorageService.uploadImage(image);
+
+        // Compensación en caso de rollback para evitar storage leak
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status == STATUS_ROLLED_BACK) {
+                    log.warn("Transacción abortada: Purgando imagen {} de Cloudinary...", secureUrl);
+                    imageStorageService.deleteImage(secureUrl);
+                }
+            }
+        });
 
         AccommodationImage accommodationImageEntity = AccommodationImage.builder()
                 .imageUrl(secureUrl)
@@ -210,11 +225,18 @@ public class AccommodationServiceImpl implements AccommodationService {
             throw new BusinessRuleValidationException("Error: La imagen no pertenece al alojamiento especificado");
         }
 
-        imageStorageService.deleteImage(imageToDelete.getImageUrl());
-
+        final String urlToPurge = imageToDelete.getImageUrl();
         accommodation.getImages().remove(imageToDelete);
-
         accommodationRepository.save(accommodation);
+
+        // Borrado difuso (Lazy Delete) usando hooks para no bloquear el Commit de BD
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                log.info("Eliminando objeto remoto tras Commit: {}", urlToPurge);
+                imageStorageService.deleteImage(urlToPurge);
+            }
+        });
     }
 
     @Override

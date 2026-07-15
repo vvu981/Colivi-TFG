@@ -16,6 +16,7 @@ import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
 import com.vvu981.colivibackend.core.exception.UnauthorizedActionException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,7 +34,7 @@ public class UserServiceImpl implements UserService {
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder; // Inyección directa de la herramienta
     private final UserMapper userMapper; // <-- Nuestra nueva herramienta
-    private final EmailService emailService; // Inyección por interfaz (DIP)
+    private final ApplicationEventPublisher eventPublisher;
 
     // Centralizamos el tiempo de expiración (24 horas) para no tener 'magic numbers'
     private static final long ACCESS_TOKEN_EXPIRATION = 86400000L;
@@ -57,6 +58,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public AuthResponse register(RegisterRequest request) {
 
         if (userRepository.findByEmailAndDeletedAtIsNull(request.email()).isPresent()) {
@@ -263,10 +265,10 @@ public class UserServiceImpl implements UserService {
         user.setReactivationTokenExpiresAt(expiresAt);
         userRepository.save(user);
 
-        // Delegamos el envío del correo al EmailService (DIP: dependemos de la abstracción).
-        emailService.sendReactivationEmail(user.getEmail(), token);
+        // Delegamos el envío del correo al Event Publisher (DIP y Desacoplamiento)
+        eventPublisher.publishEvent(new com.vvu981.colivibackend.features.user.domain.UserReactivationRequestedEvent(user.getEmail(), token));
 
-        log.info("Reactivation email sent to {} (token expires at {})", email, expiresAt);
+        log.info("Reactivation email requested for {} (token expires at {})", email, expiresAt);
     }
 
     /**

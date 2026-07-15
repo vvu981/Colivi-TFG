@@ -34,7 +34,10 @@ import com.vvu981.colivibackend.features.bookingRequests.dto.BookingRequestDto;
 import com.vvu981.colivibackend.features.bookingRequests.dto.BookingRequestResponseDto;
 import com.vvu981.colivibackend.features.bookingRequests.repository.BookingRequestRepository;
 import com.vvu981.colivibackend.features.bookingRequests.repository.filters.BookingRequestFilter;
-import com.vvu981.colivibackend.core.mail.service.EmailService;
+import org.springframework.context.ApplicationEventPublisher;
+import com.vvu981.colivibackend.features.bookingRequests.domain.BookingStatusChangedEvent;
+import com.vvu981.colivibackend.features.accommodation.repository.AccommodationRepository;
+import com.vvu981.colivibackend.features.accommodation.domain.Accommodation;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
@@ -47,9 +50,11 @@ public class BookingRequestServiceImplTest {
     @Mock
     private AccommodationListingRepository listingRepository;
     @Mock
+    private AccommodationRepository accommodationRepository;
+    @Mock
     private UserRepository userRepository;
     @Mock
-    private EmailService emailService;
+    private ApplicationEventPublisher eventPublisher;
     @Mock
     private BookingRequestFilter mockFilter;
     @Mock
@@ -70,7 +75,7 @@ public class BookingRequestServiceImplTest {
     void setUp() {
         bookingFilters = List.of(mockFilter);
         bookingRequestService = new BookingRequestServiceImpl(requestRepository, listingRepository, userRepository,
-                emailService, bookingRequestValidator, bookingFilters);
+                accommodationRepository, eventPublisher, bookingRequestValidator, bookingFilters);
 
         requester = new User();
         requester.setId(UUID.randomUUID());
@@ -85,11 +90,15 @@ public class BookingRequestServiceImplTest {
         admin.setId(UUID.randomUUID());
         admin.setRole(UserRole.ADMIN);
 
+        Accommodation acc = new Accommodation();
+        acc.setId(UUID.randomUUID());
+        
         listing = new AccommodationListing();
         listing.setId(UUID.randomUUID());
         listing.setHost(host);
         listing.setStatus(ListingStatus.AVAILABLE);
         listing.setTitle("Nice Apartment");
+        listing.setAccommodation(acc);
 
         requestDto = new BookingRequestDto(listing.getId(), LocalDate.now().plusDays(5), LocalDate.now().plusMonths(3), "Hello");
 
@@ -102,7 +111,7 @@ public class BookingRequestServiceImplTest {
         @Test
         void success() {
             when(userRepository.findByIdAndDeletedAtIsNull(requester.getId())).thenReturn(Optional.of(requester));
-            when(listingRepository.findByIdWithLock(listing.getId())).thenReturn(Optional.of(listing));
+            when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
             when(requestRepository.save(any(BookingRequest.class))).thenAnswer(i -> {
                 BookingRequest req = i.getArgument(0);
                 req.setId(UUID.randomUUID());
@@ -131,7 +140,7 @@ public class BookingRequestServiceImplTest {
         void failsIfListingDeleted() {
             when(userRepository.findByIdAndDeletedAtIsNull(requester.getId())).thenReturn(Optional.of(requester));
             listing.setDeletedAt(LocalDateTime.now());
-            when(listingRepository.findByIdWithLock(listing.getId())).thenReturn(Optional.of(listing));
+            when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
             assertThrows(BusinessRuleValidationException.class,
                     () -> bookingRequestService.createBookingRequest(requestDto, requester.getId()));
@@ -157,7 +166,7 @@ public class BookingRequestServiceImplTest {
         void failsIfListingBanned() {
             when(userRepository.findByIdAndDeletedAtIsNull(requester.getId())).thenReturn(Optional.of(requester));
             listing.setBannedAt(LocalDateTime.now());
-            when(listingRepository.findByIdWithLock(listing.getId())).thenReturn(Optional.of(listing));
+            when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
             assertThrows(BusinessRuleValidationException.class,
                     () -> bookingRequestService.createBookingRequest(requestDto, requester.getId()));
         }
@@ -165,7 +174,7 @@ public class BookingRequestServiceImplTest {
         @Test
         void failsIfListingNotFound() {
             when(userRepository.findByIdAndDeletedAtIsNull(requester.getId())).thenReturn(Optional.of(requester));
-            when(listingRepository.findByIdWithLock(listing.getId())).thenReturn(Optional.empty());
+            when(listingRepository.findById(listing.getId())).thenReturn(Optional.empty());
             assertThrows(ResourceNotFoundException.class,
                     () -> bookingRequestService.createBookingRequest(requestDto, requester.getId()));
         }
@@ -174,7 +183,7 @@ public class BookingRequestServiceImplTest {
         void failsIfListingNotAvailable() {
             listing.setStatus(ListingStatus.BANNED);
             when(userRepository.findByIdAndDeletedAtIsNull(requester.getId())).thenReturn(Optional.of(requester));
-            when(listingRepository.findByIdWithLock(listing.getId())).thenReturn(Optional.of(listing));
+            when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
             assertThrows(BusinessRuleValidationException.class,
                     () -> bookingRequestService.createBookingRequest(requestDto, requester.getId()));
         }
@@ -182,7 +191,7 @@ public class BookingRequestServiceImplTest {
         @Test
         void failsIfUserBooksOwnListing() {
             when(userRepository.findByIdAndDeletedAtIsNull(host.getId())).thenReturn(Optional.of(host));
-            when(listingRepository.findByIdWithLock(listing.getId())).thenReturn(Optional.of(listing));
+            when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
             assertThrows(BusinessRuleValidationException.class,
                     () -> bookingRequestService.createBookingRequest(requestDto, host.getId()));
         }
@@ -195,13 +204,14 @@ public class BookingRequestServiceImplTest {
         void successAsHostAccepting() {
             when(userRepository.findByIdAndDeletedAtIsNull(host.getId())).thenReturn(Optional.of(host));
             when(requestRepository.findById(bookingRequest.getId())).thenReturn(Optional.of(bookingRequest));
+            when(accommodationRepository.findByIdWithLock(listing.getAccommodation().getId())).thenReturn(Optional.of(listing.getAccommodation()));
 
             BookingRequestResponseDto result = bookingRequestService.setStatusBookingRequest(RequestStatus.ACCEPTED,
                     bookingRequest.getId(), host.getId());
 
             assertEquals(RequestStatus.ACCEPTED, result.status());
             verify(requestRepository).save(bookingRequest);
-            verify(emailService).sendBookingStatusEmail(requester.getEmail(), listing.getTitle(), true);
+            verify(eventPublisher).publishEvent(any(BookingStatusChangedEvent.class));
         }
 
         @Test
@@ -214,13 +224,14 @@ public class BookingRequestServiceImplTest {
 
             assertEquals(RequestStatus.REJECTED, result.status());
             verify(requestRepository).save(bookingRequest);
-            verify(emailService).sendBookingStatusEmail(requester.getEmail(), listing.getTitle(), false);
+            verify(eventPublisher).publishEvent(any(BookingStatusChangedEvent.class));
         }
 
         @Test
         void failsIfHostAcceptsButAccommodationIsFull() {
             when(userRepository.findByIdAndDeletedAtIsNull(host.getId())).thenReturn(Optional.of(host));
             when(requestRepository.findById(bookingRequest.getId())).thenReturn(Optional.of(bookingRequest));
+            when(accommodationRepository.findByIdWithLock(listing.getAccommodation().getId())).thenReturn(Optional.of(listing.getAccommodation()));
             
             doThrow(new BusinessRuleValidationException("El alojamiento ya está completo para las fechas seleccionadas."))
                 .when(bookingRequestValidator).validateBookingDates(bookingRequest.getStartDate(), bookingRequest.getEndDate(), bookingRequest.getAccommodationListing());
@@ -265,6 +276,7 @@ public class BookingRequestServiceImplTest {
         void failsIfRequesterAccepts() {
             when(userRepository.findByIdAndDeletedAtIsNull(requester.getId())).thenReturn(Optional.of(requester));
             when(requestRepository.findById(bookingRequest.getId())).thenReturn(Optional.of(bookingRequest));
+            when(accommodationRepository.findByIdWithLock(listing.getAccommodation().getId())).thenReturn(Optional.of(listing.getAccommodation()));
 
             assertThrows(UnauthorizedActionException.class, () -> bookingRequestService
                     .setStatusBookingRequest(RequestStatus.ACCEPTED, bookingRequest.getId(), requester.getId()));
@@ -289,6 +301,7 @@ public class BookingRequestServiceImplTest {
 
             when(userRepository.findByIdAndDeletedAtIsNull(otherUser.getId())).thenReturn(Optional.of(otherUser));
             when(requestRepository.findById(bookingRequest.getId())).thenReturn(Optional.of(bookingRequest));
+            when(accommodationRepository.findByIdWithLock(listing.getAccommodation().getId())).thenReturn(Optional.of(listing.getAccommodation()));
 
             assertThrows(UnauthorizedActionException.class, () -> bookingRequestService
                     .setStatusBookingRequest(RequestStatus.ACCEPTED, bookingRequest.getId(), otherUser.getId()));

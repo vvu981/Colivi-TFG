@@ -230,14 +230,14 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
     }
 
     private boolean isAdmin(User currentUser) {
-        return currentUser.getRole().equals(UserRole.ADMIN);
+        return currentUser.getRole() == UserRole.ADMIN;
     }
 
     private boolean canEdit(AccommodationListing accommodationListing, User currentUser) {
         boolean isAdmin = isAdmin(currentUser);
         boolean isOwner = accommodationListing.getAccommodation().getOwner().getId().equals(currentUser.getId());
         boolean isHost = accommodationListing.getHost().getId().equals(currentUser.getId());
-        return isAdmin || (isOwner && isHost);
+        return isAdmin || isOwner || isHost;
     }
 
 }

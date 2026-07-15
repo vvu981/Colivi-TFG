@@ -188,8 +188,8 @@ class AccommodationListingServiceImplTest {
         }
 
         @Test
-        @DisplayName("debe lanzar excepcion si el usuario es owner pero no host del anuncio")
-        void shouldThrowIfOwnerButNotHost() {
+        @DisplayName("debe permitir eliminar el anuncio si el usuario es owner pero no host del anuncio")
+        void shouldAllowIfOwnerButNotHost() {
             User ownerNotHost = new User();
             ownerNotHost.setId(accommodation.getOwner().getId()); // same owner
             ownerNotHost.setRole(UserRole.USER);
@@ -201,14 +201,12 @@ class AccommodationListingServiceImplTest {
 
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
-            assertThatThrownBy(() -> listingServiceImpl.deleteAccommodationListingSoft(listing.getId(), ownerNotHost.getId()))
-                    .isInstanceOf(UnauthorizedActionException.class)
-                    .hasMessageContaining("no puedes eliminar el anuncio");
+            org.junit.jupiter.api.Assertions.assertDoesNotThrow(() -> listingServiceImpl.deleteAccommodationListingSoft(listing.getId(), ownerNotHost.getId()));
         }
 
         @Test
-        @DisplayName("debe lanzar excepcion si el usuario es host pero no owner de la casa")
-        void shouldThrowIfHostButNotOwner() {
+        @DisplayName("debe permitir eliminar el anuncio si el usuario es host pero no owner de la casa")
+        void shouldAllowIfHostButNotOwner() {
             User hostNotOwner = new User();
             hostNotOwner.setId(listing.getHost().getId()); // same host
             hostNotOwner.setRole(UserRole.USER);
@@ -220,9 +218,7 @@ class AccommodationListingServiceImplTest {
 
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
-            assertThatThrownBy(() -> listingServiceImpl.deleteAccommodationListingSoft(listing.getId(), hostNotOwner.getId()))
-                    .isInstanceOf(UnauthorizedActionException.class)
-                    .hasMessageContaining("no puedes eliminar el anuncio");
+            org.junit.jupiter.api.Assertions.assertDoesNotThrow(() -> listingServiceImpl.deleteAccommodationListingSoft(listing.getId(), hostNotOwner.getId()));
         }
     }
 

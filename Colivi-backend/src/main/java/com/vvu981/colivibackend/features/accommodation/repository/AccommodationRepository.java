@@ -26,4 +26,8 @@ public interface AccommodationRepository extends JpaRepository<Accommodation, UU
                         @Param("ownerId") UUID ownerId,
                         @Param("visibility") String visibility,
                         Pageable pageable);
+
+        @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.OPTIMISTIC_FORCE_INCREMENT)
+        @Query("SELECT a FROM Accommodation a WHERE a.id = :id")
+        Optional<Accommodation> findByIdWithLock(@Param("id") UUID id);
 }

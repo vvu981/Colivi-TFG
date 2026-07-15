@@ -1,7 +1,6 @@
 package com.vvu981.colivibackend.features.user.service;
 
 import com.vvu981.colivibackend.core.security.JwtTokenProvider;
-import com.vvu981.colivibackend.core.mail.service.EmailService;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
 import com.vvu981.colivibackend.features.user.dto.*;
@@ -27,6 +26,8 @@ import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
 import com.vvu981.colivibackend.core.exception.UnauthorizedActionException;
 import com.vvu981.colivibackend.features.user.exception.InvalidTokenException;
 import com.vvu981.colivibackend.features.user.exception.UserNotFoundException;
+import org.springframework.context.ApplicationEventPublisher;
+import com.vvu981.colivibackend.features.user.domain.UserReactivationRequestedEvent;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -61,7 +62,7 @@ class UserServiceImplTest {
         @Mock
         private UserMapper userMapper;
         @Mock
-        private EmailService emailService;
+        private ApplicationEventPublisher eventPublisher;
 
         @InjectMocks
         private UserServiceImpl userService;
@@ -753,9 +754,7 @@ class UserServiceImplTest {
                         assertThat(savedUser.getReactivationTokenExpiresAt())
                                         .isAfter(LocalDateTime.now().plusHours(23));
 
-                        verify(emailService).sendReactivationEmail(
-                                        eq("victor@colivi.com"),
-                                        eq(savedUser.getReactivationToken()));
+                        verify(eventPublisher).publishEvent(any(UserReactivationRequestedEvent.class));
                 }
 
                 @Test
@@ -771,7 +770,7 @@ class UserServiceImplTest {
 
                         // Assert — no se generó token ni se envió correo
                         verify(userRepository, never()).save(any());
-                        verifyNoInteractions(emailService);
+                        verifyNoInteractions(eventPublisher);
                 }
 
                 @Test
@@ -788,7 +787,7 @@ class UserServiceImplTest {
                                         .hasMessageContaining("ya está activa");
 
                         verify(userRepository, never()).save(any());
-                        verifyNoInteractions(emailService);
+                        verifyNoInteractions(eventPublisher);
                 }
 
                 @Test
@@ -946,7 +945,7 @@ class UserServiceImplTest {
                                         .hasMessageContaining("no es válido");
 
                         verify(userRepository, never()).save(any());
-                        verifyNoInteractions(emailService);
+                        verifyNoInteractions(eventPublisher);
                 }
 
                 @Test

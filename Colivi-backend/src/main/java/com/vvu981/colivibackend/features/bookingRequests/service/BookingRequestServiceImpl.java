@@ -22,10 +22,12 @@ import com.vvu981.colivibackend.features.bookingRequests.dto.BookingRequestDto;
 import com.vvu981.colivibackend.features.bookingRequests.dto.BookingRequestResponseDto;
 import com.vvu981.colivibackend.features.bookingRequests.repository.BookingRequestRepository;
 import com.vvu981.colivibackend.features.bookingRequests.repository.filters.BookingRequestFilter;
-import com.vvu981.colivibackend.core.mail.service.EmailService;
+import com.vvu981.colivibackend.features.bookingRequests.domain.BookingStatusChangedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
+import com.vvu981.colivibackend.features.accommodation.repository.AccommodationRepository;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -38,7 +40,8 @@ public class BookingRequestServiceImpl implements BookingRequestService {
     private final BookingRequestRepository requestRepository;
     private final AccommodationListingRepository listingRepository;
     private final UserRepository userRepository;
-    private final EmailService emailService;
+    private final AccommodationRepository accommodationRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     private final BookingRequestValidator bookingRequestValidator;
 
@@ -74,8 +77,7 @@ public class BookingRequestServiceImpl implements BookingRequestService {
     }
 
     @Override
-    @Transactional // Aseguramos que todo ocurra dentro de una transacción para que el bloqueo de
-                   // base de datos sea efectivo
+    @Transactional // Aseguramos que todo ocurra dentro de una transacción para que el bloqueo de base de datos sea efectivo
     public BookingRequestResponseDto setStatusBookingRequest(RequestStatus requestStatus, UUID requestId,
             UUID currentUser) {
         User currUser = findUser(currentUser);
@@ -83,12 +85,12 @@ public class BookingRequestServiceImpl implements BookingRequestService {
         RequestStatus oldStatus = request.getStatus();
 
         // CONTROL DE EXCESO DE RESERVAS EN LA ACEPTACIÓN MANUAL
-        // Si el estado de destino es ACCEPTED, obligamos al sistema a comprobar de
-        // nuevo
+        // Si el estado de destino es ACCEPTED, obligamos al sistema a comprobar de nuevo
         // si quedan habitaciones libres para este rango de meses.
-        // Esto evita el overbooking si el casero acepta dos solicitudes pendientes
-        // consecutivas.
+        // Esto evita el overbooking si el casero acepta dos solicitudes pendientes consecutivas.
         if (requestStatus == RequestStatus.ACCEPTED) {
+            accommodationRepository.findByIdWithLock(request.getAccommodationListing().getAccommodation().getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Error: no se encuentra el alojamiento"));
             bookingRequestValidator.validateBookingDates(
                     request.getStartDate(),
                     request.getEndDate(),
@@ -105,10 +107,13 @@ public class BookingRequestServiceImpl implements BookingRequestService {
 
         if (oldStatus == RequestStatus.PENDING &&
                 (request.getStatus() == RequestStatus.ACCEPTED || request.getStatus() == RequestStatus.REJECTED)) {
-            emailService.sendBookingStatusEmail(
+            BookingStatusChangedEvent event = new BookingStatusChangedEvent(
                     request.getRequester().getEmail(),
                     request.getAccommodationListing().getTitle(),
-                    request.getStatus() == RequestStatus.ACCEPTED);
+                    request.getStatus(),
+                    request.getStatus() == RequestStatus.ACCEPTED
+            );
+            eventPublisher.publishEvent(event);
         }
 
         return new BookingRequestResponseDto(request);
@@ -158,7 +163,7 @@ public class BookingRequestServiceImpl implements BookingRequestService {
     }
 
     private AccommodationListing findListingAssociatedWithLock(UUID listingId) {
-        return listingRepository.findByIdWithLock(listingId)
+        return listingRepository.findById(listingId)
                 .orElseThrow(
                         () -> new ResourceNotFoundException("Error: no se encuentra el anuncio con id: " + listingId));
     }
