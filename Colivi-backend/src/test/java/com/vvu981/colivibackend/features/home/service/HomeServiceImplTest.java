@@ -1,0 +1,346 @@
+package com.vvu981.colivibackend.features.home.service;
+
+import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
+import com.vvu981.colivibackend.core.exception.ResourceNotFoundException;
+import com.vvu981.colivibackend.features.home.domain.Home;
+import com.vvu981.colivibackend.features.home.domain.HomeMember;
+import com.vvu981.colivibackend.features.home.domain.HomeMemberStatus;
+import com.vvu981.colivibackend.features.home.domain.HomeRole;
+import com.vvu981.colivibackend.features.home.dto.CreateHomeRequest;
+import com.vvu981.colivibackend.features.home.dto.HomeDetailResponseDto;
+import com.vvu981.colivibackend.features.home.dto.JoinHomeRequest;
+import com.vvu981.colivibackend.features.home.mapper.HomeMapper;
+import com.vvu981.colivibackend.features.home.repository.HomeMemberRepository;
+import com.vvu981.colivibackend.features.home.repository.HomeRepository;
+import com.vvu981.colivibackend.features.user.domain.User;
+import com.vvu981.colivibackend.features.user.domain.UserRole;
+import com.vvu981.colivibackend.features.user.repository.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class HomeServiceImplTest {
+
+        @Mock
+        private HomeRepository homeRepository;
+
+        @Mock
+        private HomeMemberRepository homeMemberRepository;
+
+        @Mock
+        private UserRepository userRepository;
+
+        @Mock
+        private InvitationCodeGenerator invitationCodeGenerator;
+
+        private final HomeMapper homeMapper = new HomeMapper();
+
+        private HomeServiceImpl homeService;
+
+        private User testUser;
+        private UUID testUserId;
+
+        @BeforeEach
+        void setUp() {
+                homeService = new HomeServiceImpl(
+                                homeRepository,
+                                homeMemberRepository,
+                                userRepository,
+                                invitationCodeGenerator,
+                                homeMapper);
+
+                testUserId = UUID.randomUUID();
+                testUser = new User();
+                testUser.setId(testUserId);
+                testUser.setRole(UserRole.USER); // default role
+                testUser.setFirstName("Víctor");
+                testUser.setLastName1("García");
+                testUser.setEmail("victor@test.com");
+        }
+
+        private Home buildHome(UUID homeId) {
+                Home home = new Home();
+                home.setId(homeId);
+                home.setName("Casa Test");
+                home.setInvitationCode("ABCD1234");
+                home.setCreatedAt(LocalDateTime.now());
+                home.setMembers(new ArrayList<>());
+                return home;
+        }
+
+        private HomeMember buildMember(Home home, User user, HomeRole role, HomeMemberStatus status) {
+                HomeMember member = new HomeMember();
+                member.setId(UUID.randomUUID());
+                member.setHome(home);
+                member.setUser(user);
+                member.setRole(role);
+                member.setStatus(status);
+                member.setJoinedAt(LocalDateTime.now());
+                home.getMembers().add(member);
+                return member;
+        }
+
+        // =========================================================================
+        // createHome
+        // =========================================================================
+
+        @Nested
+        class CreateHome {
+                @Test
+                void shouldCreateHomeWithGeneratedCodeAndAdminMember() {
+                        when(userRepository.findByIdAndDeletedAtIsNull(testUserId))
+                                        .thenReturn(Optional.of(testUser));
+                        when(invitationCodeGenerator.generate()).thenReturn("TESTCODE");
+                        when(homeRepository.save(any(Home.class))).thenAnswer(inv -> inv.getArgument(0));
+
+                        HomeDetailResponseDto result = homeService.createHome(
+                                        new CreateHomeRequest("Casa de la Playa"), testUserId);
+
+                        assertNotNull(result);
+                        assertEquals(HomeRole.ADMIN, result.myRole());
+                }
+        }
+
+        // =========================================================================
+        // getHomeDetail
+        // =========================================================================
+
+        @Nested
+        class GetHomeDetail {
+                @Test
+                void shouldReturnDetailForActiveMember() {
+                        UUID homeId = UUID.randomUUID();
+                        Home home = buildHome(homeId);
+                        HomeMember member = buildMember(home, testUser, HomeRole.MEMBER, HomeMemberStatus.ACTIVE);
+
+                        when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
+                        when(homeMemberRepository.findByHomeIdAndUserId(homeId, testUserId))
+                                        .thenReturn(Optional.of(member));
+
+                        assertDoesNotThrow(() -> homeService.getHomeDetail(homeId, testUserId));
+                }
+
+                @Test
+                void shouldReturnDetailForLeftMember() {
+                        UUID homeId = UUID.randomUUID();
+                        Home home = buildHome(homeId);
+                        HomeMember member = buildMember(home, testUser, HomeRole.MEMBER, HomeMemberStatus.LEFT);
+
+                        when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
+                        when(homeMemberRepository.findByHomeIdAndUserId(homeId, testUserId))
+                                        .thenReturn(Optional.of(member));
+
+                        assertDoesNotThrow(() -> homeService.getHomeDetail(homeId, testUserId));
+                }
+
+                @Test
+                void shouldThrowForArchivedMember() {
+                        UUID homeId = UUID.randomUUID();
+                        Home home = buildHome(homeId);
+                        HomeMember member = buildMember(home, testUser, HomeRole.MEMBER, HomeMemberStatus.ARCHIVED);
+
+                        when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
+                        when(homeMemberRepository.findByHomeIdAndUserId(homeId, testUserId))
+                                        .thenReturn(Optional.of(member));
+
+                        assertThrows(ResourceNotFoundException.class,
+                                        () -> homeService.getHomeDetail(homeId, testUserId));
+                }
+        }
+
+        // =========================================================================
+        // joinHome
+        // =========================================================================
+
+        @Nested
+        class JoinHome {
+                @Test
+                void shouldReactivateLeftMembershipWithMemberRole() {
+                        UUID homeId = UUID.randomUUID();
+                        Home home = buildHome(homeId);
+                        HomeMember leftAdmin = buildMember(home, testUser, HomeRole.ADMIN, HomeMemberStatus.LEFT);
+                        leftAdmin.setLeftAt(LocalDateTime.now().minusDays(10));
+
+                        when(userRepository.findByIdAndDeletedAtIsNull(testUserId))
+                                        .thenReturn(Optional.of(testUser));
+                        when(homeRepository.findByInvitationCodeAndDeletedAtIsNull("ABCD1234"))
+                                        .thenReturn(Optional.of(home));
+                        when(homeMemberRepository.findByHomeIdAndUserId(homeId, testUserId))
+                                        .thenReturn(Optional.of(leftAdmin));
+                        when(homeRepository.save(any(Home.class))).thenAnswer(inv -> inv.getArgument(0));
+
+                        HomeDetailResponseDto result = homeService.joinHome(
+                                        new JoinHomeRequest("ABCD1234"), testUserId);
+
+                        assertEquals(HomeMemberStatus.ACTIVE, result.myStatus());
+                        assertEquals(HomeRole.MEMBER, result.myRole(), "Debe recuperar rol MEMBER, no ADMIN");
+                }
+        }
+
+        // =========================================================================
+        // leaveHome
+        // =========================================================================
+
+        @Nested
+        class LeaveHome {
+                @Test
+                void shouldAutoSoftDeleteWhenUniqueAdminLeaves() {
+                        UUID homeId = UUID.randomUUID();
+                        Home home = buildHome(homeId);
+                        HomeMember adminMember = buildMember(home, testUser, HomeRole.ADMIN, HomeMemberStatus.ACTIVE);
+
+                        when(homeMemberRepository.findByHomeIdAndUserId(homeId, testUserId))
+                                        .thenReturn(Optional.of(adminMember));
+
+                        homeService.leaveHome(homeId, testUserId);
+
+                        assertEquals(HomeMemberStatus.LEFT, adminMember.getStatus());
+                        assertNotNull(home.getDeletedAt(), "El hogar debe ser softDeleted");
+                        verify(homeRepository).save(home);
+                }
+
+                @Test
+                void shouldThrowWhenAdminTriesToLeaveWithOtherActiveMembers() {
+                        UUID homeId = UUID.randomUUID();
+                        Home home = buildHome(homeId);
+                        User otherUser = new User();
+                        otherUser.setId(UUID.randomUUID());
+
+                        HomeMember adminMember = buildMember(home, testUser, HomeRole.ADMIN, HomeMemberStatus.ACTIVE);
+                        buildMember(home, otherUser, HomeRole.MEMBER, HomeMemberStatus.ACTIVE);
+
+                        when(homeMemberRepository.findByHomeIdAndUserId(homeId, testUserId))
+                                        .thenReturn(Optional.of(adminMember));
+
+                        assertThrows(BusinessRuleValidationException.class,
+                                        () -> homeService.leaveHome(homeId, testUserId));
+
+                        verify(homeRepository, never()).save(home);
+                }
+        }
+
+        // =========================================================================
+        // expelMember
+        // =========================================================================
+
+        @Nested
+        class ExpelMember {
+                @Test
+                void shouldExpelActiveMember() {
+                        UUID homeId = UUID.randomUUID();
+                        Home home = buildHome(homeId);
+                        User targetUser = new User();
+                        targetUser.setId(UUID.randomUUID());
+
+                        HomeMember adminMember = buildMember(home, testUser, HomeRole.ADMIN, HomeMemberStatus.ACTIVE);
+                        HomeMember targetMember = buildMember(home, targetUser, HomeRole.MEMBER,
+                                        HomeMemberStatus.ACTIVE);
+
+                        when(homeMemberRepository.findByHomeIdAndUserId(homeId, testUserId))
+                                        .thenReturn(Optional.of(adminMember));
+                        when(homeMemberRepository.findByHomeIdAndUserId(homeId, targetUser.getId()))
+                                        .thenReturn(Optional.of(targetMember));
+
+                        homeService.expelMember(homeId, testUserId, targetUser.getId());
+
+                        assertEquals(HomeMemberStatus.LEFT, targetMember.getStatus());
+                        assertNotNull(targetMember.getLeftAt());
+                }
+
+                @Test
+                void shouldThrowWhenExpellingSelf() {
+                        assertThrows(BusinessRuleValidationException.class,
+                                        () -> homeService.expelMember(UUID.randomUUID(), testUserId, testUserId));
+                }
+
+                @Test
+                void shouldThrowWhenExpellingInactiveMember() {
+                        UUID homeId = UUID.randomUUID();
+                        Home home = buildHome(homeId);
+                        User targetUser = new User();
+                        targetUser.setId(UUID.randomUUID());
+
+                        HomeMember adminMember = buildMember(home, testUser, HomeRole.ADMIN, HomeMemberStatus.ACTIVE);
+                        HomeMember targetMember = buildMember(home, targetUser, HomeRole.MEMBER, HomeMemberStatus.LEFT);
+
+                        when(homeMemberRepository.findByHomeIdAndUserId(homeId, testUserId))
+                                        .thenReturn(Optional.of(adminMember));
+                        when(homeMemberRepository.findByHomeIdAndUserId(homeId, targetUser.getId()))
+                                        .thenReturn(Optional.of(targetMember));
+
+                        assertThrows(BusinessRuleValidationException.class,
+                                        () -> homeService.expelMember(homeId, testUserId, targetUser.getId()));
+                }
+        }
+
+        // =========================================================================
+        // softDeleteHome
+        // =========================================================================
+
+        @Nested
+        class SoftDeleteHome {
+                @Test
+                void shouldSoftDeleteIfSystemAdmin() {
+                        UUID homeId = UUID.randomUUID();
+                        Home home = buildHome(homeId);
+                        testUser.setRole(UserRole.ADMIN); // System admin
+
+                        when(userRepository.findByIdAndDeletedAtIsNull(testUserId))
+                                        .thenReturn(Optional.of(testUser));
+                        when(homeRepository.findByIdAndDeletedAtIsNull(homeId))
+                                        .thenReturn(Optional.of(home));
+
+                        homeService.softDeleteHome(homeId, testUserId);
+                        assertNotNull(home.getDeletedAt());
+                }
+
+                @Test
+                void shouldSoftDeleteIfHomeAdminAndUniqueMember() {
+                        UUID homeId = UUID.randomUUID();
+                        Home home = buildHome(homeId);
+                        HomeMember adminMember = buildMember(home, testUser, HomeRole.ADMIN, HomeMemberStatus.ACTIVE);
+
+                        when(userRepository.findByIdAndDeletedAtIsNull(testUserId))
+                                        .thenReturn(Optional.of(testUser)); // UserRole.USER
+                        when(homeMemberRepository.findByHomeIdAndUserId(homeId, testUserId))
+                                        .thenReturn(Optional.of(adminMember));
+                        when(homeRepository.findByIdAndDeletedAtIsNull(homeId))
+                                        .thenReturn(Optional.of(home));
+
+                        homeService.softDeleteHome(homeId, testUserId);
+                        assertNotNull(home.getDeletedAt());
+                }
+
+                @Test
+                void shouldThrowIfHomeAdminButNotUniqueMember() {
+                        UUID homeId = UUID.randomUUID();
+                        Home home = buildHome(homeId);
+                        User otherUser = new User();
+                        otherUser.setId(UUID.randomUUID());
+
+                        HomeMember adminMember = buildMember(home, testUser, HomeRole.ADMIN, HomeMemberStatus.ACTIVE);
+                        buildMember(home, otherUser, HomeRole.MEMBER, HomeMemberStatus.ACTIVE);
+
+                        when(userRepository.findByIdAndDeletedAtIsNull(testUserId))
+                                        .thenReturn(Optional.of(testUser)); // UserRole.USER
+                        when(homeMemberRepository.findByHomeIdAndUserId(homeId, testUserId))
+                                        .thenReturn(Optional.of(adminMember));
+
+                        assertThrows(BusinessRuleValidationException.class,
+                                        () -> homeService.softDeleteHome(homeId, testUserId));
+                }
+        }
+}
