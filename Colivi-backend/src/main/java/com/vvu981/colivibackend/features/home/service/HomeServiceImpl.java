@@ -35,6 +35,7 @@ public class HomeServiceImpl implements HomeQueryService, HomeCommandService {
     private final UserRepository userRepository;
     private final InvitationCodeGenerator invitationCodeGenerator;
     private final HomeMapper homeMapper;
+    private final HomeBalanceValidator homeBalanceValidator;
 
     // =========================================================================
     // HomeCommandService
@@ -120,6 +121,7 @@ public class HomeServiceImpl implements HomeQueryService, HomeCommandService {
             }
         }
 
+        homeBalanceValidator.validateZeroBalance(homeId, userId);
         currentMember.leave();
     }
 
@@ -142,6 +144,7 @@ public class HomeServiceImpl implements HomeQueryService, HomeCommandService {
                     "Solo puedes expulsar a un miembro activo.");
         }
 
+        homeBalanceValidator.validateZeroBalance(homeId, targetUserId);
         targetMember.leave();
     }
 
@@ -268,7 +271,7 @@ public class HomeServiceImpl implements HomeQueryService, HomeCommandService {
         Home home = findActiveHome(homeId);
         HomeMember currentMember = homeMemberRepository.findByHomeIdAndUserId(homeId, userId)
                 .filter(m -> m.getStatus() == HomeMemberStatus.ACTIVE || m.getStatus() == HomeMemberStatus.LEFT)
-                .orElseThrow(() -> new ResourceNotFoundException(
+                .orElseThrow(() -> new UnauthorizedActionException(
                         "No tienes acceso a los detalles de este hogar."));
         return homeMapper.toDetailDto(home, currentMember);
     }
@@ -295,7 +298,7 @@ public class HomeServiceImpl implements HomeQueryService, HomeCommandService {
      */
     private HomeMember findMembership(UUID homeId, UUID userId) {
         return homeMemberRepository.findByHomeIdAndUserId(homeId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException(
+                .orElseThrow(() -> new UnauthorizedActionException(
                         "No eres miembro de este hogar."));
     }
 
@@ -306,7 +309,7 @@ public class HomeServiceImpl implements HomeQueryService, HomeCommandService {
     private HomeMember findActiveMembership(UUID homeId, UUID userId) {
         return homeMemberRepository.findByHomeIdAndUserId(homeId, userId)
                 .filter(m -> m.getStatus() == HomeMemberStatus.ACTIVE)
-                .orElseThrow(() -> new ResourceNotFoundException(
+                .orElseThrow(() -> new UnauthorizedActionException(
                         "No eres miembro activo de este hogar."));
     }
 

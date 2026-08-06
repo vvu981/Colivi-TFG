@@ -49,6 +49,9 @@ class HomeServiceImplTest {
     @Mock
     private InvitationCodeGenerator invitationCodeGenerator;
 
+    @Mock
+    private HomeBalanceValidator homeBalanceValidator;
+
     private final HomeMapper homeMapper = new HomeMapper();
 
     private HomeServiceImpl homeService;
@@ -63,7 +66,8 @@ class HomeServiceImplTest {
                 homeMemberRepository,
                 userRepository,
                 invitationCodeGenerator,
-                homeMapper
+                homeMapper,
+                homeBalanceValidator
         );
 
         testUserId = UUID.randomUUID();
@@ -164,7 +168,7 @@ class HomeServiceImplTest {
             when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
             when(homeMemberRepository.findByHomeIdAndUserId(homeId, testUserId)).thenReturn(Optional.of(member));
             
-            assertThrows(ResourceNotFoundException.class, () -> homeService.getHomeDetail(homeId, testUserId));
+            assertThrows(UnauthorizedActionException.class, () -> homeService.getHomeDetail(homeId, testUserId));
         }
 
         @Test
@@ -352,6 +356,7 @@ class HomeServiceImplTest {
 
             homeService.leaveHome(homeId, testUserId);
             assertEquals(HomeMemberStatus.LEFT, member.getStatus());
+            verify(homeBalanceValidator).validateZeroBalance(homeId, testUserId);
         }
 
         @Test
@@ -360,7 +365,7 @@ class HomeServiceImplTest {
             when(homeMemberRepository.findByHomeIdAndUserId(homeId, testUserId))
                 .thenReturn(Optional.empty());
 
-            assertThrows(ResourceNotFoundException.class, () -> homeService.leaveHome(homeId, testUserId));
+            assertThrows(UnauthorizedActionException.class, () -> homeService.leaveHome(homeId, testUserId));
         }
     }
 
@@ -389,6 +394,7 @@ class HomeServiceImplTest {
 
             assertEquals(HomeMemberStatus.LEFT, targetMember.getStatus());
             assertNotNull(targetMember.getLeftAt());
+            verify(homeBalanceValidator).validateZeroBalance(homeId, targetUser.getId());
         }
 
         @Test
@@ -431,6 +437,28 @@ class HomeServiceImplTest {
                     .thenReturn(Optional.empty());
 
             assertThrows(ResourceNotFoundException.class,
+                    () -> homeService.expelMember(homeId, testUserId, targetUser.getId()));
+        }
+
+        @Test
+        void shouldThrowWhenExpellingMemberWithDebt() {
+            UUID homeId = UUID.randomUUID();
+            Home home = buildHome(homeId);
+            User targetUser = new User();
+            targetUser.setId(UUID.randomUUID());
+            
+            HomeMember adminMember = buildMember(home, testUser, HomeRole.ADMIN, HomeMemberStatus.ACTIVE);
+            HomeMember targetMember = buildMember(home, targetUser, HomeRole.MEMBER, HomeMemberStatus.ACTIVE);
+
+            when(homeMemberRepository.findByHomeIdAndUserId(homeId, testUserId))
+                    .thenReturn(Optional.of(adminMember));
+            when(homeMemberRepository.findByHomeIdAndUserId(homeId, targetUser.getId()))
+                    .thenReturn(Optional.of(targetMember));
+            
+            doThrow(new BusinessRuleValidationException("Deudas pendientes"))
+                .when(homeBalanceValidator).validateZeroBalance(homeId, targetUser.getId());
+
+            assertThrows(BusinessRuleValidationException.class,
                     () -> homeService.expelMember(homeId, testUserId, targetUser.getId()));
         }
     }
@@ -510,7 +538,7 @@ class HomeServiceImplTest {
         void shouldThrowIfMembershipNotFound() {
             UUID homeId = UUID.randomUUID();
             when(homeMemberRepository.findByHomeIdAndUserId(homeId, testUserId)).thenReturn(Optional.empty());
-            assertThrows(ResourceNotFoundException.class, () -> homeService.archiveHomeView(homeId, testUserId));
+            assertThrows(UnauthorizedActionException.class, () -> homeService.archiveHomeView(homeId, testUserId));
         }
     }
 
