@@ -40,8 +40,8 @@ class RandomAlphanumericCodeGeneratorTest {
         @Test
         void shouldReturnCodeOfCorrectLengthAndFormat() {
             // Arrange
-            when(homeRepository.findByInvitationCodeAndDeletedAtIsNull(anyString()))
-                    .thenReturn(Optional.empty());
+            when(homeRepository.existsByInvitationCode(anyString()))
+                    .thenReturn(false);
 
             // Act
             String code = generator.generate();
@@ -57,10 +57,10 @@ class RandomAlphanumericCodeGeneratorTest {
         void shouldRetryUntilUniqueCodeIsFound() {
             // Arrange — las primeras 2 llamadas devuelven un hogar existente (colisión),
             // la tercera está libre.
-            when(homeRepository.findByInvitationCodeAndDeletedAtIsNull(anyString()))
-                    .thenReturn(Optional.of(new Home())) // 1ª — colisión
-                    .thenReturn(Optional.of(new Home())) // 2ª — colisión
-                    .thenReturn(Optional.empty());        // 3ª — libre
+            when(homeRepository.existsByInvitationCode(anyString()))
+                    .thenReturn(true)  // 1ª — colisión
+                    .thenReturn(true)  // 2ª — colisión
+                    .thenReturn(false); // 3ª — libre
 
             // Act
             String code = generator.generate();
@@ -68,18 +68,18 @@ class RandomAlphanumericCodeGeneratorTest {
             // Assert
             assertNotNull(code);
             // El repositorio debe haber sido consultado al menos 3 veces
-            verify(homeRepository, times(3)).findByInvitationCodeAndDeletedAtIsNull(anyString());
+            verify(homeRepository, times(3)).existsByInvitationCode(anyString());
         }
 
         @Test
         void shouldQueryRepositoryForUniquenessOnEachAttempt() {
             // Verifica que no se saltea la comprobación de unicidad
-            when(homeRepository.findByInvitationCodeAndDeletedAtIsNull(anyString()))
-                    .thenReturn(Optional.empty());
+            when(homeRepository.existsByInvitationCode(anyString()))
+                    .thenReturn(false);
 
             generator.generate();
 
-            verify(homeRepository, atLeastOnce()).findByInvitationCodeAndDeletedAtIsNull(anyString());
+            verify(homeRepository, atLeastOnce()).existsByInvitationCode(anyString());
         }
     }
 }

@@ -28,7 +28,7 @@ public class RandomAlphanumericCodeGenerator implements InvitationCodeGenerator 
         String code;
         do {
             code = generateRandom();
-        } while (homeRepository.findByInvitationCodeAndDeletedAtIsNull(code).isPresent());
+        } while (homeRepository.existsByInvitationCode(code));
         return code;
     }
 

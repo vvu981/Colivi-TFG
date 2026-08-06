@@ -17,6 +17,12 @@ public interface HomeRepository extends JpaRepository<Home, UUID>, JpaSpecificat
     Optional<Home> findByInvitationCodeAndDeletedAtIsNull(String invitationCode);
 
     /**
+     * Comprueba si existe un código de invitación (incluso en hogares soft-deleted)
+     * para respetar la restricción UNIQUE de la base de datos.
+     */
+    boolean existsByInvitationCode(String invitationCode);
+
+    /**
      * Busca una vivienda activa (no eliminada lógicamente) por su ID.
      */
     Optional<Home> findByIdAndDeletedAtIsNull(UUID id);
