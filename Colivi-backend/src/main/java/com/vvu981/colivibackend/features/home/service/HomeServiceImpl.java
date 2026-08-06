@@ -214,8 +214,11 @@ public class HomeServiceImpl implements HomeQueryService, HomeCommandService {
     @Override
     @Transactional
     public void hardDeleteHome(UUID homeId, UUID userId) {
-        // La autorización (solo admins del sistema) se garantiza en el controlador
-        // mediante @PreAuthorize("hasAuthority('ADMIN')").
+        User user = findActiveUser(userId);
+        if (user.getRole() != UserRole.ADMIN) {
+            throw new UnauthorizedActionException("Solo un administrador del sistema puede ejecutar un borrado físico.");
+        }
+        
         Home home = findActiveHome(homeId);
         homeRepository.delete(home);
     }

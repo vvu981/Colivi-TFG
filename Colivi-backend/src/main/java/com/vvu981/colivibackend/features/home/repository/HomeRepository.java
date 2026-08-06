@@ -24,6 +24,8 @@ public interface HomeRepository extends JpaRepository<Home, UUID>, JpaSpecificat
 
     /**
      * Busca una vivienda activa (no eliminada lógicamente) por su ID.
+     * Utiliza un EntityGraph para resolver los miembros y sus usuarios en una sola consulta (prevenir N+1).
      */
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"members", "members.user"})
     Optional<Home> findByIdAndDeletedAtIsNull(UUID id);
 }

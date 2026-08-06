@@ -1,5 +1,6 @@
 package com.vvu981.colivibackend.features.home.service;
 
+import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
 import com.vvu981.colivibackend.features.home.repository.HomeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -19,6 +20,7 @@ public class RandomAlphanumericCodeGenerator implements InvitationCodeGenerator 
 
     private static final String ALPHANUMERIC_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private static final int CODE_LENGTH = 8;
+    private static final int MAX_ATTEMPTS = 10;
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final HomeRepository homeRepository;
@@ -26,8 +28,13 @@ public class RandomAlphanumericCodeGenerator implements InvitationCodeGenerator 
     @Override
     public String generate() {
         String code;
+        int attempts = 0;
         do {
+            if (attempts >= MAX_ATTEMPTS) {
+                throw new BusinessRuleValidationException("No se pudo generar un código único de invitación tras " + MAX_ATTEMPTS + " intentos.");
+            }
             code = generateRandom();
+            attempts++;
         } while (homeRepository.existsByInvitationCode(code));
         return code;
     }

@@ -768,13 +768,27 @@ class HomeServiceImplTest {
     @Nested
     class HardDeleteHome {
         @Test
-        void shouldHardDeleteHome() {
+        void shouldHardDeleteHomeIfSystemAdmin() {
             UUID homeId = UUID.randomUUID();
             Home home = buildHome(homeId);
+            testUser.setRole(UserRole.ADMIN);
+            
+            when(userRepository.findByIdAndDeletedAtIsNull(testUserId)).thenReturn(Optional.of(testUser));
             when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
             
             homeService.hardDeleteHome(homeId, testUserId);
             verify(homeRepository).delete(home);
+        }
+
+        @Test
+        void shouldThrowIfUserNotSystemAdmin() {
+            UUID homeId = UUID.randomUUID();
+            testUser.setRole(UserRole.USER);
+            
+            when(userRepository.findByIdAndDeletedAtIsNull(testUserId)).thenReturn(Optional.of(testUser));
+            
+            assertThrows(UnauthorizedActionException.class, () -> homeService.hardDeleteHome(homeId, testUserId));
+            verify(homeRepository, never()).delete(any(Home.class));
         }
     }
 }

@@ -81,5 +81,18 @@ class RandomAlphanumericCodeGeneratorTest {
 
             verify(homeRepository, atLeastOnce()).existsByInvitationCode(anyString());
         }
+
+        @Test
+        void shouldThrowExceptionWhenMaxAttemptsExceeded() {
+            // Arrange
+            when(homeRepository.existsByInvitationCode(anyString()))
+                    .thenReturn(true);
+
+            // Act & Assert
+            assertThrows(com.vvu981.colivibackend.core.exception.BusinessRuleValidationException.class, () -> generator.generate());
+            
+            // Verify it attempted 10 times
+            verify(homeRepository, times(10)).existsByInvitationCode(anyString());
+        }
     }
 }
