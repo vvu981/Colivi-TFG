@@ -1,6 +1,5 @@
 package com.vvu981.colivibackend.features.home.service;
 
-import com.vvu981.colivibackend.features.home.domain.Home;
 import com.vvu981.colivibackend.features.home.repository.HomeRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -9,8 +8,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Optional;
-
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
@@ -18,8 +15,11 @@ import static org.mockito.Mockito.*;
 /**
  * Tests unitarios para {@link RandomAlphanumericCodeGenerator}.
  *
- * <p>El test de "retry por colisión" vive aquí y no en {@code HomeServiceImplTest}
- * porque la lógica de unicidad es responsabilidad exclusiva del generador (SRP/OCP).</p>
+ * <p>
+ * El test de "retry por colisión" vive aquí y no en {@code HomeServiceImplTest}
+ * porque la lógica de unicidad es responsabilidad exclusiva del generador
+ * (SRP/OCP).
+ * </p>
  */
 @ExtendWith(MockitoExtension.class)
 class RandomAlphanumericCodeGeneratorTest {
@@ -58,8 +58,8 @@ class RandomAlphanumericCodeGeneratorTest {
             // Arrange — las primeras 2 llamadas devuelven un hogar existente (colisión),
             // la tercera está libre.
             when(homeRepository.existsByInvitationCode(anyString()))
-                    .thenReturn(true)  // 1ª — colisión
-                    .thenReturn(true)  // 2ª — colisión
+                    .thenReturn(true) // 1ª — colisión
+                    .thenReturn(true) // 2ª — colisión
                     .thenReturn(false); // 3ª — libre
 
             // Act
