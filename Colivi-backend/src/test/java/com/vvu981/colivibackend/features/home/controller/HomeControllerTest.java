@@ -199,6 +199,21 @@ class HomeControllerTest {
     }
 
     @Test
+    void forceExpelMember() throws Exception {
+        UUID targetId = UUID.randomUUID();
+        java.util.Map<String, String> body = java.util.Map.of("reason", "No paga alquiler");
+        
+        mockMvc.perform(patch("/api/v1/homes/{id}/members/{targetUserId}/force-expel", homeId, targetId)
+                        .with(user(principal))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isNoContent());
+
+        verify(homeCommandService).forceExpelWithDebtSettlement(eq(homeId), any(), eq(targetId), eq("No paga alquiler"));
+    }
+
+    @Test
     void softDeleteHome() throws Exception {
         mockMvc.perform(delete("/api/v1/homes/{id}", homeId)
                         .with(user(principal))

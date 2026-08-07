@@ -39,6 +39,13 @@ public interface HomeCommandService {
     void expelMember(UUID homeId, UUID adminUserId, UUID targetUserId);
 
     /**
+     * Expulsión Forzosa con Liquidación de Deuda.
+     * Si el usuario objetivo tiene saldo distinto a 0.00€, el administrador asume
+     * la deuda (o el crédito) mediante una transacción automática interna para 
+     * dejar el balance en 0 y proceder con la expulsión normal.
+     */
+    void forceExpelWithDebtSettlement(UUID homeId, UUID adminUserId, UUID targetUserId, String reason);
+    /**
      * Oculta el hogar de la vista principal del usuario (LEFT → ARCHIVED).
      * Solo puede ejecutarse cuando el miembro ya ha salido del hogar (status LEFT).
      * Para archivar, primero hay que salir con {@link #leaveHome}.

@@ -36,6 +36,8 @@ public class HomeServiceImpl implements HomeQueryService, HomeCommandService {
     private final InvitationCodeGenerator invitationCodeGenerator;
     private final HomeMapper homeMapper;
     private final HomeBalanceValidator homeBalanceValidator;
+    private final HomeExpenseQueryService expenseQueryService;
+    private final HomeExpenseCommandService expenseCommandService;
 
     // =========================================================================
     // HomeCommandService
@@ -144,6 +146,55 @@ public class HomeServiceImpl implements HomeQueryService, HomeCommandService {
                     "Solo puedes expulsar a un miembro activo.");
         }
 
+        homeBalanceValidator.validateZeroBalance(homeId, targetUserId);
+        targetMember.leave();
+    }
+
+    @Override
+    @Transactional
+    public void forceExpelWithDebtSettlement(UUID homeId, UUID adminUserId, UUID targetUserId, String reason) {
+        if (adminUserId.equals(targetUserId)) {
+            throw new BusinessRuleValidationException(
+                    "No puedes expulsarte a ti mismo. Usa la opción 'Salir del hogar'.");
+        }
+
+        requireAdminRole(homeId, adminUserId);
+
+        HomeMember targetMember = homeMemberRepository.findByHomeIdAndUserId(homeId, targetUserId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "El usuario destino no es miembro de este hogar."));
+
+        if (targetMember.getStatus() != HomeMemberStatus.ACTIVE) {
+            throw new BusinessRuleValidationException(
+                    "Solo puedes expulsar a un miembro activo.");
+        }
+
+        java.math.BigDecimal userBalance = expenseQueryService.getUserBalance(homeId, targetUserId);
+
+        if (userBalance.compareTo(java.math.BigDecimal.ZERO) != 0) {
+            String baseDesc = "EXPULSION_FORZOSA_CON_LIQUIDACION";
+            String expenseDescription = reason != null && !reason.isBlank() ? baseDesc + ": " + reason : baseDesc;
+            java.math.BigDecimal absBalance = userBalance.abs();
+            com.vvu981.colivibackend.features.home.dto.CreateExpenseRequest request;
+
+            if (userBalance.compareTo(java.math.BigDecimal.ZERO) < 0) {
+                // Moroso (debe dinero, su balance es negativo).
+                // Para llegar a 0, necesita recibir un pago. 
+                // Así que el Target es el pagador, y el Admin es el participante que consume.
+                request = new com.vvu981.colivibackend.features.home.dto.CreateExpenseRequest(
+                        expenseDescription, absBalance, targetUserId, java.util.List.of(adminUserId));
+            } else {
+                // Acreditor (le deben dinero, su balance es positivo).
+                // Para llegar a 0, necesita realizar un gasto.
+                // Así que el Admin es el pagador, y el Target es el participante que consume.
+                request = new com.vvu981.colivibackend.features.home.dto.CreateExpenseRequest(
+                        expenseDescription, absBalance, adminUserId, java.util.List.of(targetUserId));
+            }
+
+            expenseCommandService.createExpense(homeId, request, adminUserId);
+        }
+
+        // Una vez liquidado el balance, procedemos con la expulsión normal
         homeBalanceValidator.validateZeroBalance(homeId, targetUserId);
         targetMember.leave();
     }

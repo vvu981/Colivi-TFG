@@ -162,6 +162,21 @@ public class HomeController {
         return ResponseEntity.noContent().build();
     }
 
+    /**
+     * PATCH /api/v1/homes/{id}/members/{targetUserId}/force-expel — Expulsión forzosa con liquidación de deudas.
+     * Requiere ser ADMIN del hogar.
+     */
+    @PatchMapping("/{id}/members/{targetUserId}/force-expel")
+    public ResponseEntity<Void> forceExpelMember(
+            @PathVariable("id") UUID homeId,
+            @PathVariable("targetUserId") UUID targetUserId,
+            @RequestBody(required = false) java.util.Map<String, String> body,
+            @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
+        String reason = body != null ? body.get("reason") : null;
+        homeCommandService.forceExpelWithDebtSettlement(homeId, currentUserId, targetUserId, reason);
+        return ResponseEntity.noContent().build();
+    }
+
     // =========================================================================
     // Operaciones mixtas / administradores del sistema
     // =========================================================================
