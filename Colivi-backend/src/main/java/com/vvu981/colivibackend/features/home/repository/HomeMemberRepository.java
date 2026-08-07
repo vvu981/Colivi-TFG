@@ -27,4 +27,9 @@ public interface HomeMemberRepository extends JpaRepository<HomeMember, UUID> {
      * Retorna todos los hogares de un usuario, excluyendo hogares eliminados lógicamente.
      */
     List<HomeMember> findByUserIdAndHomeDeletedAtIsNull(UUID userId);
+
+    /**
+     * Busca los miembros de un hogar con un estado específico.
+     */
+    List<HomeMember> findByHomeIdAndStatus(UUID homeId, HomeMemberStatus status);
 }

@@ -18,14 +18,14 @@ public class TransitDebtSimplifier implements DebtSimplifierEngine {
 
         // 1. Separar y ordenar deudores (los que deben, ordenados por mayor deuda absoluta)
         List<Balance> debtors = balances.stream()
-                .filter(b -> b.amount() < 0)
-                .sorted(Comparator.comparingDouble(Balance::amount))
+                .filter(b -> b.amount().compareTo(java.math.BigDecimal.ZERO) < 0)
+                .sorted(Comparator.comparing((Balance b) -> b.amount().abs()).reversed())
                 .collect(Collectors.toList());
 
         // 2. Separar y ordenar acreedores (los que deben recibir, ordenados de mayor a menor)
         List<Balance> creditors = balances.stream()
-                .filter(b -> b.amount() > 0)
-                .sorted(Comparator.comparingDouble(Balance::amount).reversed())
+                .filter(b -> b.amount().compareTo(java.math.BigDecimal.ZERO) > 0)
+                .sorted(Comparator.comparing(Balance::amount).reversed())
                 .collect(Collectors.toList());
 
         int i = 0; // Puntero para recorrer los deudores
@@ -36,27 +36,27 @@ public class TransitDebtSimplifier implements DebtSimplifierEngine {
             Balance currentDebtor = debtors.get(i);
             Balance currentCreditor = creditors.get(j);
 
-            double debt = Math.abs(currentDebtor.amount());
-            double credit = currentCreditor.amount();
+            java.math.BigDecimal debt = currentDebtor.amount().abs();
+            java.math.BigDecimal credit = currentCreditor.amount();
 
             // Determinar cuánto se puede transferir en este paso (el mínimo entre la deuda y el crédito)
-            double amountToTransfer = Math.min(debt, credit);
+            java.math.BigDecimal amountToTransfer = debt.min(credit);
 
             // Registrar la orden de pago
             transfers.add(new DebtTransfer(currentDebtor.userId(), currentCreditor.userId(), amountToTransfer));
 
             // Calcular saldos restantes tras el pago
-            double remainingDebt = debt - amountToTransfer;
-            double remainingCredit = credit - amountToTransfer;
+            java.math.BigDecimal remainingDebt = debt.subtract(amountToTransfer);
+            java.math.BigDecimal remainingCredit = credit.subtract(amountToTransfer);
 
             // Actualizar punteros o actualizar saldos restantes
-            if (remainingDebt == 0) {
+            if (remainingDebt.compareTo(java.math.BigDecimal.ZERO) == 0) {
                 i++; // El deudor ha saldado su cuenta por completo
             } else {
-                debtors.set(i, new Balance(currentDebtor.userId(), -remainingDebt));
+                debtors.set(i, new Balance(currentDebtor.userId(), remainingDebt.negate()));
             }
 
-            if (remainingCredit == 0) {
+            if (remainingCredit.compareTo(java.math.BigDecimal.ZERO) == 0) {
                 j++; // El acreedor ha recibido todo su dinero
             } else {
                 creditors.set(j, new Balance(currentCreditor.userId(), remainingCredit));
