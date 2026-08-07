@@ -1,7 +1,6 @@
 package com.vvu981.colivibackend.features.user.service;
 
 import com.vvu981.colivibackend.core.security.JwtTokenProvider;
-import com.vvu981.colivibackend.core.mail.service.EmailService;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
 import com.vvu981.colivibackend.features.user.dto.*;
@@ -36,7 +35,8 @@ public class UserServiceImpl implements UserService {
     private final UserMapper userMapper; // <-- Nuestra nueva herramienta
     private final ApplicationEventPublisher eventPublisher;
 
-    // Centralizamos el tiempo de expiración (24 horas) para no tener 'magic numbers'
+    // Centralizamos el tiempo de expiración (24 horas) para no tener 'magic
+    // numbers'
     private static final long ACCESS_TOKEN_EXPIRATION = 86400000L;
 
     // TTL del token de reactivación: 24 horas
@@ -230,17 +230,20 @@ public class UserServiceImpl implements UserService {
     /**
      * {@inheritDoc}
      *
-     * <p><strong>Decisión de seguridad:</strong> si el email no existe en la base
+     * <p>
+     * <strong>Decisión de seguridad:</strong> si el email no existe en la base
      * de datos, el método retorna sin lanzar excepción. Esto evita el ataque de
      * enumeración de usuarios (user enumeration attack), donde un atacante podría
-     * descubrir qué emails están registrados por las diferencias de respuesta.</p>
+     * descubrir qué emails están registrados por las diferencias de respuesta.
+     * </p>
      */
     @Override
     @Transactional
     public void requestReactivation(String email) {
 
         // Buscamos el usuario independientemente de si está eliminado o no.
-        // findByEmailAndDeletedAtIsNull NO sirve aquí: necesitamos exactamente los eliminados.
+        // findByEmailAndDeletedAtIsNull NO sirve aquí: necesitamos exactamente los
+        // eliminados.
         Optional<User> userOptional = userRepository.findByEmailIgnoreCase(email);
 
         // Silencio si no existe → anti user-enumeration
@@ -251,7 +254,8 @@ public class UserServiceImpl implements UserService {
 
         User user = userOptional.get();
 
-        // Si la cuenta ya está activa, informamos al cliente con una excepción semántica.
+        // Si la cuenta ya está activa, informamos al cliente con una excepción
+        // semántica.
         if (user.getDeletedAt() == null) {
             throw new AccountAlreadyActiveException(
                     "Error: La cuenta asociada a este email ya está activa. Inicia sesión normalmente.");
@@ -266,7 +270,8 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
 
         // Delegamos el envío del correo al Event Publisher (DIP y Desacoplamiento)
-        eventPublisher.publishEvent(new com.vvu981.colivibackend.features.user.domain.UserReactivationRequestedEvent(user.getEmail(), token));
+        eventPublisher.publishEvent(new com.vvu981.colivibackend.features.user.domain.UserReactivationRequestedEvent(
+                user.getEmail(), token));
 
         log.info("Reactivation email requested for {} (token expires at {})", email, expiresAt);
     }
@@ -274,15 +279,18 @@ public class UserServiceImpl implements UserService {
     /**
      * {@inheritDoc}
      *
-     * <p>Tras reactivar la cuenta, el token se limpia para que no pueda reutilizarse
+     * <p>
+     * Tras reactivar la cuenta, el token se limpia para que no pueda reutilizarse
      * (tokens de un solo uso). El {@code tokenVersion} se incrementa para invalidar
-     * cualquier sesión anterior que pudiera existir antes del soft-delete.</p>
+     * cualquier sesión anterior que pudiera existir antes del soft-delete.
+     * </p>
      */
     @Override
     @Transactional
     public AuthResponse reactivateAccount(String token) {
 
-        // 1. Buscamos al usuario por el token (sin filtrar por deletedAt intencionalmente).
+        // 1. Buscamos al usuario por el token (sin filtrar por deletedAt
+        // intencionalmente).
         User user = userRepository.findByReactivationToken(token)
                 .orElseThrow(() -> new InvalidReactivationTokenException(
                         "Error: El enlace de reactivación no es válido."));
@@ -301,7 +309,8 @@ public class UserServiceImpl implements UserService {
         user.setReactivationToken(null);
         user.setReactivationTokenExpiresAt(null);
 
-        // 5. Incrementamos el tokenVersion para invalidar sesiones anteriores al borrado.
+        // 5. Incrementamos el tokenVersion para invalidar sesiones anteriores al
+        // borrado.
         user.setTokenVersion(user.getTokenVersion() + 1);
 
         userRepository.save(user);
@@ -309,7 +318,7 @@ public class UserServiceImpl implements UserService {
         log.info("Account reactivated for user {}", user.getEmail());
 
         // 6. Generamos y devolvemos tokens JWT para que el usuario quede autenticado
-        //    directamente, sin necesidad de un login adicional.
+        // directamente, sin necesidad de un login adicional.
         String accessToken = jwtTokenProvider.generateAccessToken(user);
         String refreshToken = jwtTokenProvider.generateRefreshToken(user);
 
