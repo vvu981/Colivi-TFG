@@ -11,7 +11,6 @@ import com.vvu981.colivibackend.features.home.dto.HomeDetailResponseDto;
 import com.vvu981.colivibackend.features.home.dto.HomeResponseDto;
 import com.vvu981.colivibackend.features.home.dto.JoinHomeRequest;
 import com.vvu981.colivibackend.features.home.service.HomeService;
-import com.vvu981.colivibackend.features.home.service.HomeService;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,194 +38,192 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(
-        controllers = HomeController.class,
-        excludeFilters = @ComponentScan.Filter(
-                type = FilterType.ASSIGNABLE_TYPE,
-                classes = {JwtAuthenticationFilter.class}
-        )
-)
+@WebMvcTest(controllers = HomeController.class, excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = {
+                JwtAuthenticationFilter.class }))
 @AutoConfigureMockMvc(addFilters = false)
 class HomeControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+        @Autowired
+        private MockMvc mockMvc;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+        @Autowired
+        private ObjectMapper objectMapper;
 
-    @MockBean
-    private HomeService homeService;
+        @MockBean
+        private HomeService homeService;
 
-    @MockBean
-    private JwtTokenProvider jwtTokenProvider;
+        @MockBean
+        private JwtTokenProvider jwtTokenProvider;
 
-    @MockBean
-    private UserRepository userRepository;
+        @MockBean
+        private UserRepository userRepository;
 
-    private UUID userId;
-    private UUID homeId;
-    private UserPrincipal principal;
-    private UserPrincipal adminPrincipal;
+        private UUID userId;
+        private UUID homeId;
+        private UserPrincipal principal;
+        private UserPrincipal adminPrincipal;
 
-    @BeforeEach
-    void setUp() {
-        userId = UUID.randomUUID();
-        homeId = UUID.randomUUID();
-        principal = new UserPrincipal(userId, "test@test.com", "pass", List.of(new SimpleGrantedAuthority("USER")));
-        adminPrincipal = new UserPrincipal(userId, "admin@test.com", "pass", List.of(new SimpleGrantedAuthority("ADMIN")));
-    }
+        @BeforeEach
+        void setUp() {
+                userId = UUID.randomUUID();
+                homeId = UUID.randomUUID();
+                principal = new UserPrincipal(userId, "test@test.com", "pass",
+                                List.of(new SimpleGrantedAuthority("USER")));
+                adminPrincipal = new UserPrincipal(userId, "admin@test.com", "pass",
+                                List.of(new SimpleGrantedAuthority("ADMIN")));
+        }
 
-    @Test
-    void createHome() throws Exception {
-        CreateHomeRequest request = new CreateHomeRequest("My Home");
-        HomeDetailResponseDto response = new HomeDetailResponseDto(
-                homeId, "My Home", "CODE", HomeRole.ADMIN, HomeMemberStatus.ACTIVE, 1, LocalDateTime.now(), List.of()
-        );
+        @Test
+        void createHome() throws Exception {
+                CreateHomeRequest request = new CreateHomeRequest("My Home");
+                HomeDetailResponseDto response = new HomeDetailResponseDto(
+                                homeId, "My Home", "CODE", HomeRole.ADMIN, HomeMemberStatus.ACTIVE, 1,
+                                LocalDateTime.now(), List.of());
 
-        when(homeService.createHome(any(), any())).thenReturn(response);
+                when(homeService.createHome(any(), any())).thenReturn(response);
 
-        mockMvc.perform(post("/api/v1/homes")
-                        .with(user(principal))
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value(homeId.toString()))
-                .andExpect(jsonPath("$.name").value("My Home"));
-    }
+                mockMvc.perform(post("/api/v1/homes")
+                                .with(user(principal))
+                                .with(csrf())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isCreated())
+                                .andExpect(jsonPath("$.id").value(homeId.toString()))
+                                .andExpect(jsonPath("$.name").value("My Home"));
+        }
 
-    @Test
-    void joinHome() throws Exception {
-        JoinHomeRequest request = new JoinHomeRequest("CODE1234");
-        HomeDetailResponseDto response = new HomeDetailResponseDto(
-                homeId, "My Home", "CODE1234", HomeRole.MEMBER, HomeMemberStatus.ACTIVE, 1, LocalDateTime.now(), List.of()
-        );
+        @Test
+        void joinHome() throws Exception {
+                JoinHomeRequest request = new JoinHomeRequest("CODE1234");
+                HomeDetailResponseDto response = new HomeDetailResponseDto(
+                                homeId, "My Home", "CODE1234", HomeRole.MEMBER, HomeMemberStatus.ACTIVE, 1,
+                                LocalDateTime.now(), List.of());
 
-        when(homeService.joinHome(any(), any())).thenReturn(response);
+                when(homeService.joinHome(any(), any())).thenReturn(response);
 
-        mockMvc.perform(post("/api/v1/homes/join")
-                        .with(user(principal))
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("My Home"));
-    }
+                mockMvc.perform(post("/api/v1/homes/join")
+                                .with(user(principal))
+                                .with(csrf())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.name").value("My Home"));
+        }
 
-    @Test
-    void getUserHomes() throws Exception {
-        HomeResponseDto response = new HomeResponseDto(
-                homeId, "My Home", "CODE1234", HomeRole.MEMBER, HomeMemberStatus.ACTIVE, 1, LocalDateTime.now()
-        );
+        @Test
+        void getUserHomes() throws Exception {
+                HomeResponseDto response = new HomeResponseDto(
+                                homeId, "My Home", "CODE1234", HomeRole.MEMBER, HomeMemberStatus.ACTIVE, 1,
+                                LocalDateTime.now());
 
-        when(homeService.getUserHomes(any(), any())).thenReturn(List.of(response));
+                when(homeService.getUserHomes(any(), any())).thenReturn(List.of(response));
 
-        mockMvc.perform(get("/api/v1/homes")
-                        .with(user(principal)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].name").value("My Home"));
-    }
+                mockMvc.perform(get("/api/v1/homes")
+                                .with(user(principal)))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$[0].name").value("My Home"));
+        }
 
-    @Test
-    void getHomeDetail() throws Exception {
-        HomeDetailResponseDto response = new HomeDetailResponseDto(
-                homeId, "My Home", "CODE", HomeRole.MEMBER, HomeMemberStatus.ACTIVE, 1, LocalDateTime.now(), List.of()
-        );
+        @Test
+        void getHomeDetail() throws Exception {
+                HomeDetailResponseDto response = new HomeDetailResponseDto(
+                                homeId, "My Home", "CODE", HomeRole.MEMBER, HomeMemberStatus.ACTIVE, 1,
+                                LocalDateTime.now(), List.of());
 
-        when(homeService.getHomeDetail(any(), any())).thenReturn(response);
+                when(homeService.getHomeDetail(any(), any())).thenReturn(response);
 
-        mockMvc.perform(get("/api/v1/homes/{id}", homeId)
-                        .with(user(principal)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("My Home"));
-    }
+                mockMvc.perform(get("/api/v1/homes/{id}", homeId)
+                                .with(user(principal)))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.name").value("My Home"));
+        }
 
-    @Test
-    void leaveHome() throws Exception {
-        mockMvc.perform(patch("/api/v1/homes/{id}/leave", homeId)
-                        .with(user(principal))
-                        .with(csrf()))
-                .andExpect(status().isNoContent());
+        @Test
+        void leaveHome() throws Exception {
+                mockMvc.perform(patch("/api/v1/homes/{id}/leave", homeId)
+                                .with(user(principal))
+                                .with(csrf()))
+                                .andExpect(status().isNoContent());
 
-        verify(homeService).leaveHome(eq(homeId), any());
-    }
+                verify(homeService).leaveHome(eq(homeId), any());
+        }
 
-    @Test
-    void archiveHomeView() throws Exception {
-        mockMvc.perform(patch("/api/v1/homes/{id}/archive", homeId)
-                        .with(user(principal))
-                        .with(csrf()))
-                .andExpect(status().isNoContent());
+        @Test
+        void archiveHomeView() throws Exception {
+                mockMvc.perform(patch("/api/v1/homes/{id}/archive", homeId)
+                                .with(user(principal))
+                                .with(csrf()))
+                                .andExpect(status().isNoContent());
 
-        verify(homeService).archiveHomeView(eq(homeId), any());
-    }
+                verify(homeService).archiveHomeView(eq(homeId), any());
+        }
 
-    @Test
-    void unarchiveHomeView() throws Exception {
-        mockMvc.perform(patch("/api/v1/homes/{id}/unarchive", homeId)
-                        .with(user(principal))
-                        .with(csrf()))
-                .andExpect(status().isNoContent());
+        @Test
+        void unarchiveHomeView() throws Exception {
+                mockMvc.perform(patch("/api/v1/homes/{id}/unarchive", homeId)
+                                .with(user(principal))
+                                .with(csrf()))
+                                .andExpect(status().isNoContent());
 
-        verify(homeService).unarchiveHomeView(eq(homeId), any());
-    }
+                verify(homeService).unarchiveHomeView(eq(homeId), any());
+        }
 
-    @Test
-    void transferAdmin() throws Exception {
-        UUID targetId = UUID.randomUUID();
-        mockMvc.perform(patch("/api/v1/homes/{id}/transfer-admin", homeId)
-                        .with(user(principal))
-                        .param("targetUserId", targetId.toString())
-                        .with(csrf()))
-                .andExpect(status().isNoContent());
+        @Test
+        void transferAdmin() throws Exception {
+                UUID targetId = UUID.randomUUID();
+                mockMvc.perform(patch("/api/v1/homes/{id}/transfer-admin", homeId)
+                                .with(user(principal))
+                                .param("targetUserId", targetId.toString())
+                                .with(csrf()))
+                                .andExpect(status().isNoContent());
 
-        verify(homeService).transferAdmin(eq(homeId), any(), eq(targetId));
-    }
+                verify(homeService).transferAdmin(eq(homeId), any(), eq(targetId));
+        }
 
-    @Test
-    void expelMember() throws Exception {
-        UUID targetId = UUID.randomUUID();
-        mockMvc.perform(patch("/api/v1/homes/{id}/members/{targetUserId}/expel", homeId, targetId)
-                        .with(user(principal))
-                        .with(csrf()))
-                .andExpect(status().isNoContent());
+        @Test
+        void expelMember() throws Exception {
+                UUID targetId = UUID.randomUUID();
+                mockMvc.perform(patch("/api/v1/homes/{id}/members/{targetUserId}/expel", homeId, targetId)
+                                .with(user(principal))
+                                .with(csrf()))
+                                .andExpect(status().isNoContent());
 
-        verify(homeService).expelMember(eq(homeId), any(), eq(targetId));
-    }
+                verify(homeService).expelMember(eq(homeId), any(), eq(targetId));
+        }
 
-    @Test
-    void forceExpelMember() throws Exception {
-        UUID targetId = UUID.randomUUID();
-        java.util.Map<String, String> body = java.util.Map.of("reason", "No paga alquiler");
-        
-        mockMvc.perform(patch("/api/v1/homes/{id}/members/{targetUserId}/force-expel", homeId, targetId)
-                        .with(user(principal))
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(body)))
-                .andExpect(status().isNoContent());
+        @Test
+        void forceExpelMember() throws Exception {
+                UUID targetId = UUID.randomUUID();
+                java.util.Map<String, String> body = java.util.Map.of("reason", "No paga alquiler");
 
-        verify(homeService).forceExpelWithDebtSettlement(eq(homeId), any(), eq(targetId), eq("No paga alquiler"));
-    }
+                mockMvc.perform(patch("/api/v1/homes/{id}/members/{targetUserId}/force-expel", homeId, targetId)
+                                .with(user(principal))
+                                .with(csrf())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(body)))
+                                .andExpect(status().isNoContent());
 
-    @Test
-    void softDeleteHome() throws Exception {
-        mockMvc.perform(delete("/api/v1/homes/{id}", homeId)
-                        .with(user(principal))
-                        .with(csrf()))
-                .andExpect(status().isNoContent());
+                verify(homeService).forceExpelWithDebtSettlement(eq(homeId), any(), eq(targetId),
+                                eq("No paga alquiler"));
+        }
 
-        verify(homeService).softDeleteHome(eq(homeId), any());
-    }
+        @Test
+        void softDeleteHome() throws Exception {
+                mockMvc.perform(delete("/api/v1/homes/{id}", homeId)
+                                .with(user(principal))
+                                .with(csrf()))
+                                .andExpect(status().isNoContent());
 
-    @Test
-    void hardDeleteHome() throws Exception {
-        mockMvc.perform(delete("/api/v1/homes/{id}/hard", homeId)
-                        .with(user(adminPrincipal))
-                        .with(csrf()))
-                .andExpect(status().isNoContent());
+                verify(homeService).softDeleteHome(eq(homeId), any());
+        }
 
-        verify(homeService).hardDeleteHome(eq(homeId), any());
-    }
+        @Test
+        void hardDeleteHome() throws Exception {
+                mockMvc.perform(delete("/api/v1/homes/{id}/hard", homeId)
+                                .with(user(adminPrincipal))
+                                .with(csrf()))
+                                .andExpect(status().isNoContent());
+
+                verify(homeService).hardDeleteHome(eq(homeId), any());
+        }
 }

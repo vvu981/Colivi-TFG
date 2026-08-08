@@ -11,6 +11,8 @@ import com.vvu981.colivibackend.features.home.dto.CreateHomeRequest;
 import com.vvu981.colivibackend.features.home.dto.HomeDetailResponseDto;
 import com.vvu981.colivibackend.features.home.dto.HomeResponseDto;
 import com.vvu981.colivibackend.features.home.dto.JoinHomeRequest;
+import com.vvu981.colivibackend.features.home.domain.event.*;
+import org.springframework.context.ApplicationEventPublisher;
 import com.vvu981.colivibackend.features.home.mapper.HomeMapper;
 import com.vvu981.colivibackend.features.home.repository.HomeMemberRepository;
 import com.vvu981.colivibackend.features.home.repository.HomeRepository;
@@ -37,6 +39,7 @@ public class HomeServiceImpl implements HomeService {
     private final HomeMapper homeMapper;
     private final HomeBalanceValidator homeBalanceValidator;
     private final HomeExpenseService homeExpenseService;
+    private final ApplicationEventPublisher eventPublisher;
 
     // =========================================================================
     // HomeCommandService
@@ -58,6 +61,8 @@ public class HomeServiceImpl implements HomeService {
 
         home.addMember(adminMember);
         homeRepository.save(home);
+        
+        eventPublisher.publishEvent(new HomeCreatedEvent(home.getId(), userId, home.getName()));
 
         return homeMapper.toDetailDto(home, adminMember);
     }
@@ -91,6 +96,8 @@ public class HomeServiceImpl implements HomeService {
         }
 
         homeRepository.save(home);
+        
+        eventPublisher.publishEvent(new MemberJoinedEvent(home.getId(), userId, user.getFirstName() + " " + user.getLastName1()));
 
         return homeMapper.toDetailDto(home, member);
     }
@@ -110,6 +117,7 @@ public class HomeServiceImpl implements HomeService {
                 Home home = currentMember.getHome();
                 home.softDelete();
                 homeRepository.save(home);
+                eventPublisher.publishEvent(new HomeDeletedEvent(home.getId(), userId, home.getName()));
             } else {
                 long activeAdminCount = currentMember.getHome().getMembers().stream()
                         .filter(m -> m.getRole() == HomeRole.ADMIN && m.getStatus() == HomeMemberStatus.ACTIVE)
@@ -124,6 +132,7 @@ public class HomeServiceImpl implements HomeService {
 
         homeBalanceValidator.validateZeroBalance(homeId, userId);
         currentMember.leave();
+        eventPublisher.publishEvent(new MemberLeftEvent(homeId, userId, currentMember.getUser().getFirstName() + " " + currentMember.getUser().getLastName1()));
     }
 
     @Override
@@ -147,6 +156,7 @@ public class HomeServiceImpl implements HomeService {
 
         homeBalanceValidator.validateZeroBalance(homeId, targetUserId);
         targetMember.leave();
+        eventPublisher.publishEvent(new MemberExpelledEvent(homeId, adminUserId, targetMember.getUser().getFirstName() + " " + targetMember.getUser().getLastName1(), null));
     }
 
     @Override
@@ -196,6 +206,7 @@ public class HomeServiceImpl implements HomeService {
         // Una vez liquidado el balance, procedemos con la expulsión normal
         homeBalanceValidator.validateZeroBalance(homeId, targetUserId);
         targetMember.leave();
+        eventPublisher.publishEvent(new MemberExpelledEvent(homeId, adminUserId, targetMember.getUser().getFirstName() + " " + targetMember.getUser().getLastName1(), reason));
     }
 
     @Override
@@ -259,6 +270,7 @@ public class HomeServiceImpl implements HomeService {
         Home home = findActiveHome(homeId);
         home.softDelete();
         homeRepository.save(home);
+        eventPublisher.publishEvent(new HomeDeletedEvent(homeId, userId, home.getName()));
     }
 
     @Override
@@ -302,6 +314,7 @@ public class HomeServiceImpl implements HomeService {
 
         targetMember.setRole(HomeRole.ADMIN);
         currentMember.setRole(HomeRole.MEMBER);
+        eventPublisher.publishEvent(new AdminTransferredEvent(homeId, currentUserId, targetMember.getUser().getFirstName() + " " + targetMember.getUser().getLastName1()));
     }
 
     // =========================================================================

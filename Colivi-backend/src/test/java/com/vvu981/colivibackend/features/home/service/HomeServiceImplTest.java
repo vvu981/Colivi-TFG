@@ -54,6 +54,9 @@ class HomeServiceImplTest {
 
     @Mock
     private HomeExpenseService homeExpenseService;
+    
+    @Mock
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     private final HomeMapper homeMapper = new HomeMapper();
 
@@ -71,7 +74,8 @@ class HomeServiceImplTest {
                 invitationCodeGenerator,
                 homeMapper,
                 homeBalanceValidator,
-                homeExpenseService
+                homeExpenseService,
+                eventPublisher
         );
 
         testUserId = UUID.randomUUID();

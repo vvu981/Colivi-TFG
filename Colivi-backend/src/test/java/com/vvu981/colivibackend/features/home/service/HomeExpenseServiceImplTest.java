@@ -11,6 +11,7 @@ import com.vvu981.colivibackend.features.home.repository.HomeRepository;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -44,7 +45,10 @@ class HomeExpenseServiceImplTest {
     @Mock
     private HomeExpenseMapper expenseMapper;
     @Mock
-    private DebtSimplifierService DebtSimplifierService;
+    private DebtSimplifierService debtSimplifierService;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private HomeExpenseServiceImpl service;
@@ -326,7 +330,7 @@ class HomeExpenseServiceImplTest {
                     .thenReturn(List.of(expense));
 
             DebtTransfer transfer = new DebtTransfer(participant1Id, payerId, new BigDecimal("100.00"));
-            when(DebtSimplifierService.simplify(any())).thenReturn(List.of(transfer));
+            when(debtSimplifierService.simplify(any())).thenReturn(List.of(transfer));
             when(userRepository.findAllById(any())).thenReturn(List.of(payer, participant1));
 
             List<DebtTransferResponseDto> result = service.getOptimizedTransfers(homeId, payerId);
