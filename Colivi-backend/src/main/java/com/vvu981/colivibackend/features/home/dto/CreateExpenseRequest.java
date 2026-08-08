@@ -15,6 +15,7 @@ public record CreateExpenseRequest(
 
         @NotNull(message = "El importe total no puede ser nulo")
         @DecimalMin(value = "0.01", message = "El importe debe ser mayor que 0")
+        @jakarta.validation.constraints.Digits(integer = 8, fraction = 2, message = "El importe debe tener como máximo 2 decimales")
         BigDecimal totalAmount,
 
         @NotNull(message = "El pagador es obligatorio")

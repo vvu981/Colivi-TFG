@@ -136,7 +136,8 @@ public class HomeExpenseServiceImpl implements HomeExpenseCommandService, HomeEx
     // LÓGICA DE REPARTO
     // =========================================================================
     private void distributeExactAmount(HomeExpense expense, List<UUID> participantIds, BigDecimal total) {
-        int n = participantIds.size();
+        List<UUID> uniqueParticipantIds = participantIds.stream().distinct().toList();
+        int n = uniqueParticipantIds.size();
         BigDecimal bdN = new BigDecimal(n);
         
         BigDecimal baseAmount = total.divide(bdN, 2, RoundingMode.DOWN);
@@ -146,8 +147,9 @@ public class HomeExpenseServiceImpl implements HomeExpenseCommandService, HomeEx
         BigDecimal sumCheck = BigDecimal.ZERO;
 
         for (int i = 0; i < n; i++) {
-            UUID participantId = participantIds.get(i);
-            User participantUser = userRepository.findByIdAndDeletedAtIsNull(participantId).orElseThrow();
+            UUID participantId = uniqueParticipantIds.get(i);
+            User participantUser = userRepository.findByIdAndDeletedAtIsNull(participantId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Participante no encontrado con ID: " + participantId));
             
             BigDecimal owed = baseAmount;
             if (i < extraCents) {

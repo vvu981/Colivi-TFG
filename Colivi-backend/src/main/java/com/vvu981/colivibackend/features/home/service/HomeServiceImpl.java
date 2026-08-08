@@ -184,7 +184,7 @@ public class HomeServiceImpl implements HomeQueryService, HomeCommandService {
                 request = new com.vvu981.colivibackend.features.home.dto.CreateExpenseRequest(
                         expenseDescription, absBalance, targetUserId, java.util.List.of(adminUserId));
             } else {
-                // Acreditor (le deben dinero, su balance es positivo).
+                // Acreedor (le deben dinero, su balance es positivo).
                 // Para llegar a 0, necesita realizar un gasto.
                 // Así que el Admin es el pagador, y el Target es el participante que consume.
                 request = new com.vvu981.colivibackend.features.home.dto.CreateExpenseRequest(
