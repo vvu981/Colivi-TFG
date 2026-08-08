@@ -1,20 +1,37 @@
 package com.vvu981.colivibackend.features.home.service;
 
-/**
- * Interfaz unificada mantenida como ruta de migración.
- *
- * <p>Está marcada como {@code @Deprecated} porque viola el Principio de Segregación
- * de Interfaces (ISP): agrupa operaciones de lectura y escritura en un único contrato,
- * forzando a cualquier cliente a depender de métodos que no necesita.</p>
- *
- * <p>Usa en su lugar:</p>
- * <ul>
- *   <li>{@link HomeQueryService} — para operaciones de solo lectura.</li>
- *   <li>{@link HomeCommandService} — para operaciones de escritura/mutación.</li>
- * </ul>
- *
- * @deprecated Usar {@link HomeQueryService} y {@link HomeCommandService} por separado.
- */
-@Deprecated(forRemoval = true)
-public interface HomeService extends HomeQueryService, HomeCommandService {
+import com.vvu981.colivibackend.features.home.domain.HomeMemberStatus;
+import com.vvu981.colivibackend.features.home.dto.CreateHomeRequest;
+import com.vvu981.colivibackend.features.home.dto.HomeDetailResponseDto;
+import com.vvu981.colivibackend.features.home.dto.HomeResponseDto;
+import com.vvu981.colivibackend.features.home.dto.JoinHomeRequest;
+
+import java.util.List;
+import java.util.UUID;
+
+public interface HomeService {
+
+    HomeDetailResponseDto createHome(CreateHomeRequest request, UUID userId);
+
+    HomeDetailResponseDto joinHome(JoinHomeRequest request, UUID userId);
+
+    void leaveHome(UUID homeId, UUID userId);
+
+    void expelMember(UUID homeId, UUID adminUserId, UUID targetUserId);
+
+    void forceExpelWithDebtSettlement(UUID homeId, UUID adminUserId, UUID targetUserId, String reason);
+
+    void archiveHomeView(UUID homeId, UUID userId);
+
+    void unarchiveHomeView(UUID homeId, UUID userId);
+
+    void transferAdmin(UUID homeId, UUID currentUserId, UUID targetUserId);
+
+    void softDeleteHome(UUID homeId, UUID userId);
+
+    void hardDeleteHome(UUID homeId, UUID userId);
+
+    List<HomeResponseDto> getUserHomes(UUID userId, HomeMemberStatus statusFilter);
+
+    HomeDetailResponseDto getHomeDetail(UUID homeId, UUID userId);
 }

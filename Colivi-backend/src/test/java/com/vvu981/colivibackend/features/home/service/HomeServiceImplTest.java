@@ -52,6 +52,9 @@ class HomeServiceImplTest {
     @Mock
     private HomeBalanceValidator homeBalanceValidator;
 
+    @Mock
+    private HomeExpenseService homeExpenseService;
+
     private final HomeMapper homeMapper = new HomeMapper();
 
     private HomeServiceImpl homeService;
@@ -67,7 +70,8 @@ class HomeServiceImplTest {
                 userRepository,
                 invitationCodeGenerator,
                 homeMapper,
-                homeBalanceValidator
+                homeBalanceValidator,
+                homeExpenseService
         );
 
         testUserId = UUID.randomUUID();
@@ -460,6 +464,123 @@ class HomeServiceImplTest {
 
             assertThrows(BusinessRuleValidationException.class,
                     () -> homeService.expelMember(homeId, testUserId, targetUser.getId()));
+        }
+    }
+
+    // =========================================================================
+    // forceExpelWithDebtSettlement
+    // =========================================================================
+
+    @Nested
+    class ForceExpelWithDebtSettlement {
+
+        @Test
+        void shouldForceExpelAndSettleDebtWhenUserOwesMoney() {
+            UUID homeId = UUID.randomUUID();
+            Home home = buildHome(homeId);
+            User targetUser = new User();
+            targetUser.setId(UUID.randomUUID());
+            
+            HomeMember adminMember = buildMember(home, testUser, HomeRole.ADMIN, HomeMemberStatus.ACTIVE);
+            HomeMember targetMember = buildMember(home, targetUser, HomeRole.MEMBER, HomeMemberStatus.ACTIVE);
+
+            when(homeMemberRepository.findByHomeIdAndUserId(homeId, testUserId))
+                    .thenReturn(Optional.of(adminMember));
+            when(homeMemberRepository.findByHomeIdAndUserId(homeId, targetUser.getId()))
+                    .thenReturn(Optional.of(targetMember));
+            
+            // Usuario debe 50€ (balance negativo)
+            when(homeExpenseService.getUserBalance(homeId, targetUser.getId()))
+                    .thenReturn(new java.math.BigDecimal("-50.00"));
+
+            homeService.forceExpelWithDebtSettlement(homeId, testUserId, targetUser.getId(), "No paga");
+
+            // Verifica que se crea un gasto donde Target paga y Admin consume
+            verify(homeExpenseService).createExpense(eq(homeId), argThat(req -> 
+                req.payerId().equals(targetUser.getId()) &&
+                req.participantIds().contains(testUserId) &&
+                req.totalAmount().compareTo(new java.math.BigDecimal("50.00")) == 0 &&
+                req.description().contains("No paga")
+            ), eq(testUserId));
+
+            assertEquals(HomeMemberStatus.LEFT, targetMember.getStatus());
+            assertNotNull(targetMember.getLeftAt());
+            verify(homeBalanceValidator).validateZeroBalance(homeId, targetUser.getId());
+        }
+
+        @Test
+        void shouldForceExpelAndSettleDebtWhenUserIsOwedMoney() {
+            UUID homeId = UUID.randomUUID();
+            Home home = buildHome(homeId);
+            User targetUser = new User();
+            targetUser.setId(UUID.randomUUID());
+            
+            HomeMember adminMember = buildMember(home, testUser, HomeRole.ADMIN, HomeMemberStatus.ACTIVE);
+            HomeMember targetMember = buildMember(home, targetUser, HomeRole.MEMBER, HomeMemberStatus.ACTIVE);
+
+            when(homeMemberRepository.findByHomeIdAndUserId(homeId, testUserId))
+                    .thenReturn(Optional.of(adminMember));
+            when(homeMemberRepository.findByHomeIdAndUserId(homeId, targetUser.getId()))
+                    .thenReturn(Optional.of(targetMember));
+            
+            // Le deben 30€ (balance positivo)
+            when(homeExpenseService.getUserBalance(homeId, targetUser.getId()))
+                    .thenReturn(new java.math.BigDecimal("30.00"));
+
+            homeService.forceExpelWithDebtSettlement(homeId, testUserId, targetUser.getId(), null);
+
+            // Verifica que se crea un gasto donde Admin paga y Target consume
+            verify(homeExpenseService).createExpense(eq(homeId), argThat(req -> 
+                req.payerId().equals(testUserId) &&
+                req.participantIds().contains(targetUser.getId()) &&
+                req.totalAmount().compareTo(new java.math.BigDecimal("30.00")) == 0
+            ), eq(testUserId));
+
+            assertEquals(HomeMemberStatus.LEFT, targetMember.getStatus());
+            assertNotNull(targetMember.getLeftAt());
+        }
+
+        @Test
+        void shouldForceExpelWithoutCreatingExpenseWhenBalanceIsZero() {
+            UUID homeId = UUID.randomUUID();
+            Home home = buildHome(homeId);
+            User targetUser = new User();
+            targetUser.setId(UUID.randomUUID());
+            
+            HomeMember adminMember = buildMember(home, testUser, HomeRole.ADMIN, HomeMemberStatus.ACTIVE);
+            HomeMember targetMember = buildMember(home, targetUser, HomeRole.MEMBER, HomeMemberStatus.ACTIVE);
+
+            when(homeMemberRepository.findByHomeIdAndUserId(homeId, testUserId))
+                    .thenReturn(Optional.of(adminMember));
+            when(homeMemberRepository.findByHomeIdAndUserId(homeId, targetUser.getId()))
+                    .thenReturn(Optional.of(targetMember));
+            
+            // Balance ya es 0
+            when(homeExpenseService.getUserBalance(homeId, targetUser.getId()))
+                    .thenReturn(java.math.BigDecimal.ZERO);
+
+            homeService.forceExpelWithDebtSettlement(homeId, testUserId, targetUser.getId(), "Motivo");
+
+            // No se debe crear gasto
+            verify(homeExpenseService, never()).createExpense(any(), any(), any());
+
+            assertEquals(HomeMemberStatus.LEFT, targetMember.getStatus());
+            assertNotNull(targetMember.getLeftAt());
+        }
+
+        @Test
+        void shouldThrowIfCallerNotAdmin() {
+            UUID homeId = UUID.randomUUID();
+            Home home = buildHome(homeId);
+            User targetUser = new User();
+            targetUser.setId(UUID.randomUUID());
+            
+            HomeMember member = buildMember(home, testUser, HomeRole.MEMBER, HomeMemberStatus.ACTIVE);
+            when(homeMemberRepository.findByHomeIdAndUserId(homeId, testUserId))
+                    .thenReturn(Optional.of(member));
+
+            assertThrows(UnauthorizedActionException.class, 
+                () -> homeService.forceExpelWithDebtSettlement(homeId, testUserId, targetUser.getId(), "Motivo"));
         }
     }
 
