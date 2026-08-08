@@ -3,8 +3,7 @@ package com.vvu981.colivibackend.features.home.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vvu981.colivibackend.features.home.dto.CreateExpenseRequest;
 import com.vvu981.colivibackend.features.home.dto.ExpenseResponseDto;
-import com.vvu981.colivibackend.features.home.service.HomeExpenseCommandService;
-import com.vvu981.colivibackend.features.home.service.HomeExpenseQueryService;
+import com.vvu981.colivibackend.features.home.service.HomeExpenseService;
 import com.vvu981.colivibackend.features.user.domain.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,96 +33,94 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc(addFilters = false)
 class HomeExpenseControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+        @Autowired
+        private MockMvc mockMvc;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+        @Autowired
+        private ObjectMapper objectMapper;
 
-    @MockBean
-    private HomeExpenseCommandService commandService;
+        @MockBean
+        private HomeExpenseService homeExpenseService;
 
-    @MockBean
-    private HomeExpenseQueryService queryService;
+        @MockBean
+        private JwtTokenProvider jwtTokenProvider;
 
-    @MockBean
-    private JwtTokenProvider jwtTokenProvider;
+        @MockBean
+        private UserRepository userRepository;
 
-    @MockBean
-    private UserRepository userRepository;
+        private User authUser;
+        private UUID homeId;
+        private UsernamePasswordAuthenticationToken authentication;
 
-    private User authUser;
-    private UUID homeId;
-    private UsernamePasswordAuthenticationToken authentication;
+        @BeforeEach
+        void setUp() {
+                authUser = new User();
+                authUser.setId(UUID.randomUUID());
+                authUser.setEmail("test@test.com");
 
-    @BeforeEach
-    void setUp() {
-        authUser = new User();
-        authUser.setId(UUID.randomUUID());
-        authUser.setEmail("test@test.com");
+                homeId = UUID.randomUUID();
 
-        homeId = UUID.randomUUID();
+                authentication = new UsernamePasswordAuthenticationToken(
+                                authUser, null, java.util.Collections.emptyList());
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+        }
 
-        authentication = new UsernamePasswordAuthenticationToken(
-                authUser, null, java.util.Collections.emptyList());
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-    }
+        @Test
+        void createExpense() throws Exception {
+                CreateExpenseRequest request = new CreateExpenseRequest("Pizza", new BigDecimal("20.00"),
+                                authUser.getId(),
+                                List.of(authUser.getId()));
 
-    @Test
-    void createExpense() throws Exception {
-        CreateExpenseRequest request = new CreateExpenseRequest("Pizza", new BigDecimal("20.00"), authUser.getId(),
-                List.of(authUser.getId()));
+                ExpenseResponseDto response = new ExpenseResponseDto(UUID.randomUUID(), homeId, "Pizza",
+                                new BigDecimal("20.00"), null, null, null);
+                when(homeExpenseService.createExpense(eq(homeId), any(), eq(authUser.getId()))).thenReturn(response);
 
-        ExpenseResponseDto response = new ExpenseResponseDto(UUID.randomUUID(), homeId, "Pizza",
-                new BigDecimal("20.00"), null, null, null);
-        when(commandService.createExpense(eq(homeId), any(), eq(authUser.getId()))).thenReturn(response);
+                mockMvc.perform(post("/api/v1/homes/{homeId}/expenses", homeId)
+                                .principal(authentication)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isCreated())
+                                .andExpect(jsonPath("$.description").value("Pizza"));
+        }
 
-        mockMvc.perform(post("/api/v1/homes/{homeId}/expenses", homeId)
-                .principal(authentication)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.description").value("Pizza"));
-    }
+        @Test
+        void deleteExpense() throws Exception {
+                UUID expenseId = UUID.randomUUID();
 
-    @Test
-    void deleteExpense() throws Exception {
-        UUID expenseId = UUID.randomUUID();
+                mockMvc.perform(delete("/api/v1/homes/{homeId}/expenses/{expenseId}", homeId, expenseId)
+                                .principal(authentication))
+                                .andExpect(status().isNoContent());
 
-        mockMvc.perform(delete("/api/v1/homes/{homeId}/expenses/{expenseId}", homeId, expenseId)
-                .principal(authentication))
-                .andExpect(status().isNoContent());
+                verify(homeExpenseService).deleteExpense(homeId, expenseId, authUser.getId());
+        }
 
-        verify(commandService).deleteExpense(homeId, expenseId, authUser.getId());
-    }
+        @Test
+        void getHomeExpenses() throws Exception {
+                when(homeExpenseService.getHomeExpenses(homeId, authUser.getId())).thenReturn(List.of());
 
-    @Test
-    void getHomeExpenses() throws Exception {
-        when(queryService.getHomeExpenses(homeId, authUser.getId())).thenReturn(List.of());
+                mockMvc.perform(get("/api/v1/homes/{homeId}/expenses", homeId)
+                                .principal(authentication))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$").isArray());
+        }
 
-        mockMvc.perform(get("/api/v1/homes/{homeId}/expenses", homeId)
-                .principal(authentication))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray());
-    }
+        @Test
+        void getHomeBalances() throws Exception {
+                when(homeExpenseService.getHomeBalances(homeId, authUser.getId())).thenReturn(List.of());
 
-    @Test
-    void getHomeBalances() throws Exception {
-        when(queryService.getHomeBalances(homeId, authUser.getId())).thenReturn(List.of());
+                mockMvc.perform(get("/api/v1/homes/{homeId}/expenses/balances", homeId)
+                                .principal(authentication))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$").isArray());
+        }
 
-        mockMvc.perform(get("/api/v1/homes/{homeId}/expenses/balances", homeId)
-                .principal(authentication))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray());
-    }
+        @Test
+        void getOptimizedTransfers() throws Exception {
+                when(homeExpenseService.getOptimizedTransfers(homeId, authUser.getId())).thenReturn(List.of());
 
-    @Test
-    void getOptimizedTransfers() throws Exception {
-        when(queryService.getOptimizedTransfers(homeId, authUser.getId())).thenReturn(List.of());
-
-        mockMvc.perform(get("/api/v1/homes/{homeId}/expenses/balances/transfers", homeId)
-                .principal(authentication))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray());
-    }
+                mockMvc.perform(get("/api/v1/homes/{homeId}/expenses/balances/transfers", homeId)
+                                .principal(authentication))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$").isArray());
+        }
 }

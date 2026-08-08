@@ -13,7 +13,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 /**
- * Tests unitarios para {@link RandomAlphanumericCodeGenerator}.
+ * Tests unitarios para {@link InvitationCodeGenerator}.
  *
  * <p>
  * El test de "retry por colisión" vive aquí y no en {@code HomeServiceImplTest}
@@ -22,16 +22,16 @@ import static org.mockito.Mockito.*;
  * </p>
  */
 @ExtendWith(MockitoExtension.class)
-class RandomAlphanumericCodeGeneratorTest {
+class InvitationCodeGeneratorTest {
 
     @Mock
     private HomeRepository homeRepository;
 
-    private RandomAlphanumericCodeGenerator generator;
+    private InvitationCodeGenerator generator;
 
     @BeforeEach
     void setUp() {
-        generator = new RandomAlphanumericCodeGenerator(homeRepository);
+        generator = new InvitationCodeGenerator(homeRepository);
     }
 
     @Nested

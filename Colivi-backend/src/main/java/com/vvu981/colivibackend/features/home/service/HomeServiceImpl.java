@@ -28,7 +28,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class HomeServiceImpl implements HomeQueryService, HomeCommandService {
+public class HomeServiceImpl implements HomeService {
 
     private final HomeRepository homeRepository;
     private final HomeMemberRepository homeMemberRepository;
@@ -36,8 +36,7 @@ public class HomeServiceImpl implements HomeQueryService, HomeCommandService {
     private final InvitationCodeGenerator invitationCodeGenerator;
     private final HomeMapper homeMapper;
     private final HomeBalanceValidator homeBalanceValidator;
-    private final HomeExpenseQueryService expenseQueryService;
-    private final HomeExpenseCommandService expenseCommandService;
+    private final HomeExpenseService homeExpenseService;
 
     // =========================================================================
     // HomeCommandService
@@ -169,7 +168,7 @@ public class HomeServiceImpl implements HomeQueryService, HomeCommandService {
                     "Solo puedes expulsar a un miembro activo.");
         }
 
-        java.math.BigDecimal userBalance = expenseQueryService.getUserBalance(homeId, targetUserId);
+        java.math.BigDecimal userBalance = homeExpenseService.getUserBalance(homeId, targetUserId);
 
         if (userBalance.compareTo(java.math.BigDecimal.ZERO) != 0) {
             String baseDesc = "EXPULSION_FORZOSA_CON_LIQUIDACION";
@@ -191,7 +190,7 @@ public class HomeServiceImpl implements HomeQueryService, HomeCommandService {
                         expenseDescription, absBalance, adminUserId, java.util.List.of(targetUserId));
             }
 
-            expenseCommandService.createExpense(homeId, request, adminUserId);
+            homeExpenseService.createExpense(homeId, request, adminUserId);
         }
 
         // Una vez liquidado el balance, procedemos con la expulsión normal

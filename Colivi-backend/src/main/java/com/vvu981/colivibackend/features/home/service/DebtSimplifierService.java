@@ -10,9 +10,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-public class TransitDebtSimplifier implements DebtSimplifierEngine {
+public class DebtSimplifierService {
 
-    @Override
     public List<DebtTransfer> simplify(List<Balance> balances) {
         List<DebtTransfer> transfers = new ArrayList<>();
 

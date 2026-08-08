@@ -11,9 +11,9 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class TransitDebtSimplifierTest {
+class DebtSimplifierServiceTest {
 
-    private DebtSimplifierEngine simplifierEngine;
+    private DebtSimplifierService simplifierEngine;
 
     private final UUID userA = UUID.randomUUID();
     private final UUID userB = UUID.randomUUID();
@@ -25,7 +25,7 @@ class TransitDebtSimplifierTest {
 
     @BeforeEach
     void setUp() {
-        simplifierEngine = new TransitDebtSimplifier();
+        simplifierEngine = new DebtSimplifierService();
     }
 
     @Test

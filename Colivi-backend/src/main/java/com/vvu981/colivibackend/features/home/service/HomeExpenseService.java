@@ -1,13 +1,19 @@
 package com.vvu981.colivibackend.features.home.service;
 
 import com.vvu981.colivibackend.features.home.dto.BalanceResponseDto;
+import com.vvu981.colivibackend.features.home.dto.CreateExpenseRequest;
 import com.vvu981.colivibackend.features.home.dto.DebtTransferResponseDto;
 import com.vvu981.colivibackend.features.home.dto.ExpenseResponseDto;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
-public interface HomeExpenseQueryService {
+public interface HomeExpenseService {
+
+    ExpenseResponseDto createExpense(UUID homeId, CreateExpenseRequest request, UUID requestUserId);
+
+    void deleteExpense(UUID homeId, UUID expenseId, UUID requestUserId);
 
     List<ExpenseResponseDto> getHomeExpenses(UUID homeId, UUID requestUserId);
 
@@ -15,5 +21,5 @@ public interface HomeExpenseQueryService {
 
     List<DebtTransferResponseDto> getOptimizedTransfers(UUID homeId, UUID requestUserId);
 
-    java.math.BigDecimal getUserBalance(UUID homeId, UUID userId);
+    BigDecimal getUserBalance(UUID homeId, UUID userId);
 }

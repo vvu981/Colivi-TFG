@@ -44,7 +44,7 @@ class HomeExpenseServiceImplTest {
     @Mock
     private HomeExpenseMapper expenseMapper;
     @Mock
-    private DebtSimplifierEngine debtSimplifierEngine;
+    private DebtSimplifierService DebtSimplifierService;
 
     @InjectMocks
     private HomeExpenseServiceImpl service;
@@ -326,7 +326,7 @@ class HomeExpenseServiceImplTest {
                     .thenReturn(List.of(expense));
 
             DebtTransfer transfer = new DebtTransfer(participant1Id, payerId, new BigDecimal("100.00"));
-            when(debtSimplifierEngine.simplify(any())).thenReturn(List.of(transfer));
+            when(DebtSimplifierService.simplify(any())).thenReturn(List.of(transfer));
             when(userRepository.findAllById(any())).thenReturn(List.of(payer, participant1));
 
             List<DebtTransferResponseDto> result = service.getOptimizedTransfers(homeId, payerId);

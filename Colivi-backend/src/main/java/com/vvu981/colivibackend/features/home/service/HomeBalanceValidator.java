@@ -13,11 +13,11 @@ import java.util.UUID;
 @Service
 public class HomeBalanceValidator {
 
-    private final HomeExpenseQueryService expenseQueryService;
+    private final HomeExpenseService expenseQueryService;
 
     // Usamos @Lazy para evitar posibles dependencias circulares si HomeService 
-    // y HomeExpenseQueryService terminan dependiendo entre sí.
-    public HomeBalanceValidator(@Lazy HomeExpenseQueryService expenseQueryService) {
+    // y HomeExpenseService terminan dependiendo entre sí.
+    public HomeBalanceValidator(@Lazy HomeExpenseService expenseQueryService) {
         this.expenseQueryService = expenseQueryService;
     }
 

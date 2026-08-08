@@ -5,8 +5,8 @@ import com.vvu981.colivibackend.features.home.dto.CreateHomeRequest;
 import com.vvu981.colivibackend.features.home.dto.HomeDetailResponseDto;
 import com.vvu981.colivibackend.features.home.dto.HomeResponseDto;
 import com.vvu981.colivibackend.features.home.dto.JoinHomeRequest;
-import com.vvu981.colivibackend.features.home.service.HomeCommandService;
-import com.vvu981.colivibackend.features.home.service.HomeQueryService;
+import com.vvu981.colivibackend.features.home.service.HomeService;
+import com.vvu981.colivibackend.features.home.service.HomeService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -38,12 +38,10 @@ import java.util.UUID;
 @RequestMapping("/api/v1/homes")
 public class HomeController {
 
-    private final HomeQueryService homeQueryService;
-    private final HomeCommandService homeCommandService;
+    private final HomeService homeService;
 
-    public HomeController(HomeQueryService homeQueryService, HomeCommandService homeCommandService) {
-        this.homeQueryService = homeQueryService;
-        this.homeCommandService = homeCommandService;
+    public HomeController(HomeService homeService) {
+        this.homeService = homeService;
     }
 
     // =========================================================================
@@ -57,7 +55,7 @@ public class HomeController {
     public ResponseEntity<HomeDetailResponseDto> createHome(
             @Valid @RequestBody CreateHomeRequest request,
             @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
-        HomeDetailResponseDto response = homeCommandService.createHome(request, currentUserId);
+        HomeDetailResponseDto response = homeService.createHome(request, currentUserId);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -69,7 +67,7 @@ public class HomeController {
     public ResponseEntity<HomeDetailResponseDto> joinHome(
             @Valid @RequestBody JoinHomeRequest request,
             @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
-        HomeDetailResponseDto response = homeCommandService.joinHome(request, currentUserId);
+        HomeDetailResponseDto response = homeService.joinHome(request, currentUserId);
         return ResponseEntity.ok(response);
     }
 
@@ -81,7 +79,7 @@ public class HomeController {
     public ResponseEntity<List<HomeResponseDto>> getUserHomes(
             @RequestParam(required = false) HomeMemberStatus status,
             @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
-        List<HomeResponseDto> response = homeQueryService.getUserHomes(currentUserId, status);
+        List<HomeResponseDto> response = homeService.getUserHomes(currentUserId, status);
         return ResponseEntity.ok(response);
     }
 
@@ -92,7 +90,7 @@ public class HomeController {
     public ResponseEntity<HomeDetailResponseDto> getHomeDetail(
             @PathVariable("id") UUID homeId,
             @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
-        HomeDetailResponseDto response = homeQueryService.getHomeDetail(homeId, currentUserId);
+        HomeDetailResponseDto response = homeService.getHomeDetail(homeId, currentUserId);
         return ResponseEntity.ok(response);
     }
 
@@ -104,7 +102,7 @@ public class HomeController {
     public ResponseEntity<Void> leaveHome(
             @PathVariable("id") UUID homeId,
             @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
-        homeCommandService.leaveHome(homeId, currentUserId);
+        homeService.leaveHome(homeId, currentUserId);
         return ResponseEntity.noContent().build();
     }
 
@@ -116,7 +114,7 @@ public class HomeController {
     public ResponseEntity<Void> archiveHomeView(
             @PathVariable("id") UUID homeId,
             @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
-        homeCommandService.archiveHomeView(homeId, currentUserId);
+        homeService.archiveHomeView(homeId, currentUserId);
         return ResponseEntity.noContent().build();
     }
 
@@ -128,7 +126,7 @@ public class HomeController {
     public ResponseEntity<Void> unarchiveHomeView(
             @PathVariable("id") UUID homeId,
             @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
-        homeCommandService.unarchiveHomeView(homeId, currentUserId);
+        homeService.unarchiveHomeView(homeId, currentUserId);
         return ResponseEntity.noContent().build();
     }
 
@@ -145,7 +143,7 @@ public class HomeController {
             @PathVariable("id") UUID homeId,
             @RequestParam("targetUserId") UUID targetUserId,
             @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
-        homeCommandService.transferAdmin(homeId, currentUserId, targetUserId);
+        homeService.transferAdmin(homeId, currentUserId, targetUserId);
         return ResponseEntity.noContent().build();
     }
 
@@ -158,7 +156,7 @@ public class HomeController {
             @PathVariable("id") UUID homeId,
             @PathVariable("targetUserId") UUID targetUserId,
             @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
-        homeCommandService.expelMember(homeId, currentUserId, targetUserId);
+        homeService.expelMember(homeId, currentUserId, targetUserId);
         return ResponseEntity.noContent().build();
     }
 
@@ -173,7 +171,7 @@ public class HomeController {
             @RequestBody(required = false) java.util.Map<String, String> body,
             @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
         String reason = body != null ? body.get("reason") : null;
-        homeCommandService.forceExpelWithDebtSettlement(homeId, currentUserId, targetUserId, reason);
+        homeService.forceExpelWithDebtSettlement(homeId, currentUserId, targetUserId, reason);
         return ResponseEntity.noContent().build();
     }
 
@@ -190,7 +188,7 @@ public class HomeController {
     public ResponseEntity<Void> softDeleteHome(
             @PathVariable("id") UUID homeId,
             @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
-        homeCommandService.softDeleteHome(homeId, currentUserId);
+        homeService.softDeleteHome(homeId, currentUserId);
         return ResponseEntity.noContent().build();
     }
 
@@ -203,7 +201,7 @@ public class HomeController {
     public ResponseEntity<Void> hardDeleteHome(
             @PathVariable("id") UUID homeId,
             @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
-        homeCommandService.hardDeleteHome(homeId, currentUserId);
+        homeService.hardDeleteHome(homeId, currentUserId);
         return ResponseEntity.noContent().build();
     }
 }

@@ -24,14 +24,14 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class HomeExpenseServiceImpl implements HomeExpenseCommandService, HomeExpenseQueryService {
+public class HomeExpenseServiceImpl implements HomeExpenseService {
 
     private final HomeExpenseRepository expenseRepository;
     private final HomeRepository homeRepository;
     private final HomeMemberRepository memberRepository;
     private final UserRepository userRepository;
     private final HomeExpenseMapper expenseMapper;
-    private final DebtSimplifierEngine debtSimplifierEngine;
+    private final DebtSimplifierService debtSimplifierService;
 
     @Override
     @Transactional
@@ -113,7 +113,7 @@ public class HomeExpenseServiceImpl implements HomeExpenseCommandService, HomeEx
     public List<DebtTransferResponseDto> getOptimizedTransfers(UUID homeId, UUID requestUserId) {
         validateMemberHasReadAccess(homeId, requestUserId);
         List<Balance> balances = calculateRawBalances(homeId);
-        List<DebtTransfer> transfers = debtSimplifierEngine.simplify(balances);
+        List<DebtTransfer> transfers = debtSimplifierService.simplify(balances);
         
         Map<UUID, User> userMap = fetchUsersForTransfers(transfers);
         

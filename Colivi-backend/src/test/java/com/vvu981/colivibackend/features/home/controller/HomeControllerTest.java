@@ -10,8 +10,8 @@ import com.vvu981.colivibackend.features.home.dto.CreateHomeRequest;
 import com.vvu981.colivibackend.features.home.dto.HomeDetailResponseDto;
 import com.vvu981.colivibackend.features.home.dto.HomeResponseDto;
 import com.vvu981.colivibackend.features.home.dto.JoinHomeRequest;
-import com.vvu981.colivibackend.features.home.service.HomeCommandService;
-import com.vvu981.colivibackend.features.home.service.HomeQueryService;
+import com.vvu981.colivibackend.features.home.service.HomeService;
+import com.vvu981.colivibackend.features.home.service.HomeService;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -56,10 +56,7 @@ class HomeControllerTest {
     private ObjectMapper objectMapper;
 
     @MockBean
-    private HomeQueryService homeQueryService;
-
-    @MockBean
-    private HomeCommandService homeCommandService;
+    private HomeService homeService;
 
     @MockBean
     private JwtTokenProvider jwtTokenProvider;
@@ -87,7 +84,7 @@ class HomeControllerTest {
                 homeId, "My Home", "CODE", HomeRole.ADMIN, HomeMemberStatus.ACTIVE, 1, LocalDateTime.now(), List.of()
         );
 
-        when(homeCommandService.createHome(any(), any())).thenReturn(response);
+        when(homeService.createHome(any(), any())).thenReturn(response);
 
         mockMvc.perform(post("/api/v1/homes")
                         .with(user(principal))
@@ -106,7 +103,7 @@ class HomeControllerTest {
                 homeId, "My Home", "CODE1234", HomeRole.MEMBER, HomeMemberStatus.ACTIVE, 1, LocalDateTime.now(), List.of()
         );
 
-        when(homeCommandService.joinHome(any(), any())).thenReturn(response);
+        when(homeService.joinHome(any(), any())).thenReturn(response);
 
         mockMvc.perform(post("/api/v1/homes/join")
                         .with(user(principal))
@@ -123,7 +120,7 @@ class HomeControllerTest {
                 homeId, "My Home", "CODE1234", HomeRole.MEMBER, HomeMemberStatus.ACTIVE, 1, LocalDateTime.now()
         );
 
-        when(homeQueryService.getUserHomes(any(), any())).thenReturn(List.of(response));
+        when(homeService.getUserHomes(any(), any())).thenReturn(List.of(response));
 
         mockMvc.perform(get("/api/v1/homes")
                         .with(user(principal)))
@@ -137,7 +134,7 @@ class HomeControllerTest {
                 homeId, "My Home", "CODE", HomeRole.MEMBER, HomeMemberStatus.ACTIVE, 1, LocalDateTime.now(), List.of()
         );
 
-        when(homeQueryService.getHomeDetail(any(), any())).thenReturn(response);
+        when(homeService.getHomeDetail(any(), any())).thenReturn(response);
 
         mockMvc.perform(get("/api/v1/homes/{id}", homeId)
                         .with(user(principal)))
@@ -152,7 +149,7 @@ class HomeControllerTest {
                         .with(csrf()))
                 .andExpect(status().isNoContent());
 
-        verify(homeCommandService).leaveHome(eq(homeId), any());
+        verify(homeService).leaveHome(eq(homeId), any());
     }
 
     @Test
@@ -162,7 +159,7 @@ class HomeControllerTest {
                         .with(csrf()))
                 .andExpect(status().isNoContent());
 
-        verify(homeCommandService).archiveHomeView(eq(homeId), any());
+        verify(homeService).archiveHomeView(eq(homeId), any());
     }
 
     @Test
@@ -172,7 +169,7 @@ class HomeControllerTest {
                         .with(csrf()))
                 .andExpect(status().isNoContent());
 
-        verify(homeCommandService).unarchiveHomeView(eq(homeId), any());
+        verify(homeService).unarchiveHomeView(eq(homeId), any());
     }
 
     @Test
@@ -184,7 +181,7 @@ class HomeControllerTest {
                         .with(csrf()))
                 .andExpect(status().isNoContent());
 
-        verify(homeCommandService).transferAdmin(eq(homeId), any(), eq(targetId));
+        verify(homeService).transferAdmin(eq(homeId), any(), eq(targetId));
     }
 
     @Test
@@ -195,7 +192,7 @@ class HomeControllerTest {
                         .with(csrf()))
                 .andExpect(status().isNoContent());
 
-        verify(homeCommandService).expelMember(eq(homeId), any(), eq(targetId));
+        verify(homeService).expelMember(eq(homeId), any(), eq(targetId));
     }
 
     @Test
@@ -210,7 +207,7 @@ class HomeControllerTest {
                         .content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().isNoContent());
 
-        verify(homeCommandService).forceExpelWithDebtSettlement(eq(homeId), any(), eq(targetId), eq("No paga alquiler"));
+        verify(homeService).forceExpelWithDebtSettlement(eq(homeId), any(), eq(targetId), eq("No paga alquiler"));
     }
 
     @Test
@@ -220,7 +217,7 @@ class HomeControllerTest {
                         .with(csrf()))
                 .andExpect(status().isNoContent());
 
-        verify(homeCommandService).softDeleteHome(eq(homeId), any());
+        verify(homeService).softDeleteHome(eq(homeId), any());
     }
 
     @Test
@@ -230,6 +227,6 @@ class HomeControllerTest {
                         .with(csrf()))
                 .andExpect(status().isNoContent());
 
-        verify(homeCommandService).hardDeleteHome(eq(homeId), any());
+        verify(homeService).hardDeleteHome(eq(homeId), any());
     }
 }

@@ -19,7 +19,7 @@ import static org.mockito.Mockito.when;
 class HomeBalanceValidatorTest {
 
     @Mock
-    private HomeExpenseQueryService expenseQueryService;
+    private HomeExpenseService expenseQueryService;
 
     @InjectMocks
     private HomeBalanceValidator validator;

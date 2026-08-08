@@ -4,8 +4,8 @@ import com.vvu981.colivibackend.features.home.dto.BalanceResponseDto;
 import com.vvu981.colivibackend.features.home.dto.CreateExpenseRequest;
 import com.vvu981.colivibackend.features.home.dto.DebtTransferResponseDto;
 import com.vvu981.colivibackend.features.home.dto.ExpenseResponseDto;
-import com.vvu981.colivibackend.features.home.service.HomeExpenseCommandService;
-import com.vvu981.colivibackend.features.home.service.HomeExpenseQueryService;
+import com.vvu981.colivibackend.features.home.service.HomeExpenseService;
+import com.vvu981.colivibackend.features.home.service.HomeExpenseService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -21,8 +21,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class HomeExpenseController {
 
-    private final HomeExpenseCommandService commandService;
-    private final HomeExpenseQueryService queryService;
+    private final HomeExpenseService commandService;
+    private final HomeExpenseService queryService;
 
     @PostMapping
     public ResponseEntity<ExpenseResponseDto> createExpense(

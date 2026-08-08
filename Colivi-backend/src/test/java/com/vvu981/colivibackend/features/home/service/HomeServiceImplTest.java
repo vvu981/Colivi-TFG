@@ -53,10 +53,7 @@ class HomeServiceImplTest {
     private HomeBalanceValidator homeBalanceValidator;
 
     @Mock
-    private HomeExpenseQueryService expenseQueryService;
-
-    @Mock
-    private HomeExpenseCommandService expenseCommandService;
+    private HomeExpenseService homeExpenseService;
 
     private final HomeMapper homeMapper = new HomeMapper();
 
@@ -74,8 +71,7 @@ class HomeServiceImplTest {
                 invitationCodeGenerator,
                 homeMapper,
                 homeBalanceValidator,
-                expenseQueryService,
-                expenseCommandService
+                homeExpenseService
         );
 
         testUserId = UUID.randomUUID();
@@ -494,13 +490,13 @@ class HomeServiceImplTest {
                     .thenReturn(Optional.of(targetMember));
             
             // Usuario debe 50€ (balance negativo)
-            when(expenseQueryService.getUserBalance(homeId, targetUser.getId()))
+            when(homeExpenseService.getUserBalance(homeId, targetUser.getId()))
                     .thenReturn(new java.math.BigDecimal("-50.00"));
 
             homeService.forceExpelWithDebtSettlement(homeId, testUserId, targetUser.getId(), "No paga");
 
             // Verifica que se crea un gasto donde Target paga y Admin consume
-            verify(expenseCommandService).createExpense(eq(homeId), argThat(req -> 
+            verify(homeExpenseService).createExpense(eq(homeId), argThat(req -> 
                 req.payerId().equals(targetUser.getId()) &&
                 req.participantIds().contains(testUserId) &&
                 req.totalAmount().compareTo(new java.math.BigDecimal("50.00")) == 0 &&
@@ -528,13 +524,13 @@ class HomeServiceImplTest {
                     .thenReturn(Optional.of(targetMember));
             
             // Le deben 30€ (balance positivo)
-            when(expenseQueryService.getUserBalance(homeId, targetUser.getId()))
+            when(homeExpenseService.getUserBalance(homeId, targetUser.getId()))
                     .thenReturn(new java.math.BigDecimal("30.00"));
 
             homeService.forceExpelWithDebtSettlement(homeId, testUserId, targetUser.getId(), null);
 
             // Verifica que se crea un gasto donde Admin paga y Target consume
-            verify(expenseCommandService).createExpense(eq(homeId), argThat(req -> 
+            verify(homeExpenseService).createExpense(eq(homeId), argThat(req -> 
                 req.payerId().equals(testUserId) &&
                 req.participantIds().contains(targetUser.getId()) &&
                 req.totalAmount().compareTo(new java.math.BigDecimal("30.00")) == 0
@@ -560,13 +556,13 @@ class HomeServiceImplTest {
                     .thenReturn(Optional.of(targetMember));
             
             // Balance ya es 0
-            when(expenseQueryService.getUserBalance(homeId, targetUser.getId()))
+            when(homeExpenseService.getUserBalance(homeId, targetUser.getId()))
                     .thenReturn(java.math.BigDecimal.ZERO);
 
             homeService.forceExpelWithDebtSettlement(homeId, testUserId, targetUser.getId(), "Motivo");
 
             // No se debe crear gasto
-            verify(expenseCommandService, never()).createExpense(any(), any(), any());
+            verify(homeExpenseService, never()).createExpense(any(), any(), any());
 
             assertEquals(HomeMemberStatus.LEFT, targetMember.getStatus());
             assertNotNull(targetMember.getLeftAt());
