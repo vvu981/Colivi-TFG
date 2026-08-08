@@ -23,7 +23,7 @@ CREATE TABLE home_expense_participants (
     CONSTRAINT uk_expense_participant UNIQUE (expense_id, user_id)
 );
 
-CREATE INDEX idx_home_expenses_home_id ON home_expenses(home_id);
+CREATE INDEX idx_home_expenses_home_created_desc ON home_expenses(home_id, created_at DESC) WHERE deleted_at IS NULL;
 CREATE INDEX idx_home_expenses_payer_id ON home_expenses(payer_id);
 CREATE INDEX idx_home_expense_participants_expense_id ON home_expense_participants(expense_id);
 CREATE INDEX idx_home_expense_participants_user_id ON home_expense_participants(user_id);

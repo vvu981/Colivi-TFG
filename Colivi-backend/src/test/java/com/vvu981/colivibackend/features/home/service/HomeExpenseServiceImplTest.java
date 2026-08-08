@@ -108,7 +108,7 @@ class HomeExpenseServiceImplTest {
             mockActiveMembersList(homeId, payer, participant1);
 
             when(userRepository.findByIdAndDeletedAtIsNull(payerId)).thenReturn(Optional.of(payer));
-            when(userRepository.findByIdAndDeletedAtIsNull(participant1Id)).thenReturn(Optional.of(participant1));
+            when(userRepository.findAllById(any())).thenReturn(List.of(payer, participant1));
 
             CreateExpenseRequest request = new CreateExpenseRequest("Test", new BigDecimal("100.00"), payerId,
                     List.of(payerId, participant1Id));
@@ -132,8 +132,7 @@ class HomeExpenseServiceImplTest {
             mockActiveMembersList(homeId, payer, participant1, participant2);
 
             when(userRepository.findByIdAndDeletedAtIsNull(payerId)).thenReturn(Optional.of(payer));
-            when(userRepository.findByIdAndDeletedAtIsNull(participant1Id)).thenReturn(Optional.of(participant1));
-            when(userRepository.findByIdAndDeletedAtIsNull(participant2Id)).thenReturn(Optional.of(participant2));
+            when(userRepository.findAllById(any())).thenReturn(List.of(payer, participant1, participant2));
 
             // 100.00 / 3 = 33.333...
             CreateExpenseRequest request = new CreateExpenseRequest("Test", new BigDecimal("100.00"), payerId,

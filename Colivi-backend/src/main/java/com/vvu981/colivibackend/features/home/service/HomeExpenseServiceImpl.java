@@ -145,11 +145,16 @@ public class HomeExpenseServiceImpl implements HomeExpenseCommandService, HomeEx
         int extraCents = remainder.multiply(new BigDecimal("100")).intValue();
         
         BigDecimal sumCheck = BigDecimal.ZERO;
+        
+        Map<UUID, User> participantsMap = userRepository.findAllById(uniqueParticipantIds).stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
 
         for (int i = 0; i < n; i++) {
             UUID participantId = uniqueParticipantIds.get(i);
-            User participantUser = userRepository.findByIdAndDeletedAtIsNull(participantId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Participante no encontrado con ID: " + participantId));
+            User participantUser = participantsMap.get(participantId);
+            if (participantUser == null || participantUser.getDeletedAt() != null) {
+                throw new ResourceNotFoundException("Participante no encontrado con ID: " + participantId);
+            }
             
             BigDecimal owed = baseAmount;
             if (i < extraCents) {
