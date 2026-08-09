@@ -129,4 +129,16 @@ class UserTest {
         // Assert matching between constructors
         assertEquals(userAllArgs.getId(), user.getId());
     }
+
+    @Test
+    @DisplayName("should CoverSettersAndGetters_When UsingLombok")
+    void shouldCoverSettersAndGetters_WhenUsingLombok() {
+        UUID id1 = UUID.randomUUID();
+        User user1 = new User();
+        user1.setId(id1);
+        user1.setEmail("test@test.com");
+        
+        assertEquals(id1, user1.getId());
+        assertEquals("test@test.com", user1.getEmail());
+    }
 }
