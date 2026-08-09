@@ -5,7 +5,7 @@ import com.vvu981.colivibackend.features.home.dto.CreateHomeRequest;
 import com.vvu981.colivibackend.features.home.dto.HomeDetailResponseDto;
 import com.vvu981.colivibackend.features.home.dto.HomeResponseDto;
 import com.vvu981.colivibackend.features.home.dto.JoinHomeRequest;
-import com.vvu981.colivibackend.features.home.service.HomeService;
+import com.vvu981.colivibackend.features.home.dto.ForceExpelRequestDto;
 import com.vvu981.colivibackend.features.home.service.HomeService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -22,16 +22,22 @@ import java.util.UUID;
  *
  * <h2>Modelo de estados de membresía</h2>
  * <ul>
- *   <li>{@code ACTIVE}   – el usuario vive/participa activamente → vista principal</li>
- *   <li>{@code LEFT}     – el usuario salió pero quiere ver el historial → pestaña "Salidos"</li>
- *   <li>{@code ARCHIVED} – el usuario salió y no quiere verlo → pestaña "Archivados"</li>
+ * <li>{@code ACTIVE} – el usuario vive/participa activamente → vista
+ * principal</li>
+ * <li>{@code LEFT} – el usuario salió pero quiere ver el historial → pestaña
+ * "Salidos"</li>
+ * <li>{@code ARCHIVED} – el usuario salió y no quiere verlo → pestaña
+ * "Archivados"</li>
  * </ul>
  *
  * <h2>Niveles de autorización</h2>
  * <ul>
- *   <li>Operaciones de miembro: cualquier usuario autenticado con membresía activa (o left para lectura).</li>
- *   <li>Operaciones de admin del hogar: requieren {@code HomeRole.ADMIN} en el hogar.</li>
- *   <li>Operaciones de admin del sistema: requieren {@code @PreAuthorize("hasAuthority('ADMIN')")}.</li>
+ * <li>Operaciones de miembro: cualquier usuario autenticado con membresía
+ * activa (o left para lectura).</li>
+ * <li>Operaciones de admin del hogar: requieren {@code HomeRole.ADMIN} en el
+ * hogar.</li>
+ * <li>Operaciones de admin del sistema: requieren
+ * {@code @PreAuthorize("hasAuthority('ADMIN')")}.</li>
  * </ul>
  */
 @RestController
@@ -61,7 +67,8 @@ public class HomeController {
 
     /**
      * POST /api/v1/homes/join — Se une al hogar usando un código de invitación.
-     * Si el usuario tenía una membresía previa (LEFT/ARCHIVED), la reactiva con rol MEMBER.
+     * Si el usuario tenía una membresía previa (LEFT/ARCHIVED), la reactiva con rol
+     * MEMBER.
      */
     @PostMapping("/join")
     public ResponseEntity<HomeDetailResponseDto> joinHome(
@@ -73,7 +80,8 @@ public class HomeController {
 
     /**
      * GET /api/v1/homes — Obtiene los hogares del usuario autenticado.
-     * Filtra opcionalmente por estado de membresía con el QueryParam {@code status}.
+     * Filtra opcionalmente por estado de membresía con el QueryParam
+     * {@code status}.
      */
     @GetMapping
     public ResponseEntity<List<HomeResponseDto>> getUserHomes(
@@ -84,7 +92,8 @@ public class HomeController {
     }
 
     /**
-     * GET /api/v1/homes/{id} — Detalle completo de un hogar. Requiere membresía ACTIVE o LEFT.
+     * GET /api/v1/homes/{id} — Detalle completo de un hogar. Requiere membresía
+     * ACTIVE o LEFT.
      */
     @GetMapping("/{id}")
     public ResponseEntity<HomeDetailResponseDto> getHomeDetail(
@@ -108,7 +117,8 @@ public class HomeController {
 
     /**
      * PATCH /api/v1/homes/{id}/archive — Archiva el hogar (LEFT → ARCHIVED).
-     * Requiere haber salido previamente del hogar. El hogar pasa a la pestaña "Archivados".
+     * Requiere haber salido previamente del hogar. El hogar pasa a la pestaña
+     * "Archivados".
      */
     @PatchMapping("/{id}/archive")
     public ResponseEntity<Void> archiveHomeView(
@@ -135,7 +145,8 @@ public class HomeController {
     // =========================================================================
 
     /**
-     * PATCH /api/v1/homes/{id}/transfer-admin — Transfiere el rol de ADMIN a otro miembro activo.
+     * PATCH /api/v1/homes/{id}/transfer-admin — Transfiere el rol de ADMIN a otro
+     * miembro activo.
      * Necesario antes de salir si eres el único ADMIN y quedan miembros activos.
      */
     @PatchMapping("/{id}/transfer-admin")
@@ -148,7 +159,8 @@ public class HomeController {
     }
 
     /**
-     * PATCH /api/v1/homes/{id}/members/{targetUserId}/expel — Expulsa a un miembro activo.
+     * PATCH /api/v1/homes/{id}/members/{targetUserId}/expel — Expulsa a un miembro
+     * activo.
      * Requiere ser ADMIN del hogar.
      */
     @PatchMapping("/{id}/members/{targetUserId}/expel")
@@ -161,18 +173,31 @@ public class HomeController {
     }
 
     /**
-     * PATCH /api/v1/homes/{id}/members/{targetUserId}/force-expel — Expulsión forzosa con liquidación de deudas.
+     * PATCH /api/v1/homes/{id}/members/{targetUserId}/force-expel — Expulsión
+     * forzosa con liquidación de deudas.
      * Requiere ser ADMIN del hogar.
      */
     @PatchMapping("/{id}/members/{targetUserId}/force-expel")
     public ResponseEntity<Void> forceExpelMember(
             @PathVariable("id") UUID homeId,
             @PathVariable("targetUserId") UUID targetUserId,
-            @RequestBody(required = false) java.util.Map<String, String> body,
+            @Valid @RequestBody(required = false) ForceExpelRequestDto requestDto,
             @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
-        String reason = body != null ? body.get("reason") : null;
+        String reason = requestDto != null ? requestDto.reason() : null;
         homeService.forceExpelWithDebtSettlement(homeId, currentUserId, targetUserId, reason);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * PATCH /api/v1/homes/{id}/invitation-code/regenerate — Regenera el código de invitación.
+     * Requiere ser ADMIN del hogar.
+     */
+    @PatchMapping("/{id}/invitation-code/regenerate")
+    public ResponseEntity<HomeDetailResponseDto> regenerateInvitationCode(
+            @PathVariable("id") UUID homeId,
+            @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
+        HomeDetailResponseDto response = homeService.regenerateInvitationCode(homeId, currentUserId);
+        return ResponseEntity.ok(response);
     }
 
     // =========================================================================
@@ -193,7 +218,8 @@ public class HomeController {
     }
 
     /**
-     * DELETE /api/v1/homes/{id}/hard — Borrado físico del hogar y en cascada. Irreversible.
+     * DELETE /api/v1/homes/{id}/hard — Borrado físico del hogar y en cascada.
+     * Irreversible.
      * Exclusivo para administradores del sistema.
      */
     @DeleteMapping("/{id}/hard")

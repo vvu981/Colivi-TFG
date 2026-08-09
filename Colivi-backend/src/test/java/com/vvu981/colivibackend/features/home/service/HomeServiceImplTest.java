@@ -44,6 +44,9 @@ class HomeServiceImplTest {
     private HomeMemberRepository homeMemberRepository;
 
     @Mock
+    private com.vvu981.colivibackend.features.home.repository.ActivityLogRepository activityLogRepository;
+
+    @Mock
     private UserRepository userRepository;
 
     @Mock
@@ -54,6 +57,9 @@ class HomeServiceImplTest {
 
     @Mock
     private HomeExpenseService homeExpenseService;
+    
+    @Mock
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     private final HomeMapper homeMapper = new HomeMapper();
 
@@ -67,11 +73,13 @@ class HomeServiceImplTest {
         homeService = new HomeServiceImpl(
                 homeRepository,
                 homeMemberRepository,
+                activityLogRepository,
                 userRepository,
                 invitationCodeGenerator,
                 homeMapper,
                 homeBalanceValidator,
-                homeExpenseService
+                homeExpenseService,
+                eventPublisher
         );
 
         testUserId = UUID.randomUUID();
@@ -488,6 +496,8 @@ class HomeServiceImplTest {
                     .thenReturn(Optional.of(adminMember));
             when(homeMemberRepository.findByHomeIdAndUserId(homeId, targetUser.getId()))
                     .thenReturn(Optional.of(targetMember));
+            when(homeRepository.findByIdAndDeletedAtIsNull(homeId))
+                    .thenReturn(Optional.of(home));
             
             // Usuario debe 50€ (balance negativo)
             when(homeExpenseService.getUserBalance(homeId, targetUser.getId()))
@@ -522,6 +532,8 @@ class HomeServiceImplTest {
                     .thenReturn(Optional.of(adminMember));
             when(homeMemberRepository.findByHomeIdAndUserId(homeId, targetUser.getId()))
                     .thenReturn(Optional.of(targetMember));
+            when(homeRepository.findByIdAndDeletedAtIsNull(homeId))
+                    .thenReturn(Optional.of(home));
             
             // Le deben 30€ (balance positivo)
             when(homeExpenseService.getUserBalance(homeId, targetUser.getId()))
@@ -898,6 +910,7 @@ class HomeServiceImplTest {
             when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
             
             homeService.hardDeleteHome(homeId, testUserId);
+            verify(activityLogRepository).deleteByHomeId(homeId);
             verify(homeRepository).delete(home);
         }
 

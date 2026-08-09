@@ -74,6 +74,7 @@ public class HomeMember {
     public void reactivate() {
         this.status = HomeMemberStatus.ACTIVE;
         this.role = HomeRole.MEMBER;
+        this.joinedAt = LocalDateTime.now();
         this.leftAt = null;
     }
 

@@ -25,6 +25,8 @@ public interface HomeService {
 
     void unarchiveHomeView(UUID homeId, UUID userId);
 
+    HomeDetailResponseDto regenerateInvitationCode(UUID homeId, UUID userId);
+
     void transferAdmin(UUID homeId, UUID currentUserId, UUID targetUserId);
 
     void softDeleteHome(UUID homeId, UUID userId);

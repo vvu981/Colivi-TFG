@@ -12,7 +12,10 @@ import com.vvu981.colivibackend.features.home.repository.HomeRepository;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
+import com.vvu981.colivibackend.features.home.domain.event.ExpenseCreatedEvent;
+import com.vvu981.colivibackend.features.home.domain.event.ExpenseDeletedEvent;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +35,7 @@ public class HomeExpenseServiceImpl implements HomeExpenseService {
     private final UserRepository userRepository;
     private final HomeExpenseMapper expenseMapper;
     private final DebtSimplifierService debtSimplifierService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional
@@ -55,6 +59,14 @@ public class HomeExpenseServiceImpl implements HomeExpenseService {
         distributeExactAmount(expense, request.participantIds(), request.totalAmount());
 
         expenseRepository.save(expense);
+        
+        eventPublisher.publishEvent(new ExpenseCreatedEvent(
+                homeId, 
+                requestUserId, 
+                expense.getDescription(), 
+                expense.getTotalAmount()
+        ));
+        
         return expenseMapper.toExpenseResponseDto(expense);
     }
 
@@ -86,6 +98,12 @@ public class HomeExpenseServiceImpl implements HomeExpenseService {
 
         expense.softDelete();
         expenseRepository.save(expense);
+        
+        eventPublisher.publishEvent(new ExpenseDeletedEvent(
+                homeId,
+                requestUserId,
+                expense.getDescription()
+        ));
     }
 
     @Override

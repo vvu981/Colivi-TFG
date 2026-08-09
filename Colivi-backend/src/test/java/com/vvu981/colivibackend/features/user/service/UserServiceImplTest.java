@@ -56,6 +56,8 @@ class UserServiceImplTest {
         @Mock
         private UserRepository userRepository;
         @Mock
+        private com.vvu981.colivibackend.features.home.repository.ActivityLogRepository activityLogRepository;
+        @Mock
         private JwtTokenProvider jwtTokenProvider;
         @Mock
         private PasswordEncoder passwordEncoder;
@@ -604,6 +606,7 @@ class UserServiceImplTest {
                         userService.deleteUserHard(userId);
 
                         // Assert — se delegó en delete(), nunca en save()
+                        verify(activityLogRepository).nullifyActorIdByUserId(userId);
                         verify(userRepository).delete(persistedUser);
                         verify(userRepository, never()).save(any());
                 }
