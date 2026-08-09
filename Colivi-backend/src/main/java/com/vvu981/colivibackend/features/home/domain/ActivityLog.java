@@ -37,7 +37,7 @@ public class ActivityLog {
     @Column(name = "description", nullable = false, columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "metadata", columnDefinition = "JSON")
+    @Column(name = "metadata", columnDefinition = "JSONB")
     private String metadata;
 
     @Column(name = "created_at", nullable = false, updatable = false)
