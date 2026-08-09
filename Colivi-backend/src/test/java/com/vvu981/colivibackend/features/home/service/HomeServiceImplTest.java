@@ -1,8 +1,8 @@
 package com.vvu981.colivibackend.features.home.service;
 
 import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
-import com.vvu981.colivibackend.core.exception.ResourceNotFoundException;
 import com.vvu981.colivibackend.core.exception.UnauthorizedActionException;
+import com.vvu981.colivibackend.core.exception.ResourceNotFoundException;
 import com.vvu981.colivibackend.features.home.domain.Home;
 import com.vvu981.colivibackend.features.home.domain.HomeMember;
 import com.vvu981.colivibackend.features.home.domain.HomeMemberStatus;
@@ -607,8 +607,6 @@ class HomeServiceImplTest {
                         assertNotNull(targetMember.getLeftAt());
                 }
 
-
-
                 @Test
                 void shouldForceExpelAndSettleDebtWhenReasonIsBlank() {
                         UUID homeId = UUID.randomUUID();
@@ -646,16 +644,20 @@ class HomeServiceImplTest {
                         User targetUser = new User();
                         targetUser.setId(UUID.randomUUID());
 
-                        // Admin es activo, Target es activo. Haremos trampa y en el mock de home los quitaremos de los active,
-                        // en realidad home.getMembers() devolverá solo a target, para forzar que la lista de activos sea 0.
-                        HomeMember targetMember = buildMember(home, targetUser, HomeRole.MEMBER, HomeMemberStatus.ACTIVE);
+                        // Admin es activo, Target es activo. Haremos trampa y en el mock de home los
+                        // quitaremos de los active,
+                        // en realidad home.getMembers() devolverá solo a target, para forzar que la
+                        // lista de activos sea 0.
+                        HomeMember targetMember = buildMember(home, targetUser, HomeRole.MEMBER,
+                                        HomeMemberStatus.ACTIVE);
 
                         HomeMember adminMember = new HomeMember();
                         adminMember.setRole(HomeRole.ADMIN);
                         adminMember.setStatus(HomeMemberStatus.ACTIVE);
                         adminMember.setUser(testUser);
-                        // No lo agregamos a home.members() intencionalmente para que no haya activos que condonen
-                        
+                        // No lo agregamos a home.members() intencionalmente para que no haya activos
+                        // que condonen
+
                         when(homeMemberRepository.findByHomeIdAndUserId(homeId, testUserId))
                                         .thenReturn(Optional.of(adminMember));
                         when(homeMemberRepository.findByHomeIdAndUserId(homeId, targetUser.getId()))
@@ -666,8 +668,9 @@ class HomeServiceImplTest {
                         when(homeExpenseService.getUserBalance(homeId, targetUser.getId()))
                                         .thenReturn(new java.math.BigDecimal("-50.00"));
 
-                        assertThrows(BusinessRuleValidationException.class, 
-                            () -> homeService.forceExpelWithDebtSettlement(homeId, testUserId, targetUser.getId(), "Motivo"));
+                        assertThrows(BusinessRuleValidationException.class,
+                                        () -> homeService.forceExpelWithDebtSettlement(homeId, testUserId,
+                                                        targetUser.getId(), "Motivo"));
                 }
 
                 @Test
@@ -1004,7 +1007,7 @@ class HomeServiceImplTest {
                         testUser.setRole(UserRole.ADMIN);
 
                         when(userRepository.findActiveById(testUserId)).thenReturn(Optional.of(testUser));
-                        when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
+                        when(homeRepository.findById(homeId)).thenReturn(Optional.of(home));
 
                         homeService.hardDeleteHome(homeId, testUserId);
                         verify(activityLogRepository).deleteByHomeId(homeId);

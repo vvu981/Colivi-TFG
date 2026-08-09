@@ -305,7 +305,8 @@ public class HomeServiceImpl implements HomeService {
             throw new UnauthorizedActionException("Solo un administrador del sistema puede ejecutar un borrado físico.");
         }
         
-        Home home = findActiveHome(homeId);
+        Home home = homeRepository.findById(homeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Hogar no encontrado con id: " + homeId));
         
         // BYPASS GDPR: Borrado manual explícito de auditoría para evitar FK constraints.
         activityLogRepository.deleteByHomeId(homeId);
