@@ -110,9 +110,7 @@ public class HomeServiceImpl implements HomeService {
         HomeMember currentMember = findActiveMembership(homeId, userId);
 
         if (currentMember.getRole() == HomeRole.ADMIN) {
-            long activeMemberCount = currentMember.getHome().getMembers().stream()
-                    .filter(m -> m.getStatus() == HomeMemberStatus.ACTIVE)
-                    .count();
+            long activeMemberCount = homeMemberRepository.countByHomeIdAndStatus(homeId, HomeMemberStatus.ACTIVE);
 
             if (activeMemberCount == 1) {
                 // Es el ÚNICO miembro activo: softDelete automático
@@ -121,9 +119,7 @@ public class HomeServiceImpl implements HomeService {
                 homeRepository.save(home);
                 eventPublisher.publishEvent(new HomeDeletedEvent(home.getId(), userId, home.getName()));
             } else {
-                long activeAdminCount = currentMember.getHome().getMembers().stream()
-                        .filter(m -> m.getRole() == HomeRole.ADMIN && m.getStatus() == HomeMemberStatus.ACTIVE)
-                        .count();
+                long activeAdminCount = homeMemberRepository.countByHomeIdAndRoleAndStatus(homeId, HomeRole.ADMIN, HomeMemberStatus.ACTIVE);
 
                 if (activeAdminCount == 1) {
                     throw new BusinessRuleValidationException(
@@ -187,7 +183,9 @@ public class HomeServiceImpl implements HomeService {
             String expenseDescription = reason != null && !reason.isBlank() ? baseDesc + ": " + reason : baseDesc;
             java.math.BigDecimal absBalance = userBalance.abs();
             
-            Home home = findActiveHome(homeId);
+            Home home = homeRepository.findByIdForUpdate(homeId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Hogar no encontrado o eliminado"));
+            
             java.util.List<UUID> activeMemberIds = home.getMembers().stream()
                     .filter(m -> m.getStatus() == HomeMemberStatus.ACTIVE && !m.getUser().getId().equals(targetUserId))
                     .map(m -> m.getUser().getId())
@@ -377,7 +375,7 @@ public class HomeServiceImpl implements HomeService {
     // =========================================================================
 
     private User findActiveUser(UUID userId) {
-        return userRepository.findByIdAndDeletedAtIsNull(userId)
+        return userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Usuario no encontrado o eliminado con id: " + userId));
     }

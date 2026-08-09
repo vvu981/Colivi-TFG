@@ -169,7 +169,7 @@ public class BookingRequestServiceImpl implements BookingRequestService {
     }
 
     private User findUser(UUID currentUser) {
-        return userRepository.findByIdAndDeletedAtIsNull(currentUser)
+        return userRepository.findById(currentUser)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Error: no se encuentra el usuario con id: " + currentUser));
     }

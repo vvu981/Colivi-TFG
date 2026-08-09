@@ -111,7 +111,7 @@ class HomeExpenseServiceImplTest {
             when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
             mockActiveMembersList(homeId, payer, participant1);
 
-            when(userRepository.findByIdAndDeletedAtIsNull(payerId)).thenReturn(Optional.of(payer));
+            when(userRepository.findById(payerId)).thenReturn(Optional.of(payer));
             when(userRepository.findAllById(any())).thenReturn(List.of(payer, participant1));
 
             CreateExpenseRequest request = new CreateExpenseRequest("Test", new BigDecimal("100.00"), payerId,
@@ -135,7 +135,7 @@ class HomeExpenseServiceImplTest {
             when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
             mockActiveMembersList(homeId, payer, participant1, participant2);
 
-            when(userRepository.findByIdAndDeletedAtIsNull(payerId)).thenReturn(Optional.of(payer));
+            when(userRepository.findById(payerId)).thenReturn(Optional.of(payer));
             when(userRepository.findAllById(any())).thenReturn(List.of(payer, participant1, participant2));
 
             // 100.00 / 3 = 33.333...
@@ -206,7 +206,7 @@ class HomeExpenseServiceImplTest {
         @Test
         void deleteExpense_AsPayer_Success() {
             when(expenseRepository.findByIdAndDeletedAtIsNull(expenseId)).thenReturn(Optional.of(expense));
-            when(userRepository.findByIdAndDeletedAtIsNull(payerId)).thenReturn(Optional.of(payer));
+            when(userRepository.findById(payerId)).thenReturn(Optional.of(payer));
 
             service.deleteExpense(homeId, expenseId, payerId);
 
@@ -221,7 +221,7 @@ class HomeExpenseServiceImplTest {
             admin.setRole(UserRole.ADMIN);
 
             when(expenseRepository.findByIdAndDeletedAtIsNull(expenseId)).thenReturn(Optional.of(expense));
-            when(userRepository.findByIdAndDeletedAtIsNull(admin.getId())).thenReturn(Optional.of(admin));
+            when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
 
             service.deleteExpense(homeId, expenseId, admin.getId());
 
@@ -240,7 +240,7 @@ class HomeExpenseServiceImplTest {
             adminMember.setRole(HomeRole.ADMIN);
 
             when(expenseRepository.findByIdAndDeletedAtIsNull(expenseId)).thenReturn(Optional.of(expense));
-            when(userRepository.findByIdAndDeletedAtIsNull(homeAdmin.getId())).thenReturn(Optional.of(homeAdmin));
+            when(userRepository.findById(homeAdmin.getId())).thenReturn(Optional.of(homeAdmin));
             when(memberRepository.findByHomeIdAndUserId(homeId, homeAdmin.getId()))
                     .thenReturn(Optional.of(adminMember));
 
@@ -261,7 +261,7 @@ class HomeExpenseServiceImplTest {
             randomMember.setRole(HomeRole.MEMBER);
 
             when(expenseRepository.findByIdAndDeletedAtIsNull(expenseId)).thenReturn(Optional.of(expense));
-            when(userRepository.findByIdAndDeletedAtIsNull(randomUser.getId())).thenReturn(Optional.of(randomUser));
+            when(userRepository.findById(randomUser.getId())).thenReturn(Optional.of(randomUser));
             when(memberRepository.findByHomeIdAndUserId(homeId, randomUser.getId()))
                     .thenReturn(Optional.of(randomMember));
 

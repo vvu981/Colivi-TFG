@@ -2,6 +2,7 @@ package com.vvu981.colivibackend.features.home.repository;
 
 import com.vvu981.colivibackend.features.home.domain.HomeMember;
 import com.vvu981.colivibackend.features.home.domain.HomeMemberStatus;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -21,15 +22,24 @@ public interface HomeMemberRepository extends JpaRepository<HomeMember, UUID> {
      * Retorna los hogares de un usuario filtrados por su estado de membresía,
      * excluyendo hogares eliminados lógicamente.
      */
+    @EntityGraph(attributePaths = {"user", "home"})
     List<HomeMember> findByUserIdAndStatusAndHomeDeletedAtIsNull(UUID userId, HomeMemberStatus status);
 
     /**
      * Retorna todos los hogares de un usuario, excluyendo hogares eliminados lógicamente.
      */
+    @EntityGraph(attributePaths = {"user", "home"})
     List<HomeMember> findByUserIdAndHomeDeletedAtIsNull(UUID userId);
 
     /**
      * Busca los miembros de un hogar con un estado específico.
      */
+    @EntityGraph(attributePaths = {"user", "home"})
     List<HomeMember> findByHomeIdAndStatus(UUID homeId, HomeMemberStatus status);
+
+    long countByHomeIdAndStatus(UUID homeId, HomeMemberStatus status);
+
+    long countByHomeIdAndRoleAndStatus(UUID homeId, com.vvu981.colivibackend.features.home.domain.HomeRole role, HomeMemberStatus status);
+
+    Optional<HomeMember> findFirstByHomeIdAndStatusOrderByJoinedAtAsc(UUID homeId, HomeMemberStatus status);
 }
