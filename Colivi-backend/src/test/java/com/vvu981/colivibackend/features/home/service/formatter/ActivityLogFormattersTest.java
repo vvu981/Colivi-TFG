@@ -83,7 +83,7 @@ class ActivityLogFormattersTest {
         Map<String, Object> meta1 = log.getMetadata();
         assertEquals("Bad behavior", meta1.get("reason"));
         assertEquals("John Doe", meta1.get("expelledUser"));
-        
+
         MemberExpelledEvent eventNoReason = new MemberExpelledEvent(homeId, actorId, "John Doe", null);
         ActivityLog logNoReason = formatter.format(eventNoReason);
         Map<String, Object> meta2 = logNoReason.getMetadata();

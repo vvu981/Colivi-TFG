@@ -112,9 +112,9 @@ class AccommodationServiceImplTest {
                 accommodation.setId(UUID.randomUUID());
                 accommodation.setImages(new ArrayList<>());
 
-                lenient().when(userRepository.findById(owner.getId())).thenReturn(Optional.of(owner));
-                lenient().when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
-                lenient().when(userRepository.findById(otherUser.getId())).thenReturn(Optional.of(otherUser));
+                lenient().when(userRepository.findActiveById(owner.getId())).thenReturn(Optional.of(owner));
+                lenient().when(userRepository.findActiveById(admin.getId())).thenReturn(Optional.of(admin));
+                lenient().when(userRepository.findActiveById(otherUser.getId())).thenReturn(Optional.of(otherUser));
                 lenient().when(userRepository.getReferenceById(owner.getId())).thenReturn(owner);
                 lenient().when(userRepository.getReferenceById(admin.getId())).thenReturn(admin);
                 lenient().when(userRepository.getReferenceById(otherUser.getId())).thenReturn(otherUser);

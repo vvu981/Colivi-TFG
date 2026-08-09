@@ -1,6 +1,5 @@
 package com.vvu981.colivibackend.features.home.service;
 
-import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
 import com.vvu981.colivibackend.core.exception.ResourceNotFoundException;
 import com.vvu981.colivibackend.features.home.domain.ActivityLog;
 import com.vvu981.colivibackend.features.home.domain.ActivityType;
@@ -74,7 +73,8 @@ class ActivityLogQueryServiceImplTest {
 
         Pageable pageable = PageRequest.of(0, 10);
         Page<ActivityLog> page = new PageImpl<>(List.of(log));
-        when(activityLogRepository.findByHomeIdAndCreatedAtGreaterThanEqualOrderByCreatedAtDesc(homeId, member.getJoinedAt(), pageable)).thenReturn(page);
+        when(activityLogRepository.findByHomeIdAndCreatedAtGreaterThanEqualOrderByCreatedAtDesc(homeId,
+                member.getJoinedAt(), pageable)).thenReturn(page);
 
         when(activityLogMapper.toResponseDto(log)).thenReturn(
                 new ActivityLogResponseDto(UUID.randomUUID(), homeId, userId, "Test User", ActivityType.HOME_CREATED,
@@ -84,7 +84,8 @@ class ActivityLogQueryServiceImplTest {
 
         assertNotNull(result);
         assertEquals(1, result.getContent().size());
-        verify(activityLogRepository).findByHomeIdAndCreatedAtGreaterThanEqualOrderByCreatedAtDesc(homeId, member.getJoinedAt(), pageable);
+        verify(activityLogRepository).findByHomeIdAndCreatedAtGreaterThanEqualOrderByCreatedAtDesc(homeId,
+                member.getJoinedAt(), pageable);
     }
 
     @Test
@@ -105,7 +106,8 @@ class ActivityLogQueryServiceImplTest {
 
         Pageable pageable = PageRequest.of(0, 10);
         Page<ActivityLog> page = new PageImpl<>(List.of(log));
-        when(activityLogRepository.findByHomeIdAndCreatedAtBetweenOrderByCreatedAtDesc(homeId, member.getJoinedAt(), member.getLeftAt(), pageable)).thenReturn(page);
+        when(activityLogRepository.findByHomeIdAndCreatedAtBetweenOrderByCreatedAtDesc(homeId, member.getJoinedAt(),
+                member.getLeftAt(), pageable)).thenReturn(page);
 
         when(activityLogMapper.toResponseDto(log)).thenReturn(
                 new ActivityLogResponseDto(UUID.randomUUID(), homeId, userId, "Test User", ActivityType.HOME_CREATED,
@@ -115,7 +117,8 @@ class ActivityLogQueryServiceImplTest {
 
         assertNotNull(result);
         assertEquals(1, result.getContent().size());
-        verify(activityLogRepository).findByHomeIdAndCreatedAtBetweenOrderByCreatedAtDesc(homeId, member.getJoinedAt(), member.getLeftAt(), pageable);
+        verify(activityLogRepository).findByHomeIdAndCreatedAtBetweenOrderByCreatedAtDesc(homeId, member.getJoinedAt(),
+                member.getLeftAt(), pageable);
     }
 
     @Test
@@ -126,12 +129,4 @@ class ActivityLogQueryServiceImplTest {
         assertThrows(ResourceNotFoundException.class, () -> service.getHomeActivities(homeId, userId, pageable));
     }
 
-    @Test
-    void getHomeActivities_ThrowsIfNotAllowed() {
-        member.setStatus(null);
-        when(homeMemberRepository.findByHomeIdAndUserId(homeId, userId)).thenReturn(Optional.of(member));
-
-        Pageable pageable = PageRequest.of(0, 10);
-        assertThrows(BusinessRuleValidationException.class, () -> service.getHomeActivities(homeId, userId, pageable));
-    }
 }

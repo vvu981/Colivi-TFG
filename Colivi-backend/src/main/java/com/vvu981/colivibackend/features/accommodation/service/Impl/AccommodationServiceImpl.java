@@ -61,7 +61,7 @@ public class AccommodationServiceImpl implements AccommodationService {
     }
 
     private User getUser(UUID currentUserId) {
-        return userRepository.findById(currentUserId)
+        return userRepository.findActiveById(currentUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("Error: Usuario no encontrado"));
     }
 

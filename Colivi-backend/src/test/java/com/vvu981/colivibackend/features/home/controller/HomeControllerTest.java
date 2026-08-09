@@ -208,6 +208,18 @@ class HomeControllerTest {
         }
 
         @Test
+        void forceExpelMemberWithoutReason() throws Exception {
+                UUID targetId = UUID.randomUUID();
+
+                mockMvc.perform(patch("/api/v1/homes/{id}/members/{targetUserId}/force-expel", homeId, targetId)
+                                .with(user(principal))
+                                .with(csrf()))
+                                .andExpect(status().isNoContent());
+
+                verify(homeService).forceExpelWithDebtSettlement(eq(homeId), any(), eq(targetId), eq(null));
+        }
+
+        @Test
         void softDeleteHome() throws Exception {
                 mockMvc.perform(delete("/api/v1/homes/{id}", homeId)
                                 .with(user(principal))

@@ -111,7 +111,7 @@ class HomeExpenseServiceImplTest {
             when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
             mockActiveMembersList(homeId, payer, participant1);
 
-            when(userRepository.findByIdAndDeletedAtIsNull(payerId)).thenReturn(Optional.of(payer));
+            when(userRepository.findActiveById(payerId)).thenReturn(Optional.of(payer));
             when(userRepository.findAllById(any())).thenReturn(List.of(payer, participant1));
 
             CreateExpenseRequest request = new CreateExpenseRequest("Test", new BigDecimal("100.00"), payerId,
@@ -135,7 +135,7 @@ class HomeExpenseServiceImplTest {
             when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
             mockActiveMembersList(homeId, payer, participant1, participant2);
 
-            when(userRepository.findByIdAndDeletedAtIsNull(payerId)).thenReturn(Optional.of(payer));
+            when(userRepository.findActiveById(payerId)).thenReturn(Optional.of(payer));
             when(userRepository.findAllById(any())).thenReturn(List.of(payer, participant1, participant2));
 
             // 100.00 / 3 = 33.333...
@@ -187,6 +187,29 @@ class HomeExpenseServiceImplTest {
 
             assertThrows(UnauthorizedActionException.class, () -> service.createExpense(homeId, request, payerId));
         }
+
+        @Test
+        void createExpense_HomeNotFound_ThrowsException() {
+            mockActiveMember(homeId, payerId);
+            when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.empty());
+
+            CreateExpenseRequest request = new CreateExpenseRequest("Test", new BigDecimal("100.00"), payerId, List.of(payerId));
+            assertThrows(com.vvu981.colivibackend.core.exception.ResourceNotFoundException.class, () -> service.createExpense(homeId, request, payerId));
+        }
+
+        @Test
+        void createExpense_UserNotFound_ThrowsException() {
+            mockActiveMember(homeId, payerId);
+            when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
+            mockActiveMembersList(homeId, payer, participant1);
+
+            when(userRepository.findActiveById(payerId)).thenReturn(Optional.of(payer));
+            // Simula que no se encontraron todos los usuarios (ej. findAllById devuelve 1 en vez de 2)
+            when(userRepository.findAllById(any())).thenReturn(List.of(payer));
+
+            CreateExpenseRequest request = new CreateExpenseRequest("Test", new BigDecimal("100.00"), payerId, List.of(payerId, participant1Id));
+            assertThrows(com.vvu981.colivibackend.core.exception.ResourceNotFoundException.class, () -> service.createExpense(homeId, request, payerId));
+        }
     }
 
     @Nested
@@ -206,7 +229,7 @@ class HomeExpenseServiceImplTest {
         @Test
         void deleteExpense_AsPayer_Success() {
             when(expenseRepository.findByIdAndDeletedAtIsNull(expenseId)).thenReturn(Optional.of(expense));
-            when(userRepository.findByIdAndDeletedAtIsNull(payerId)).thenReturn(Optional.of(payer));
+            when(userRepository.findActiveById(payerId)).thenReturn(Optional.of(payer));
 
             service.deleteExpense(homeId, expenseId, payerId);
 
@@ -221,7 +244,7 @@ class HomeExpenseServiceImplTest {
             admin.setRole(UserRole.ADMIN);
 
             when(expenseRepository.findByIdAndDeletedAtIsNull(expenseId)).thenReturn(Optional.of(expense));
-            when(userRepository.findByIdAndDeletedAtIsNull(admin.getId())).thenReturn(Optional.of(admin));
+            when(userRepository.findActiveById(admin.getId())).thenReturn(Optional.of(admin));
 
             service.deleteExpense(homeId, expenseId, admin.getId());
 
@@ -240,7 +263,7 @@ class HomeExpenseServiceImplTest {
             adminMember.setRole(HomeRole.ADMIN);
 
             when(expenseRepository.findByIdAndDeletedAtIsNull(expenseId)).thenReturn(Optional.of(expense));
-            when(userRepository.findByIdAndDeletedAtIsNull(homeAdmin.getId())).thenReturn(Optional.of(homeAdmin));
+            when(userRepository.findActiveById(homeAdmin.getId())).thenReturn(Optional.of(homeAdmin));
             when(memberRepository.findByHomeIdAndUserId(homeId, homeAdmin.getId()))
                     .thenReturn(Optional.of(adminMember));
 
@@ -261,12 +284,20 @@ class HomeExpenseServiceImplTest {
             randomMember.setRole(HomeRole.MEMBER);
 
             when(expenseRepository.findByIdAndDeletedAtIsNull(expenseId)).thenReturn(Optional.of(expense));
-            when(userRepository.findByIdAndDeletedAtIsNull(randomUser.getId())).thenReturn(Optional.of(randomUser));
+            when(userRepository.findActiveById(randomUser.getId())).thenReturn(Optional.of(randomUser));
             when(memberRepository.findByHomeIdAndUserId(homeId, randomUser.getId()))
                     .thenReturn(Optional.of(randomMember));
 
             assertThrows(UnauthorizedActionException.class,
                     () -> service.deleteExpense(homeId, expenseId, randomUser.getId()));
+        }
+
+        @Test
+        void deleteExpense_ExpenseNotFound_ThrowsException() {
+            when(expenseRepository.findByIdAndDeletedAtIsNull(expenseId)).thenReturn(Optional.empty());
+
+            assertThrows(com.vvu981.colivibackend.core.exception.ResourceNotFoundException.class, 
+                () -> service.deleteExpense(homeId, expenseId, payerId));
         }
     }
 

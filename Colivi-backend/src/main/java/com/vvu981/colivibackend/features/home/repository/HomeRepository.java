@@ -28,4 +28,8 @@ public interface HomeRepository extends JpaRepository<Home, UUID>, JpaSpecificat
      */
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"members", "members.user"})
     Optional<Home> findByIdAndDeletedAtIsNull(UUID id);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("SELECT h FROM Home h WHERE h.id = :id AND h.deletedAt IS NULL")
+    Optional<Home> findByIdForUpdate(@org.springframework.data.repository.query.Param("id") UUID id);
 }

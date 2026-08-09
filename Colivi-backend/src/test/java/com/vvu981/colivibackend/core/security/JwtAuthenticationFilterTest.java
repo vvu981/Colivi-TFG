@@ -190,7 +190,7 @@ class JwtAuthenticationFilterTest {
             when(jwtTokenProvider.extractEmail(anyString())).thenReturn("victor@colivi.com");
             when(jwtTokenProvider.isTokenValid(anyString())).thenReturn(true);
             when(jwtTokenProvider.extractTokenVersion(anyString())).thenReturn(1); // token antiguo
-            when(userRepository.findByEmail("victor@colivi.com"))
+            when(userRepository.findActiveByEmail("victor@colivi.com"))
                     .thenReturn(Optional.of(activeUser));
 
             // Act
@@ -217,7 +217,7 @@ class JwtAuthenticationFilterTest {
             when(request.getHeader("Authorization")).thenReturn("Bearer valid.unknown.token");
             when(jwtTokenProvider.extractEmail(anyString())).thenReturn("ghost@example.com");
             when(jwtTokenProvider.isTokenValid(anyString())).thenReturn(true);
-            when(userRepository.findByEmail("ghost@example.com"))
+            when(userRepository.findActiveByEmail("ghost@example.com"))
                     .thenReturn(Optional.empty());
 
             // Act
@@ -245,7 +245,7 @@ class JwtAuthenticationFilterTest {
             when(jwtTokenProvider.extractEmail(anyString())).thenReturn("victor@colivi.com");
             when(jwtTokenProvider.isTokenValid(anyString())).thenReturn(true);
             when(jwtTokenProvider.extractTokenVersion(anyString())).thenReturn(1);
-            when(userRepository.findByEmail("victor@colivi.com"))
+            when(userRepository.findActiveByEmail("victor@colivi.com"))
                     .thenReturn(Optional.of(activeUser));
 
             // Act
@@ -273,7 +273,7 @@ class JwtAuthenticationFilterTest {
             when(jwtTokenProvider.extractEmail(anyString())).thenReturn("victor@colivi.com");
             when(jwtTokenProvider.isTokenValid(anyString())).thenReturn(true);
             when(jwtTokenProvider.extractTokenVersion(anyString())).thenReturn(1);
-            when(userRepository.findByEmail("victor@colivi.com"))
+            when(userRepository.findActiveByEmail("victor@colivi.com"))
                     .thenReturn(Optional.of(activeUser));
 
             // Act

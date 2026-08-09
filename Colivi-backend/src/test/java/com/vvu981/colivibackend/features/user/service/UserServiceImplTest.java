@@ -97,7 +97,7 @@ class UserServiceImplTest {
                 void givenValidCredentials_whenLogin_thenReturnsAuthResponse() {
                         // Arrange
                         LoginRequest request = new LoginRequest("victor@colivi.com", "password123");
-                        when(userRepository.findByEmailAndDeletedAtIsNull("victor@colivi.com"))
+                        when(userRepository.findActiveByEmail("victor@colivi.com"))
                                         .thenReturn(Optional.of(persistedUser));
                         when(passwordEncoder.matches("password123", persistedUser.getPasswordHash()))
                                         .thenReturn(true);
@@ -118,7 +118,7 @@ class UserServiceImplTest {
                 void givenNonExistentEmail_whenLogin_thenThrowsUnauthorizedActionException() {
                         // Arrange
                         LoginRequest request = new LoginRequest("ghost@colivi.com", "password123");
-                        when(userRepository.findByEmailAndDeletedAtIsNull("ghost@colivi.com"))
+                        when(userRepository.findActiveByEmail("ghost@colivi.com"))
                                         .thenReturn(Optional.empty());
 
                         // Act & Assert
@@ -132,7 +132,7 @@ class UserServiceImplTest {
                 void givenWrongPassword_whenLogin_thenThrowsUnauthorizedActionException() {
                         // Arrange
                         LoginRequest request = new LoginRequest("victor@colivi.com", "wrong_password");
-                        when(userRepository.findByEmailAndDeletedAtIsNull("victor@colivi.com"))
+                        when(userRepository.findActiveByEmail("victor@colivi.com"))
                                         .thenReturn(Optional.of(persistedUser));
                         when(passwordEncoder.matches("wrong_password", persistedUser.getPasswordHash()))
                                         .thenReturn(false);
@@ -151,12 +151,12 @@ class UserServiceImplTest {
                 void givenWrongEmailOrPassword_whenLogin_thenSameGenericMessage() {
                         // Arrange — email inexistente
                         LoginRequest badEmail = new LoginRequest("nobody@colivi.com", "pass");
-                        when(userRepository.findByEmailAndDeletedAtIsNull("nobody@colivi.com"))
+                        when(userRepository.findActiveByEmail("nobody@colivi.com"))
                                         .thenReturn(Optional.empty());
 
                         // Arrange — contraseña incorrecta
                         LoginRequest badPass = new LoginRequest("victor@colivi.com", "wrong");
-                        when(userRepository.findByEmailAndDeletedAtIsNull("victor@colivi.com"))
+                        when(userRepository.findActiveByEmail("victor@colivi.com"))
                                         .thenReturn(Optional.of(persistedUser));
                         when(passwordEncoder.matches("wrong", persistedUser.getPasswordHash()))
                                         .thenReturn(false);
@@ -192,9 +192,9 @@ class UserServiceImplTest {
                 @DisplayName("happy path: nuevo usuario devuelve AuthResponse con tokens")
                 void givenNewUser_whenRegister_thenReturnsAuthResponse() {
                         // Arrange
-                        when(userRepository.findByEmailAndDeletedAtIsNull("nuevo@colivi.com"))
+                        when(userRepository.findActiveByEmail("nuevo@colivi.com"))
                                         .thenReturn(Optional.empty());
-                        when(userRepository.findByNicknameAndDeletedAtIsNull("vvu981"))
+                        when(userRepository.findActiveByNickname("vvu981"))
                                         .thenReturn(Optional.empty());
                         when(passwordEncoder.encode("SecurePass1!")).thenReturn("$2a$12$encoded");
                         when(userRepository.save(any(User.class))).thenReturn(persistedUser);
@@ -214,7 +214,7 @@ class UserServiceImplTest {
                 @DisplayName("email duplicado lanza BusinessRuleValidationException")
                 void givenDuplicateEmail_whenRegister_thenThrowsBusinessRuleValidationException() {
                         // Arrange
-                        when(userRepository.findByEmailAndDeletedAtIsNull("nuevo@colivi.com"))
+                        when(userRepository.findActiveByEmail("nuevo@colivi.com"))
                                         .thenReturn(Optional.of(persistedUser));
 
                         // Act & Assert
@@ -229,9 +229,9 @@ class UserServiceImplTest {
                 @DisplayName("nickname duplicado lanza BusinessRuleValidationException")
                 void givenDuplicateNickname_whenRegister_thenThrowsBusinessRuleValidationException() {
                         // Arrange
-                        when(userRepository.findByEmailAndDeletedAtIsNull("nuevo@colivi.com"))
+                        when(userRepository.findActiveByEmail("nuevo@colivi.com"))
                                         .thenReturn(Optional.empty());
-                        when(userRepository.findByNicknameAndDeletedAtIsNull("vvu981"))
+                        when(userRepository.findActiveByNickname("vvu981"))
                                         .thenReturn(Optional.of(persistedUser));
 
                         // Act & Assert
@@ -246,8 +246,8 @@ class UserServiceImplTest {
                 @DisplayName("el usuario guardado tiene rol USER (nunca ADMIN) y contraseña hasheada")
                 void givenNewUser_whenRegister_thenSavedWithUserRoleAndHashedPassword() {
                         // Arrange
-                        when(userRepository.findByEmailAndDeletedAtIsNull(anyString())).thenReturn(Optional.empty());
-                        when(userRepository.findByNicknameAndDeletedAtIsNull(anyString())).thenReturn(Optional.empty());
+                        when(userRepository.findActiveByEmail(anyString())).thenReturn(Optional.empty());
+                        when(userRepository.findActiveByNickname(anyString())).thenReturn(Optional.empty());
                         when(passwordEncoder.encode(anyString())).thenReturn("$2a$12$hashed");
                         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
                         when(jwtTokenProvider.generateAccessToken(any())).thenReturn("tok");
@@ -277,7 +277,7 @@ class UserServiceImplTest {
                         RefreshTokenRequest request = new RefreshTokenRequest("valid.refresh.token");
                         when(jwtTokenProvider.isTokenValid("valid.refresh.token")).thenReturn(true);
                         when(jwtTokenProvider.extractEmail("valid.refresh.token")).thenReturn("victor@colivi.com");
-                        when(userRepository.findByEmailAndDeletedAtIsNull("victor@colivi.com"))
+                        when(userRepository.findActiveByEmail("victor@colivi.com"))
                                         .thenReturn(Optional.of(persistedUser));
                         when(jwtTokenProvider.extractTokenVersion("valid.refresh.token")).thenReturn(1);
                         when(jwtTokenProvider.generateAccessToken(persistedUser)).thenReturn("new.access.token");
@@ -314,7 +314,7 @@ class UserServiceImplTest {
                         RefreshTokenRequest request = new RefreshTokenRequest("valid.token.dead.user");
                         when(jwtTokenProvider.isTokenValid("valid.token.dead.user")).thenReturn(true);
                         when(jwtTokenProvider.extractEmail("valid.token.dead.user")).thenReturn("deleted@colivi.com");
-                        when(userRepository.findByEmailAndDeletedAtIsNull("deleted@colivi.com"))
+                        when(userRepository.findActiveByEmail("deleted@colivi.com"))
                                         .thenReturn(Optional.empty());
 
                         // Act & Assert
@@ -330,7 +330,7 @@ class UserServiceImplTest {
                         RefreshTokenRequest request = new RefreshTokenRequest("mismatch.version.token");
                         when(jwtTokenProvider.isTokenValid("mismatch.version.token")).thenReturn(true);
                         when(jwtTokenProvider.extractEmail("mismatch.version.token")).thenReturn("victor@colivi.com");
-                        when(userRepository.findByEmailAndDeletedAtIsNull("victor@colivi.com"))
+                        when(userRepository.findActiveByEmail("victor@colivi.com"))
                                         .thenReturn(Optional.of(persistedUser));
                         when(jwtTokenProvider.extractTokenVersion("mismatch.version.token")).thenReturn(99); // Versión en DB es 1
 
@@ -354,7 +354,7 @@ class UserServiceImplTest {
                 void givenExistingUser_whenSetAdmin_thenRoleIsAdminAndSaved() {
                         // Arrange
                         UUID userId = persistedUser.getId();
-                        when(userRepository.findByIdAndDeletedAtIsNull(userId))
+                        when(userRepository.findActiveById(userId))
                                         .thenReturn(Optional.of(persistedUser));
                         when(userRepository.save(persistedUser)).thenReturn(persistedUser);
 
@@ -371,7 +371,7 @@ class UserServiceImplTest {
                 void givenNonExistentUserId_whenSetAdmin_thenThrowsUserNotFoundException() {
                         // Arrange
                         UUID unknownId = UUID.randomUUID();
-                        when(userRepository.findByIdAndDeletedAtIsNull(unknownId))
+                        when(userRepository.findActiveById(unknownId))
                                         .thenReturn(Optional.empty());
 
                         // Act & Assert
@@ -399,7 +399,7 @@ class UserServiceImplTest {
                                         "newNick", "NuevoNombre", "NuevoApellido", null, "+34699999999", null);
                         UpdateNonSensible expectedResponse = new UpdateNonSensible(
                                         "newNick", "NuevoNombre", "NuevoApellido", null, "+34699999999", null);
-                        when(userRepository.findByIdAndDeletedAtIsNull(persistedUser.getId()))
+                        when(userRepository.findActiveById(persistedUser.getId()))
                                         .thenReturn(Optional.of(persistedUser));
                         when(userRepository.save(persistedUser)).thenReturn(persistedUser);
                         when(userMapper.toUpdateNonSensibleDto(persistedUser)).thenReturn(expectedResponse);
@@ -433,7 +433,7 @@ class UserServiceImplTest {
                 void givenWrongCurrentPassword_whenUpdateSensible_thenThrowsUnauthorizedActionException() {
                         // Arrange
                         UpdateSensible request = new UpdateSensible("wrong_current", "new@email.com", null);
-                        when(userRepository.findByIdAndDeletedAtIsNull(persistedUser.getId()))
+                        when(userRepository.findActiveById(persistedUser.getId()))
                                         .thenReturn(Optional.of(persistedUser));
                         when(passwordEncoder.matches("wrong_current", persistedUser.getPasswordHash()))
                                         .thenReturn(false); // contraseña incorrecta
@@ -451,7 +451,7 @@ class UserServiceImplTest {
                 void givenCorrectCurrentPassword_whenUpdateEmailOnly_thenEmailUpdatedAndSaved() {
                         // Arrange
                         UpdateSensible request = new UpdateSensible("correct_current", "nuevo@colivi.com", null);
-                        when(userRepository.findByIdAndDeletedAtIsNull(persistedUser.getId()))
+                        when(userRepository.findActiveById(persistedUser.getId()))
                                         .thenReturn(Optional.of(persistedUser));
                         when(passwordEncoder.matches("correct_current", persistedUser.getPasswordHash()))
                                         .thenReturn(true);
@@ -471,7 +471,7 @@ class UserServiceImplTest {
 
                         // Arrange
                         UpdateSensible request = new UpdateSensible("correct_current", null, "NewSecure1!");
-                        when(userRepository.findByIdAndDeletedAtIsNull(persistedUser.getId()))
+                        when(userRepository.findActiveById(persistedUser.getId()))
                                         .thenReturn(Optional.of(persistedUser));
                         when(passwordEncoder.matches("correct_current", persistedUser.getPasswordHash()))
                                         .thenReturn(true);
@@ -491,7 +491,7 @@ class UserServiceImplTest {
                 void givenNoChanges_whenUpdateSensible_thenRepositoryNotCalled() {
                         // Arrange — nada que cambiar
                         UpdateSensible request = new UpdateSensible("correct_current", null, null);
-                        when(userRepository.findByIdAndDeletedAtIsNull(persistedUser.getId()))
+                        when(userRepository.findActiveById(persistedUser.getId()))
                                         .thenReturn(Optional.of(persistedUser));
                         when(passwordEncoder.matches("correct_current", persistedUser.getPasswordHash()))
                                         .thenReturn(true);
@@ -508,7 +508,7 @@ class UserServiceImplTest {
                 void givenBlankChanges_whenUpdateSensible_thenRepositoryNotCalled() {
                         // Arrange — nada que cambiar
                         UpdateSensible request = new UpdateSensible("correct_current", "   ", "");
-                        when(userRepository.findByIdAndDeletedAtIsNull(persistedUser.getId()))
+                        when(userRepository.findActiveById(persistedUser.getId()))
                                         .thenReturn(Optional.of(persistedUser));
                         when(passwordEncoder.matches("correct_current", persistedUser.getPasswordHash()))
                                         .thenReturn(true);
@@ -535,7 +535,7 @@ class UserServiceImplTest {
                         // Arrange
                         UUID userId = persistedUser.getId();
                         assertThat(persistedUser.getDeletedAt()).isNull(); // precondición
-                        when(userRepository.findByIdAndDeletedAtIsNull(userId))
+                        when(userRepository.findActiveById(userId))
                                         .thenReturn(Optional.of(persistedUser));
                         when(userRepository.save(persistedUser)).thenReturn(persistedUser);
 
@@ -552,7 +552,7 @@ class UserServiceImplTest {
                 void givenExistingUser_whenDeleteUserSoft_thenDeletedAtIsBeforeOrEqualNow() {
                         // Arrange
                         UUID userId = persistedUser.getId();
-                        when(userRepository.findByIdAndDeletedAtIsNull(userId))
+                        when(userRepository.findActiveById(userId))
                                         .thenReturn(Optional.of(persistedUser));
                         when(userRepository.save(persistedUser)).thenReturn(persistedUser);
 
@@ -574,7 +574,7 @@ class UserServiceImplTest {
                 void givenNonExistentUserId_whenDeleteUserSoft_thenThrowsUserNotFoundException() {
                         // Arrange
                         UUID unknownId = UUID.randomUUID();
-                        when(userRepository.findByIdAndDeletedAtIsNull(unknownId))
+                        when(userRepository.findActiveById(unknownId))
                                         .thenReturn(Optional.empty());
 
                         // Act & Assert
@@ -599,7 +599,7 @@ class UserServiceImplTest {
                 void givenExistingUser_whenDeleteUserHard_thenRepositoryDeleteCalled() {
                         // Arrange
                         UUID userId = persistedUser.getId();
-                        when(userRepository.findByIdAndDeletedAtIsNull(userId))
+                        when(userRepository.findById(userId))
                                         .thenReturn(Optional.of(persistedUser));
 
                         // Act
@@ -616,7 +616,7 @@ class UserServiceImplTest {
                 void givenNonExistentUserId_whenDeleteUserHard_thenThrowsUserNotFoundException() {
                         // Arrange
                         UUID unknownId = UUID.randomUUID();
-                        when(userRepository.findByIdAndDeletedAtIsNull(unknownId))
+                        when(userRepository.findById(unknownId))
                                         .thenReturn(Optional.empty());
 
                         // Act & Assert
@@ -642,7 +642,7 @@ class UserServiceImplTest {
                         // Arrange
                         UUID userId = persistedUser.getId();
                         Integer originalVersion = persistedUser.getTokenVersion();
-                        when(userRepository.findByIdAndDeletedAtIsNull(userId))
+                        when(userRepository.findActiveById(userId))
                                         .thenReturn(Optional.of(persistedUser));
                         when(userRepository.save(persistedUser)).thenReturn(persistedUser);
 
@@ -659,7 +659,7 @@ class UserServiceImplTest {
                 void givenNonExistentUser_whenLogout_thenThrowsUserNotFoundException() {
                         // Arrange
                         UUID unknownId = UUID.randomUUID();
-                        when(userRepository.findByIdAndDeletedAtIsNull(unknownId))
+                        when(userRepository.findActiveById(unknownId))
                                         .thenReturn(Optional.empty());
 
                         // Act & Assert
@@ -684,7 +684,7 @@ class UserServiceImplTest {
                 void givenExistingUser_whenBanUser_thenBannedAndSaved() {
                         // Arrange
                         UUID userId = persistedUser.getId();
-                        when(userRepository.findByIdAndDeletedAtIsNull(userId))
+                        when(userRepository.findActiveById(userId))
                                         .thenReturn(Optional.of(persistedUser));
                         when(userRepository.save(persistedUser)).thenReturn(persistedUser);
 
@@ -715,7 +715,7 @@ class UserServiceImplTest {
                         // Arrange
                         UUID userId = persistedUser.getId();
                         persistedUser.setBannedAt(LocalDateTime.now());
-                        when(userRepository.findByIdAndDeletedAtIsNull(userId))
+                        when(userRepository.findActiveById(userId))
                                         .thenReturn(Optional.of(persistedUser));
                         when(userRepository.save(persistedUser)).thenReturn(persistedUser);
 
@@ -1008,7 +1008,7 @@ class UserServiceImplTest {
             // Arrange
             UUID userId = persistedUser.getId();
             UserProfileResponse expectedDto = new UserProfileResponse();
-            when(userRepository.findByIdAndDeletedAtIsNull(userId)).thenReturn(Optional.of(persistedUser));
+            when(userRepository.findActiveById(userId)).thenReturn(Optional.of(persistedUser));
             when(userMapper.toUserProfileDto(persistedUser)).thenReturn(expectedDto);
 
             // Act
@@ -1016,7 +1016,7 @@ class UserServiceImplTest {
 
             // Assert
             assertThat(result).isEqualTo(expectedDto);
-            verify(userRepository).findByIdAndDeletedAtIsNull(userId);
+            verify(userRepository).findActiveById(userId);
             verify(userMapper).toUserProfileDto(persistedUser);
         }
     }
@@ -1030,7 +1030,7 @@ class UserServiceImplTest {
             // Arrange
             UUID userId = persistedUser.getId();
             UserProfileResponse expectedDto = new UserProfileResponse();
-            when(userRepository.findByIdAndDeletedAtIsNull(userId)).thenReturn(Optional.of(persistedUser));
+            when(userRepository.findActiveById(userId)).thenReturn(Optional.of(persistedUser));
             when(userMapper.toUserProfileDto(persistedUser)).thenReturn(expectedDto);
 
             // Act
@@ -1038,7 +1038,7 @@ class UserServiceImplTest {
 
             // Assert
             assertThat(result).isEqualTo(expectedDto);
-            verify(userRepository).findByIdAndDeletedAtIsNull(userId);
+            verify(userRepository).findActiveById(userId);
             verify(userMapper).toUserProfileDto(persistedUser);
         }
     }

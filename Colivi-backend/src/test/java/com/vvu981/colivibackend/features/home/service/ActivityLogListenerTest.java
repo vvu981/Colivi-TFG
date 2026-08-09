@@ -14,7 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -78,7 +78,7 @@ class ActivityLogListenerTest {
 
         ActivityLogListener listener = new ActivityLogListener(activityLogRepository, List.of(formatter));
 
-        org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class, () -> {
+        assertDoesNotThrow(() -> {
             listener.handleHomeActivityEvent(event);
         });
 

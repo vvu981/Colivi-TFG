@@ -10,6 +10,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
+
 import java.util.List;
 
 @Slf4j
@@ -21,21 +24,28 @@ public class ActivityLogListener {
     private final List<ActivityLogFormatter<?>> formatters;
 
     @SuppressWarnings("unchecked")
-    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleHomeActivityEvent(HomeActivityEvent event) {
         log.debug("Processing activity event: {}", event.activityType());
 
-        formatters.stream()
-                .filter(formatter -> formatter.supports(event))
-                .findFirst()
-                .ifPresentOrElse(
-                        formatter -> {
-                            @SuppressWarnings("rawtypes")
-                            ActivityLogFormatter rawFormatter = formatter;
-                            ActivityLog logEntity = rawFormatter.format(event);
-                            activityLogRepository.save(logEntity);
-                        },
-                        () -> log.warn("No ActivityLogFormatter found for event type: {}",
-                                event.getClass().getSimpleName()));
+        try {
+            formatters.stream()
+                    .filter(formatter -> formatter.supports(event))
+                    .findFirst()
+                    .ifPresentOrElse(
+                            formatter -> {
+                                @SuppressWarnings("rawtypes")
+                                ActivityLogFormatter rawFormatter = formatter;
+                                ActivityLog logEntity = rawFormatter.format(event);
+                                activityLogRepository.save(logEntity);
+                            },
+                            () -> log.warn("No ActivityLogFormatter found for event type: {}",
+                                    event.getClass().getSimpleName()));
+        } catch (Exception e) {
+            log.error("Failed to persist ActivityLog for event {}. " +
+                    "This error is safely contained and won't rollback the main transaction.", 
+                    event.activityType(), e);
+        }
     }
 }

@@ -85,10 +85,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        // Cargamos al usuario independientemente de su estado (baneado / eliminado).
-        // La responsabilidad de filtrar por estado recae en UserStatusEnforcerFilter
-        // (SRP).
-        userRepository.findByEmail(userEmail).ifPresent(user -> {
+        userRepository.findActiveByEmail(userEmail).ifPresent(user -> {
 
             // Validamos únicamente la integridad del token: versión actual del usuario.
             if (jwtTokenProvider.extractTokenVersion(jwt).equals(user.getTokenVersion())) {

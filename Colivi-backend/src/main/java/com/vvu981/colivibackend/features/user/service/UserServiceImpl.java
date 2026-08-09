@@ -2,6 +2,7 @@ package com.vvu981.colivibackend.features.user.service;
 
 import com.vvu981.colivibackend.core.security.JwtTokenProvider;
 import com.vvu981.colivibackend.features.user.domain.User;
+import com.vvu981.colivibackend.features.user.domain.UserReactivationRequestedEvent;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
 import com.vvu981.colivibackend.features.user.dto.*;
 import com.vvu981.colivibackend.features.user.exception.AccountAlreadyActiveException;
@@ -20,6 +21,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.vvu981.colivibackend.features.user.domain.event.UserDeletedEvent;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -46,7 +48,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public AuthResponse login(LoginRequest loginRequest) {
-        User user = userRepository.findByEmailAndDeletedAtIsNull(loginRequest.email())
+        User user = userRepository.findActiveByEmail(loginRequest.email())
                 .orElseThrow(() -> new UnauthorizedActionException("Error: Credenciales inválidas."));
 
         if (!passwordEncoder.matches(loginRequest.password(), user.getPasswordHash())) {
@@ -63,11 +65,11 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public AuthResponse register(RegisterRequest request) {
 
-        if (userRepository.findByEmailAndDeletedAtIsNull(request.email()).isPresent()) {
+        if (userRepository.findActiveByEmail(request.email()).isPresent()) {
             throw new BusinessRuleValidationException("Error: El email ya está registrado");
         }
 
-        if (userRepository.findByNicknameAndDeletedAtIsNull(request.nickname()).isPresent()) {
+        if (userRepository.findActiveByNickname(request.nickname()).isPresent()) {
             throw new BusinessRuleValidationException("Error: El apodo ya está en uso");
         }
 
@@ -101,7 +103,7 @@ public class UserServiceImpl implements UserService {
         }
 
         String email = jwtTokenProvider.extractEmail(currentRefreshToken);
-        User user = userRepository.findByEmailAndDeletedAtIsNull(email)
+        User user = userRepository.findActiveByEmail(email)
                 .orElseThrow(() -> new UserNotFoundException("Error: Usuario no encontrado."));
 
         Integer tokenVersionInJwt = jwtTokenProvider.extractTokenVersion(currentRefreshToken);
@@ -167,7 +169,7 @@ public class UserServiceImpl implements UserService {
     }
 
     private User getActiveUserById(UUID userId) {
-        return userRepository.findByIdAndDeletedAtIsNull(userId)
+        return userRepository.findActiveById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Error: Usuario no encontrado"));
     }
 
@@ -177,16 +179,21 @@ public class UserServiceImpl implements UserService {
 
         user.setDeletedAt(LocalDateTime.now());
         userRepository.save(user);
+        eventPublisher
+                .publishEvent(new UserDeletedEvent(userId, false));
     }
 
     @Override
     @Transactional
     public void deleteUserHard(UUID userId) {
-        User user = getActiveUserById(userId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Error: Usuario no encontrado"));
 
         activityLogRepository.nullifyActorIdByUserId(userId);
-        
+
         userRepository.delete(user);
+        eventPublisher
+                .publishEvent(new UserDeletedEvent(userId, true));
     }
 
     @Override
@@ -247,7 +254,7 @@ public class UserServiceImpl implements UserService {
     public void requestReactivation(String email) {
 
         // Buscamos el usuario independientemente de si está eliminado o no.
-        // findByEmailAndDeletedAtIsNull NO sirve aquí: necesitamos exactamente los
+        // findByEmail NO sirve aquí: necesitamos exactamente los
         // eliminados.
         Optional<User> userOptional = userRepository.findByEmailIgnoreCase(email);
 
@@ -275,7 +282,7 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
 
         // Delegamos el envío del correo al Event Publisher (DIP y Desacoplamiento)
-        eventPublisher.publishEvent(new com.vvu981.colivibackend.features.user.domain.UserReactivationRequestedEvent(
+        eventPublisher.publishEvent(new UserReactivationRequestedEvent(
                 user.getEmail(), token));
 
         log.info("Reactivation email requested for {} (token expires at {})", email, expiresAt);

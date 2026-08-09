@@ -39,19 +39,6 @@ jobs:
       - name: Run tests and verify JaCoCo coverage threshold
         working-directory: ./Colivi-backend
         run: mvn --batch-mode --no-transfer-progress verify
-        env:
-          # Variables de entorno mínimas para que el contexto Spring arranque en tests unitarios.
-          # Los tests de integración con BD real usarían Testcontainers y no necesitarían esto.
-          SPRING_DATASOURCE_URL: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
-          SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.h2.Driver
-          SPRING_DATASOURCE_USERNAME: sa
-          SPRING_DATASOURCE_PASSWORD: ""
-          SPRING_JPA_HIBERNATE_DDL_AUTO: create-drop
-          SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.H2Dialect
-          JWT_SECRET: dGVzdC1zZWNyZXQta2V5LWZvci1naXRodWItYWN0aW9ucy0xMjM0NTY3OA==
-          JWT_EXPIRATION: 3600000
-          JWT_REFRESH_EXPIRATION: 86400000
-
       # ── 5. Publicar reporte JaCoCo como artefacto del workflow ───────────────
       - name: Upload JaCoCo HTML report
         if: always()   # se sube aunque el job falle, para diagnóstico

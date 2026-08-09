@@ -180,7 +180,6 @@
                     <!-- Excluimos clases que no tienen lógica testable globalmente -->
                     <excludes>
                         <exclude>com/vvu981/colivibackend/ColiviBackendApplication.class</exclude>
-                        <exclude>com/vvu981/colivibackend/features/user/domain/**</exclude>
                         <exclude>com/vvu981/colivibackend/features/user/dto/**</exclude>
                         <exclude>com/vvu981/colivibackend/features/user/mapper/**Impl.class</exclude>
                         <exclude>com/vvu981/colivibackend/core/storage/**</exclude>
