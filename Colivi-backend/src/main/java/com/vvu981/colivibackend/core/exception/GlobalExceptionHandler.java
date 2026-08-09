@@ -9,6 +9,7 @@ import com.vvu981.colivibackend.features.user.exception.StaleSessionException;
 import com.vvu981.colivibackend.features.user.exception.UserNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -19,137 +20,67 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // Usuario baneado → 403 Forbidden
-    // Nota: normalmente UserStatusEnforcerFilter escribe la respuesta directamente.
-    // Este handler actúa como red de seguridad si la excepción se lanza desde un
-    // servicio.
-    @ExceptionHandler(AccountBannedException.class)
-    public ResponseEntity<Map<String, Object>> handleAccountBanned(AccountBannedException ex) {
+    private ResponseEntity<Map<String, Object>> buildErrorResponse(HttpStatus status, String message) {
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
-        body.put("status", HttpStatus.FORBIDDEN.value());
-        body.put("error", "Forbidden");
-        body.put("message", ex.getMessage());
-
-        return new ResponseEntity<>(body, HttpStatus.FORBIDDEN);
+        body.put("status", status.value());
+        body.put("error", status.getReasonPhrase());
+        body.put("message", message);
+        return new ResponseEntity<>(body, status);
     }
 
-    // Usuario eliminado (soft-delete) → 403 Forbidden con mensaje orientativo
-    @ExceptionHandler(AccountDeletedException.class)
-    public ResponseEntity<Map<String, Object>> handleAccountDeleted(AccountDeletedException ex) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", LocalDateTime.now());
-        body.put("status", HttpStatus.FORBIDDEN.value());
-        body.put("error", "Forbidden");
-        body.put("message", ex.getMessage());
-
-        return new ResponseEntity<>(body, HttpStatus.FORBIDDEN);
+    // Errores de Autorización (403 Forbidden)
+    @ExceptionHandler({
+            AccountBannedException.class,
+            AccountDeletedException.class,
+            UnauthorizedActionException.class
+    })
+    public ResponseEntity<Map<String, Object>> handleForbidden(RuntimeException ex) {
+        return buildErrorResponse(HttpStatus.FORBIDDEN, ex.getMessage());
     }
 
-    // Tokens JWT de sesión inválidos/caducados → 401 Unauthorized
-    @ExceptionHandler({ InvalidTokenException.class, StaleSessionException.class })
-    public ResponseEntity<Map<String, Object>> handleUnauthorizedExceptions(RuntimeException ex) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", LocalDateTime.now());
-        body.put("status", HttpStatus.UNAUTHORIZED.value());
-        body.put("error", "Unauthorized");
-        body.put("message", ex.getMessage());
-
-        return new ResponseEntity<>(body, HttpStatus.UNAUTHORIZED);
+    // Errores de Autenticación (401 Unauthorized)
+    @ExceptionHandler({
+            InvalidTokenException.class,
+            StaleSessionException.class
+    })
+    public ResponseEntity<Map<String, Object>> handleUnauthorized(RuntimeException ex) {
+        return buildErrorResponse(HttpStatus.UNAUTHORIZED, ex.getMessage());
     }
 
-    // Recurso no existe → 404 Not Found
-    @ExceptionHandler(UserNotFoundException.class)
-    public ResponseEntity<Map<String, Object>> handleNotFoundExceptions(UserNotFoundException ex) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", LocalDateTime.now());
-        body.put("status", HttpStatus.NOT_FOUND.value());
-        body.put("error", "Not Found");
-        body.put("message", ex.getMessage());
-
-        return new ResponseEntity<>(body, HttpStatus.NOT_FOUND);
+    // Recursos no encontrados (404 Not Found)
+    @ExceptionHandler({
+            UserNotFoundException.class,
+            ResourceNotFoundException.class
+    })
+    public ResponseEntity<Map<String, Object>> handleNotFound(RuntimeException ex) {
+        return buildErrorResponse(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
-    // Token de reactivación inválido o caducado → 400 Bad Request
-    // Distinto de InvalidTokenException (401): el enlace de reactivación es
-    // público,
-    // su invalidez es un error de solicitud, no de autenticación.
-    @ExceptionHandler(InvalidReactivationTokenException.class)
-    public ResponseEntity<Map<String, Object>> handleInvalidReactivationToken(
-            InvalidReactivationTokenException ex) {
+    // Reglas de negocio y estados inválidos (400 Bad Request)
+    @ExceptionHandler({
+            InvalidReactivationTokenException.class,
+            AccountAlreadyActiveException.class,
+            BusinessRuleValidationException.class
+    })
+    public ResponseEntity<Map<String, Object>> handleBadRequest(RuntimeException ex) {
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    // Errores de validación de campos (@Valid en los controladores) → 400 Bad Request
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, Object>> handleValidationExceptions(MethodArgumentNotValidException ex) {
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.BAD_REQUEST.value());
-        body.put("error", "Bad Request");
-        body.put("message", ex.getMessage());
-
-        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
-    }
-
-    // Cuenta ya activa cuando se intenta reactivar → 400 Bad Request
-    @ExceptionHandler(AccountAlreadyActiveException.class)
-    public ResponseEntity<Map<String, Object>> handleAccountAlreadyActive(
-            AccountAlreadyActiveException ex) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", LocalDateTime.now());
-        body.put("status", HttpStatus.BAD_REQUEST.value());
-        body.put("error", "Bad Request");
-        body.put("message", ex.getMessage());
-
-        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
-    }
-
-    // Errores de validación de campos (@Valid en los controladores) → 400 Bad
-    // Request
-    @ExceptionHandler(org.springframework.web.bind.MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, Object>> handleValidationExceptions(
-            org.springframework.web.bind.MethodArgumentNotValidException ex) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", LocalDateTime.now());
-        body.put("status", HttpStatus.BAD_REQUEST.value());
-        body.put("error", "Bad Request");
+        body.put("error", HttpStatus.BAD_REQUEST.getReasonPhrase());
+        body.put("message", "Validation failed");
 
         Map<String, String> errors = new HashMap<>();
         ex.getBindingResult().getFieldErrors()
                 .forEach(error -> errors.put(error.getField(), error.getDefaultMessage()));
-        body.put("message", "Validation failed");
+        
         body.put("errors", errors);
-
-        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
-    }
-
-    // Recurso no encontrado genérico → 404 Not Found
-    @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<Map<String, Object>> handleResourceNotFoundException(ResourceNotFoundException ex) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", LocalDateTime.now());
-        body.put("status", HttpStatus.NOT_FOUND.value());
-        body.put("error", "Not Found");
-        body.put("message", ex.getMessage());
-
-        return new ResponseEntity<>(body, HttpStatus.NOT_FOUND);
-    }
-
-    // Acción no autorizada genérica → 403 Forbidden
-    @ExceptionHandler(UnauthorizedActionException.class)
-    public ResponseEntity<Map<String, Object>> handleUnauthorizedActionException(UnauthorizedActionException ex) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", LocalDateTime.now());
-        body.put("status", HttpStatus.FORBIDDEN.value());
-        body.put("error", "Forbidden");
-        body.put("message", ex.getMessage());
-
-        return new ResponseEntity<>(body, HttpStatus.FORBIDDEN);
-    }
-
-    // Violación de regla de negocio genérica → 400 Bad Request
-    @ExceptionHandler(BusinessRuleValidationException.class)
-    public ResponseEntity<Map<String, Object>> handleBusinessRuleValidationException(BusinessRuleValidationException ex) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", LocalDateTime.now());
-        body.put("status", HttpStatus.BAD_REQUEST.value());
-        body.put("error", "Bad Request");
-        body.put("message", ex.getMessage());
 
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }

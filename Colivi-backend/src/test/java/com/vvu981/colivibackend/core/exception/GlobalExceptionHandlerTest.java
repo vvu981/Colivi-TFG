@@ -29,7 +29,7 @@ class GlobalExceptionHandlerTest {
         InvalidTokenException exception = new InvalidTokenException("Invalid token error");
 
         // Act
-        ResponseEntity<Map<String, Object>> response = handler.handleUnauthorizedExceptions(exception);
+        ResponseEntity<Map<String, Object>> response = handler.handleUnauthorized(exception);
 
         // Assert
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
@@ -48,7 +48,7 @@ class GlobalExceptionHandlerTest {
         StaleSessionException exception = new StaleSessionException("Stale session error");
 
         // Act
-        ResponseEntity<Map<String, Object>> response = handler.handleUnauthorizedExceptions(exception);
+        ResponseEntity<Map<String, Object>> response = handler.handleUnauthorized(exception);
 
         // Assert
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
@@ -67,7 +67,7 @@ class GlobalExceptionHandlerTest {
         UserNotFoundException exception = new UserNotFoundException("User not found error");
 
         // Act
-        ResponseEntity<Map<String, Object>> response = handler.handleNotFoundExceptions(exception);
+        ResponseEntity<Map<String, Object>> response = handler.handleNotFound(exception);
 
         // Assert
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
@@ -86,7 +86,7 @@ class GlobalExceptionHandlerTest {
         InvalidReactivationTokenException exception = new InvalidReactivationTokenException("Token inválido");
 
         // Act
-        ResponseEntity<Map<String, Object>> response = handler.handleInvalidReactivationToken(exception);
+        ResponseEntity<Map<String, Object>> response = handler.handleBadRequest(exception);
 
         // Assert
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
@@ -105,7 +105,7 @@ class GlobalExceptionHandlerTest {
         AccountAlreadyActiveException exception = new AccountAlreadyActiveException("Cuenta ya activa");
 
         // Act
-        ResponseEntity<Map<String, Object>> response = handler.handleAccountAlreadyActive(exception);
+        ResponseEntity<Map<String, Object>> response = handler.handleBadRequest(exception);
 
         // Assert
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
@@ -124,7 +124,7 @@ class GlobalExceptionHandlerTest {
         AccountBannedException exception = new AccountBannedException();
 
         // Act
-        ResponseEntity<Map<String, Object>> response = handler.handleAccountBanned(exception);
+        ResponseEntity<Map<String, Object>> response = handler.handleForbidden(exception);
 
         // Assert
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
@@ -143,7 +143,7 @@ class GlobalExceptionHandlerTest {
         AccountBannedException exception = new AccountBannedException("Spam masivo");
 
         // Act
-        ResponseEntity<Map<String, Object>> response = handler.handleAccountBanned(exception);
+        ResponseEntity<Map<String, Object>> response = handler.handleForbidden(exception);
 
         // Assert
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
@@ -161,7 +161,7 @@ class GlobalExceptionHandlerTest {
         AccountDeletedException exception = new AccountDeletedException();
 
         // Act
-        ResponseEntity<Map<String, Object>> response = handler.handleAccountDeleted(exception);
+        ResponseEntity<Map<String, Object>> response = handler.handleForbidden(exception);
 
         // Assert
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
