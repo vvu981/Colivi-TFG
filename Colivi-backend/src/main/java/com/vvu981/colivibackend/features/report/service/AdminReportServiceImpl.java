@@ -5,13 +5,12 @@ import com.vvu981.colivibackend.features.report.domain.Report;
 import com.vvu981.colivibackend.features.report.domain.ReportStatus;
 import com.vvu981.colivibackend.features.report.domain.TargetType;
 import com.vvu981.colivibackend.features.report.domain.event.ReportResolvedEvent;
-import com.vvu981.colivibackend.features.report.dto.ReportFilterRequest;
 import com.vvu981.colivibackend.features.report.dto.ReportResponse;
 import com.vvu981.colivibackend.features.report.dto.ReportStatusUpdateRequest;
 import com.vvu981.colivibackend.features.report.dto.ReportTargetCountDTO;
 import com.vvu981.colivibackend.features.report.mapper.ReportMapper;
 import com.vvu981.colivibackend.features.report.repository.ReportRepository;
-import com.vvu981.colivibackend.features.report.repository.ReportSpecification;
+import com.vvu981.colivibackend.features.report.repository.specification.ReportSpecificationBuilder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
@@ -20,26 +19,23 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
 import java.util.UUID;
 
 @Service
+@Transactional
 @RequiredArgsConstructor
 public class AdminReportServiceImpl implements AdminReportService {
 
     private final ReportRepository reportRepository;
-    private final ReportMapper reportMapper;
     private final ApplicationEventPublisher eventPublisher;
+    private final ReportMapper reportMapper;
+    private final ReportSpecificationBuilder specificationBuilder;
 
     @Override
-    public Page<ReportResponse> listReports(ReportFilterRequest filters, Pageable pageable) {
-        Specification<Report> spec = ReportSpecification.buildFilter(
-                filters.status(),
-                filters.targetType(),
-                filters.reason(),
-                filters.from(),
-                filters.to()
-        );
-
+    @Transactional(readOnly = true)
+    public Page<ReportResponse> listReports(Map<String, String> params, Pageable pageable) {
+        Specification<Report> spec = specificationBuilder.buildSpecification(params);
         return reportRepository.findAll(spec, pageable).map(reportMapper::toResponse);
     }
 

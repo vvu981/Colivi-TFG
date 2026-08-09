@@ -1,10 +1,8 @@
 package com.vvu981.colivibackend.features.report.controller;
 
-import com.vvu981.colivibackend.features.report.domain.ReportReason;
-import com.vvu981.colivibackend.features.report.domain.ReportStatus;
 import com.vvu981.colivibackend.features.report.domain.TargetType;
-import com.vvu981.colivibackend.features.report.dto.ReportFilterRequest;
 import com.vvu981.colivibackend.features.report.dto.ReportResponse;
+import java.util.Map;
 import com.vvu981.colivibackend.features.report.dto.ReportStatusUpdateRequest;
 import com.vvu981.colivibackend.features.report.dto.ReportTargetCountDTO;
 import com.vvu981.colivibackend.features.report.service.AdminReportService;
@@ -12,13 +10,11 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 @RestController
@@ -31,15 +27,10 @@ public class AdminReportController {
 
     @GetMapping
     public ResponseEntity<Page<ReportResponse>> listReports(
-            @RequestParam(required = false) ReportStatus status,
-            @RequestParam(required = false) TargetType targetType,
-            @RequestParam(required = false) ReportReason reason,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
+            @RequestParam Map<String, String> allParams,
             Pageable pageable) {
-        
-        ReportFilterRequest filters = new ReportFilterRequest(status, targetType, reason, from, to);
-        Page<ReportResponse> response = adminReportService.listReports(filters, pageable);
+
+        Page<ReportResponse> response = adminReportService.listReports(allParams, pageable);
         return ResponseEntity.ok(response);
     }
 

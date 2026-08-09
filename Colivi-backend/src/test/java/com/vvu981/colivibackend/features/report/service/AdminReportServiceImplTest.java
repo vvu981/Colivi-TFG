@@ -5,7 +5,6 @@ import com.vvu981.colivibackend.features.report.domain.Report;
 import com.vvu981.colivibackend.features.report.domain.ReportStatus;
 import com.vvu981.colivibackend.features.report.domain.TargetType;
 import com.vvu981.colivibackend.features.report.domain.event.ReportResolvedEvent;
-import com.vvu981.colivibackend.features.report.dto.ReportFilterRequest;
 import com.vvu981.colivibackend.features.report.dto.ReportResponse;
 import com.vvu981.colivibackend.features.report.dto.ReportStatusUpdateRequest;
 import com.vvu981.colivibackend.features.report.dto.ReportTargetCountDTO;
@@ -25,6 +24,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -59,13 +59,18 @@ class AdminReportServiceImplTest {
         report.setStatus(ReportStatus.PENDING);
     }
 
+    @Mock
+    private com.vvu981.colivibackend.features.report.repository.specification.ReportSpecificationBuilder specificationBuilder;
+
     @Test
     void listReports_shouldReturnPage() {
-        ReportFilterRequest filter = new ReportFilterRequest(null, null, null, null, null);
+        Map<String, String> filter = java.util.Map.of();
         PageRequest pageRequest = PageRequest.of(0, 10);
         Page<Report> page = new PageImpl<>(List.of(report));
 
-        when(reportRepository.findAll(any(Specification.class), eq(pageRequest))).thenReturn(page);
+        Specification<Report> spec = Specification.where(null);
+        when(specificationBuilder.buildSpecification(filter)).thenReturn(spec);
+        when(reportRepository.findAll(eq(spec), eq(pageRequest))).thenReturn(page);
 
         Page<ReportResponse> result = adminReportService.listReports(filter, pageRequest);
 
