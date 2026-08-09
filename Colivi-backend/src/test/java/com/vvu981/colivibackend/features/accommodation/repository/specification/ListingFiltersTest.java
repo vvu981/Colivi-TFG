@@ -27,6 +27,8 @@ class ListingFiltersTest {
     @Test
     @DisplayName("CityFilter debe ser aplicable si existe el parametro 'city' no vacio")
     void testCityFilterApplicability() {
+        assertThat(cityFilter.isApplicable(null)).isFalse();
+        
         Map<String, String> params = new HashMap<>();
         assertThat(cityFilter.isApplicable(params)).isFalse();
 
@@ -67,6 +69,8 @@ class ListingFiltersTest {
     @Test
     @DisplayName("MaxPriceFilter debe ser aplicable si existe el parametro 'maxPrice' no vacio")
     void testMaxPriceFilterApplicability() {
+        assertThat(maxPriceFilter.isApplicable(null)).isFalse();
+        
         Map<String, String> params = new HashMap<>();
         assertThat(maxPriceFilter.isApplicable(params)).isFalse();
 
@@ -104,6 +108,8 @@ class ListingFiltersTest {
     @DisplayName("RentalTypeFilter debe ser aplicable si existe el parametro 'rentalType' no vacio")
     void testRentalTypeFilterApplicability() {
         RentalTypeFilter rentalTypeFilter = new RentalTypeFilter();
+        assertThat(rentalTypeFilter.isApplicable(null)).isFalse();
+        
         Map<String, String> params = new HashMap<>();
         assertThat(rentalTypeFilter.isApplicable(params)).isFalse();
 

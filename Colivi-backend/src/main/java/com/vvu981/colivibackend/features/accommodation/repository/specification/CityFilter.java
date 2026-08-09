@@ -13,7 +13,7 @@ public class CityFilter implements ListingFilter {
 
     @Override
     public boolean isApplicable(Map<String, String> params) {
-        return params.containsKey("city") && params.get("city") != null && !params.get("city").isBlank();
+        return params != null && params.containsKey("city") && params.get("city") != null && !params.get("city").isBlank();
     }
 
     @Override

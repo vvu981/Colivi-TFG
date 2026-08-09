@@ -1,6 +1,5 @@
 package com.vvu981.colivibackend.features.home.service;
 
-import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
 import com.vvu981.colivibackend.core.exception.ResourceNotFoundException;
 import com.vvu981.colivibackend.features.home.domain.HomeMember;
 import com.vvu981.colivibackend.features.home.domain.HomeMemberStatus;
@@ -30,16 +29,15 @@ public class ActivityLogQueryServiceImpl implements ActivityLogQueryService {
         HomeMember member = homeMemberRepository.findByHomeIdAndUserId(homeId, requestUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("No eres miembro de este hogar."));
 
-        if (member.getStatus() != HomeMemberStatus.ACTIVE && member.getStatus() != HomeMemberStatus.LEFT && member.getStatus() != HomeMemberStatus.ARCHIVED) {
-            throw new BusinessRuleValidationException("No tienes permiso para ver el historial de actividad de este hogar.");
-        }
-
         if (member.getStatus() == HomeMemberStatus.LEFT || member.getStatus() == HomeMemberStatus.ARCHIVED) {
-            return activityLogRepository.findByHomeIdAndCreatedAtBetweenOrderByCreatedAtDesc(homeId, member.getJoinedAt(), member.getLeftAt(), pageable)
+            return activityLogRepository
+                    .findByHomeIdAndCreatedAtBetweenOrderByCreatedAtDesc(homeId, member.getJoinedAt(),
+                            member.getLeftAt(), pageable)
                     .map(activityLogMapper::toResponseDto);
         }
 
-        return activityLogRepository.findByHomeIdAndCreatedAtGreaterThanEqualOrderByCreatedAtDesc(homeId, member.getJoinedAt(), pageable)
+        return activityLogRepository
+                .findByHomeIdAndCreatedAtGreaterThanEqualOrderByCreatedAtDesc(homeId, member.getJoinedAt(), pageable)
                 .map(activityLogMapper::toResponseDto);
     }
 }

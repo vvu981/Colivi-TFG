@@ -607,6 +607,69 @@ class HomeServiceImplTest {
                         assertNotNull(targetMember.getLeftAt());
                 }
 
+
+
+                @Test
+                void shouldForceExpelAndSettleDebtWhenReasonIsBlank() {
+                        UUID homeId = UUID.randomUUID();
+                        Home home = buildHome(homeId);
+                        User targetUser = new User();
+                        targetUser.setId(UUID.randomUUID());
+
+                        HomeMember adminMember = buildMember(home, testUser, HomeRole.ADMIN, HomeMemberStatus.ACTIVE);
+                        HomeMember targetMember = buildMember(home, targetUser, HomeRole.MEMBER,
+                                        HomeMemberStatus.ACTIVE);
+
+                        when(homeMemberRepository.findByHomeIdAndUserId(homeId, testUserId))
+                                        .thenReturn(Optional.of(adminMember));
+                        when(homeMemberRepository.findByHomeIdAndUserId(homeId, targetUser.getId()))
+                                        .thenReturn(Optional.of(targetMember));
+                        when(homeRepository.findByIdForUpdate(homeId))
+                                        .thenReturn(Optional.of(home));
+
+                        when(homeExpenseService.getUserBalance(homeId, targetUser.getId()))
+                                        .thenReturn(new java.math.BigDecimal("-50.00"));
+
+                        homeService.forceExpelWithDebtSettlement(homeId, testUserId, targetUser.getId(), "   ");
+
+                        verify(homeExpenseService).createExpense(eq(homeId),
+                                        argThat(req -> req.description().equals("CONDONACIÓN_EXPULSIÓN")),
+                                        eq(testUserId));
+
+                        assertEquals(HomeMemberStatus.LEFT, targetMember.getStatus());
+                }
+
+                @Test
+                void shouldThrowWhenNotEnoughActiveMembers() {
+                        UUID homeId = UUID.randomUUID();
+                        Home home = buildHome(homeId);
+                        User targetUser = new User();
+                        targetUser.setId(UUID.randomUUID());
+
+                        // Admin es activo, Target es activo. Haremos trampa y en el mock de home los quitaremos de los active,
+                        // en realidad home.getMembers() devolverá solo a target, para forzar que la lista de activos sea 0.
+                        HomeMember targetMember = buildMember(home, targetUser, HomeRole.MEMBER, HomeMemberStatus.ACTIVE);
+
+                        HomeMember adminMember = new HomeMember();
+                        adminMember.setRole(HomeRole.ADMIN);
+                        adminMember.setStatus(HomeMemberStatus.ACTIVE);
+                        adminMember.setUser(testUser);
+                        // No lo agregamos a home.members() intencionalmente para que no haya activos que condonen
+                        
+                        when(homeMemberRepository.findByHomeIdAndUserId(homeId, testUserId))
+                                        .thenReturn(Optional.of(adminMember));
+                        when(homeMemberRepository.findByHomeIdAndUserId(homeId, targetUser.getId()))
+                                        .thenReturn(Optional.of(targetMember));
+                        when(homeRepository.findByIdForUpdate(homeId))
+                                        .thenReturn(Optional.of(home));
+
+                        when(homeExpenseService.getUserBalance(homeId, targetUser.getId()))
+                                        .thenReturn(new java.math.BigDecimal("-50.00"));
+
+                        assertThrows(BusinessRuleValidationException.class, 
+                            () -> homeService.forceExpelWithDebtSettlement(homeId, testUserId, targetUser.getId(), "Motivo"));
+                }
+
                 @Test
                 void shouldThrowIfCallerNotAdmin() {
                         UUID homeId = UUID.randomUUID();

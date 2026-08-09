@@ -187,6 +187,29 @@ class HomeExpenseServiceImplTest {
 
             assertThrows(UnauthorizedActionException.class, () -> service.createExpense(homeId, request, payerId));
         }
+
+        @Test
+        void createExpense_HomeNotFound_ThrowsException() {
+            mockActiveMember(homeId, payerId);
+            when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.empty());
+
+            CreateExpenseRequest request = new CreateExpenseRequest("Test", new BigDecimal("100.00"), payerId, List.of(payerId));
+            assertThrows(com.vvu981.colivibackend.core.exception.ResourceNotFoundException.class, () -> service.createExpense(homeId, request, payerId));
+        }
+
+        @Test
+        void createExpense_UserNotFound_ThrowsException() {
+            mockActiveMember(homeId, payerId);
+            when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
+            mockActiveMembersList(homeId, payer, participant1);
+
+            when(userRepository.findById(payerId)).thenReturn(Optional.of(payer));
+            // Simula que no se encontraron todos los usuarios (ej. findAllById devuelve 1 en vez de 2)
+            when(userRepository.findAllById(any())).thenReturn(List.of(payer));
+
+            CreateExpenseRequest request = new CreateExpenseRequest("Test", new BigDecimal("100.00"), payerId, List.of(payerId, participant1Id));
+            assertThrows(com.vvu981.colivibackend.core.exception.ResourceNotFoundException.class, () -> service.createExpense(homeId, request, payerId));
+        }
     }
 
     @Nested
@@ -267,6 +290,14 @@ class HomeExpenseServiceImplTest {
 
             assertThrows(UnauthorizedActionException.class,
                     () -> service.deleteExpense(homeId, expenseId, randomUser.getId()));
+        }
+
+        @Test
+        void deleteExpense_ExpenseNotFound_ThrowsException() {
+            when(expenseRepository.findByIdAndDeletedAtIsNull(expenseId)).thenReturn(Optional.empty());
+
+            assertThrows(com.vvu981.colivibackend.core.exception.ResourceNotFoundException.class, 
+                () -> service.deleteExpense(homeId, expenseId, payerId));
         }
     }
 

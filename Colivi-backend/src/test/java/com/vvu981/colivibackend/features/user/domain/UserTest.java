@@ -141,4 +141,32 @@ class UserTest {
         assertEquals(id1, user1.getId());
         assertEquals("test@test.com", user1.getEmail());
     }
+
+    @Test
+    @DisplayName("should CoverAllBranchesInGetFullName")
+    void shouldCoverAllBranchesInGetFullName() {
+        User user = new User();
+        user.setFirstName("John");
+        
+        // lastName1 is null
+        user.setLastName1(null);
+        assertEquals("John", user.getFullName());
+        
+        // lastName1 is blank
+        user.setLastName1("  ");
+        assertEquals("John", user.getFullName());
+        
+        // lastName1 exists, lastName2 is null
+        user.setLastName1("Doe");
+        user.setLastName2(null);
+        assertEquals("John Doe", user.getFullName());
+        
+        // lastName1 exists, lastName2 is blank
+        user.setLastName2("");
+        assertEquals("John Doe", user.getFullName());
+        
+        // Both exist
+        user.setLastName2("Smith");
+        assertEquals("John Doe Smith", user.getFullName());
+    }
 }

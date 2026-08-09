@@ -11,7 +11,7 @@ public class RentalTypeFilter implements ListingFilter {
 
     @Override
     public boolean isApplicable(Map<String, String> params) {
-        return params.containsKey("rentalType") && params.get("rentalType") != null && !params.get("rentalType").isBlank();
+        return params != null && params.containsKey("rentalType") && params.get("rentalType") != null && !params.get("rentalType").isBlank();
     }
 
     @Override

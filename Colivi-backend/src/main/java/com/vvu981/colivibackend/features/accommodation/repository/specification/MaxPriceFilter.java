@@ -11,7 +11,7 @@ public class MaxPriceFilter implements ListingFilter {
 
     @Override
     public boolean isApplicable(Map<String, String> params) {
-        return params.containsKey("maxPrice") && params.get("maxPrice") != null && !params.get("maxPrice").isBlank();
+        return params != null && params.containsKey("maxPrice") && params.get("maxPrice") != null && !params.get("maxPrice").isBlank();
     }
 
     @Override
