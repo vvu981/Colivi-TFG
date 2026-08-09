@@ -34,6 +34,11 @@ public class ActivityLogQueryServiceImpl implements ActivityLogQueryService {
             throw new BusinessRuleValidationException("No tienes permiso para ver el historial de actividad de este hogar.");
         }
 
+        if (member.getStatus() == HomeMemberStatus.LEFT || member.getStatus() == HomeMemberStatus.ARCHIVED) {
+            return activityLogRepository.findByHomeIdAndCreatedAtLessThanEqualOrderByCreatedAtDesc(homeId, member.getLeftAt(), pageable)
+                    .map(activityLogMapper::toResponseDto);
+        }
+
         return activityLogRepository.findByHomeIdOrderByCreatedAtDesc(homeId, pageable)
                 .map(activityLogMapper::toResponseDto);
     }

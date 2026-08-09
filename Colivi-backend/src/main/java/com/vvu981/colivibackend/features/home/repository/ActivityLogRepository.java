@@ -12,4 +12,6 @@ import java.util.UUID;
 public interface ActivityLogRepository extends JpaRepository<ActivityLog, UUID> {
     
     Page<ActivityLog> findByHomeIdOrderByCreatedAtDesc(UUID homeId, Pageable pageable);
+    
+    Page<ActivityLog> findByHomeIdAndCreatedAtLessThanEqualOrderByCreatedAtDesc(UUID homeId, java.time.LocalDateTime limitDate, Pageable pageable);
 }

@@ -86,6 +86,37 @@ class ActivityLogQueryServiceImplTest {
     }
 
     @Test
+    void getHomeActivities_Success_WhenMemberIsLeft() {
+        member.setStatus(HomeMemberStatus.LEFT);
+        member.setLeftAt(LocalDateTime.now().minusDays(1));
+        when(homeMemberRepository.findByHomeIdAndUserId(homeId, userId)).thenReturn(Optional.of(member));
+
+        ActivityLog log = new ActivityLog();
+        User actor = new User();
+        actor.setId(userId);
+        actor.setFirstName("Test");
+        actor.setLastName1("User");
+        log.setActor(actor);
+        Home home = new Home();
+        home.setId(homeId);
+        log.setHome(home);
+
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<ActivityLog> page = new PageImpl<>(List.of(log));
+        when(activityLogRepository.findByHomeIdAndCreatedAtLessThanEqualOrderByCreatedAtDesc(homeId, member.getLeftAt(), pageable)).thenReturn(page);
+
+        when(activityLogMapper.toResponseDto(log)).thenReturn(
+                new ActivityLogResponseDto(UUID.randomUUID(), homeId, userId, "Test User", ActivityType.HOME_CREATED,
+                        "desc", null, LocalDateTime.now()));
+
+        Page<ActivityLogResponseDto> result = service.getHomeActivities(homeId, userId, pageable);
+
+        assertNotNull(result);
+        assertEquals(1, result.getContent().size());
+        verify(activityLogRepository).findByHomeIdAndCreatedAtLessThanEqualOrderByCreatedAtDesc(homeId, member.getLeftAt(), pageable);
+    }
+
+    @Test
     void getHomeActivities_ThrowsIfNotFound() {
         when(homeMemberRepository.findByHomeIdAndUserId(homeId, userId)).thenReturn(Optional.empty());
 
