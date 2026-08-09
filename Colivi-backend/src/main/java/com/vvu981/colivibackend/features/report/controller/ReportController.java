@@ -7,6 +7,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -32,8 +34,16 @@ public class ReportController {
     @GetMapping("/me")
     public ResponseEntity<Page<ReportResponse>> getMyReports(
             @AuthenticationPrincipal(expression = "id") UUID reporterId,
-            Pageable pageable) {
+            @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         Page<ReportResponse> response = reportService.getUserReports(reporterId, pageable);
         return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/{id}/cancel")
+    public ResponseEntity<Void> cancelReport(
+            @AuthenticationPrincipal(expression = "id") UUID reporterId,
+            @PathVariable UUID id) {
+        reportService.cancelReport(reporterId, id);
+        return ResponseEntity.noContent().build();
     }
 }

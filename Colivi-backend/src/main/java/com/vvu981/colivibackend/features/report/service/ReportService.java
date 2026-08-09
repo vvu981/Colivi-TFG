@@ -12,4 +12,6 @@ public interface ReportService {
     ReportResponse createReport(UUID reporterId, CreateReportRequest request);
 
     Page<ReportResponse> getUserReports(UUID reporterId, Pageable pageable);
+
+    void cancelReport(UUID reporterId, UUID reportId);
 }

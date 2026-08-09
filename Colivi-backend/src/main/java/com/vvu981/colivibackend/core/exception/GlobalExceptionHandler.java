@@ -61,7 +61,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({
             InvalidReactivationTokenException.class,
             AccountAlreadyActiveException.class,
-            BusinessRuleValidationException.class
+            BusinessRuleValidationException.class,
+            IllegalStateException.class
     })
     public ResponseEntity<Map<String, Object>> handleBadRequest(RuntimeException ex) {
         return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());

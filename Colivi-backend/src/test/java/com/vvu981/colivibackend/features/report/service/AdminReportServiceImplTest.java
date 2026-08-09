@@ -1,10 +1,13 @@
 package com.vvu981.colivibackend.features.report.service;
 
+import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
 import com.vvu981.colivibackend.core.exception.ResourceNotFoundException;
 import com.vvu981.colivibackend.features.report.domain.Report;
 import com.vvu981.colivibackend.features.report.domain.ReportStatus;
-import com.vvu981.colivibackend.features.report.domain.TargetType;
+import com.vvu981.colivibackend.features.report.domain.ReportTargetType;
 import com.vvu981.colivibackend.features.report.domain.event.ReportResolvedEvent;
+import com.vvu981.colivibackend.features.report.dto.BulkReportStatusUpdateRequest;
+import com.vvu981.colivibackend.features.report.dto.ReportFilterCriteriaDto;
 import com.vvu981.colivibackend.features.report.dto.ReportResponse;
 import com.vvu981.colivibackend.features.report.dto.ReportStatusUpdateRequest;
 import com.vvu981.colivibackend.features.report.dto.ReportTargetCountDTO;
@@ -24,7 +27,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -59,18 +61,14 @@ class AdminReportServiceImplTest {
         report.setStatus(ReportStatus.PENDING);
     }
 
-    @Mock
-    private com.vvu981.colivibackend.features.report.repository.specification.ReportSpecificationBuilder specificationBuilder;
-
     @Test
     void listReports_shouldReturnPage() {
-        Map<String, String> filter = java.util.Map.of();
+        ReportFilterCriteriaDto filter = new ReportFilterCriteriaDto(
+                null, null, null, null, null, null, null);
         PageRequest pageRequest = PageRequest.of(0, 10);
         Page<Report> page = new PageImpl<>(List.of(report));
 
-        Specification<Report> spec = Specification.where(null);
-        when(specificationBuilder.buildSpecification(filter)).thenReturn(spec);
-        when(reportRepository.findAll(eq(spec), eq(pageRequest))).thenReturn(page);
+        when(reportRepository.findAll(any(Specification.class), eq(pageRequest))).thenReturn(page);
 
         Page<ReportResponse> result = adminReportService.listReports(filter, pageRequest);
 
@@ -82,9 +80,10 @@ class AdminReportServiceImplTest {
         PageRequest pageRequest = PageRequest.of(0, 10);
         Page<ReportTargetCountDTO> page = new PageImpl<>(List.of());
 
-        when(reportRepository.findMostReportedTargets(TargetType.USER, pageRequest)).thenReturn(page);
+        when(reportRepository.findMostReportedTargets(ReportTargetType.USER, pageRequest)).thenReturn(page);
 
-        Page<ReportTargetCountDTO> result = adminReportService.getMostReportedTargets(TargetType.USER, pageRequest);
+        Page<ReportTargetCountDTO> result = adminReportService.getMostReportedTargets(ReportTargetType.USER,
+                pageRequest);
 
         assertThat(result.getContent()).isEmpty();
     }
@@ -151,5 +150,39 @@ class AdminReportServiceImplTest {
                 .isInstanceOf(IllegalStateException.class);
 
         verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    void updateBulkReportStatus_shouldThrowException_whenStatusIsInvalid() {
+        BulkReportStatusUpdateRequest request = new BulkReportStatusUpdateRequest(List.of(reportId),
+                ReportStatus.PENDING, null);
+
+        assertThatThrownBy(() -> adminReportService.updateBulkReportStatus(request, adminId))
+                .isInstanceOf(BusinessRuleValidationException.class);
+    }
+
+    @Test
+    void updateBulkReportStatus_shouldThrowException_whenIdsDoNotMatch() {
+        BulkReportStatusUpdateRequest request = new BulkReportStatusUpdateRequest(
+                List.of(reportId, UUID.randomUUID()), ReportStatus.DISMISSED, null);
+
+        when(reportRepository.findAllById(request.reportIds())).thenReturn(List.of(report));
+
+        assertThatThrownBy(() -> adminReportService.updateBulkReportStatus(request, adminId))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void updateBulkReportStatus_shouldProcessSuccessfully() {
+        BulkReportStatusUpdateRequest request = new BulkReportStatusUpdateRequest(
+                List.of(reportId), ReportStatus.DISMISSED, "Spam");
+
+        when(reportRepository.findAllById(request.reportIds())).thenReturn(List.of(report));
+
+        adminReportService.updateBulkReportStatus(request, adminId);
+
+        assertThat(report.getStatus()).isEqualTo(ReportStatus.DISMISSED);
+        assertThat(report.getAdminNotes()).isEqualTo("Spam");
+        verify(reportRepository).saveAll(anyList());
     }
 }

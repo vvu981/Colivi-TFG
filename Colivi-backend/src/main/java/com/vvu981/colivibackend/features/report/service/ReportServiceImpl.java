@@ -1,12 +1,13 @@
 package com.vvu981.colivibackend.features.report.service;
 
 import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
+import com.vvu981.colivibackend.core.exception.ResourceNotFoundException;
 import com.vvu981.colivibackend.features.accommodation.repository.AccommodationListingRepository;
 import com.vvu981.colivibackend.features.home.repository.HomeExpenseRepository;
 import com.vvu981.colivibackend.features.home.repository.HomeRepository;
 import com.vvu981.colivibackend.features.report.domain.Report;
 import com.vvu981.colivibackend.features.report.domain.ReportStatus;
-import com.vvu981.colivibackend.features.report.domain.TargetType;
+import com.vvu981.colivibackend.features.report.domain.ReportTargetType;
 import com.vvu981.colivibackend.features.report.domain.event.ReportCreatedEvent;
 import com.vvu981.colivibackend.features.report.dto.CreateReportRequest;
 import com.vvu981.colivibackend.features.report.dto.ReportResponse;
@@ -39,9 +40,9 @@ public class ReportServiceImpl implements ReportService {
     @Override
     @Transactional
     public ReportResponse createReport(UUID reporterId, CreateReportRequest request) {
-        
+
         // 1. Evitar auto-denuncia
-        if (request.targetType() == TargetType.USER && request.targetId().equals(reporterId)) {
+        if (request.targetType() == ReportTargetType.USER && request.targetId().equals(reporterId)) {
             throw new BusinessRuleValidationException("No puedes denunciarte a ti mismo.");
         }
 
@@ -59,11 +60,10 @@ public class ReportServiceImpl implements ReportService {
 
         // 3. Verificar denuncia duplicada activa
         boolean hasActiveReport = reportRepository.existsByReporterIdAndTargetTypeAndTargetIdAndStatusIn(
-                reporterId, 
-                request.targetType(), 
-                request.targetId(), 
-                List.of(ReportStatus.PENDING, ReportStatus.INVESTIGATING)
-        );
+                reporterId,
+                request.targetType(),
+                request.targetId(),
+                List.of(ReportStatus.PENDING, ReportStatus.INVESTIGATING));
 
         if (hasActiveReport) {
             throw new BusinessRuleValidationException("Ya tienes una denuncia activa para este elemento.");
@@ -72,7 +72,7 @@ public class ReportServiceImpl implements ReportService {
         // 4. Crear denuncia
         Report report = reportMapper.toEntity(request);
         report.setReporterId(reporterId);
-        
+
         Report savedReport = reportRepository.save(report);
 
         // 5. Publicar evento de dominio
@@ -80,8 +80,7 @@ public class ReportServiceImpl implements ReportService {
                 savedReport.getId(),
                 savedReport.getReporterId(),
                 savedReport.getTargetType(),
-                savedReport.getTargetId()
-        ));
+                savedReport.getTargetId()));
 
         return reportMapper.toResponse(savedReport);
     }
@@ -90,5 +89,15 @@ public class ReportServiceImpl implements ReportService {
     public Page<ReportResponse> getUserReports(UUID reporterId, Pageable pageable) {
         return reportRepository.findByReporterId(reporterId, pageable)
                 .map(reportMapper::toResponse);
+    }
+
+    @Override
+    @Transactional
+    public void cancelReport(UUID reporterId, UUID reportId) {
+        Report report = reportRepository.findById(reportId)
+                .orElseThrow(() -> new ResourceNotFoundException("Denuncia no encontrada."));
+
+        report.cancel(reporterId);
+        reportRepository.save(report);
     }
 }

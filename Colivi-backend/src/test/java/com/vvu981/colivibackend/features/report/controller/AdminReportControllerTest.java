@@ -1,9 +1,13 @@
 package com.vvu981.colivibackend.features.report.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vvu981.colivibackend.core.security.JwtTokenProvider;
 import com.vvu981.colivibackend.features.report.domain.ReportStatus;
+import com.vvu981.colivibackend.features.report.dto.ReportFilterCriteriaDto;
 import com.vvu981.colivibackend.features.report.dto.ReportStatusUpdateRequest;
 import com.vvu981.colivibackend.features.report.service.AdminReportService;
+import com.vvu981.colivibackend.features.user.repository.UserRepository;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -37,14 +41,15 @@ class AdminReportControllerTest {
     private AdminReportService adminReportService;
 
     @MockBean
-    private com.vvu981.colivibackend.core.security.JwtTokenProvider jwtTokenProvider;
+    private JwtTokenProvider jwtTokenProvider;
 
     @MockBean
-    private com.vvu981.colivibackend.features.user.repository.UserRepository userRepository;
+    private UserRepository userRepository;
 
     @Test
     void listReports_shouldReturn200() throws Exception {
-        when(adminReportService.listReports(any(), any())).thenReturn(new PageImpl<>(List.of()));
+        when(adminReportService.listReports(any(ReportFilterCriteriaDto.class), any()))
+                .thenReturn(new PageImpl<>(List.of()));
 
         mockMvc.perform(get("/api/v1/admin/reports"))
                 .andExpect(status().isOk());

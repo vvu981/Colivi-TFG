@@ -26,7 +26,7 @@ public class Report {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "target_type", nullable = false)
-    private TargetType targetType;
+    private ReportTargetType targetType;
 
     @Column(name = "target_id", nullable = false)
     private UUID targetId;
@@ -70,8 +70,8 @@ public class Report {
     }
 
     public void resolve(String adminNotes, UUID resolverId) {
-        if (this.status == ReportStatus.RESOLVED) {
-            throw new IllegalStateException("La denuncia ya ha sido resuelta.");
+        if (this.status == ReportStatus.RESOLVED || this.status == ReportStatus.DISMISSED) {
+            throw new IllegalStateException("La denuncia ya ha sido cerrada.");
         }
         this.status = ReportStatus.RESOLVED;
         this.adminNotes = adminNotes;
@@ -80,12 +80,23 @@ public class Report {
     }
 
     public void dismiss(String adminNotes, UUID resolverId) {
-        if (this.status == ReportStatus.DISMISSED) {
-            throw new IllegalStateException("La denuncia ya ha sido descartada.");
+        if (this.status == ReportStatus.RESOLVED || this.status == ReportStatus.DISMISSED) {
+            throw new IllegalStateException("La denuncia ya ha sido cerrada.");
         }
         this.status = ReportStatus.DISMISSED;
         this.adminNotes = adminNotes;
         this.resolverId = resolverId;
+        this.resolvedAt = LocalDateTime.now();
+    }
+
+    public void cancel(UUID requesterId) {
+        if (!this.reporterId.equals(requesterId)) {
+            throw new IllegalStateException("No tienes permiso para cancelar esta denuncia.");
+        }
+        if (this.status != ReportStatus.PENDING) {
+            throw new IllegalStateException("Solo puedes cancelar denuncias en estado PENDING.");
+        }
+        this.status = ReportStatus.CANCELLED;
         this.resolvedAt = LocalDateTime.now();
     }
 }

@@ -2,7 +2,7 @@ package com.vvu981.colivibackend.features.report.mapper;
 
 import com.vvu981.colivibackend.features.report.domain.Report;
 import com.vvu981.colivibackend.features.report.domain.ReportReason;
-import com.vvu981.colivibackend.features.report.domain.TargetType;
+import com.vvu981.colivibackend.features.report.domain.ReportTargetType;
 import com.vvu981.colivibackend.features.report.dto.CreateReportRequest;
 import com.vvu981.colivibackend.features.report.dto.ReportResponse;
 import org.junit.jupiter.api.Test;
@@ -18,11 +18,11 @@ class ReportMapperTest {
 
     @Test
     void toEntity_shouldMapCorrectly() {
-        CreateReportRequest request = new CreateReportRequest(TargetType.USER, UUID.randomUUID(), ReportReason.SPAM, "Test");
+        CreateReportRequest request = new CreateReportRequest(ReportTargetType.USER, UUID.randomUUID(), ReportReason.SPAM, "Test");
         Report report = mapper.toEntity(request);
         
         assertThat(report).isNotNull();
-        assertThat(report.getTargetType()).isEqualTo(TargetType.USER);
+        assertThat(report.getTargetType()).isEqualTo(ReportTargetType.USER);
         assertThat(report.getReason()).isEqualTo(ReportReason.SPAM);
         assertThat(report.getDescription()).isEqualTo("Test");
     }
@@ -36,14 +36,14 @@ class ReportMapperTest {
     void toResponse_shouldMapCorrectly() {
         Report report = new Report();
         report.setId(UUID.randomUUID());
-        report.setTargetType(TargetType.USER);
+        report.setTargetType(ReportTargetType.USER);
         report.setReason(ReportReason.SPAM);
 
         ReportResponse response = mapper.toResponse(report);
         
         assertThat(response).isNotNull();
         assertThat(response.id()).isEqualTo(report.getId());
-        assertThat(response.targetType()).isEqualTo(TargetType.USER);
+        assertThat(response.targetType()).isEqualTo(ReportTargetType.USER);
         assertThat(response.reason()).isEqualTo(ReportReason.SPAM);
     }
 

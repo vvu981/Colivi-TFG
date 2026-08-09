@@ -1,11 +1,14 @@
 package com.vvu981.colivibackend.features.report.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vvu981.colivibackend.core.security.JwtTokenProvider;
 import com.vvu981.colivibackend.features.report.domain.ReportReason;
-import com.vvu981.colivibackend.features.report.domain.TargetType;
+import com.vvu981.colivibackend.features.report.domain.ReportTargetType;
 import com.vvu981.colivibackend.features.report.dto.CreateReportRequest;
 import com.vvu981.colivibackend.features.report.dto.ReportResponse;
 import com.vvu981.colivibackend.features.report.service.ReportService;
+import com.vvu981.colivibackend.features.user.repository.UserRepository;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -31,43 +34,45 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
                                           // controller
 class ReportControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+        @Autowired
+        private MockMvc mockMvc;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+        @Autowired
+        private ObjectMapper objectMapper;
 
-    @MockBean
-    private ReportService reportService;
+        @MockBean
+        private ReportService reportService;
 
-    @MockBean
-    private com.vvu981.colivibackend.core.security.JwtTokenProvider jwtTokenProvider;
+        @MockBean
+        private JwtTokenProvider jwtTokenProvider;
 
-    @MockBean
-    private com.vvu981.colivibackend.features.user.repository.UserRepository userRepository;
+        @MockBean
+        private UserRepository userRepository;
 
-    @Test
-    void createReport_shouldReturn201() throws Exception {
-        CreateReportRequest request = new CreateReportRequest(TargetType.USER, UUID.randomUUID(), ReportReason.SPAM,
-                "Test");
-        ReportResponse response = new ReportResponse(UUID.randomUUID(), UUID.randomUUID(), TargetType.USER,
-                UUID.randomUUID(), ReportReason.SPAM, "Test", null, null, null, null, null, null);
+        @Test
+        void createReport_shouldReturn201() throws Exception {
+                CreateReportRequest request = new CreateReportRequest(ReportTargetType.USER, UUID.randomUUID(),
+                                ReportReason.SPAM,
+                                "Test");
+                ReportResponse response = new ReportResponse(UUID.randomUUID(), UUID.randomUUID(),
+                                ReportTargetType.USER,
+                                UUID.randomUUID(), ReportReason.SPAM, "Test", null, null, null, null, null, null);
 
-        when(reportService.createReport(any(), any())).thenReturn(response);
+                when(reportService.createReport(any(), any())).thenReturn(response);
 
-        mockMvc.perform(post("/api/v1/reports")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request))
-                .with(csrf()))
-                .andExpect(status().isCreated());
-    }
+                mockMvc.perform(post("/api/v1/reports")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                                .with(csrf()))
+                                .andExpect(status().isCreated());
+        }
 
-    @Test
-    void getMyReports_shouldReturn200() throws Exception {
-        Page<ReportResponse> page = new PageImpl<>(List.of());
-        when(reportService.getUserReports(any(), any())).thenReturn(page);
+        @Test
+        void getMyReports_shouldReturn200() throws Exception {
+                Page<ReportResponse> page = new PageImpl<>(List.of());
+                when(reportService.getUserReports(any(), any())).thenReturn(page);
 
-        mockMvc.perform(get("/api/v1/reports/me"))
-                .andExpect(status().isOk());
-    }
+                mockMvc.perform(get("/api/v1/reports/me"))
+                                .andExpect(status().isOk());
+        }
 }

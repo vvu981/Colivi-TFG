@@ -1,6 +1,6 @@
 package com.vvu981.colivibackend.features.report.dto;
 
-import com.vvu981.colivibackend.features.report.domain.TargetType;
+import com.vvu981.colivibackend.features.report.domain.ReportTargetType;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
@@ -12,10 +12,10 @@ class ReportTargetCountDTOTest {
     @Test
     void record_shouldWork() {
         UUID id = UUID.randomUUID();
-        ReportTargetCountDTO dto = new ReportTargetCountDTO(id, TargetType.USER, 5L);
+        ReportTargetCountDTO dto = new ReportTargetCountDTO(id, ReportTargetType.USER, 5L);
 
         assertThat(dto.targetId()).isEqualTo(id);
-        assertThat(dto.targetType()).isEqualTo(TargetType.USER);
+        assertThat(dto.targetType()).isEqualTo(ReportTargetType.USER);
         assertThat(dto.reportCount()).isEqualTo(5L);
     }
 }

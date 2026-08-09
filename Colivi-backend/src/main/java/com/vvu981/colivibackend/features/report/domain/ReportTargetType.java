@@ -1,6 +1,6 @@
 package com.vvu981.colivibackend.features.report.domain;
 
-public enum TargetType {
+public enum ReportTargetType {
     LISTING,
     USER,
     HOME,
