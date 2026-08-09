@@ -47,7 +47,7 @@ public class HomeExpenseServiceImpl implements HomeExpenseService {
 
         validatePayerAndParticipants(homeId, request.payerId(), request.participantIds());
 
-        User payer = userRepository.findById(request.payerId())
+        User payer = userRepository.findActiveById(request.payerId())
                 .orElseThrow(() -> new ResourceNotFoundException("Pagador no encontrado"));
 
         HomeExpense expense = new HomeExpense();
@@ -80,7 +80,7 @@ public class HomeExpenseServiceImpl implements HomeExpenseService {
             throw new ResourceNotFoundException("El gasto no pertenece a este hogar");
         }
 
-        User requestUser = userRepository.findById(requestUserId)
+        User requestUser = userRepository.findActiveById(requestUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
 
         boolean isSystemAdmin = requestUser.getRole() == UserRole.ADMIN;

@@ -42,7 +42,7 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
     private final UserRepository userRepository;
 
     private User getUser(UUID currentUserId) {
-        return userRepository.findById(currentUserId)
+        return userRepository.findActiveById(currentUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("Error: Usuario no encontrado"));
     }
 

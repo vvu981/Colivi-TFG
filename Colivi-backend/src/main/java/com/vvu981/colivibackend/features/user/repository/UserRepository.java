@@ -7,15 +7,31 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, UUID> {
+    Optional<User> findByIdAndDeletedAtIsNull(UUID id);
+    Optional<User> findByEmailAndDeletedAtIsNull(String email);
+    Optional<User> findByNicknameAndDeletedAtIsNull(String nickname);
+    List<User> findAllByDeletedAtIsNull();
 
     Optional<User> findByEmail(String email);
-
     Optional<User> findByNickname(String nickname);
+
+    default Optional<User> findActiveById(UUID id) {
+        return findByIdAndDeletedAtIsNull(id);
+    }
+
+    default Optional<User> findActiveByEmail(String email) {
+        return findByEmailAndDeletedAtIsNull(email);
+    }
+
+    default Optional<User> findActiveByNickname(String nickname) {
+        return findByNicknameAndDeletedAtIsNull(nickname);
+    }
 
     @Modifying
     @Query("UPDATE User u SET u.role = 'ADMIN' WHERE u.id = :targetUserId")

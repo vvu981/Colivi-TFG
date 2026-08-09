@@ -48,7 +48,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public AuthResponse login(LoginRequest loginRequest) {
-        User user = userRepository.findByEmail(loginRequest.email())
+        User user = userRepository.findActiveByEmail(loginRequest.email())
                 .orElseThrow(() -> new UnauthorizedActionException("Error: Credenciales inválidas."));
 
         if (!passwordEncoder.matches(loginRequest.password(), user.getPasswordHash())) {
@@ -65,11 +65,11 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public AuthResponse register(RegisterRequest request) {
 
-        if (userRepository.findByEmail(request.email()).isPresent()) {
+        if (userRepository.findActiveByEmail(request.email()).isPresent()) {
             throw new BusinessRuleValidationException("Error: El email ya está registrado");
         }
 
-        if (userRepository.findByNickname(request.nickname()).isPresent()) {
+        if (userRepository.findActiveByNickname(request.nickname()).isPresent()) {
             throw new BusinessRuleValidationException("Error: El apodo ya está en uso");
         }
 
@@ -103,7 +103,7 @@ public class UserServiceImpl implements UserService {
         }
 
         String email = jwtTokenProvider.extractEmail(currentRefreshToken);
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findActiveByEmail(email)
                 .orElseThrow(() -> new UserNotFoundException("Error: Usuario no encontrado."));
 
         Integer tokenVersionInJwt = jwtTokenProvider.extractTokenVersion(currentRefreshToken);
@@ -169,7 +169,7 @@ public class UserServiceImpl implements UserService {
     }
 
     private User getActiveUserById(UUID userId) {
-        return userRepository.findById(userId)
+        return userRepository.findActiveById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Error: Usuario no encontrado"));
     }
 
@@ -186,7 +186,8 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void deleteUserHard(UUID userId) {
-        User user = getActiveUserById(userId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Error: Usuario no encontrado"));
 
         activityLogRepository.nullifyActorIdByUserId(userId);
 

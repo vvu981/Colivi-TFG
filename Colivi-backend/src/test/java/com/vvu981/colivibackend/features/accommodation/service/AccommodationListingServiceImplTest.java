@@ -92,9 +92,9 @@ class AccommodationListingServiceImplTest {
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        lenient().when(userRepository.findById(host.getId())).thenReturn(Optional.of(host));
-        lenient().when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
-        lenient().when(userRepository.findById(otherUser.getId())).thenReturn(Optional.of(otherUser));
+        lenient().when(userRepository.findActiveById(host.getId())).thenReturn(Optional.of(host));
+        lenient().when(userRepository.findActiveById(admin.getId())).thenReturn(Optional.of(admin));
+        lenient().when(userRepository.findActiveById(otherUser.getId())).thenReturn(Optional.of(otherUser));
     }
 
     @Nested
@@ -193,7 +193,7 @@ class AccommodationListingServiceImplTest {
             User ownerNotHost = new User();
             ownerNotHost.setId(accommodation.getOwner().getId()); // same owner
             ownerNotHost.setRole(UserRole.USER);
-            lenient().when(userRepository.findById(ownerNotHost.getId())).thenReturn(Optional.of(ownerNotHost));
+            lenient().when(userRepository.findActiveById(ownerNotHost.getId())).thenReturn(Optional.of(ownerNotHost));
 
             User distinctHost = new User();
             distinctHost.setId(UUID.randomUUID());
@@ -210,7 +210,7 @@ class AccommodationListingServiceImplTest {
             User hostNotOwner = new User();
             hostNotOwner.setId(listing.getHost().getId()); // same host
             hostNotOwner.setRole(UserRole.USER);
-            lenient().when(userRepository.findById(hostNotOwner.getId())).thenReturn(Optional.of(hostNotOwner));
+            lenient().when(userRepository.findActiveById(hostNotOwner.getId())).thenReturn(Optional.of(hostNotOwner));
 
             User distinctOwner = new User();
             distinctOwner.setId(UUID.randomUUID());
@@ -536,7 +536,7 @@ class AccommodationListingServiceImplTest {
         @DisplayName("debe lanzar excepcion si el usuario no existe")
         void shouldThrowIfUserNotFound() {
             UUID nonExistentId = UUID.randomUUID();
-            when(userRepository.findById(nonExistentId)).thenReturn(Optional.empty());
+            when(userRepository.findActiveById(nonExistentId)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> listingServiceImpl.banAccommodationListing(listing.getId(), nonExistentId))
                     .isInstanceOf(ResourceNotFoundException.class)

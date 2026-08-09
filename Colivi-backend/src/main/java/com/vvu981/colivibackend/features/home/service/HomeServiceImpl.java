@@ -375,7 +375,7 @@ public class HomeServiceImpl implements HomeService {
     // =========================================================================
 
     private User findActiveUser(UUID userId) {
-        return userRepository.findById(userId)
+        return userRepository.findActiveById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Usuario no encontrado o eliminado con id: " + userId));
     }

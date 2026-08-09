@@ -120,7 +120,7 @@ class HomeServiceImplTest {
         class CreateHome {
                 @Test
                 void shouldCreateHomeWithGeneratedCodeAndAdminMember() {
-                        when(userRepository.findById(testUserId))
+                        when(userRepository.findActiveById(testUserId))
                                         .thenReturn(Optional.of(testUser));
                         when(invitationCodeGenerator.generate()).thenReturn("TESTCODE");
                         when(homeRepository.save(any(Home.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -134,7 +134,7 @@ class HomeServiceImplTest {
 
                 @Test
                 void shouldThrowIfUserNotFound() {
-                        when(userRepository.findById(testUserId)).thenReturn(Optional.empty());
+                        when(userRepository.findActiveById(testUserId)).thenReturn(Optional.empty());
                         assertThrows(ResourceNotFoundException.class,
                                         () -> homeService.createHome(new CreateHomeRequest("Casa"), testUserId));
                 }
@@ -242,7 +242,7 @@ class HomeServiceImplTest {
                         HomeMember leftAdmin = buildMember(home, testUser, HomeRole.ADMIN, HomeMemberStatus.LEFT);
                         leftAdmin.setLeftAt(LocalDateTime.now().minusDays(10));
 
-                        when(userRepository.findById(testUserId))
+                        when(userRepository.findActiveById(testUserId))
                                         .thenReturn(Optional.of(testUser));
                         when(homeRepository.findByInvitationCodeAndDeletedAtIsNull("ABCD1234"))
                                         .thenReturn(Optional.of(home));
@@ -262,7 +262,7 @@ class HomeServiceImplTest {
                         UUID homeId = UUID.randomUUID();
                         Home home = buildHome(homeId);
 
-                        when(userRepository.findById(testUserId))
+                        when(userRepository.findActiveById(testUserId))
                                         .thenReturn(Optional.of(testUser));
                         when(homeRepository.findByInvitationCodeAndDeletedAtIsNull("CODE"))
                                         .thenReturn(Optional.of(home));
@@ -283,7 +283,7 @@ class HomeServiceImplTest {
                         Home home = buildHome(homeId);
                         HomeMember activeMember = buildMember(home, testUser, HomeRole.MEMBER, HomeMemberStatus.ACTIVE);
 
-                        when(userRepository.findById(testUserId))
+                        when(userRepository.findActiveById(testUserId))
                                         .thenReturn(Optional.of(testUser));
                         when(homeRepository.findByInvitationCodeAndDeletedAtIsNull("CODE"))
                                         .thenReturn(Optional.of(home));
@@ -296,7 +296,7 @@ class HomeServiceImplTest {
 
                 @Test
                 void shouldThrowWhenCodeNotFound() {
-                        when(userRepository.findById(testUserId)).thenReturn(Optional.of(testUser));
+                        when(userRepository.findActiveById(testUserId)).thenReturn(Optional.of(testUser));
                         when(homeRepository.findByInvitationCodeAndDeletedAtIsNull("INVALID"))
                                         .thenReturn(Optional.empty());
 
@@ -903,7 +903,7 @@ class HomeServiceImplTest {
                         Home home = buildHome(homeId);
                         testUser.setRole(UserRole.ADMIN); // System admin
 
-                        when(userRepository.findById(testUserId))
+                        when(userRepository.findActiveById(testUserId))
                                         .thenReturn(Optional.of(testUser));
                         when(homeRepository.findByIdAndDeletedAtIsNull(homeId))
                                         .thenReturn(Optional.of(home));
@@ -918,7 +918,7 @@ class HomeServiceImplTest {
                         Home home = buildHome(homeId);
                         HomeMember adminMember = buildMember(home, testUser, HomeRole.ADMIN, HomeMemberStatus.ACTIVE);
 
-                        when(userRepository.findById(testUserId))
+                        when(userRepository.findActiveById(testUserId))
                                         .thenReturn(Optional.of(testUser)); // UserRole.USER
                         when(homeMemberRepository.findByHomeIdAndUserId(homeId, testUserId))
                                         .thenReturn(Optional.of(adminMember));
@@ -939,7 +939,7 @@ class HomeServiceImplTest {
                         HomeMember adminMember = buildMember(home, testUser, HomeRole.ADMIN, HomeMemberStatus.ACTIVE);
                         buildMember(home, otherUser, HomeRole.MEMBER, HomeMemberStatus.ACTIVE);
 
-                        when(userRepository.findById(testUserId))
+                        when(userRepository.findActiveById(testUserId))
                                         .thenReturn(Optional.of(testUser)); // UserRole.USER
                         when(homeMemberRepository.findByHomeIdAndUserId(homeId, testUserId))
                                         .thenReturn(Optional.of(adminMember));
@@ -954,7 +954,7 @@ class HomeServiceImplTest {
                         Home home = buildHome(homeId);
                         HomeMember member = buildMember(home, testUser, HomeRole.MEMBER, HomeMemberStatus.ACTIVE);
 
-                        when(userRepository.findById(testUserId))
+                        when(userRepository.findActiveById(testUserId))
                                         .thenReturn(Optional.of(testUser)); // UserRole.USER
                         when(homeMemberRepository.findByHomeIdAndUserId(homeId, testUserId))
                                         .thenReturn(Optional.of(member));
@@ -969,7 +969,7 @@ class HomeServiceImplTest {
                         Home home = buildHome(homeId);
                         HomeMember member = buildMember(home, testUser, HomeRole.ADMIN, HomeMemberStatus.LEFT);
 
-                        when(userRepository.findById(testUserId))
+                        when(userRepository.findActiveById(testUserId))
                                         .thenReturn(Optional.of(testUser)); // UserRole.USER
                         when(homeMemberRepository.findByHomeIdAndUserId(homeId, testUserId))
                                         .thenReturn(Optional.of(member));
@@ -981,7 +981,7 @@ class HomeServiceImplTest {
                 @Test
                 void shouldThrowIfMembershipNotFound() {
                         UUID homeId = UUID.randomUUID();
-                        when(userRepository.findById(testUserId))
+                        when(userRepository.findActiveById(testUserId))
                                         .thenReturn(Optional.of(testUser)); // UserRole.USER
                         when(homeMemberRepository.findByHomeIdAndUserId(homeId, testUserId))
                                         .thenReturn(Optional.empty());
@@ -1003,7 +1003,7 @@ class HomeServiceImplTest {
                         Home home = buildHome(homeId);
                         testUser.setRole(UserRole.ADMIN);
 
-                        when(userRepository.findById(testUserId)).thenReturn(Optional.of(testUser));
+                        when(userRepository.findActiveById(testUserId)).thenReturn(Optional.of(testUser));
                         when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
 
                         homeService.hardDeleteHome(homeId, testUserId);
@@ -1016,7 +1016,7 @@ class HomeServiceImplTest {
                         UUID homeId = UUID.randomUUID();
                         testUser.setRole(UserRole.USER);
 
-                        when(userRepository.findById(testUserId)).thenReturn(Optional.of(testUser));
+                        when(userRepository.findActiveById(testUserId)).thenReturn(Optional.of(testUser));
 
                         assertThrows(UnauthorizedActionException.class,
                                         () -> homeService.hardDeleteHome(homeId, testUserId));
