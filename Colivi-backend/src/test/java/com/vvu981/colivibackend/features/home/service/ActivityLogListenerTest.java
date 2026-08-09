@@ -65,7 +65,7 @@ class ActivityLogListenerTest {
     }
 
     @Test
-    void shouldNotThrowExceptionIfSaveFails() {
+    void shouldThrowExceptionIfSaveFails() {
         UUID homeId = UUID.randomUUID();
         UUID actorId = UUID.randomUUID();
         HomeCreatedEvent event = new HomeCreatedEvent(homeId, actorId, "My Home");
@@ -78,7 +78,9 @@ class ActivityLogListenerTest {
 
         ActivityLogListener listener = new ActivityLogListener(activityLogRepository, List.of(formatter));
 
-        listener.handleHomeActivityEvent(event);
+        org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class, () -> {
+            listener.handleHomeActivityEvent(event);
+        });
 
         verify(activityLogRepository, times(1)).save(any(ActivityLog.class));
     }

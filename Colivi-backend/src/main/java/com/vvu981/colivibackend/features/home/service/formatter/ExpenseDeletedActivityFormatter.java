@@ -7,8 +7,14 @@ import com.vvu981.colivibackend.features.home.domain.event.HomeActivityEvent;
 import com.vvu981.colivibackend.features.user.domain.User;
 import org.springframework.stereotype.Component;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+
 @Component
+@RequiredArgsConstructor
 public class ExpenseDeletedActivityFormatter implements ActivityLogFormatter<ExpenseDeletedEvent> {
+
+    private final ObjectMapper objectMapper;
 
     @Override
     public boolean supports(HomeActivityEvent event) {
@@ -29,7 +35,12 @@ public class ExpenseDeletedActivityFormatter implements ActivityLogFormatter<Exp
         
         log.setActivityType(event.activityType());
         log.setDescription("Se ha eliminado el gasto: '" + event.expenseDescription() + "'.");
-        log.setMetadata("{\"deletedExpense\":\"" + event.expenseDescription() + "\"}");
+        
+        try {
+            log.setMetadata(objectMapper.writeValueAsString(java.util.Map.of("deletedExpense", event.expenseDescription())));
+        } catch (Exception e) {
+            log.setMetadata("{}");
+        }
         
         return log;
     }

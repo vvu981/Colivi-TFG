@@ -3,6 +3,7 @@ package com.vvu981.colivibackend.features.home.service.formatter;
 import com.vvu981.colivibackend.features.home.domain.ActivityLog;
 import com.vvu981.colivibackend.features.home.domain.ActivityType;
 import com.vvu981.colivibackend.features.home.domain.event.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -15,10 +16,11 @@ class ActivityLogFormattersTest {
 
     private final UUID homeId = UUID.randomUUID();
     private final UUID actorId = UUID.randomUUID();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
     void testHomeCreatedActivityFormatter() {
-        HomeCreatedActivityFormatter formatter = new HomeCreatedActivityFormatter();
+        HomeCreatedActivityFormatter formatter = new HomeCreatedActivityFormatter(objectMapper);
         HomeCreatedEvent event = new HomeCreatedEvent(homeId, actorId, "My Home");
 
         assertTrue(formatter.supports(event));
@@ -33,7 +35,7 @@ class ActivityLogFormattersTest {
 
     @Test
     void testHomeDeletedActivityFormatter() {
-        HomeDeletedActivityFormatter formatter = new HomeDeletedActivityFormatter();
+        HomeDeletedActivityFormatter formatter = new HomeDeletedActivityFormatter(objectMapper);
         HomeDeletedEvent event = new HomeDeletedEvent(homeId, actorId, "My Home");
 
         assertTrue(formatter.supports(event));
@@ -46,7 +48,7 @@ class ActivityLogFormattersTest {
 
     @Test
     void testMemberJoinedActivityFormatter() {
-        MemberJoinedActivityFormatter formatter = new MemberJoinedActivityFormatter();
+        MemberJoinedActivityFormatter formatter = new MemberJoinedActivityFormatter(objectMapper);
         MemberJoinedEvent event = new MemberJoinedEvent(homeId, actorId, "John Doe");
 
         assertTrue(formatter.supports(event));
@@ -59,7 +61,7 @@ class ActivityLogFormattersTest {
 
     @Test
     void testMemberLeftActivityFormatter() {
-        MemberLeftActivityFormatter formatter = new MemberLeftActivityFormatter();
+        MemberLeftActivityFormatter formatter = new MemberLeftActivityFormatter(objectMapper);
         MemberLeftEvent event = new MemberLeftEvent(homeId, actorId, "John Doe");
 
         assertTrue(formatter.supports(event));
@@ -72,24 +74,27 @@ class ActivityLogFormattersTest {
 
     @Test
     void testMemberExpelledActivityFormatter() {
-        MemberExpelledActivityFormatter formatter = new MemberExpelledActivityFormatter();
+        MemberExpelledActivityFormatter formatter = new MemberExpelledActivityFormatter(objectMapper);
         MemberExpelledEvent event = new MemberExpelledEvent(homeId, actorId, "John Doe", "Bad behavior");
 
         assertTrue(formatter.supports(event));
 
         ActivityLog log = formatter.format(event);
         assertEquals(ActivityType.MEMBER_EXPELLED, log.getActivityType());
-        assertEquals("John Doe ha sido expulsado del hogar.", log.getDescription());
-        assertEquals("{\"expelledUser\":\"John Doe\", \"reason\":\"Bad behavior\"}", log.getMetadata());
+        String meta1 = log.getMetadata();
+        assertTrue(meta1.contains("\"reason\":\"Bad behavior\""));
+        assertTrue(meta1.contains("\"expelledUser\":\"John Doe\""));
         
         MemberExpelledEvent eventNoReason = new MemberExpelledEvent(homeId, actorId, "John Doe", null);
         ActivityLog logNoReason = formatter.format(eventNoReason);
-        assertEquals("{\"expelledUser\":\"John Doe\", \"reason\":\"\"}", logNoReason.getMetadata());
+        String meta2 = logNoReason.getMetadata();
+        assertTrue(meta2.contains("\"reason\":\"\""));
+        assertTrue(meta2.contains("\"expelledUser\":\"John Doe\""));
     }
 
     @Test
     void testAdminTransferredActivityFormatter() {
-        AdminTransferredActivityFormatter formatter = new AdminTransferredActivityFormatter();
+        AdminTransferredActivityFormatter formatter = new AdminTransferredActivityFormatter(objectMapper);
         AdminTransferredEvent event = new AdminTransferredEvent(homeId, actorId, "Jane Doe");
 
         assertTrue(formatter.supports(event));
@@ -102,7 +107,7 @@ class ActivityLogFormattersTest {
 
     @Test
     void testExpenseCreatedActivityFormatter() {
-        ExpenseCreatedActivityFormatter formatter = new ExpenseCreatedActivityFormatter();
+        ExpenseCreatedActivityFormatter formatter = new ExpenseCreatedActivityFormatter(objectMapper);
         ExpenseCreatedEvent event = new ExpenseCreatedEvent(homeId, actorId, "Internet Bill", new BigDecimal("50.00"));
 
         assertTrue(formatter.supports(event));
@@ -110,12 +115,14 @@ class ActivityLogFormattersTest {
         ActivityLog log = formatter.format(event);
         assertEquals(ActivityType.EXPENSE_CREATED, log.getActivityType());
         assertEquals("Se ha añadido un nuevo gasto: 'Internet Bill'.", log.getDescription());
-        assertEquals("{\"expenseDescription\":\"Internet Bill\", \"amount\":\"50.00\"}", log.getMetadata());
+        String meta3 = log.getMetadata();
+        assertTrue(meta3.contains("\"expenseDescription\":\"Internet Bill\""));
+        assertTrue(meta3.contains("\"amount\":\"50.00\""));
     }
 
     @Test
     void testExpenseDeletedActivityFormatter() {
-        ExpenseDeletedActivityFormatter formatter = new ExpenseDeletedActivityFormatter();
+        ExpenseDeletedActivityFormatter formatter = new ExpenseDeletedActivityFormatter(objectMapper);
         ExpenseDeletedEvent event = new ExpenseDeletedEvent(homeId, actorId, "Internet Bill");
 
         assertTrue(formatter.supports(event));

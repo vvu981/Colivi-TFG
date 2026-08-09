@@ -7,8 +7,14 @@ import com.vvu981.colivibackend.features.home.domain.event.MemberLeftEvent;
 import com.vvu981.colivibackend.features.user.domain.User;
 import org.springframework.stereotype.Component;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+
 @Component
+@RequiredArgsConstructor
 public class MemberLeftActivityFormatter implements ActivityLogFormatter<MemberLeftEvent> {
+
+    private final ObjectMapper objectMapper;
 
     @Override
     public boolean supports(HomeActivityEvent event) {
@@ -29,7 +35,12 @@ public class MemberLeftActivityFormatter implements ActivityLogFormatter<MemberL
         
         log.setActivityType(event.activityType());
         log.setDescription(event.userFullName() + " ha abandonado el hogar.");
-        log.setMetadata("{\"leftUser\":\"" + event.userFullName() + "\"}");
+        
+        try {
+            log.setMetadata(objectMapper.writeValueAsString(java.util.Map.of("leftUser", event.userFullName())));
+        } catch (Exception e) {
+            log.setMetadata("{}");
+        }
         
         return log;
     }

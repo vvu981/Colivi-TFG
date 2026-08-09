@@ -7,8 +7,6 @@ import com.vvu981.colivibackend.features.home.service.formatter.ActivityLogForma
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
@@ -23,26 +21,21 @@ public class ActivityLogListener {
     private final List<ActivityLogFormatter<?>> formatters;
 
     @SuppressWarnings("unchecked")
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
     public void handleHomeActivityEvent(HomeActivityEvent event) {
         log.debug("Processing activity event: {}", event.activityType());
 
-        try {
-            formatters.stream()
-                    .filter(formatter -> formatter.supports(event))
-                    .findFirst()
-                    .ifPresentOrElse(
-                            formatter -> {
-                                @SuppressWarnings("rawtypes")
-                                ActivityLogFormatter rawFormatter = formatter;
-                                ActivityLog logEntity = rawFormatter.format(event);
-                                activityLogRepository.save(logEntity);
-                            },
-                            () -> log.warn("No ActivityLogFormatter found for event type: {}", event.getClass().getSimpleName())
-                    );
-        } catch (Exception e) {
-            log.error("Failed to save activity log for event: {}", event.activityType(), e);
-        }
+        formatters.stream()
+                .filter(formatter -> formatter.supports(event))
+                .findFirst()
+                .ifPresentOrElse(
+                        formatter -> {
+                            @SuppressWarnings("rawtypes")
+                            ActivityLogFormatter rawFormatter = formatter;
+                            ActivityLog logEntity = rawFormatter.format(event);
+                            activityLogRepository.save(logEntity);
+                        },
+                        () -> log.warn("No ActivityLogFormatter found for event type: {}",
+                                event.getClass().getSimpleName()));
     }
 }

@@ -7,8 +7,14 @@ import com.vvu981.colivibackend.features.home.domain.event.HomeDeletedEvent;
 import com.vvu981.colivibackend.features.user.domain.User;
 import org.springframework.stereotype.Component;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+
 @Component
+@RequiredArgsConstructor
 public class HomeDeletedActivityFormatter implements ActivityLogFormatter<HomeDeletedEvent> {
+
+    private final ObjectMapper objectMapper;
 
     @Override
     public boolean supports(HomeActivityEvent event) {
@@ -29,7 +35,12 @@ public class HomeDeletedActivityFormatter implements ActivityLogFormatter<HomeDe
         
         log.setActivityType(event.activityType());
         log.setDescription("El hogar '" + event.homeName() + "' ha sido eliminado.");
-        log.setMetadata("{\"deletedHomeName\":\"" + event.homeName() + "\"}");
+        
+        try {
+            log.setMetadata(objectMapper.writeValueAsString(java.util.Map.of("deletedHomeName", event.homeName())));
+        } catch (Exception e) {
+            log.setMetadata("{}");
+        }
         
         return log;
     }

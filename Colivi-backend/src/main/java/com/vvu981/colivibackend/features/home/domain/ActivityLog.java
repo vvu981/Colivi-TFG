@@ -49,4 +49,10 @@ public class ActivityLog {
             this.createdAt = LocalDateTime.now();
         }
     }
+
+    @PreUpdate
+    @PreRemove
+    protected void preventModification() {
+        throw new UnsupportedOperationException("Los registros de auditoría son inmutables.");
+    }
 }

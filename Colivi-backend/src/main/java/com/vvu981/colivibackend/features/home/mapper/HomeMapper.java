@@ -25,7 +25,7 @@ public class HomeMapper {
     public HomeMemberResponseDto toMemberDto(HomeMember member) {
         return new HomeMemberResponseDto(
                 member.getUser().getId(),
-                member.getUser().getFirstName() + " " + member.getUser().getLastName1(),
+                member.getUser().getFullName(),
                 member.getUser().getEmail(),
                 member.getRole(),
                 member.getStatus(),

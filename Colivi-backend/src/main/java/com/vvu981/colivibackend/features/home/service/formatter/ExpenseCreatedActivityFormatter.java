@@ -7,8 +7,14 @@ import com.vvu981.colivibackend.features.home.domain.event.HomeActivityEvent;
 import com.vvu981.colivibackend.features.user.domain.User;
 import org.springframework.stereotype.Component;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+
 @Component
+@RequiredArgsConstructor
 public class ExpenseCreatedActivityFormatter implements ActivityLogFormatter<ExpenseCreatedEvent> {
+
+    private final ObjectMapper objectMapper;
 
     @Override
     public boolean supports(HomeActivityEvent event) {
@@ -29,7 +35,12 @@ public class ExpenseCreatedActivityFormatter implements ActivityLogFormatter<Exp
         
         log.setActivityType(event.activityType());
         log.setDescription("Se ha añadido un nuevo gasto: '" + event.description() + "'.");
-        log.setMetadata("{\"expenseDescription\":\"" + event.description() + "\", \"amount\":\"" + event.amount().toString() + "\"}");
+        
+        try {
+            log.setMetadata(objectMapper.writeValueAsString(java.util.Map.of("expenseDescription", event.description(), "amount", event.amount().toString())));
+        } catch (Exception e) {
+            log.setMetadata("{}");
+        }
         
         return log;
     }

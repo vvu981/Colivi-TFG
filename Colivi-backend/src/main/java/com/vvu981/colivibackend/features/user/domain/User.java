@@ -84,4 +84,16 @@ public class User {
         }
         return LocalDateTime.now().isBefore(bannedUntil);
     }
+
+    public String getFullName() {
+        if (lastName1 == null || lastName1.isBlank()) {
+            return firstName;
+        }
+
+        if (lastName2 == null || lastName2.isBlank())
+            return firstName + " " + lastName1;
+
+        return firstName + " " + lastName1 + " " + lastName2;
+
+    }
 }

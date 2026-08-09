@@ -97,7 +97,7 @@ public class HomeServiceImpl implements HomeService {
 
         homeRepository.save(home);
         
-        eventPublisher.publishEvent(new MemberJoinedEvent(home.getId(), userId, user.getFirstName() + " " + user.getLastName1()));
+        eventPublisher.publishEvent(new MemberJoinedEvent(home.getId(), userId, user.getFullName()));
 
         return homeMapper.toDetailDto(home, member);
     }
@@ -132,7 +132,7 @@ public class HomeServiceImpl implements HomeService {
 
         homeBalanceValidator.validateZeroBalance(homeId, userId);
         currentMember.leave();
-        eventPublisher.publishEvent(new MemberLeftEvent(homeId, userId, currentMember.getUser().getFirstName() + " " + currentMember.getUser().getLastName1()));
+        eventPublisher.publishEvent(new MemberLeftEvent(homeId, userId, currentMember.getUser().getFullName()));
     }
 
     @Override
@@ -156,7 +156,7 @@ public class HomeServiceImpl implements HomeService {
 
         homeBalanceValidator.validateZeroBalance(homeId, targetUserId);
         targetMember.leave();
-        eventPublisher.publishEvent(new MemberExpelledEvent(homeId, adminUserId, targetMember.getUser().getFirstName() + " " + targetMember.getUser().getLastName1(), null));
+        eventPublisher.publishEvent(new MemberExpelledEvent(homeId, adminUserId, targetMember.getUser().getFullName(), null));
     }
 
     @Override
@@ -206,7 +206,7 @@ public class HomeServiceImpl implements HomeService {
         // Una vez liquidado el balance, procedemos con la expulsión normal
         homeBalanceValidator.validateZeroBalance(homeId, targetUserId);
         targetMember.leave();
-        eventPublisher.publishEvent(new MemberExpelledEvent(homeId, adminUserId, targetMember.getUser().getFirstName() + " " + targetMember.getUser().getLastName1(), reason));
+        eventPublisher.publishEvent(new MemberExpelledEvent(homeId, adminUserId, targetMember.getUser().getFullName(), reason));
     }
 
     @Override
@@ -314,7 +314,7 @@ public class HomeServiceImpl implements HomeService {
 
         targetMember.setRole(HomeRole.ADMIN);
         currentMember.setRole(HomeRole.MEMBER);
-        eventPublisher.publishEvent(new AdminTransferredEvent(homeId, currentUserId, targetMember.getUser().getFirstName() + " " + targetMember.getUser().getLastName1()));
+        eventPublisher.publishEvent(new AdminTransferredEvent(homeId, currentUserId, targetMember.getUser().getFullName()));
     }
 
     // =========================================================================

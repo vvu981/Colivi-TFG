@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 public class ActivityLogMapper {
 
     public ActivityLogResponseDto toResponseDto(ActivityLog log) {
-        String actorFullName = log.getActor().getFirstName() + " " + log.getActor().getLastName1();
+        String actorFullName = log.getActor().getFullName();
         return new ActivityLogResponseDto(
                 log.getId(),
                 log.getHome().getId(),
