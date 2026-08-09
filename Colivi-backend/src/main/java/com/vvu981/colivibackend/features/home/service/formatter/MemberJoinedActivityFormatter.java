@@ -7,14 +7,8 @@ import com.vvu981.colivibackend.features.home.domain.event.MemberJoinedEvent;
 import com.vvu981.colivibackend.features.user.domain.User;
 import org.springframework.stereotype.Component;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
-
 @Component
-@RequiredArgsConstructor
 public class MemberJoinedActivityFormatter implements ActivityLogFormatter<MemberJoinedEvent> {
-
-    private final ObjectMapper objectMapper;
 
     @Override
     public boolean supports(HomeActivityEvent event) {
@@ -24,24 +18,20 @@ public class MemberJoinedActivityFormatter implements ActivityLogFormatter<Membe
     @Override
     public ActivityLog format(MemberJoinedEvent event) {
         ActivityLog log = new ActivityLog();
-        
+
         Home home = new Home();
         home.setId(event.homeId());
         log.setHome(home);
-        
+
         User actor = new User();
         actor.setId(event.actorId());
         log.setActor(actor);
-        
+
         log.setActivityType(event.activityType());
         log.setDescription(event.userFullName() + " se ha unido al hogar.");
-        
-        try {
-            log.setMetadata(objectMapper.writeValueAsString(java.util.Map.of("joinedUser", event.userFullName())));
-        } catch (Exception e) {
-            log.setMetadata("{}");
-        }
-        
+
+        log.setMetadata(java.util.Map.of("joinedUser", event.userFullName()));
+
         return log;
     }
 }

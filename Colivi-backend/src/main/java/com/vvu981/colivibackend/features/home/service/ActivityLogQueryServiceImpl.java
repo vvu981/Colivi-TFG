@@ -35,11 +35,11 @@ public class ActivityLogQueryServiceImpl implements ActivityLogQueryService {
         }
 
         if (member.getStatus() == HomeMemberStatus.LEFT || member.getStatus() == HomeMemberStatus.ARCHIVED) {
-            return activityLogRepository.findByHomeIdAndCreatedAtLessThanEqualOrderByCreatedAtDesc(homeId, member.getLeftAt(), pageable)
+            return activityLogRepository.findByHomeIdAndCreatedAtBetweenOrderByCreatedAtDesc(homeId, member.getJoinedAt(), member.getLeftAt(), pageable)
                     .map(activityLogMapper::toResponseDto);
         }
 
-        return activityLogRepository.findByHomeIdOrderByCreatedAtDesc(homeId, pageable)
+        return activityLogRepository.findByHomeIdAndCreatedAtGreaterThanEqualOrderByCreatedAtDesc(homeId, member.getJoinedAt(), pageable)
                 .map(activityLogMapper::toResponseDto);
     }
 }

@@ -27,6 +27,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -54,6 +55,7 @@ class ActivityLogQueryServiceImplTest {
         userId = UUID.randomUUID();
         member = new HomeMember();
         member.setStatus(HomeMemberStatus.ACTIVE);
+        member.setJoinedAt(LocalDateTime.now().minusDays(5));
     }
 
     @Test
@@ -72,17 +74,17 @@ class ActivityLogQueryServiceImplTest {
 
         Pageable pageable = PageRequest.of(0, 10);
         Page<ActivityLog> page = new PageImpl<>(List.of(log));
-        when(activityLogRepository.findByHomeIdOrderByCreatedAtDesc(homeId, pageable)).thenReturn(page);
+        when(activityLogRepository.findByHomeIdAndCreatedAtGreaterThanEqualOrderByCreatedAtDesc(homeId, member.getJoinedAt(), pageable)).thenReturn(page);
 
         when(activityLogMapper.toResponseDto(log)).thenReturn(
                 new ActivityLogResponseDto(UUID.randomUUID(), homeId, userId, "Test User", ActivityType.HOME_CREATED,
-                        "desc", null, LocalDateTime.now()));
+                        "desc", Map.of(), LocalDateTime.now()));
 
         Page<ActivityLogResponseDto> result = service.getHomeActivities(homeId, userId, pageable);
 
         assertNotNull(result);
         assertEquals(1, result.getContent().size());
-        verify(activityLogRepository).findByHomeIdOrderByCreatedAtDesc(homeId, pageable);
+        verify(activityLogRepository).findByHomeIdAndCreatedAtGreaterThanEqualOrderByCreatedAtDesc(homeId, member.getJoinedAt(), pageable);
     }
 
     @Test
@@ -103,17 +105,17 @@ class ActivityLogQueryServiceImplTest {
 
         Pageable pageable = PageRequest.of(0, 10);
         Page<ActivityLog> page = new PageImpl<>(List.of(log));
-        when(activityLogRepository.findByHomeIdAndCreatedAtLessThanEqualOrderByCreatedAtDesc(homeId, member.getLeftAt(), pageable)).thenReturn(page);
+        when(activityLogRepository.findByHomeIdAndCreatedAtBetweenOrderByCreatedAtDesc(homeId, member.getJoinedAt(), member.getLeftAt(), pageable)).thenReturn(page);
 
         when(activityLogMapper.toResponseDto(log)).thenReturn(
                 new ActivityLogResponseDto(UUID.randomUUID(), homeId, userId, "Test User", ActivityType.HOME_CREATED,
-                        "desc", null, LocalDateTime.now()));
+                        "desc", Map.of(), LocalDateTime.now()));
 
         Page<ActivityLogResponseDto> result = service.getHomeActivities(homeId, userId, pageable);
 
         assertNotNull(result);
         assertEquals(1, result.getContent().size());
-        verify(activityLogRepository).findByHomeIdAndCreatedAtLessThanEqualOrderByCreatedAtDesc(homeId, member.getLeftAt(), pageable);
+        verify(activityLogRepository).findByHomeIdAndCreatedAtBetweenOrderByCreatedAtDesc(homeId, member.getJoinedAt(), member.getLeftAt(), pageable);
     }
 
     @Test
@@ -126,7 +128,6 @@ class ActivityLogQueryServiceImplTest {
 
     @Test
     void getHomeActivities_ThrowsIfNotAllowed() {
-        member.setStatus(null);
         member.setStatus(null);
         when(homeMemberRepository.findByHomeIdAndUserId(homeId, userId)).thenReturn(Optional.of(member));
 

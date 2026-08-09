@@ -7,7 +7,11 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 @Entity
@@ -26,8 +30,8 @@ public class ActivityLog {
     @JoinColumn(name = "home_id", nullable = false)
     private Home home;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "actor_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "actor_id")
     private User actor;
 
     @Enumerated(EnumType.STRING)
@@ -37,8 +41,9 @@ public class ActivityLog {
     @Column(name = "description", nullable = false, columnDefinition = "TEXT")
     private String description;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "metadata", columnDefinition = "JSONB")
-    private String metadata;
+    private Map<String, Object> metadata;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

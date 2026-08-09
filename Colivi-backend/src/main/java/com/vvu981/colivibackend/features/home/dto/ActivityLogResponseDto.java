@@ -3,6 +3,7 @@ package com.vvu981.colivibackend.features.home.dto;
 import com.vvu981.colivibackend.features.home.domain.ActivityType;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 public record ActivityLogResponseDto(
@@ -12,7 +13,7 @@ public record ActivityLogResponseDto(
         String actorFullName,
         ActivityType activityType,
         String description,
-        String metadata,
+        Map<String, Object> metadata,
         LocalDateTime createdAt
 ) {
 }

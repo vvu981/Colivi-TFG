@@ -9,6 +9,7 @@ import com.vvu981.colivibackend.features.user.exception.InvalidReactivationToken
 import com.vvu981.colivibackend.features.user.exception.InvalidTokenException;
 import com.vvu981.colivibackend.features.user.exception.StaleSessionException;
 import com.vvu981.colivibackend.features.user.exception.UserNotFoundException;
+import com.vvu981.colivibackend.features.home.repository.ActivityLogRepository;
 import com.vvu981.colivibackend.features.user.mapper.UserMapper;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
 import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
@@ -30,6 +31,7 @@ import java.util.UUID;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final ActivityLogRepository activityLogRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder; // Inyección directa de la herramienta
     private final UserMapper userMapper; // <-- Nuestra nueva herramienta
@@ -178,9 +180,12 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public void deleteUserHard(UUID userId) {
         User user = getActiveUserById(userId);
 
+        activityLogRepository.nullifyActorIdByUserId(userId);
+        
         userRepository.delete(user);
     }
 

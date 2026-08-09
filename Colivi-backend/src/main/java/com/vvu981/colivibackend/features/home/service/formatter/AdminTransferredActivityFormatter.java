@@ -7,14 +7,8 @@ import com.vvu981.colivibackend.features.home.domain.event.HomeActivityEvent;
 import com.vvu981.colivibackend.features.user.domain.User;
 import org.springframework.stereotype.Component;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
-
 @Component
-@RequiredArgsConstructor
 public class AdminTransferredActivityFormatter implements ActivityLogFormatter<AdminTransferredEvent> {
-
-    private final ObjectMapper objectMapper;
 
     @Override
     public boolean supports(HomeActivityEvent event) {
@@ -24,24 +18,20 @@ public class AdminTransferredActivityFormatter implements ActivityLogFormatter<A
     @Override
     public ActivityLog format(AdminTransferredEvent event) {
         ActivityLog log = new ActivityLog();
-        
+
         Home home = new Home();
         home.setId(event.homeId());
         log.setHome(home);
-        
+
         User actor = new User();
         actor.setId(event.actorId());
         log.setActor(actor);
-        
+
         log.setActivityType(event.activityType());
         log.setDescription("Se ha transferido el rol de administrador a " + event.newAdminFullName() + ".");
-        
-        try {
-            log.setMetadata(objectMapper.writeValueAsString(java.util.Map.of("newAdmin", event.newAdminFullName())));
-        } catch (Exception e) {
-            log.setMetadata("{}");
-        }
-        
+
+        log.setMetadata(java.util.Map.of("newAdmin", event.newAdminFullName()));
+
         return log;
     }
 }

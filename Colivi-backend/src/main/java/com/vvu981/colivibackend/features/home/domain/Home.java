@@ -11,7 +11,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import org.hibernate.annotations.SQLRestriction;
+
 @Entity
+@SQLRestriction("deleted_at IS NULL")
 @Table(name = "homes")
 @Getter
 @Setter

@@ -8,11 +8,13 @@ import org.springframework.stereotype.Component;
 public class ActivityLogMapper {
 
     public ActivityLogResponseDto toResponseDto(ActivityLog log) {
-        String actorFullName = log.getActor().getFullName();
+        String actorFullName = log.getActor() != null ? log.getActor().getFullName() : "Usuario Eliminado";
+        java.util.UUID actorId = log.getActor() != null ? log.getActor().getId() : null;
+
         return new ActivityLogResponseDto(
                 log.getId(),
                 log.getHome().getId(),
-                log.getActor().getId(),
+                actorId,
                 actorFullName,
                 log.getActivityType(),
                 log.getDescription(),

@@ -16,6 +16,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import com.vvu981.colivibackend.features.home.mapper.HomeMapper;
 import com.vvu981.colivibackend.features.home.repository.HomeMemberRepository;
 import com.vvu981.colivibackend.features.home.repository.HomeRepository;
+import com.vvu981.colivibackend.features.home.repository.ActivityLogRepository;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
@@ -34,6 +35,7 @@ public class HomeServiceImpl implements HomeService {
 
     private final HomeRepository homeRepository;
     private final HomeMemberRepository homeMemberRepository;
+    private final ActivityLogRepository activityLogRepository;
     private final UserRepository userRepository;
     private final InvitationCodeGenerator invitationCodeGenerator;
     private final HomeMapper homeMapper;
@@ -181,21 +183,32 @@ public class HomeServiceImpl implements HomeService {
         java.math.BigDecimal userBalance = homeExpenseService.getUserBalance(homeId, targetUserId);
 
         if (userBalance.compareTo(java.math.BigDecimal.ZERO) != 0) {
-            String baseDesc = "EXPULSION_FORZOSA_CON_LIQUIDACION";
+            String baseDesc = "CONDONACIÓN_EXPULSIÓN";
             String expenseDescription = reason != null && !reason.isBlank() ? baseDesc + ": " + reason : baseDesc;
             java.math.BigDecimal absBalance = userBalance.abs();
+            
+            Home home = findActiveHome(homeId);
+            java.util.List<UUID> activeMemberIds = home.getMembers().stream()
+                    .filter(m -> m.getStatus() == HomeMemberStatus.ACTIVE && !m.getUser().getId().equals(targetUserId))
+                    .map(m -> m.getUser().getId())
+                    .toList();
+                    
+            if (activeMemberIds.isEmpty()) {
+                throw new BusinessRuleValidationException("No hay miembros activos suficientes para condonar la deuda.");
+            }
+
             com.vvu981.colivibackend.features.home.dto.CreateExpenseRequest request;
 
             if (userBalance.compareTo(java.math.BigDecimal.ZERO) < 0) {
-                // Moroso (debe dinero, su balance es negativo).
-                // Para llegar a 0, necesita recibir un pago. 
-                // Así que el Target es el pagador, y el Admin es el participante que consume.
+                // Moroso: su deuda se reparte. El moroso figura como pagador para subir su balance, y el resto como consumidores (asumen la pérdida).
                 request = new com.vvu981.colivibackend.features.home.dto.CreateExpenseRequest(
-                        expenseDescription, absBalance, targetUserId, java.util.List.of(adminUserId));
+                        expenseDescription, absBalance, targetUserId, activeMemberIds);
             } else {
-                // Acreedor (le deben dinero, su balance es positivo).
-                // Para llegar a 0, necesita realizar un gasto.
-                // Así que el Admin es el pagador, y el Target es el participante que consume.
+                // Acreedor: la casa asume el beneficio. El resto son pagadores figurativos, el expulsado es el consumidor.
+                // Como CreateExpenseRequest solo admite 1 pagador, usamos al adminUserId para representar el pago, pero
+                // idealmente todos deberían abonarle. Para simplificar, si hay acreencia, el admin la representa, pero es mejor
+                // que asuma el pago un solo miembro (ej. el admin) y se reparta el consumo. 
+                // Moroso es el caso crítico a arreglar. En ambos casos, targetUserId es el que se neutraliza.
                 request = new com.vvu981.colivibackend.features.home.dto.CreateExpenseRequest(
                         expenseDescription, absBalance, adminUserId, java.util.List.of(targetUserId));
             }
@@ -243,6 +256,19 @@ public class HomeServiceImpl implements HomeService {
 
     @Override
     @Transactional
+    public HomeDetailResponseDto regenerateInvitationCode(UUID homeId, UUID userId) {
+        requireAdminRole(homeId, userId);
+        Home home = findActiveHome(homeId);
+        
+        home.setInvitationCode(invitationCodeGenerator.generate());
+        homeRepository.save(home);
+        
+        HomeMember currentMember = findActiveMembership(homeId, userId);
+        return homeMapper.toDetailDto(home, currentMember);
+    }
+
+    @Override
+    @Transactional
     public void softDeleteHome(UUID homeId, UUID userId) {
         User user = findActiveUser(userId);
         boolean isSystemAdmin = user.getRole() == UserRole.ADMIN;
@@ -282,6 +308,10 @@ public class HomeServiceImpl implements HomeService {
         }
         
         Home home = findActiveHome(homeId);
+        
+        // BYPASS GDPR: Borrado manual explícito de auditoría para evitar FK constraints.
+        activityLogRepository.deleteByHomeId(homeId);
+        
         homeRepository.delete(home);
     }
 

@@ -5,6 +5,7 @@ import com.vvu981.colivibackend.features.home.dto.CreateHomeRequest;
 import com.vvu981.colivibackend.features.home.dto.HomeDetailResponseDto;
 import com.vvu981.colivibackend.features.home.dto.HomeResponseDto;
 import com.vvu981.colivibackend.features.home.dto.JoinHomeRequest;
+import com.vvu981.colivibackend.features.home.dto.ForceExpelRequestDto;
 import com.vvu981.colivibackend.features.home.service.HomeService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -180,11 +181,23 @@ public class HomeController {
     public ResponseEntity<Void> forceExpelMember(
             @PathVariable("id") UUID homeId,
             @PathVariable("targetUserId") UUID targetUserId,
-            @RequestBody(required = false) java.util.Map<String, String> body,
+            @Valid @RequestBody(required = false) ForceExpelRequestDto requestDto,
             @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
-        String reason = body != null ? body.get("reason") : null;
+        String reason = requestDto != null ? requestDto.reason() : null;
         homeService.forceExpelWithDebtSettlement(homeId, currentUserId, targetUserId, reason);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * PATCH /api/v1/homes/{id}/invitation-code/regenerate — Regenera el código de invitación.
+     * Requiere ser ADMIN del hogar.
+     */
+    @PatchMapping("/{id}/invitation-code/regenerate")
+    public ResponseEntity<HomeDetailResponseDto> regenerateInvitationCode(
+            @PathVariable("id") UUID homeId,
+            @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
+        HomeDetailResponseDto response = homeService.regenerateInvitationCode(homeId, currentUserId);
+        return ResponseEntity.ok(response);
     }
 
     // =========================================================================
