@@ -66,6 +66,12 @@ public class EmailServiceImpl implements EmailService {
     @Value("${app.mail.booking-rejected-subject}")
     private String bookingRejectedSubject;
 
+    @Value("${app.mail.password-reset-subject}")
+    private String passwordResetSubject;
+
+    @Value("${app.mail.password-reset-url}")
+    private String passwordResetUrlBase;
+
     // ─── Implementación de la interfaz ────────────────────────────────────────
 
     /**
@@ -87,6 +93,12 @@ public class EmailServiceImpl implements EmailService {
     @Override
     public void sendBookingStatusEmail(String toEmail, String listingTitle, boolean isAccepted) {
         SimpleMailMessage message = buildBookingStatusMessage(toEmail, listingTitle, isAccepted);
+        mailSender.send(message);
+    }
+
+    @Override
+    public void sendPasswordResetEmail(String toEmail, String token) {
+        SimpleMailMessage message = buildPasswordResetMessage(toEmail, token);
         mailSender.send(message);
     }
 
@@ -170,5 +182,36 @@ public class EmailServiceImpl implements EmailService {
                 Este correo ha sido generado automáticamente. Por favor, no respondas a él.
                 © Colivi — Plataforma de alojamiento universitario
                 """.formatted(listingTitle, statusText, extraMessage);
+    }
+
+    private SimpleMailMessage buildPasswordResetMessage(String toEmail, String token) {
+        SimpleMailMessage message = new SimpleMailMessage();
+
+        message.setFrom(fromAddress);
+        message.setTo(toEmail);
+        message.setSubject(passwordResetSubject);
+        message.setText(buildPasswordResetBody(token));
+
+        return message;
+    }
+
+    private String buildPasswordResetBody(String token) {
+        return """
+                Hola,
+
+                Hemos recibido una solicitud para restablecer tu contraseña en Colivi.
+
+                Para crear una nueva contraseña, haz clic en el siguiente enlace o cópialo
+                en tu navegador. Este enlace es válido durante las próximas 24 horas:
+
+                %s%s
+
+                Si no solicitaste este cambio, puedes ignorar este correo con total tranquilidad.
+                Tu contraseña no cambiará hasta que accedas al enlace de arriba y crees una nueva.
+
+                ─────────────────────────────────────────────
+                Este correo ha sido generado automáticamente. Por favor, no respondas a él.
+                © Colivi — Plataforma de alojamiento universitario
+                """.formatted(passwordResetUrlBase, token);
     }
 }

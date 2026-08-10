@@ -34,6 +34,18 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<com.vvu981.colivibackend.features.user.dto.UserProfileResponse> getMyProfile(
+            @AuthenticationPrincipal(expression = "id") UUID userId) {
+        return ResponseEntity.ok(userService.getMyProfile(userId));
+    }
+
+    @GetMapping("/{userId}")
+    public ResponseEntity<com.vvu981.colivibackend.features.user.dto.UserProfileResponse> getUserProfile(
+            @PathVariable UUID userId) {
+        return ResponseEntity.ok(userService.getUserProfile(userId));
+    }
+
     @PatchMapping("/me/profile")
     public ResponseEntity<UpdateNonSensible> updateMyProfile(
             @Valid @RequestBody UpdateNonSensible request,

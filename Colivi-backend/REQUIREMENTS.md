@@ -13,7 +13,7 @@
 | RF-09 | Cambiar Contraseña Interna | Permite al usuario autenticado modificar su contraseña actual aportando la antigua por motivos de seguridad. |
 | RF-10 | Cerrar Sesión (Logout) | Invalida los tokens del usuario activo, terminando la sesión de forma segura. |
 | RF-11 | Borrado Lógico de Cuenta Propia | Permite al usuario eliminar su propia cuenta, ocultándola del sistema (Soft Delete) sin perder referencias físicas por integridad. |
-| RF-12 | Consultar Perfil Público de Usuario | Permite a cualquier usuario autenticado visualizar la ficha pública (nombre, foto, biografía, valoraciones) de otro usuario de la plataforma. |
+| RF-12 | Consultar Perfil de Usuario (Público/Propio) | Permite a un usuario autenticado consultar sus propios datos (`/me`) o visualizar la ficha pública de otro usuario (`/{id}`) de la plataforma. |
 | RF-13 | Listar y Buscar Usuarios (Admin) | Permite a la administración buscar, filtrar y listar las cuentas de usuario registradas en el sistema por estado, rol o criterios de búsqueda. |
 | RF-14 | Borrado Físico de Usuario | Permite a un SuperAdmin eliminar irreversiblemente (Hard Delete) todos los datos y rastro físico de un usuario de la base de datos. |
 | RF-15 | Banear Usuario | Permite a un Administrador suspender (Ban) el acceso a la plataforma de un usuario infractor. |
@@ -73,3 +73,5 @@
 | RF-69 | Absorción Automática de Deuda | El Sistema genera automáticamente un gasto interno (CONDONACIÓN_EXPULSIÓN) para redistribuir la deuda impagada de un miembro cuando este es expulsado forzosamente. |
 | RF-70 | Promoción Automática de Administrador | El Sistema otorga automáticamente (HomeMemberOrphanListener) el rol de Administrador al miembro activo más antiguo si el actual Admin elimina su cuenta. |
 | RF-71 | Cierre Automático de Hogar Vacío | El Sistema archiva o marca automáticamente un hogar como inactivo/borrado cuando se detecta que su único y último miembro activo sale del mismo o elimina su cuenta. |
+| RF-72 | Flujo de Recuperación de Contraseña Olvidada | Permite a un usuario no logueado solicitar (Forgot Password) y consumir (Reset Password) un token de recuperación para cambiar su contraseña. |
+| RF-73 | Consultar Expediente de Denuncia (Admin) | Permite a un Administrador obtener la información detallada de una denuncia específica mediante su ID. |

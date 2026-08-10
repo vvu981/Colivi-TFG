@@ -75,6 +75,10 @@ public class User {
      */
     private LocalDateTime reactivationTokenExpiresAt;
 
+    private String passwordResetToken;
+
+    private LocalDateTime passwordResetTokenExpiresAt;
+
     public boolean isBanned() {
         if (bannedAt == null) {
             return false;

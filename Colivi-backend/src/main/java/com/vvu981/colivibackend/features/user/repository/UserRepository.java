@@ -42,4 +42,15 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     @Query(nativeQuery = true, value = "SELECT * FROM \"user\" WHERE LOWER(email) = LOWER(:email)")
     Optional<User> findByEmailIgnoreCase(@Param("email") String email);
+
+    @Query(nativeQuery = true, value = "SELECT * FROM \"user\" WHERE password_reset_token = :token")
+    Optional<User> findByPasswordResetToken(@Param("token") String token);
+
+    @Modifying
+    @Query(nativeQuery = true, value = "UPDATE \"user\" SET reactivation_token = NULL, reactivation_token_expires_at = NULL WHERE reactivation_token_expires_at < CURRENT_TIMESTAMP")
+    int clearExpiredReactivationTokens();
+
+    @Modifying
+    @Query(nativeQuery = true, value = "UPDATE \"user\" SET password_reset_token = NULL, password_reset_token_expires_at = NULL WHERE password_reset_token_expires_at < CURRENT_TIMESTAMP")
+    int clearExpiredPasswordResetTokens();
 }
