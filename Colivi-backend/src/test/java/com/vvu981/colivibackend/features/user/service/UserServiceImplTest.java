@@ -1,6 +1,7 @@
 package com.vvu981.colivibackend.features.user.service;
 
 import com.vvu981.colivibackend.core.security.JwtTokenProvider;
+import com.vvu981.colivibackend.features.home.repository.ActivityLogRepository;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
 import com.vvu981.colivibackend.features.user.dto.*;
@@ -25,6 +26,7 @@ import java.util.UUID;
 import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
 import com.vvu981.colivibackend.core.exception.UnauthorizedActionException;
 import com.vvu981.colivibackend.features.user.exception.InvalidTokenException;
+import com.vvu981.colivibackend.features.user.exception.StaleSessionException;
 import com.vvu981.colivibackend.features.user.exception.UserNotFoundException;
 import org.springframework.context.ApplicationEventPublisher;
 import com.vvu981.colivibackend.features.user.domain.UserReactivationRequestedEvent;
@@ -56,7 +58,7 @@ class UserServiceImplTest {
         @Mock
         private UserRepository userRepository;
         @Mock
-        private com.vvu981.colivibackend.features.home.repository.ActivityLogRepository activityLogRepository;
+        private ActivityLogRepository activityLogRepository;
         @Mock
         private JwtTokenProvider jwtTokenProvider;
         @Mock
@@ -332,11 +334,13 @@ class UserServiceImplTest {
                         when(jwtTokenProvider.extractEmail("mismatch.version.token")).thenReturn("victor@colivi.com");
                         when(userRepository.findActiveByEmail("victor@colivi.com"))
                                         .thenReturn(Optional.of(persistedUser));
-                        when(jwtTokenProvider.extractTokenVersion("mismatch.version.token")).thenReturn(99); // Versión en DB es 1
+                        when(jwtTokenProvider.extractTokenVersion("mismatch.version.token")).thenReturn(99); // Versión
+                                                                                                             // en DB es
+                                                                                                             // 1
 
                         // Act & Assert
                         assertThatThrownBy(() -> userService.refreshToken(request))
-                                        .isInstanceOf(com.vvu981.colivibackend.features.user.exception.StaleSessionException.class)
+                                        .isInstanceOf(StaleSessionException.class)
                                         .hasMessageContaining("La sesión ha expirado");
                 }
         }
@@ -999,48 +1003,50 @@ class UserServiceImplTest {
                 }
         }
 
-    @Nested
-    @DisplayName("getUserProfile")
-    class GetUserProfile {
-        @Test
-        @DisplayName("happy path: retorna el perfil del usuario")
-        void givenExistingUserId_whenGetUserProfile_thenReturnsUserProfile() {
-            // Arrange
-            UUID userId = persistedUser.getId();
-            UserProfileResponse expectedDto = new UserProfileResponse(userId, "nick", "first", "last", null, "url", null);
-            when(userRepository.findActiveById(userId)).thenReturn(Optional.of(persistedUser));
-            when(userMapper.toUserProfileDto(persistedUser)).thenReturn(expectedDto);
+        @Nested
+        @DisplayName("getUserProfile")
+        class GetUserProfile {
+                @Test
+                @DisplayName("happy path: retorna el perfil del usuario")
+                void givenExistingUserId_whenGetUserProfile_thenReturnsUserProfile() {
+                        // Arrange
+                        UUID userId = persistedUser.getId();
+                        UserProfileResponse expectedDto = new UserProfileResponse(userId, "nick", "first", "last", null,
+                                        "url", null);
+                        when(userRepository.findActiveById(userId)).thenReturn(Optional.of(persistedUser));
+                        when(userMapper.toUserProfileDto(persistedUser)).thenReturn(expectedDto);
 
-            // Act
-            UserProfileResponse result = userService.getUserProfile(userId);
+                        // Act
+                        UserProfileResponse result = userService.getUserProfile(userId);
 
-            // Assert
-            assertThat(result).isEqualTo(expectedDto);
-            verify(userRepository).findActiveById(userId);
-            verify(userMapper).toUserProfileDto(persistedUser);
+                        // Assert
+                        assertThat(result).isEqualTo(expectedDto);
+                        verify(userRepository).findActiveById(userId);
+                        verify(userMapper).toUserProfileDto(persistedUser);
+                }
         }
-    }
 
-    @Nested
-    @DisplayName("getMyProfile")
-    class GetMyProfile {
-        @Test
-        @DisplayName("happy path: retorna el propio perfil del usuario")
-        void givenExistingUserId_whenGetMyProfile_thenReturnsUserProfile() {
-            // Arrange
-            UUID userId = persistedUser.getId();
-            com.vvu981.colivibackend.features.user.dto.MyProfileResponse expectedDto = new com.vvu981.colivibackend.features.user.dto.MyProfileResponse(
-                    userId, "test@colivi.com", "123", com.vvu981.colivibackend.features.user.domain.UserRole.USER, "nick", "First", "Last", null, "url", null);
-            when(userRepository.findActiveById(userId)).thenReturn(Optional.of(persistedUser));
-            when(userMapper.toMyProfileDto(persistedUser)).thenReturn(expectedDto);
+        @Nested
+        @DisplayName("getMyProfile")
+        class GetMyProfile {
+                @Test
+                @DisplayName("happy path: retorna el propio perfil del usuario")
+                void givenExistingUserId_whenGetMyProfile_thenReturnsUserProfile() {
+                        // Arrange
+                        UUID userId = persistedUser.getId();
+                        MyProfileResponse expectedDto = new MyProfileResponse(
+                                        userId, "test@colivi.com", "123", UserRole.USER, "nick", "First", "Last", null,
+                                        "url", null);
+                        when(userRepository.findActiveById(userId)).thenReturn(Optional.of(persistedUser));
+                        when(userMapper.toMyProfileDto(persistedUser)).thenReturn(expectedDto);
 
-            // Act
-            com.vvu981.colivibackend.features.user.dto.MyProfileResponse result = userService.getMyProfile(userId);
+                        // Act
+                        MyProfileResponse result = userService.getMyProfile(userId);
 
-            // Assert
-            assertThat(result).isEqualTo(expectedDto);
-            verify(userRepository).findActiveById(userId);
-            verify(userMapper).toMyProfileDto(persistedUser);
+                        // Assert
+                        assertThat(result).isEqualTo(expectedDto);
+                        verify(userRepository).findActiveById(userId);
+                        verify(userMapper).toMyProfileDto(persistedUser);
+                }
         }
-    }
 }
