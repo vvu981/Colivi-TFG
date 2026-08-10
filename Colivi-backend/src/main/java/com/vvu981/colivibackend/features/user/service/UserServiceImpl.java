@@ -232,10 +232,18 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserProfileResponse getMyProfile(UUID userId) {
+    public MyProfileResponse getMyProfile(UUID userId) {
         User user = getActiveUserById(userId);
 
-        return userMapper.toUserProfileDto(user);
+        return userMapper.toMyProfileDto(user);
+    }
+    
+    @Override
+    public AdminUserProfileResponse getAdminUserProfile(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Error: Usuario no encontrado"));
+                
+        return userMapper.toAdminUserProfileDto(user);
     }
 
     // ─── Flujo de reactivación de cuenta ─────────────────────────────────────
@@ -341,8 +349,14 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void forgotPassword(String email) {
-        // Find active user by email
-        userRepository.findActiveByEmail(email).ifPresentOrElse(user -> {
+        // Find user by email (using findByEmail to include potentially banned/deleted users to evaluate them)
+        userRepository.findByEmailIgnoreCase(email).ifPresentOrElse(user -> {
+            if (user.isBanned() || user.getDeletedAt() != null) {
+                // Silently ignore to prevent timing/enumeration attacks
+                log.warn("Password reset requested for banned or inactive email: {}", email);
+                return;
+            }
+            
             String token = UUID.randomUUID().toString();
             user.setPasswordResetToken(token);
             user.setPasswordResetTokenExpiresAt(LocalDateTime.now().plusHours(24));
@@ -353,7 +367,7 @@ public class UserServiceImpl implements UserService {
                     user.getEmail(), token, user.getPasswordResetTokenExpiresAt());
         }, () -> {
             // Silently ignore to prevent email enumeration
-            log.warn("Password reset requested for unknown or inactive email: {}", email);
+            log.warn("Password reset requested for unknown email: {}", email);
         });
     }
 

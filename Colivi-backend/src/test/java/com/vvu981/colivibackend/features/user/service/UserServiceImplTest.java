@@ -1007,7 +1007,7 @@ class UserServiceImplTest {
         void givenExistingUserId_whenGetUserProfile_thenReturnsUserProfile() {
             // Arrange
             UUID userId = persistedUser.getId();
-            UserProfileResponse expectedDto = new UserProfileResponse();
+            UserProfileResponse expectedDto = new UserProfileResponse(userId, "nick", "first", "last", null, "url", null);
             when(userRepository.findActiveById(userId)).thenReturn(Optional.of(persistedUser));
             when(userMapper.toUserProfileDto(persistedUser)).thenReturn(expectedDto);
 
@@ -1029,17 +1029,18 @@ class UserServiceImplTest {
         void givenExistingUserId_whenGetMyProfile_thenReturnsUserProfile() {
             // Arrange
             UUID userId = persistedUser.getId();
-            UserProfileResponse expectedDto = new UserProfileResponse();
+            com.vvu981.colivibackend.features.user.dto.MyProfileResponse expectedDto = new com.vvu981.colivibackend.features.user.dto.MyProfileResponse(
+                    userId, "test@colivi.com", "123", com.vvu981.colivibackend.features.user.domain.UserRole.USER, "nick", "First", "Last", null, "url", null);
             when(userRepository.findActiveById(userId)).thenReturn(Optional.of(persistedUser));
-            when(userMapper.toUserProfileDto(persistedUser)).thenReturn(expectedDto);
+            when(userMapper.toMyProfileDto(persistedUser)).thenReturn(expectedDto);
 
             // Act
-            UserProfileResponse result = userService.getMyProfile(userId);
+            com.vvu981.colivibackend.features.user.dto.MyProfileResponse result = userService.getMyProfile(userId);
 
             // Assert
             assertThat(result).isEqualTo(expectedDto);
             verify(userRepository).findActiveById(userId);
-            verify(userMapper).toUserProfileDto(persistedUser);
+            verify(userMapper).toMyProfileDto(persistedUser);
         }
     }
 }

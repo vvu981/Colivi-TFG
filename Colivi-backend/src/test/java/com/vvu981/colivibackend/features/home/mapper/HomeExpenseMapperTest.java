@@ -46,7 +46,7 @@ class HomeExpenseMapperTest {
         user = new User();
         user.setId(userId);
         
-        userDto = new UserProfileResponse();
+        userDto = new UserProfileResponse(userId, "nick", "first", "last", null, "url", null);
     }
 
     @Test
@@ -115,8 +115,8 @@ class HomeExpenseMapperTest {
         User toUser = new User();
         toUser.setId(toId);
         
-        UserProfileResponse fromDto = new UserProfileResponse();
-        UserProfileResponse toDto = new UserProfileResponse();
+        UserProfileResponse fromDto = new UserProfileResponse(fromId, "nick", "first", "last", null, "url", null);
+        UserProfileResponse toDto = new UserProfileResponse(toId, "nick", "first", "last", null, "url", null);
 
         DebtTransfer transfer = new DebtTransfer(fromId, toId, new BigDecimal("50.00"));
 

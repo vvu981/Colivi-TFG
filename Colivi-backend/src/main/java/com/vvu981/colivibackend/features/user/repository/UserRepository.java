@@ -47,10 +47,10 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByPasswordResetToken(@Param("token") String token);
 
     @Modifying
-    @Query(nativeQuery = true, value = "UPDATE \"user\" SET reactivation_token = NULL, reactivation_token_expires_at = NULL WHERE reactivation_token_expires_at < CURRENT_TIMESTAMP")
+    @Query(nativeQuery = true, value = "UPDATE \"user\" SET reactivation_token = NULL, reactivation_token_expires_at = NULL WHERE reactivation_token_expires_at IS NOT NULL AND reactivation_token_expires_at < CURRENT_TIMESTAMP")
     int clearExpiredReactivationTokens();
 
     @Modifying
-    @Query(nativeQuery = true, value = "UPDATE \"user\" SET password_reset_token = NULL, password_reset_token_expires_at = NULL WHERE password_reset_token_expires_at < CURRENT_TIMESTAMP")
+    @Query(nativeQuery = true, value = "UPDATE \"user\" SET password_reset_token = NULL, password_reset_token_expires_at = NULL WHERE password_reset_token_expires_at IS NOT NULL AND password_reset_token_expires_at < CURRENT_TIMESTAMP")
     int clearExpiredPasswordResetTokens();
 }

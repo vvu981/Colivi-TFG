@@ -35,7 +35,7 @@ public class UserController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<com.vvu981.colivibackend.features.user.dto.UserProfileResponse> getMyProfile(
+    public ResponseEntity<com.vvu981.colivibackend.features.user.dto.MyProfileResponse> getMyProfile(
             @AuthenticationPrincipal(expression = "id") UUID userId) {
         return ResponseEntity.ok(userService.getMyProfile(userId));
     }
@@ -44,6 +44,13 @@ public class UserController {
     public ResponseEntity<com.vvu981.colivibackend.features.user.dto.UserProfileResponse> getUserProfile(
             @PathVariable UUID userId) {
         return ResponseEntity.ok(userService.getUserProfile(userId));
+    }
+
+    @PreAuthorize("hasAuthority('ADMIN')")
+    @GetMapping("/admin/{userId}")
+    public ResponseEntity<com.vvu981.colivibackend.features.user.dto.AdminUserProfileResponse> getAdminUserProfile(
+            @PathVariable UUID userId) {
+        return ResponseEntity.ok(userService.getAdminUserProfile(userId));
     }
 
     @PatchMapping("/me/profile")

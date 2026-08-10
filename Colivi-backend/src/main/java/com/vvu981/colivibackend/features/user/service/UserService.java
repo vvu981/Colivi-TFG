@@ -31,7 +31,9 @@ public interface UserService {
 
     UserProfileResponse getUserProfile(UUID userId);
 
-    UserProfileResponse getMyProfile(UUID userId);
+    MyProfileResponse getMyProfile(UUID userId);
+    
+    AdminUserProfileResponse getAdminUserProfile(UUID userId);
 
     /**
      * Paso 1 del flujo de reactivación.
