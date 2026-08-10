@@ -190,13 +190,14 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
     }
 
     @Override
-    public Page<AccommodationListingResponse> getBannedAccommodationListings(int page, int size, UUID currentUserId) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("bannedAt").descending());
+    @Transactional(readOnly = true)
+    public Page<AccommodationListingResponse> searchAllListingsForAdmin(Map<String, String> filters, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
-        Page<AccommodationListing> bannedListings = listingRepository
-                .findByStatusAndDeletedAtIsNull(ListingStatus.BANNED, pageable);
+        Specification<AccommodationListing> spec = specificationBuilder.buildAdminSpecification(filters);
 
-        return bannedListings.map(AccommodationListingResponse::new);
+        Page<AccommodationListing> listings = listingRepository.findAll(spec, pageable);
+        return listings.map(AccommodationListingResponse::new);
     }
 
     @Override

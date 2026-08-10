@@ -29,13 +29,23 @@ public class ListingSpecificationBuilder {
                 )
         );
 
+        return applyFilters(spec, params);
+    }
+
+    public Specification<AccommodationListing> buildAdminSpecification(Map<String, String> params) {
+        // Para admin, empezamos sin condiciones restrictivas (devuelve TODO, incluyendo borrados y baneados)
+        Specification<AccommodationListing> spec = Specification.where(null);
+        return applyFilters(spec, params);
+    }
+
+    private Specification<AccommodationListing> applyFilters(Specification<AccommodationListing> baseSpec, Map<String, String> params) {
+        Specification<AccommodationListing> spec = baseSpec;
         // Recorremos las estrategias de filtrado dinámicamente (Cero ifs rígidos)
         for (ListingFilter filter : filters) {
             if (filter.isApplicable(params)) {
                 spec = spec.and(filter.apply(params));
             }
         }
-
         return spec;
     }
 }

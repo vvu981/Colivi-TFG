@@ -55,20 +55,21 @@
 | RF-51 | Recuperar Anuncio Retirado | Permite al propietario restaurar a estado público un anuncio previamente marcado como borrado lógico. |
 | RF-52 | Ocultar Anuncio (Moderación Admin) | Permite a un Administrador bloquear/banear un anuncio que infrinja políticas, impidiendo que aparezca en búsquedas públicas. |
 | RF-53 | Restaurar Anuncio (Moderación Admin) | Permite a un Administrador levantar el bloqueo de un anuncio baneado para que vuelva a estar visible. |
-| RF-54 | Enviar Solicitud de Reserva (Inquilino) | Permite a un interesado enviar una petición de alojamiento al propietario para unas fechas determinadas. |
-| RF-55 | Enviar Solicitud de Reserva (Admin) | Permite a un Administrador forzar/crear una solicitud de reserva en nombre de un inquilino específico hacia una propiedad. |
-| RF-56 | Consultar Detalle de Solicitud de Reserva | Permite a un usuario consultar el estado e información concreta de una reserva particular (propia o donde él es el dueño). |
-| RF-57 | Gestionar Solicitud de Reserva | Permite al propietario Aceptar, Rechazar o Cancelar una petición de reserva entrante sobre sus anuncios. |
-| RF-58 | Consultar Reservas Enviadas (Inquilino) | Permite a un inquilino ver el histórico y estado de todas las solicitudes de reserva que ha emitido. |
-| RF-59 | Consultar Reservas Recibidas (Propietario) | Permite a un propietario listar las reservas entrantes hacia sus anuncios, filtrables por inmueble. |
-| RF-60 | Listar Todas las Reservas (Admin) | Permite a la administración ver, filtrar y auditar absolutamente todas las transacciones y reservas del sistema. |
-| RF-61 | Crear Denuncia (Reporte) | Permite a cualquier usuario enviar una alerta de moderación hacia un objetivo (Usuario, Anuncio, Hogar, Gasto) indicando motivo y justificación. |
-| RF-62 | Consultar Mis Denuncias | Permite a un usuario listar las denuncias que ha emitido y ver su estado actual de resolución. |
-| RF-63 | Cancelar Denuncia Propia | Permite a un usuario anular (CANCELLED) voluntariamente una denuncia que hizo, siempre que su estado siga como pendiente. |
-| RF-64 | Filtrar Denuncias (Admin) | Permite a la administración buscar quejas usando especificaciones complejas (por objetivo, creador, tipo, fechas, estado). |
-| RF-65 | Gestionar Estado de Denuncia | Permite a un Administrador avanzar el ciclo de vida de un reporte (Investigar, Resolver o Desestimar) añadiendo notas privadas. |
-| RF-66 | Moderación Masiva (Bulk Update) | Permite a la administración resolver, desestimar o investigar múltiples denuncias de forma atómica y agrupada. |
-| RF-67 | Consultar Estadísticas de Denuncias | Retorna a la administración un ranking con los elementos que acumulan más quejas (Top Most Reported) para detectar infractores reincidentes. |
-| RF-68 | Absorción Automática de Deuda | El Sistema genera automáticamente un gasto interno (CONDONACIÓN_EXPULSIÓN) para redistribuir la deuda impagada de un miembro cuando este es expulsado forzosamente. |
-| RF-69 | Promoción Automática de Administrador | El Sistema otorga automáticamente (HomeMemberOrphanListener) el rol de Administrador al miembro activo más antiguo si el actual Admin elimina su cuenta. |
-| RF-70 | Cierre Automático de Hogar Vacío | El Sistema archiva o marca automáticamente un hogar como inactivo/borrado cuando se detecta que su único y último miembro activo sale del mismo o elimina su cuenta. |
+| RF-54 | Listar y Buscar Anuncios (Admin) | Permite a la administración buscar y listar todos los anuncios y propiedades del sistema, independientemente de su estado de visibilidad o moderación. |
+| RF-55 | Enviar Solicitud de Reserva (Inquilino) | Permite a un interesado enviar una petición de alojamiento al propietario para unas fechas determinadas. |
+| RF-56 | Enviar Solicitud de Reserva (Admin) | Permite a un Administrador forzar/crear una solicitud de reserva en nombre de un inquilino específico hacia una propiedad. |
+| RF-57 | Consultar Detalle de Solicitud de Reserva | Permite a un usuario consultar el estado e información concreta de una reserva particular (propia o donde él es el dueño). |
+| RF-58 | Gestionar Solicitud de Reserva | Permite al propietario Aceptar, Rechazar o Cancelar una petición de reserva entrante sobre sus anuncios. |
+| RF-59 | Consultar Reservas Enviadas (Inquilino) | Permite a un inquilino ver el histórico y estado de todas las solicitudes de reserva que ha emitido. |
+| RF-60 | Consultar Reservas Recibidas (Propietario) | Permite a un propietario listar las reservas entrantes hacia sus anuncios, filtrables por inmueble. |
+| RF-61 | Listar Todas las Reservas (Admin) | Permite a la administración ver, filtrar y auditar absolutamente todas las transacciones y reservas del sistema. |
+| RF-62 | Crear Denuncia (Reporte) | Permite a cualquier usuario enviar una alerta de moderación hacia un objetivo (Usuario, Anuncio, Hogar, Gasto) indicando motivo y justificación. |
+| RF-63 | Consultar Mis Denuncias | Permite a un usuario listar las denuncias que ha emitido y ver su estado actual de resolución. |
+| RF-64 | Cancelar Denuncia Propia | Permite a un usuario anular (CANCELLED) voluntariamente una denuncia que hizo, siempre que su estado siga como pendiente. |
+| RF-65 | Filtrar Denuncias (Admin) | Permite a la administración buscar quejas usando especificaciones complejas (por objetivo, creador, tipo, fechas, estado). |
+| RF-66 | Gestionar Estado de Denuncia | Permite a un Administrador avanzar el ciclo de vida de un reporte (Investigar, Resolver o Desestimar) añadiendo notas privadas. |
+| RF-67 | Moderación Masiva (Bulk Update) | Permite a la administración resolver, desestimar o investigar múltiples denuncias de forma atómica y agrupada. |
+| RF-68 | Consultar Estadísticas de Denuncias | Retorna a la administración un ranking con los elementos que acumulan más quejas (Top Most Reported) para detectar infractores reincidentes. |
+| RF-69 | Absorción Automática de Deuda | El Sistema genera automáticamente un gasto interno (CONDONACIÓN_EXPULSIÓN) para redistribuir la deuda impagada de un miembro cuando este es expulsado forzosamente. |
+| RF-70 | Promoción Automática de Administrador | El Sistema otorga automáticamente (HomeMemberOrphanListener) el rol de Administrador al miembro activo más antiguo si el actual Admin elimina su cuenta. |
+| RF-71 | Cierre Automático de Hogar Vacío | El Sistema archiva o marca automáticamente un hogar como inactivo/borrado cuando se detecta que su único y último miembro activo sale del mismo o elimina su cuenta. |
