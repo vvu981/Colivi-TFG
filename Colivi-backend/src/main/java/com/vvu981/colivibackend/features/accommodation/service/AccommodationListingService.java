@@ -35,7 +35,7 @@ public interface AccommodationListingService {
 
         AccommodationListingResponse recoverAccommodationListing(UUID accommodationId, UUID currentUserId); // solo admin
 
-        Page<AccommodationListingResponse> getBannedAccommodationListings(int page, int size, UUID currentUserId);
+        Page<AccommodationListingResponse> searchAllListingsForAdmin(Map<String, String> filters, int page, int size);
 
         AccommodationListingResponse getAccommodationListing(UUID accommodationId);
 

@@ -29,4 +29,12 @@ public interface EmailService {
      * @param isAccepted   true si la reserva fue aceptada, false si fue rechazada.
      */
     void sendBookingStatusEmail(String toEmail, String listingTitle, boolean isAccepted);
+
+    /**
+     * Envía un correo electrónico de recuperación de contraseña al usuario.
+     *
+     * @param toEmail dirección de correo electrónico del destinatario.
+     * @param token   token UUID de recuperación de contraseña generado.
+     */
+    void sendPasswordResetEmail(String toEmail, String token);
 }

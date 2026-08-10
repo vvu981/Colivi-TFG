@@ -130,4 +130,12 @@ public class AdminReportServiceImpl implements AdminReportService {
 
         reportRepository.saveAll(reports);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ReportResponse getReportById(UUID id) {
+        Report report = reportRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("No se encontró el reporte con ID: " + id));
+        return reportMapper.toResponse(report);
+    }
 }

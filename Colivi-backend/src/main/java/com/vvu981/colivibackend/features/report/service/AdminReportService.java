@@ -19,5 +19,7 @@ public interface AdminReportService {
 
     ReportResponse updateReportStatus(UUID reportId, ReportStatusUpdateRequest request, UUID adminId);
 
+    ReportResponse getReportById(UUID id);
+
     void updateBulkReportStatus(BulkReportStatusUpdateRequest request, UUID adminId);
 }

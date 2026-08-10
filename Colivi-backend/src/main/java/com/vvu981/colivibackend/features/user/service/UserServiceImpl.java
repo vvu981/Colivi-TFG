@@ -2,6 +2,7 @@ package com.vvu981.colivibackend.features.user.service;
 
 import com.vvu981.colivibackend.core.security.JwtTokenProvider;
 import com.vvu981.colivibackend.features.user.domain.User;
+import com.vvu981.colivibackend.features.user.domain.UserPasswordResetRequestedEvent;
 import com.vvu981.colivibackend.features.user.domain.UserReactivationRequestedEvent;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
 import com.vvu981.colivibackend.features.user.dto.*;
@@ -231,10 +232,18 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserProfileResponse getMyProfile(UUID userId) {
+    public MyProfileResponse getMyProfile(UUID userId) {
         User user = getActiveUserById(userId);
 
-        return userMapper.toUserProfileDto(user);
+        return userMapper.toMyProfileDto(user);
+    }
+    
+    @Override
+    public AdminUserProfileResponse getAdminUserProfile(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Error: Usuario no encontrado"));
+                
+        return userMapper.toAdminUserProfileDto(user);
     }
 
     // ─── Flujo de reactivación de cuenta ─────────────────────────────────────
@@ -335,5 +344,52 @@ public class UserServiceImpl implements UserService {
         String refreshToken = jwtTokenProvider.generateRefreshToken(user);
 
         return new AuthResponse(accessToken, refreshToken, ACCESS_TOKEN_EXPIRATION);
+    }
+
+    @Override
+    @Transactional
+    public void forgotPassword(String email) {
+        // Find user by email (using findByEmail to include potentially banned/deleted users to evaluate them)
+        userRepository.findByEmailIgnoreCase(email).ifPresentOrElse(user -> {
+            if (user.isBanned() || user.getDeletedAt() != null) {
+                // Silently ignore to prevent timing/enumeration attacks
+                log.warn("Password reset requested for banned or inactive email: {}", email);
+                return;
+            }
+            
+            String token = UUID.randomUUID().toString();
+            user.setPasswordResetToken(token);
+            user.setPasswordResetTokenExpiresAt(LocalDateTime.now().plusHours(24));
+            userRepository.save(user);
+
+            eventPublisher.publishEvent(new UserPasswordResetRequestedEvent(user.getEmail(), token));
+            log.info("Password reset requested for {} (token: {}, expires at {})",
+                    user.getEmail(), token, user.getPasswordResetTokenExpiresAt());
+        }, () -> {
+            // Silently ignore to prevent email enumeration
+            log.warn("Password reset requested for unknown email: {}", email);
+        });
+    }
+
+    @Override
+    @Transactional
+    public void resetPassword(String token, String newPassword) {
+        User user = userRepository.findByPasswordResetToken(token)
+                .orElseThrow(() -> new InvalidTokenException("El token de recuperación no es válido."));
+
+        if (user.getPasswordResetTokenExpiresAt() == null
+                || LocalDateTime.now().isAfter(user.getPasswordResetTokenExpiresAt())) {
+            throw new InvalidTokenException("El token de recuperación ha caducado. Solicita uno nuevo.");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        user.setPasswordResetToken(null);
+        user.setPasswordResetTokenExpiresAt(null);
+
+        // Invalidate previous sessions
+        user.setTokenVersion(user.getTokenVersion() + 1);
+
+        userRepository.save(user);
+        log.info("Password successfully reset for user {}", user.getEmail());
     }
 }

@@ -3,6 +3,8 @@ package com.vvu981.colivibackend.features.user.mapper;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.dto.UpdateNonSensible;
 import com.vvu981.colivibackend.features.user.dto.UserProfileResponse;
+import com.vvu981.colivibackend.features.user.dto.MyProfileResponse;
+import com.vvu981.colivibackend.features.user.dto.AdminUserProfileResponse;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.MappingTarget;
@@ -18,5 +20,9 @@ public interface UserMapper {
     UpdateNonSensible toUpdateNonSensibleDto(User entity);
 
     UserProfileResponse toUserProfileDto(User user);
+    
+    MyProfileResponse toMyProfileDto(User user);
+    
+    AdminUserProfileResponse toAdminUserProfileDto(User user);
 
 }

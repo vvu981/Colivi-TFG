@@ -467,18 +467,17 @@ class AccommodationListingServiceImplTest {
     }
 
     @Nested
-    @DisplayName("getBannedAccommodationListings")
-    class GetBannedAccommodationListings {
+    @DisplayName("searchAllListingsForAdmin")
+    class SearchAllListingsForAdmin {
 
         @Test
-        @DisplayName("debe listar todos los anuncios baneados")
-        void shouldListBannedListings() {
+        @DisplayName("debe listar todos los anuncios usando la especificacion de admin")
+        void shouldListAllAdminListings() {
             Page<AccommodationListing> page = new PageImpl<>(List.of(listing));
-            when(listingRepository.findByStatusAndDeletedAtIsNull(eq(ListingStatus.BANNED), any(Pageable.class)))
-                    .thenReturn(page);
+            when(specificationBuilder.buildAdminSpecification(anyMap())).thenReturn(Specification.where(null));
+            when(listingRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
 
-            Page<AccommodationListingResponse> response = listingServiceImpl.getBannedAccommodationListings(0, 10,
-                    admin.getId());
+            Page<AccommodationListingResponse> response = listingServiceImpl.searchAllListingsForAdmin(Map.of(), 0, 10);
 
             assertThat(response).isNotNull();
             assertThat(response.getContent()).hasSize(1);

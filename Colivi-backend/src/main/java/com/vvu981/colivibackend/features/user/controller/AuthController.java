@@ -85,4 +85,20 @@ public class AuthController {
         AuthResponse response = userService.reactivateAccount(request.token());
         return ResponseEntity.ok(response);
     }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(
+            @Valid @RequestBody com.vvu981.colivibackend.features.user.dto.ForgotPasswordRequestDto request) {
+        
+        userService.forgotPassword(request.email());
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Void> resetPassword(
+            @Valid @RequestBody com.vvu981.colivibackend.features.user.dto.ResetPasswordRequestDto request) {
+        
+        userService.resetPassword(request.token(), request.newPassword());
+        return ResponseEntity.noContent().build();
+    }
 }

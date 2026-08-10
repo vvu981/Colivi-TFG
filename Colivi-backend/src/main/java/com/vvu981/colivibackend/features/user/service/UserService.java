@@ -31,7 +31,9 @@ public interface UserService {
 
     UserProfileResponse getUserProfile(UUID userId);
 
-    UserProfileResponse getMyProfile(UUID userId);
+    MyProfileResponse getMyProfile(UUID userId);
+    
+    AdminUserProfileResponse getAdminUserProfile(UUID userId);
 
     /**
      * Paso 1 del flujo de reactivación.
@@ -60,4 +62,8 @@ public interface UserService {
      *         si el token no existe o ya ha caducado.
      */
     AuthResponse reactivateAccount(String token);
+
+    void forgotPassword(String email);
+
+    void resetPassword(String token, String newPassword);
 }

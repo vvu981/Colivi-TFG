@@ -45,6 +45,12 @@ public class AdminReportController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<ReportResponse> getReportById(@PathVariable UUID id) {
+        ReportResponse response = adminReportService.getReportById(id);
+        return ResponseEntity.ok(response);
+    }
+
     @PatchMapping("/{id}/status")
     public ResponseEntity<ReportResponse> updateReportStatus(
             @PathVariable UUID id,
