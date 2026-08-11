@@ -185,4 +185,57 @@ class AdminReportServiceImplTest {
         assertThat(report.getAdminNotes()).isEqualTo("Spam");
         verify(reportRepository).saveAll(anyList());
     }
+
+    @Test
+    void updateBulkReportStatus_shouldInvestigate() {
+        BulkReportStatusUpdateRequest request = new BulkReportStatusUpdateRequest(
+                List.of(reportId), ReportStatus.INVESTIGATING, null);
+        when(reportRepository.findAllById(request.reportIds())).thenReturn(List.of(report));
+
+        adminReportService.updateBulkReportStatus(request, adminId);
+
+        assertThat(report.getStatus()).isEqualTo(ReportStatus.INVESTIGATING);
+        verify(reportRepository).saveAll(anyList());
+    }
+
+    @Test
+    void updateBulkReportStatus_shouldResolveAndPublishEvent() {
+        BulkReportStatusUpdateRequest request = new BulkReportStatusUpdateRequest(
+                List.of(reportId), ReportStatus.RESOLVED, "Banned user");
+        when(reportRepository.findAllById(request.reportIds())).thenReturn(List.of(report));
+
+        adminReportService.updateBulkReportStatus(request, adminId);
+
+        assertThat(report.getStatus()).isEqualTo(ReportStatus.RESOLVED);
+        verify(eventPublisher).publishEvent(any(ReportResolvedEvent.class));
+        verify(reportRepository).saveAll(anyList());
+    }
+
+    @Test
+    void updateReportStatus_shouldThrowException_whenStatusIsInvalid() {
+        ReportStatusUpdateRequest request = new ReportStatusUpdateRequest(ReportStatus.PENDING, null);
+        when(reportRepository.findById(reportId)).thenReturn(Optional.of(report));
+        
+        assertThatThrownBy(() -> adminReportService.updateReportStatus(reportId, request, adminId))
+                .isInstanceOf(BusinessRuleValidationException.class);
+    }
+
+    @Test
+    void getReportById_shouldReturnResponse() {
+        when(reportRepository.findById(reportId)).thenReturn(Optional.of(report));
+        ReportResponse responseMock = new ReportResponse(reportId, null, null, null, null, null, null, null, null, null, null, null);
+        when(reportMapper.toResponse(report)).thenReturn(responseMock);
+
+        ReportResponse result = adminReportService.getReportById(reportId);
+
+        assertThat(result).isNotNull();
+    }
+
+    @Test
+    void getReportById_shouldThrowException_whenNotFound() {
+        when(reportRepository.findById(reportId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> adminReportService.getReportById(reportId))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
 }
