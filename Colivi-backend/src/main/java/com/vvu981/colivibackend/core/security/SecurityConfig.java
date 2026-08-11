@@ -17,6 +17,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 import java.util.List;
 
@@ -48,9 +49,9 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/auth/**").permitAll() // Rutas públicas (Login y Registro)
-                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll() // Rutas públicas (Swagger)
-                        .requestMatchers("/error").permitAll() // Permitir la ruta de errores por defecto de Spring Boot
+                        .requestMatchers(new AntPathRequestMatcher("/api/v1/auth/**")).permitAll() // Rutas públicas (Login y Registro)
+                        .requestMatchers(new AntPathRequestMatcher("/v3/api-docs/**"), new AntPathRequestMatcher("/swagger-ui/**"), new AntPathRequestMatcher("/swagger-ui.html")).permitAll() // Rutas públicas (Swagger)
+                        .requestMatchers(new AntPathRequestMatcher("/error")).permitAll() // Permitir la ruta de errores por defecto de Spring Boot
                         .anyRequest().authenticated() // Todo lo demás requiere estar logueado
                 )
 
