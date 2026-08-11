@@ -175,6 +175,27 @@ public class BookingRequestServiceImpl implements BookingRequestService {
     }
 
     @Override
+    public BookingRequestResponseDto confirmBookingPayment(UUID requestId, com.vvu981.colivibackend.features.bookingRequests.dto.PaymentConfirmationDto paymentDto, UUID currentUserId) {
+        BookingRequest request = findById(requestId);
+        
+        // Verificar que quien confirma la reserva sea el inquilino original
+        if (!request.getRequester().getId().equals(currentUserId)) {
+            throw new UnauthorizedActionException("Error: solo el inquilino que creó la solicitud puede confirmar el pago.");
+        }
+        
+        // Cambiar estado a CONFIRMED
+        request.confirm();
+        
+        // Marcar el anuncio como UNAVAILABLE
+        AccommodationListing listing = request.getAccommodationListing();
+        listing.setStatus(com.vvu981.colivibackend.features.accommodation.domain.ListingStatus.UNAVAILABLE);
+        
+        // Guardar cambios
+        BookingRequest savedRequest = requestRepository.save(request);
+        return new BookingRequestResponseDto(savedRequest);
+    }
+
+    @Override
     public BookingRequestResponseDto getBookingRequestById(UUID requestId, UUID currentUser) {
         User currUser = findUser(currentUser);
         BookingRequest request = findById(requestId);

@@ -132,6 +132,7 @@ public class BookingRequestE2EIntegrationTest extends BaseIntegrationTest {
                 "title", "Room for Booking Test",
                 "description", "Nice room",
                 "pricePerMonth", 500.0,
+                "securityDeposit", 100.0,
                 "rentalType", "ROOM"
         );
 

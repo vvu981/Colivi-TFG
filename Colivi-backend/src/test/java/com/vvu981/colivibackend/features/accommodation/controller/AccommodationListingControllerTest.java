@@ -90,6 +90,7 @@ class AccommodationListingControllerTest {
                 "Cozy Room in Center",
                 "Nice and warm room in city center",
                 BigDecimal.valueOf(450.0),
+                BigDecimal.valueOf(100.0),
                 ListingStatus.AVAILABLE,
                 "ENTIRE_PLACE",
                 LocalDateTime.now(),
@@ -149,7 +150,8 @@ class AccommodationListingControllerTest {
             AccommodationListingRequest request = new AccommodationListingRequest(
                     accommodationId, "Cozy Room in Center", "Nice and warm room in city center",
                     BigDecimal.valueOf(450.0),
-                    com.vvu981.colivibackend.features.accommodation.domain.RentalType.ENTIRE_PLACE);
+                    com.vvu981.colivibackend.features.accommodation.domain.RentalType.ENTIRE_PLACE,
+                    BigDecimal.valueOf(100.0));
             when(listingService.createAccommodationListing(any(AccommodationListingRequest.class), any(UUID.class)))
                     .thenReturn(listingResponse);
 
@@ -177,6 +179,7 @@ class AccommodationListingControllerTest {
                     "Updated Title",
                     "Updated Description",
                     BigDecimal.valueOf(500.0),
+                    BigDecimal.valueOf(100.0),
                     ListingStatus.AVAILABLE,
                     "ENTIRE_PLACE",
                     LocalDateTime.now(),

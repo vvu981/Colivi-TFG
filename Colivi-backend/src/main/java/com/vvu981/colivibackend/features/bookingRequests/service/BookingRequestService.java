@@ -17,6 +17,8 @@ public interface BookingRequestService {
 
     BookingRequestResponseDto setStatusBookingRequest(RequestStatus requestStatus, UUID requestId, UUID currentUser);
 
+    BookingRequestResponseDto confirmBookingPayment(UUID requestId, com.vvu981.colivibackend.features.bookingRequests.dto.PaymentConfirmationDto paymentDto, UUID currentUserId);
+
     BookingRequestResponseDto getBookingRequestById(UUID requestId, UUID currentUser);
 
     Page<BookingRequestResponseDto> getTenantBookingRequests(int page, int size, UUID currentUserId); // inquilino o

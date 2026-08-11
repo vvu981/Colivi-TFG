@@ -338,6 +338,7 @@ public class ApiE2EIntegrationTest extends BaseIntegrationTest {
                                 "title", "Habitación centro",
                                 "description", "Preciosa",
                                 "pricePerMonth", 450.00,
+                                "securityDeposit", 100.0,
                                 "rentalType", "ENTIRE_PLACE");
 
                 MvcResult result = mockMvc.perform(post("/api/v1/listings")
@@ -368,6 +369,7 @@ public class ApiE2EIntegrationTest extends BaseIntegrationTest {
                                 "title", "Habitación de lujo",
                                 "description", "Spacious",
                                 "pricePerMonth", 600.00,
+                                "securityDeposit", 100.0,
                                 "rentalType", "ROOM");
 
                 mockMvc.perform(put("/api/v1/listings/" + listingId)

@@ -97,4 +97,11 @@ public class BookingRequest {
         }
         this.status = RequestStatus.CANCELLED;
     }
+
+    public void confirm() {
+        if (this.status != RequestStatus.ACCEPTED) {
+            throw new IllegalStateException("Solo se pueden confirmar solicitudes aceptadas previamente por el propietario.");
+        }
+        this.status = RequestStatus.CONFIRMED;
+    }
 }
