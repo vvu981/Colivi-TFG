@@ -59,6 +59,14 @@ public class BookingRequest {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    // ─── Payment Information ─────────────────────────────────────────────────────
+
+    @Column(name = "transaction_id", length = 100)
+    private String transactionId;
+
+    @Column(name = "payment_method", length = 30)
+    private String paymentMethod;
+
     // ─── Lifecycle ───────────────────────────────────────────────────────────────
 
     @PreUpdate
@@ -98,10 +106,12 @@ public class BookingRequest {
         this.status = RequestStatus.CANCELLED;
     }
 
-    public void confirm() {
+    public void confirm(String transactionId, String paymentMethod) {
         if (this.status != RequestStatus.ACCEPTED) {
             throw new IllegalStateException("Solo se pueden confirmar solicitudes aceptadas previamente por el propietario.");
         }
         this.status = RequestStatus.CONFIRMED;
+        this.transactionId = transactionId;
+        this.paymentMethod = paymentMethod;
     }
 }

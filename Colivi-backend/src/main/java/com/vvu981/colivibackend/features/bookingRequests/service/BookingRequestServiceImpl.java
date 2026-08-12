@@ -23,6 +23,8 @@ import com.vvu981.colivibackend.features.bookingRequests.dto.BookingRequestRespo
 import com.vvu981.colivibackend.features.bookingRequests.repository.BookingRequestRepository;
 import com.vvu981.colivibackend.features.bookingRequests.repository.filters.BookingRequestFilter;
 import com.vvu981.colivibackend.features.bookingRequests.domain.BookingStatusChangedEvent;
+import com.vvu981.colivibackend.features.bookingRequests.domain.BookingConfirmedEvent;
+import com.vvu981.colivibackend.features.bookingRequests.dto.PaymentConfirmationDto;
 import org.springframework.context.ApplicationEventPublisher;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
@@ -175,23 +177,40 @@ public class BookingRequestServiceImpl implements BookingRequestService {
     }
 
     @Override
-    public BookingRequestResponseDto confirmBookingPayment(UUID requestId, com.vvu981.colivibackend.features.bookingRequests.dto.PaymentConfirmationDto paymentDto, UUID currentUserId) {
+    @Transactional
+    public BookingRequestResponseDto confirmBookingPayment(UUID requestId, PaymentConfirmationDto paymentDto, UUID currentUserId) {
         BookingRequest request = findById(requestId);
         
         // Verificar que quien confirma la reserva sea el inquilino original
         if (!request.getRequester().getId().equals(currentUserId)) {
             throw new UnauthorizedActionException("Error: solo el inquilino que creó la solicitud puede confirmar el pago.");
         }
+
+        // Bloqueo pesimista sobre el listing para evitar concurrencia
+        AccommodationListing listing = listingRepository.findByIdWithPessimisticLock(request.getAccommodationListing().getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Error: no se encuentra el anuncio."));
+
+        if (listing.getStatus() != ListingStatus.AVAILABLE) {
+            throw new BusinessRuleValidationException("El alojamiento ya no está disponible.");
+        }
         
-        // Cambiar estado a CONFIRMED
-        request.confirm();
+        try {
+            // Cambiar estado a CONFIRMED y registrar transacción simulada
+            request.confirm(java.util.UUID.randomUUID().toString(), "Credit Card");
+        } catch (IllegalStateException e) {
+            throw new BusinessRuleValidationException(e.getMessage());
+        }
         
         // Marcar el anuncio como UNAVAILABLE
-        AccommodationListing listing = request.getAccommodationListing();
-        listing.setStatus(com.vvu981.colivibackend.features.accommodation.domain.ListingStatus.UNAVAILABLE);
+        listing.setStatus(ListingStatus.UNAVAILABLE);
+        listingRepository.save(listing);
         
-        // Guardar cambios
+        // Guardar cambios de la request
         BookingRequest savedRequest = requestRepository.save(request);
+
+        // Notificar evento
+        eventPublisher.publishEvent(new BookingConfirmedEvent(listing.getId(), savedRequest.getId()));
+
         return new BookingRequestResponseDto(savedRequest);
     }
 

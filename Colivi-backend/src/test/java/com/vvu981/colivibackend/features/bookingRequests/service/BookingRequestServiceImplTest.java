@@ -438,6 +438,7 @@ public class BookingRequestServiceImplTest {
         void success() {
             bookingRequest.setStatus(RequestStatus.ACCEPTED);
             when(requestRepository.findById(bookingRequest.getId())).thenReturn(Optional.of(bookingRequest));
+            when(listingRepository.findByIdWithPessimisticLock(any(UUID.class))).thenReturn(Optional.of(listing));
             when(requestRepository.save(any(BookingRequest.class))).thenReturn(bookingRequest);
 
             PaymentConfirmationDto paymentDto = new PaymentConfirmationDto(
