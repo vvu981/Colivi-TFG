@@ -23,6 +23,7 @@ import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingR
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingResponse;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingUpdateRequest;
 import com.vvu981.colivibackend.features.accommodation.service.AccommodationListingService;
+import com.vvu981.colivibackend.features.recommendation.service.SearchHistoryService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -32,14 +33,27 @@ import lombok.RequiredArgsConstructor;
 public class AccommodationListingController {
 
     private final AccommodationListingService listingService;
+    private final SearchHistoryService searchHistoryService;
 
     @GetMapping
     public ResponseEntity<Page<AccommodationListingResponse>> getPublicCatalog(
             @RequestParam Map<String, String> allParams,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
 
         Page<AccommodationListingResponse> catalog = listingService.searchListings(allParams, page, size);
+        
+        // Save search async
+        if (currentUserId != null) {
+            String city = allParams.get("city");
+            String maxPriceStr = allParams.get("maxPrice");
+            java.math.BigDecimal maxPrice = maxPriceStr != null ? new java.math.BigDecimal(maxPriceStr) : null;
+            String type = allParams.get("rentalType"); // Or whatever the frontend sends
+            
+            searchHistoryService.saveSearchAsync(currentUserId, city, maxPrice, type);
+        }
+
         return ResponseEntity.ok(catalog);
     }
 

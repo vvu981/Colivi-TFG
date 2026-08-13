@@ -11,6 +11,7 @@ import com.vvu981.colivibackend.features.accommodation.service.AccommodationList
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
+import com.vvu981.colivibackend.features.recommendation.service.SearchHistoryService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -57,6 +58,9 @@ class AccommodationListingControllerTest {
     private AccommodationListingService listingService;
 
     @MockBean
+    private SearchHistoryService searchHistoryService;
+
+    @MockBean
     private JwtTokenProvider jwtTokenProvider;
 
     @MockBean
@@ -96,7 +100,8 @@ class AccommodationListingControllerTest {
                 LocalDateTime.now(),
                 null,
                 hostUser.getId(),
-                hostUser.getNickname());
+                hostUser.getNickname(),
+                false);
     }
 
     private UsernamePasswordAuthenticationToken buildAuth(User user) {
@@ -110,12 +115,12 @@ class AccommodationListingControllerTest {
 
         @Test
         @DisplayName("debe retornar 200 con catalogo paginado")
-        @WithMockUser
         void shouldReturnPublicCatalog() throws Exception {
             Page<AccommodationListingResponse> page = new PageImpl<>(List.of(listingResponse));
             when(listingService.searchListings(any(), anyInt(), anyInt())).thenReturn(page);
 
             mockMvc.perform(get("/api/v1/listings")
+                    .with(authentication(buildAuth(hostUser)))
                     .param("page", "0")
                     .param("size", "10"))
                     .andExpect(status().isOk())
@@ -185,7 +190,8 @@ class AccommodationListingControllerTest {
                     LocalDateTime.now(),
                     null,
                     hostUser.getId(),
-                    hostUser.getNickname());
+                    hostUser.getNickname(),
+                    false);
             when(listingService.updateAccommodationListing(eq(listingId), any(AccommodationListingUpdateRequest.class),
                     any(UUID.class)))
                     .thenReturn(updatedResponse);

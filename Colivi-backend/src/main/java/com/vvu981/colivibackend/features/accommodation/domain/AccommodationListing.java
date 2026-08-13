@@ -58,6 +58,10 @@ public class AccommodationListing {
     @Version
     private Integer version; // Control de concurrencia optimista exigido en tu SPEC
 
+    @Column(name = "is_promoted", nullable = false)
+    @Builder.Default
+    private Boolean isPromoted = false;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "rental_type", nullable = false)
     private RentalType rentalType;
@@ -92,6 +96,9 @@ public class AccommodationListing {
         }
         if (this.previousStatus == null) {
             this.previousStatus = ListingStatus.AVAILABLE;
+        }
+        if (this.isPromoted == null) {
+            this.isPromoted = false;
         }
     }
 

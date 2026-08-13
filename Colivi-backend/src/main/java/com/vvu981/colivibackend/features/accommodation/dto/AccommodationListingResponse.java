@@ -18,7 +18,8 @@ public record AccommodationListingResponse(
                 LocalDateTime createdAt,
                 AccommodationResponse accommodation, // Reutilizamos tu DTO para enviar la info de la casa limpia
                 UUID hostId,
-                String hostNickname) {
+                String hostNickname,
+                Boolean isPromoted) {
 
         // 🔍 SOLUCIÓN: El constructor que Java estaba buscando desesperadamente para el
         // método .map()
@@ -41,6 +42,8 @@ public record AccommodationListingResponse(
 
                                 // Datos mínimos y seguros del casero
                                 listing.getHost() != null ? listing.getHost().getId() : null,
-                                listing.getHost() != null ? listing.getHost().getNickname() : null);
+                                listing.getHost() != null ? listing.getHost().getNickname() : null,
+                                
+                                listing.getIsPromoted() != null ? listing.getIsPromoted() : false);
         }
 }
