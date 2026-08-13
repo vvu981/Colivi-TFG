@@ -46,6 +46,7 @@ public class BookingRequestServiceImpl implements BookingRequestService {
     private final AccommodationRepository accommodationRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final PaymentService paymentService;
+    private final org.springframework.transaction.support.TransactionTemplate transactionTemplate;
 
     private final BookingRequestValidator bookingRequestValidator;
 
@@ -59,7 +60,7 @@ public class BookingRequestServiceImpl implements BookingRequestService {
         if (currUser.isBanned() || (currUser.getDeletedAt() != null))
             throw new UnauthorizedActionException("Error: estas baneado o eliminado.");
 
-        AccommodationListing listing = findListingAssociatedWithLock(requestDto.accommodationListingId());
+        AccommodationListing listing = findListingById(requestDto.accommodationListingId());
 
         if (listing.getBannedAt() != null || listing.getDeletedAt() != null)
             throw new BusinessRuleValidationException("Error: el anuncio esta eliminado o baneado.");
@@ -93,8 +94,8 @@ public class BookingRequestServiceImpl implements BookingRequestService {
         // si quedan habitaciones libres para este rango de meses.
         // Esto evita el overbooking si el casero acepta dos solicitudes pendientes consecutivas.
         if (requestStatus == RequestStatus.ACCEPTED) {
-            accommodationRepository.findByIdWithLock(request.getAccommodationListing().getAccommodation().getId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Error: no se encuentra el alojamiento"));
+            listingRepository.findByIdWithPessimisticLock(request.getAccommodationListing().getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Error: no se encuentra el anuncio"));
             bookingRequestValidator.validateBookingDates(
                     request.getStartDate(),
                     request.getEndDate(),
@@ -166,7 +167,7 @@ public class BookingRequestServiceImpl implements BookingRequestService {
                         () -> new ResourceNotFoundException("Error: no se encuentra la solicitud con id:" + requestId));
     }
 
-    private AccommodationListing findListingAssociatedWithLock(UUID listingId) {
+    private AccommodationListing findListingById(UUID listingId) {
         return listingRepository.findById(listingId)
                 .orElseThrow(
                         () -> new ResourceNotFoundException("Error: no se encuentra el anuncio con id: " + listingId));
@@ -179,63 +180,63 @@ public class BookingRequestServiceImpl implements BookingRequestService {
     }
 
     @Override
-    @Transactional
     public BookingRequestResponseDto confirmBookingPayment(UUID requestId, PaymentConfirmationDto paymentDto, UUID currentUserId) {
-        BookingRequest request = findById(requestId);
         
-        // Verificar que quien confirma la reserva sea el inquilino original
-        if (!request.getRequester().getId().equals(currentUserId)) {
-            throw new UnauthorizedActionException("Error: solo el inquilino que creó la solicitud puede confirmar el pago.");
-        }
+        java.math.BigDecimal totalToPay = transactionTemplate.execute(status -> {
+            BookingRequest request = findById(requestId);
+            
+            if (!request.getRequester().getId().equals(currentUserId)) {
+                throw new UnauthorizedActionException("Error: solo el inquilino que creó la solicitud puede confirmar el pago.");
+            }
 
-        // Comprobación rápida sin lock
-        if (request.getAccommodationListing().getStatus() != ListingStatus.AVAILABLE) {
-            throw new BusinessRuleValidationException("El alojamiento ya no está disponible.");
-        }
+            if (request.getStatus() != RequestStatus.ACCEPTED) {
+                throw new BusinessRuleValidationException("Solo puedes pagar reservas que hayan sido aceptadas.");
+            }
 
-        // 1.3 Cobro correcto: mes + fianza
-        java.math.BigDecimal totalToPay = request.getAccommodationListing().getPricePerMonth()
-                .add(request.getAccommodationListing().getSecurityDeposit());
+            if (request.getAccommodationListing().getStatus() != ListingStatus.AVAILABLE) {
+                throw new BusinessRuleValidationException("El alojamiento ya no está disponible.");
+            }
+
+            return request.getAccommodationListing().getPricePerMonth()
+                    .add(request.getAccommodationListing().getSecurityDeposit());
+        });
 
         String transactionId;
         try {
-            // 2.1 Procesar el pago ANTES del bloqueo pesimista
             transactionId = paymentService.processPayment(paymentDto.paymentToken(), totalToPay);
         } catch (Exception e) {
             throw new BusinessRuleValidationException(e.getMessage());
         }
 
-        // Bloqueo pesimista sobre el listing para evitar concurrencia
-        AccommodationListing listing = listingRepository.findByIdWithPessimisticLock(request.getAccommodationListing().getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Error: no se encuentra el anuncio."));
+        return transactionTemplate.execute(status -> {
+            BookingRequest request = findById(requestId);
+            AccommodationListing listing = listingRepository.findByIdWithPessimisticLock(request.getAccommodationListing().getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Error: no se encuentra el anuncio."));
 
-        if (listing.getStatus() != ListingStatus.AVAILABLE) {
-            throw new BusinessRuleValidationException("El alojamiento ya no está disponible.");
-        }
-        
-        try {
-            // Cambiar estado a CONFIRMED y registrar transacción
-            request.confirm(transactionId, paymentDto.paymentMethod());
-        } catch (IllegalStateException e) {
-            throw new BusinessRuleValidationException(e.getMessage());
-        }
-        
-        // 1.1 Evitar Double Booking: actualizar estado del anuncio
-        listing.setStatus(ListingStatus.UNAVAILABLE);
-        listingRepository.save(listing);
-        
-        // Guardar cambios de la request
-        BookingRequest savedRequest = requestRepository.save(request);
+            if (listing.getStatus() != ListingStatus.AVAILABLE) {
+                throw new BusinessRuleValidationException("El alojamiento ya no está disponible.");
+            }
+            
+            try {
+                request.confirm(transactionId, paymentDto.paymentMethod());
+            } catch (IllegalStateException e) {
+                throw new BusinessRuleValidationException(e.getMessage());
+            }
+            
+            listing.setStatus(ListingStatus.UNAVAILABLE);
+            listingRepository.save(listing);
+            
+            BookingRequest savedRequest = requestRepository.save(request);
 
-        // Notificar evento
-        eventPublisher.publishEvent(new BookingConfirmedEvent(
-                listing.getId(), 
-                savedRequest.getId(),
-                savedRequest.getStartDate(),
-                savedRequest.getEndDate()
-        ));
+            eventPublisher.publishEvent(new BookingConfirmedEvent(
+                    listing.getId(), 
+                    savedRequest.getId(),
+                    savedRequest.getStartDate(),
+                    savedRequest.getEndDate()
+            ));
 
-        return new BookingRequestResponseDto(savedRequest);
+            return new BookingRequestResponseDto(savedRequest);
+        });
     }
 
     @Override

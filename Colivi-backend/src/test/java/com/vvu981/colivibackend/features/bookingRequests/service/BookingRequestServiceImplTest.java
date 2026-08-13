@@ -63,6 +63,8 @@ public class BookingRequestServiceImplTest {
         private BookingRequestValidator bookingRequestValidator;
         @Mock
         private PaymentService paymentService;
+        @Mock
+        private org.springframework.transaction.support.TransactionTemplate transactionTemplate;
 
         private List<BookingRequestFilter> bookingFilters;
 
@@ -80,7 +82,7 @@ public class BookingRequestServiceImplTest {
                 bookingFilters = List.of(mockFilter);
                 bookingRequestService = new BookingRequestServiceImpl(requestRepository, listingRepository,
                                 userRepository,
-                                accommodationRepository, eventPublisher, paymentService, bookingRequestValidator,
+                                accommodationRepository, eventPublisher, paymentService, transactionTemplate, bookingRequestValidator,
                                 bookingFilters);
 
                 requester = new User();
@@ -222,8 +224,8 @@ public class BookingRequestServiceImplTest {
                         when(userRepository.findActiveById(host.getId())).thenReturn(Optional.of(host));
                         when(requestRepository.findById(bookingRequest.getId()))
                                         .thenReturn(Optional.of(bookingRequest));
-                        when(accommodationRepository.findByIdWithLock(listing.getAccommodation().getId()))
-                                        .thenReturn(Optional.of(listing.getAccommodation()));
+                        when(listingRepository.findByIdWithPessimisticLock(listing.getId()))
+                                        .thenReturn(Optional.of(listing));
 
                         BookingRequestResponseDto result = bookingRequestService.setStatusBookingRequest(
                                         RequestStatus.ACCEPTED,
@@ -254,8 +256,8 @@ public class BookingRequestServiceImplTest {
                         when(userRepository.findActiveById(host.getId())).thenReturn(Optional.of(host));
                         when(requestRepository.findById(bookingRequest.getId()))
                                         .thenReturn(Optional.of(bookingRequest));
-                        when(accommodationRepository.findByIdWithLock(listing.getAccommodation().getId()))
-                                        .thenReturn(Optional.of(listing.getAccommodation()));
+                        when(listingRepository.findByIdWithPessimisticLock(listing.getId()))
+                                        .thenReturn(Optional.of(listing));
 
                         doThrow(new BusinessRuleValidationException(
                                         "El alojamiento ya está completo para las fechas seleccionadas."))
@@ -312,8 +314,8 @@ public class BookingRequestServiceImplTest {
                         when(userRepository.findActiveById(requester.getId())).thenReturn(Optional.of(requester));
                         when(requestRepository.findById(bookingRequest.getId()))
                                         .thenReturn(Optional.of(bookingRequest));
-                        when(accommodationRepository.findByIdWithLock(listing.getAccommodation().getId()))
-                                        .thenReturn(Optional.of(listing.getAccommodation()));
+                        when(listingRepository.findByIdWithPessimisticLock(listing.getId()))
+                                        .thenReturn(Optional.of(listing));
 
                         assertThrows(UnauthorizedActionException.class, () -> bookingRequestService
                                         .setStatusBookingRequest(RequestStatus.ACCEPTED, bookingRequest.getId(),
@@ -342,8 +344,8 @@ public class BookingRequestServiceImplTest {
                         when(userRepository.findActiveById(otherUser.getId())).thenReturn(Optional.of(otherUser));
                         when(requestRepository.findById(bookingRequest.getId()))
                                         .thenReturn(Optional.of(bookingRequest));
-                        when(accommodationRepository.findByIdWithLock(listing.getAccommodation().getId()))
-                                        .thenReturn(Optional.of(listing.getAccommodation()));
+                        when(listingRepository.findByIdWithPessimisticLock(listing.getId()))
+                                        .thenReturn(Optional.of(listing));
 
                         assertThrows(UnauthorizedActionException.class, () -> bookingRequestService
                                         .setStatusBookingRequest(RequestStatus.ACCEPTED, bookingRequest.getId(),
@@ -485,6 +487,14 @@ public class BookingRequestServiceImplTest {
 
         @Nested
         class ConfirmBookingPayment {
+                @BeforeEach
+                void setUpTransactionTemplate() {
+                        lenient().when(transactionTemplate.execute(any())).thenAnswer(i -> {
+                                org.springframework.transaction.support.TransactionCallback<?> callback = i.getArgument(0);
+                                return callback.doInTransaction(new org.springframework.transaction.support.SimpleTransactionStatus());
+                        });
+                }
+
                 @Test
                 void success() {
                         bookingRequest.setStatus(RequestStatus.ACCEPTED);
