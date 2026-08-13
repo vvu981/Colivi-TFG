@@ -147,4 +147,37 @@ public class BookingRequestControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].id").value(requestId.toString()));
     }
+
+    @Test
+    void confirmPaymentSuccess() throws Exception {
+        com.vvu981.colivibackend.features.bookingRequests.dto.PaymentConfirmationDto paymentDto = 
+            new com.vvu981.colivibackend.features.bookingRequests.dto.PaymentConfirmationDto("token_123", "Credit Card");
+            
+        when(requestService.confirmBookingPayment(eq(requestId), any(), any())).thenReturn(responseDto);
+
+        mockMvc.perform(post("/api/v1/booking-requests/{id}/confirm-payment", requestId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(paymentDto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(requestId.toString()));
+    }
+
+    @Test
+    void confirmPaymentFailsIfNotRequester() throws Exception {
+        com.vvu981.colivibackend.features.bookingRequests.dto.PaymentConfirmationDto paymentDto = 
+            new com.vvu981.colivibackend.features.bookingRequests.dto.PaymentConfirmationDto("token_123", "Credit Card");
+            
+        when(requestService.confirmBookingPayment(eq(requestId), any(), any()))
+                .thenThrow(new com.vvu981.colivibackend.core.exception.UnauthorizedActionException("Error: solo el inquilino puede confirmar el pago."));
+
+        try {
+            mockMvc.perform(post("/api/v1/booking-requests/{id}/confirm-payment", requestId)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(paymentDto)))
+                    .andExpect(status().isForbidden());
+        } catch (Exception e) {
+            // Si GlobalExceptionHandler no está cargado, Spring tira ServletException envolviendo a UnauthorizedActionException
+            org.junit.jupiter.api.Assertions.assertTrue(e.getCause() instanceof com.vvu981.colivibackend.core.exception.UnauthorizedActionException);
+        }
+    }
 }

@@ -26,7 +26,7 @@ public interface BookingRequestRepository
             @org.springframework.data.repository.query.Param("endDate") java.time.LocalDate endDate
         );
 
-        @org.springframework.data.jpa.repository.Modifying
+        @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true, flushAutomatically = true)
         @org.springframework.data.jpa.repository.Query("""
             UPDATE BookingRequest b 
             SET b.status = 'CANCELLED' 

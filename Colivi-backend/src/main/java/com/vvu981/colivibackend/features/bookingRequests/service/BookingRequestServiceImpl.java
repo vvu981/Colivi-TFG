@@ -188,6 +188,23 @@ public class BookingRequestServiceImpl implements BookingRequestService {
             throw new UnauthorizedActionException("Error: solo el inquilino que creó la solicitud puede confirmar el pago.");
         }
 
+        // Comprobación rápida sin lock
+        if (request.getAccommodationListing().getStatus() != ListingStatus.AVAILABLE) {
+            throw new BusinessRuleValidationException("El alojamiento ya no está disponible.");
+        }
+
+        // 1.3 Cobro correcto: mes + fianza
+        java.math.BigDecimal totalToPay = request.getAccommodationListing().getPricePerMonth()
+                .add(request.getAccommodationListing().getSecurityDeposit());
+
+        String transactionId;
+        try {
+            // 2.1 Procesar el pago ANTES del bloqueo pesimista
+            transactionId = paymentService.processPayment(paymentDto.paymentToken(), totalToPay);
+        } catch (Exception e) {
+            throw new BusinessRuleValidationException(e.getMessage());
+        }
+
         // Bloqueo pesimista sobre el listing para evitar concurrencia
         AccommodationListing listing = listingRepository.findByIdWithPessimisticLock(request.getAccommodationListing().getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Error: no se encuentra el anuncio."));
@@ -197,14 +214,15 @@ public class BookingRequestServiceImpl implements BookingRequestService {
         }
         
         try {
-            // Procesar el pago
-            String transactionId = paymentService.processPayment(paymentDto.paymentToken(), listing.getPricePerMonth());
-            
             // Cambiar estado a CONFIRMED y registrar transacción
             request.confirm(transactionId, paymentDto.paymentMethod());
         } catch (IllegalStateException e) {
             throw new BusinessRuleValidationException(e.getMessage());
         }
+        
+        // 1.1 Evitar Double Booking: actualizar estado del anuncio
+        listing.setStatus(ListingStatus.UNAVAILABLE);
+        listingRepository.save(listing);
         
         // Guardar cambios de la request
         BookingRequest savedRequest = requestRepository.save(request);
