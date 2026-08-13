@@ -20,7 +20,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigDecimal;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -47,7 +46,7 @@ class RecommendationServiceImplTest {
     @BeforeEach
     void setUp() {
         userId = UUID.randomUUID();
-        
+
         listing1 = new AccommodationListing();
         listing1.setId(UUID.randomUUID());
         listing1.setTitle("Test 1");
@@ -83,7 +82,8 @@ class RecommendationServiceImplTest {
                 .thenReturn(page);
 
         // Act
-        List<AccommodationListingResponse> result = recommendationService.getRecommendations(userId, 1, null, null, null);
+        List<AccommodationListingResponse> result = recommendationService.getRecommendations(userId, 1, null, null,
+                null);
 
         // Assert
         assertEquals(1, result.size());
@@ -121,7 +121,7 @@ class RecommendationServiceImplTest {
 
         // First query returns 1 item, but limit is 2
         Page<AccommodationListing> page1 = new PageImpl<>(List.of(listing1));
-        
+
         // Second query (fallback) returns 1 more item
         Page<AccommodationListing> page2 = new PageImpl<>(List.of(listing2));
 
@@ -130,7 +130,8 @@ class RecommendationServiceImplTest {
                 .thenReturn(page2); // Fallback search
 
         // Act
-        List<AccommodationListingResponse> result = recommendationService.getRecommendations(userId, 2, null, null, null);
+        List<AccommodationListingResponse> result = recommendationService.getRecommendations(userId, 2, null, null,
+                null);
 
         // Assert
         assertEquals(2, result.size());
