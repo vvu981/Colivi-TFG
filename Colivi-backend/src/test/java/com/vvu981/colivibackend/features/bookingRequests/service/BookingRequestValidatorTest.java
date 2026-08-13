@@ -102,11 +102,9 @@ class BookingRequestValidatorTest {
         UUID listingId = UUID.randomUUID();
 
         when(listing.getId()).thenReturn(listingId);
-        when(listing.getAccommodation()).thenReturn(accommodation);
-        when(accommodation.getTotalRooms()).thenReturn(3);
 
         when(bookingRequestRepository.countOverlappingAcceptedBookings(listingId, startDate, endDate))
-                .thenReturn(3L); // All 3 rooms are occupied
+                .thenReturn(1L); // 1 active booking means full
 
         assertThatThrownBy(() -> validator.validateBookingDates(startDate, endDate, listing))
                 .isInstanceOf(BusinessRuleValidationException.class)
@@ -121,11 +119,9 @@ class BookingRequestValidatorTest {
         UUID listingId = UUID.randomUUID();
 
         when(listing.getId()).thenReturn(listingId);
-        when(listing.getAccommodation()).thenReturn(accommodation);
-        when(accommodation.getTotalRooms()).thenReturn(3);
 
         when(bookingRequestRepository.countOverlappingAcceptedBookings(listingId, startDate, endDate))
-                .thenReturn(2L); // 2 out of 3 rooms occupied
+                .thenReturn(0L); // 0 active bookings
 
         assertThatCode(() -> validator.validateBookingDates(startDate, endDate, listing))
                 .doesNotThrowAnyException();

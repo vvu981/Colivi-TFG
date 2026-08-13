@@ -106,7 +106,7 @@ class AccommodationListingServiceImplTest {
         void shouldCreateListingWhenOwner() {
             AccommodationListingRequest request = new AccommodationListingRequest(
                     accommodation.getId(), "Title", "Desc", BigDecimal.valueOf(500),
-                    com.vvu981.colivibackend.features.accommodation.domain.RentalType.ENTIRE_PLACE);
+                    com.vvu981.colivibackend.features.accommodation.domain.RentalType.ENTIRE_PLACE, BigDecimal.valueOf(100));
             when(accommodationService.findAccommodationByIdAndDeletedAtIsNull(accommodation.getId()))
                     .thenReturn(accommodation);
             when(listingRepository.save(any(AccommodationListing.class)))
@@ -124,7 +124,7 @@ class AccommodationListingServiceImplTest {
         void shouldCreateListingWhenAdmin() {
             AccommodationListingRequest request = new AccommodationListingRequest(
                     accommodation.getId(), "Title", "Desc", BigDecimal.valueOf(500),
-                    com.vvu981.colivibackend.features.accommodation.domain.RentalType.ENTIRE_PLACE);
+                    com.vvu981.colivibackend.features.accommodation.domain.RentalType.ENTIRE_PLACE, BigDecimal.valueOf(100));
             when(accommodationService.findAccommodationByIdAndDeletedAtIsNull(accommodation.getId()))
                     .thenReturn(accommodation);
             when(listingRepository.save(any(AccommodationListing.class)))
@@ -141,7 +141,7 @@ class AccommodationListingServiceImplTest {
         void shouldThrowExceptionWhenNotOwnerNorAdmin() {
             AccommodationListingRequest request = new AccommodationListingRequest(
                     accommodation.getId(), "Title", "Desc", BigDecimal.valueOf(500),
-                    com.vvu981.colivibackend.features.accommodation.domain.RentalType.ENTIRE_PLACE);
+                    com.vvu981.colivibackend.features.accommodation.domain.RentalType.ENTIRE_PLACE, BigDecimal.valueOf(100));
             when(accommodationService.findAccommodationByIdAndDeletedAtIsNull(accommodation.getId()))
                     .thenReturn(accommodation);
 

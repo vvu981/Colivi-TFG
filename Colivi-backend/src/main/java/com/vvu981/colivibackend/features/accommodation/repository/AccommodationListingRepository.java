@@ -38,4 +38,7 @@ public interface AccommodationListingRepository
         @org.springframework.data.jpa.repository.Query("SELECT a FROM AccommodationListing a WHERE a.id = :id")
         java.util.Optional<AccommodationListing> findByIdWithLock(@org.springframework.data.repository.query.Param("id") UUID id);
 
+        @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+        @org.springframework.data.jpa.repository.Query("SELECT a FROM AccommodationListing a WHERE a.id = :id")
+        java.util.Optional<AccommodationListing> findByIdWithPessimisticLock(@org.springframework.data.repository.query.Param("id") UUID id);
 }

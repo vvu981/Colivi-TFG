@@ -63,6 +63,15 @@ public class BookingRequestController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/{id}/confirm-payment")
+    public ResponseEntity<BookingRequestResponseDto> confirmPayment(
+            @PathVariable("id") UUID requestId,
+            @RequestBody com.vvu981.colivibackend.features.bookingRequests.dto.PaymentConfirmationDto paymentDto,
+            @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
+        BookingRequestResponseDto response = requestService.confirmBookingPayment(requestId, paymentDto, currentUserId);
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<BookingRequestResponseDto> getBookingRequestById(
             @PathVariable("id") UUID requestId,

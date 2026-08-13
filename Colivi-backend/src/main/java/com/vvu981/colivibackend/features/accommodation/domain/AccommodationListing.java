@@ -44,6 +44,9 @@ public class AccommodationListing {
     @Column(name = "price_per_month", nullable = false)
     private BigDecimal pricePerMonth;
 
+    @Column(name = "security_deposit", nullable = false)
+    private BigDecimal securityDeposit;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ListingStatus status; // PENDIENTE, ACTIVO, RECHAZADO, FINALIZADO
@@ -77,6 +80,7 @@ public class AccommodationListing {
         this.title = dto.title();
         this.description = dto.description();
         this.pricePerMonth = dto.pricePerMonth();
+        this.securityDeposit = dto.securityDeposit();
         this.rentalType = dto.rentalType();
     }
 

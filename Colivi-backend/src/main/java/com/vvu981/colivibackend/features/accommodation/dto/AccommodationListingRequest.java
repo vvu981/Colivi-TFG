@@ -17,7 +17,9 @@ public record AccommodationListingRequest(
 
         @NotNull(message = "Price per month is required") @Min(value = 1, message = "Price per month must be greater than 0") BigDecimal pricePerMonth,
 
-        @NotNull(message = "Rental type is required") RentalType rentalType // 👈 NUEVO CAMPO: El cliente enviará "ROOM"
+        @NotNull(message = "Rental type is required") RentalType rentalType, // 👈 NUEVO CAMPO: El cliente enviará "ROOM"
                                                                             // o "ENTIRE_PLACE"
+        
+        @NotNull(message = "Security deposit is required") @Min(value = 0, message = "Security deposit cannot be negative") BigDecimal securityDeposit
 ) {
 }

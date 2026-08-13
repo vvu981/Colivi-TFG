@@ -38,7 +38,7 @@ public class DefaultBookingRequestValidator implements BookingRequestValidator {
         }
 
         long activeBookings = bookingRequestRepository.countOverlappingAcceptedBookings(listing.getId(), startDate, endDate);
-        if (activeBookings >= listing.getAccommodation().getTotalRooms()) {
+        if (activeBookings > 0) {
             throw new BusinessRuleValidationException("El alojamiento ya está completo para las fechas seleccionadas.");
         }
     }
