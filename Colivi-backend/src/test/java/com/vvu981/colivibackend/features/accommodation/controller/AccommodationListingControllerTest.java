@@ -114,13 +114,27 @@ class AccommodationListingControllerTest {
     class GetPublicCatalog {
 
         @Test
-        @DisplayName("debe retornar 200 con catalogo paginado")
-        void shouldReturnPublicCatalog() throws Exception {
+        @DisplayName("debe retornar 200 con catalogo paginado cuando el usuario esta autenticado")
+        void shouldReturnPublicCatalogAuthenticated() throws Exception {
             Page<AccommodationListingResponse> page = new PageImpl<>(List.of(listingResponse));
             when(listingService.searchListings(any(), anyInt(), anyInt())).thenReturn(page);
 
             mockMvc.perform(get("/api/v1/listings")
                     .with(authentication(buildAuth(hostUser)))
+                    .param("page", "0")
+                    .param("size", "10"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content").isArray())
+                    .andExpect(jsonPath("$.content[0].title").value("Cozy Room in Center"));
+        }
+
+        @Test
+        @DisplayName("debe retornar 200 con catalogo paginado cuando el usuario es anonimo")
+        void shouldReturnPublicCatalogAnonymous() throws Exception {
+            Page<AccommodationListingResponse> page = new PageImpl<>(List.of(listingResponse));
+            when(listingService.searchListings(any(), anyInt(), anyInt())).thenReturn(page);
+
+            mockMvc.perform(get("/api/v1/listings")
                     .param("page", "0")
                     .param("size", "10"))
                     .andExpect(status().isOk())

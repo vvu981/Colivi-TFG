@@ -34,9 +34,13 @@ public class RecommendationSpecification {
                 predicates.add(cb.not(root.get("id").in(excludedIds)));
             }
 
+            // Eager fetch to avoid N+1 problem
+            jakarta.persistence.criteria.Fetch<AccommodationListing, Accommodation> accommodationFetch = root.fetch("accommodation", JoinType.INNER);
+            root.fetch("host", JoinType.LEFT);
+
             // Optional Criteria
             if (city != null && !city.trim().isEmpty()) {
-                Join<AccommodationListing, Accommodation> accommodationJoin = root.join("accommodation", JoinType.INNER);
+                Join<AccommodationListing, Accommodation> accommodationJoin = (Join<AccommodationListing, Accommodation>) accommodationFetch;
                 predicates.add(cb.equal(cb.lower(accommodationJoin.get("city")), city.toLowerCase()));
             }
 
@@ -49,7 +53,7 @@ public class RecommendationSpecification {
                     RentalType type = RentalType.valueOf(accommodationType.toUpperCase());
                     predicates.add(cb.equal(root.get("rentalType"), type));
                 } catch (IllegalArgumentException e) {
-                    // Ignore invalid rental type
+                    throw new IllegalArgumentException("Invalid accommodation type: " + accommodationType);
                 }
             }
 

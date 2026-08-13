@@ -40,15 +40,24 @@ public class AccommodationListingController {
             @RequestParam Map<String, String> allParams,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
+            @AuthenticationPrincipal com.vvu981.colivibackend.features.user.domain.User user) {
 
         Page<AccommodationListingResponse> catalog = listingService.searchListings(allParams, page, size);
         
+        UUID currentUserId = user != null ? user.getId() : null;
+
         // Save search async
         if (currentUserId != null) {
             String city = allParams.get("city");
             String maxPriceStr = allParams.get("maxPrice");
-            java.math.BigDecimal maxPrice = maxPriceStr != null ? new java.math.BigDecimal(maxPriceStr) : null;
+            java.math.BigDecimal maxPrice = null;
+            try {
+                if (maxPriceStr != null && !maxPriceStr.trim().isEmpty()) {
+                    maxPrice = new java.math.BigDecimal(maxPriceStr);
+                }
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Invalid maxPrice value", e);
+            }
             String type = allParams.get("rentalType"); // Or whatever the frontend sends
             
             searchHistoryService.saveSearchAsync(currentUserId, city, maxPrice, type);
