@@ -42,6 +42,7 @@ import com.vvu981.colivibackend.features.accommodation.domain.Accommodation;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
+import com.vvu981.colivibackend.core.payment.service.PaymentService;
 
 @ExtendWith(MockitoExtension.class)
 public class BookingRequestServiceImplTest {
@@ -60,6 +61,8 @@ public class BookingRequestServiceImplTest {
     private BookingRequestFilter mockFilter;
     @Mock
     private BookingRequestValidator bookingRequestValidator;
+    @Mock
+    private PaymentService paymentService;
 
     private List<BookingRequestFilter> bookingFilters;
 
@@ -76,7 +79,7 @@ public class BookingRequestServiceImplTest {
     void setUp() {
         bookingFilters = List.of(mockFilter);
         bookingRequestService = new BookingRequestServiceImpl(requestRepository, listingRepository, userRepository,
-                accommodationRepository, eventPublisher, bookingRequestValidator, bookingFilters);
+                accommodationRepository, eventPublisher, paymentService, bookingRequestValidator, bookingFilters);
 
         requester = new User();
         requester.setId(UUID.randomUUID());
@@ -440,16 +443,16 @@ public class BookingRequestServiceImplTest {
             when(requestRepository.findById(bookingRequest.getId())).thenReturn(Optional.of(bookingRequest));
             when(listingRepository.findByIdWithPessimisticLock(any(UUID.class))).thenReturn(Optional.of(listing));
             when(requestRepository.save(any(BookingRequest.class))).thenReturn(bookingRequest);
+            when(paymentService.processPayment(anyString(), any())).thenReturn("TXN-12345");
 
             PaymentConfirmationDto paymentDto = new PaymentConfirmationDto(
-                    UUID.randomUUID().toString(), "Credit Card", null, null);
+                    "tok_12345", "Credit Card");
 
             BookingRequestResponseDto result = bookingRequestService.confirmBookingPayment(bookingRequest.getId(),
                     paymentDto, requester.getId());
 
             assertNotNull(result);
             assertEquals(RequestStatus.CONFIRMED, result.status());
-            assertEquals(ListingStatus.UNAVAILABLE, listing.getStatus());
             verify(requestRepository).save(bookingRequest);
         }
 
@@ -458,7 +461,7 @@ public class BookingRequestServiceImplTest {
             when(requestRepository.findById(bookingRequest.getId())).thenReturn(Optional.of(bookingRequest));
 
             PaymentConfirmationDto paymentDto = new PaymentConfirmationDto(
-                    UUID.randomUUID().toString(), "Credit Card", null, null);
+                    "tok_12345", "Credit Card");
 
             assertThrows(UnauthorizedActionException.class,
                     () -> bookingRequestService.confirmBookingPayment(bookingRequest.getId(), paymentDto,

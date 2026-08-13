@@ -25,6 +25,7 @@ import com.vvu981.colivibackend.features.bookingRequests.repository.filters.Book
 import com.vvu981.colivibackend.features.bookingRequests.domain.BookingStatusChangedEvent;
 import com.vvu981.colivibackend.features.bookingRequests.domain.BookingConfirmedEvent;
 import com.vvu981.colivibackend.features.bookingRequests.dto.PaymentConfirmationDto;
+import com.vvu981.colivibackend.core.payment.service.PaymentService;
 import org.springframework.context.ApplicationEventPublisher;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
@@ -44,6 +45,7 @@ public class BookingRequestServiceImpl implements BookingRequestService {
     private final UserRepository userRepository;
     private final AccommodationRepository accommodationRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final PaymentService paymentService;
 
     private final BookingRequestValidator bookingRequestValidator;
 
@@ -195,21 +197,25 @@ public class BookingRequestServiceImpl implements BookingRequestService {
         }
         
         try {
-            // Cambiar estado a CONFIRMED y registrar transacción simulada
-            request.confirm(java.util.UUID.randomUUID().toString(), "Credit Card");
+            // Procesar el pago
+            String transactionId = paymentService.processPayment(paymentDto.paymentToken(), listing.getPricePerMonth());
+            
+            // Cambiar estado a CONFIRMED y registrar transacción
+            request.confirm(transactionId, paymentDto.paymentMethod());
         } catch (IllegalStateException e) {
             throw new BusinessRuleValidationException(e.getMessage());
         }
-        
-        // Marcar el anuncio como UNAVAILABLE
-        listing.setStatus(ListingStatus.UNAVAILABLE);
-        listingRepository.save(listing);
         
         // Guardar cambios de la request
         BookingRequest savedRequest = requestRepository.save(request);
 
         // Notificar evento
-        eventPublisher.publishEvent(new BookingConfirmedEvent(listing.getId(), savedRequest.getId()));
+        eventPublisher.publishEvent(new BookingConfirmedEvent(
+                listing.getId(), 
+                savedRequest.getId(),
+                savedRequest.getStartDate(),
+                savedRequest.getEndDate()
+        ));
 
         return new BookingRequestResponseDto(savedRequest);
     }

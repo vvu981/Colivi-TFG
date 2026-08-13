@@ -24,7 +24,9 @@ public class BookingConfirmedEventListener {
         try {
             int cancelledCount = bookingRequestRepository.cancelOtherRequestsByListingId(
                     event.accommodationListingId(),
-                    event.confirmedRequestId()
+                    event.confirmedRequestId(),
+                    event.startDate(),
+                    event.endDate()
             );
             log.info("Cancelled {} overlapping requests for listing {}", cancelledCount, event.accommodationListingId());
             
