@@ -532,5 +532,33 @@ public class BookingRequestServiceImplTest {
                                                         paymentDto,
                                                         host.getId()));
                 }
+
+                @Test
+                void failsAndRefundsIfListingBecomesUnavailable() {
+                        bookingRequest.setStatus(RequestStatus.ACCEPTED);
+                        // El anuncio empieza disponible para que pase la primera transacción
+                        listing.setStatus(ListingStatus.AVAILABLE);
+
+                        when(requestRepository.findById(bookingRequest.getId()))
+                                        .thenReturn(Optional.of(bookingRequest));
+                        
+                        when(listingRepository.findByIdWithPessimisticLock(any(UUID.class)))
+                                        .thenReturn(Optional.of(listing));
+                        
+                        // Simulamos concurrencia: justo durante el pago, el anuncio deja de estar disponible
+                        when(paymentService.processPayment(anyString(), any())).thenAnswer(i -> {
+                                listing.setStatus(ListingStatus.UNAVAILABLE);
+                                return "TXN-12345";
+                        });
+
+                        PaymentConfirmationDto paymentDto = new PaymentConfirmationDto(
+                                        "tok_12345", "Credit Card");
+
+                        assertThrows(BusinessRuleValidationException.class,
+                                        () -> bookingRequestService.confirmBookingPayment(bookingRequest.getId(),
+                                                        paymentDto, requester.getId()));
+
+                        verify(paymentService).refund("TXN-12345");
+                }
         }
 }

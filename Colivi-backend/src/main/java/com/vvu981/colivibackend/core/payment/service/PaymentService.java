@@ -12,4 +12,11 @@ public interface PaymentService {
      * @return El ID de la transacción generada si fue exitosa.
      */
     String processPayment(String paymentToken, BigDecimal amount);
+
+    /**
+     * Reembolsa un pago utilizando el ID de transacción generado.
+     *
+     * @param transactionId El ID de la transacción a reembolsar.
+     */
+    void refund(String transactionId);
 }

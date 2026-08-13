@@ -11,12 +11,13 @@ import com.vvu981.colivibackend.features.bookingRequests.domain.BookingRequest;
 public interface BookingRequestRepository
                 extends JpaRepository<BookingRequest, UUID>, JpaSpecificationExecutor<BookingRequest> {
 
+        @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"requester", "accommodationListing"})
         Page<BookingRequest> findByRequesterId(UUID currentUserId, Pageable page);
 
         @org.springframework.data.jpa.repository.Query("""
             SELECT COUNT(b) FROM BookingRequest b 
             WHERE b.accommodationListing.id = :listingId 
-              AND b.status = 'ACCEPTED' 
+              AND b.status IN ('ACCEPTED', 'CONFIRMED') 
               AND b.startDate <= :endDate 
               AND b.endDate >= :startDate
         """)

@@ -24,4 +24,11 @@ public class PaymentServiceImpl implements PaymentService {
         
         return transactionId;
     }
+
+    @Override
+    public void refund(String transactionId) {
+        log.info("Simulando reembolso de la transacción: {}", transactionId);
+        // En una pasarela real, aquí se llamaría a la API de devoluciones (Stripe/PayPal)
+        log.info("Reembolso procesado exitosamente para la transacción ID: {}", transactionId);
+    }
 }

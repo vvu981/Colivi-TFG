@@ -208,35 +208,40 @@ public class BookingRequestServiceImpl implements BookingRequestService {
             throw new BusinessRuleValidationException(e.getMessage());
         }
 
-        return transactionTemplate.execute(status -> {
-            BookingRequest request = findById(requestId);
-            AccommodationListing listing = listingRepository.findByIdWithPessimisticLock(request.getAccommodationListing().getId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Error: no se encuentra el anuncio."));
+        try {
+            return transactionTemplate.execute(status -> {
+                BookingRequest request = findById(requestId);
+                AccommodationListing listing = listingRepository.findByIdWithPessimisticLock(request.getAccommodationListing().getId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Error: no se encuentra el anuncio."));
 
-            if (listing.getStatus() != ListingStatus.AVAILABLE) {
-                throw new BusinessRuleValidationException("El alojamiento ya no está disponible.");
-            }
-            
-            try {
-                request.confirm(transactionId, paymentDto.paymentMethod());
-            } catch (IllegalStateException e) {
-                throw new BusinessRuleValidationException(e.getMessage());
-            }
-            
-            listing.setStatus(ListingStatus.UNAVAILABLE);
-            listingRepository.save(listing);
-            
-            BookingRequest savedRequest = requestRepository.save(request);
+                if (listing.getStatus() != ListingStatus.AVAILABLE) {
+                    throw new BusinessRuleValidationException("El alojamiento ya no está disponible.");
+                }
+                
+                try {
+                    request.confirm(transactionId, paymentDto.paymentMethod());
+                } catch (IllegalStateException e) {
+                    throw new BusinessRuleValidationException(e.getMessage());
+                }
+                
+                listing.setStatus(ListingStatus.UNAVAILABLE);
+                listingRepository.save(listing);
+                
+                BookingRequest savedRequest = requestRepository.save(request);
 
-            eventPublisher.publishEvent(new BookingConfirmedEvent(
-                    listing.getId(), 
-                    savedRequest.getId(),
-                    savedRequest.getStartDate(),
-                    savedRequest.getEndDate()
-            ));
+                eventPublisher.publishEvent(new BookingConfirmedEvent(
+                        listing.getId(), 
+                        savedRequest.getId(),
+                        savedRequest.getStartDate(),
+                        savedRequest.getEndDate()
+                ));
 
-            return new BookingRequestResponseDto(savedRequest);
-        });
+                return new BookingRequestResponseDto(savedRequest);
+            });
+        } catch (Exception ex) {
+            paymentService.refund(transactionId);
+            throw new BusinessRuleValidationException("La reserva no pudo completarse debido a un cambio de disponibilidad. Tu pago ha sido reembolsado.");
+        }
     }
 
     @Override
