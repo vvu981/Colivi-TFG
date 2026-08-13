@@ -141,6 +141,15 @@ class AccommodationListingControllerTest {
                     .andExpect(jsonPath("$.content").isArray())
                     .andExpect(jsonPath("$.content[0].title").value("Cozy Room in Center"));
         }
+
+        @Test
+        @DisplayName("debe retornar 400 cuando maxPrice tiene formato invalido")
+        void shouldReturn400WhenMaxPriceIsInvalid() throws Exception {
+            mockMvc.perform(get("/api/v1/listings")
+                    .with(authentication(buildAuth(hostUser)))
+                    .param("maxPrice", "invalid_price"))
+                    .andExpect(status().isBadRequest());
+        }
     }
 
     @Nested

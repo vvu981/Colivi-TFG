@@ -138,4 +138,52 @@ class RecommendationServiceImplTest {
         verify(historyRepository, times(1)).findTop3ByUserIdOrderByCreatedAtDesc(userId);
         verify(listingRepository, times(2)).findAll(any(Specification.class), any(Pageable.class));
     }
+
+    @Test
+    void testGetRecommendations_NullLimit_UsesDefault() {
+        // Arrange
+        Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
+        when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(page);
+
+        // Act
+        List<AccommodationListingResponse> result = recommendationService.getRecommendations(null, null, null, null, null);
+
+        // Assert
+        assertEquals(1, result.size());
+    }
+
+    @Test
+    void testGetRecommendations_NegativeLimit_UsesDefault() {
+        // Arrange
+        Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
+        when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(page);
+
+        // Act
+        List<AccommodationListingResponse> result = recommendationService.getRecommendations(null, -5, null, null, null);
+
+        // Assert
+        assertEquals(1, result.size());
+    }
+
+    @Test
+    void testGetRecommendations_HistoryWithNullValues_UsesMethodArguments() {
+        // Arrange
+        UserSearchHistory history = new UserSearchHistory();
+        // history has null city, maxPrice, type
+
+        when(historyRepository.findTop3ByUserIdOrderByCreatedAtDesc(userId))
+                .thenReturn(List.of(history));
+
+        Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
+        when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(page);
+
+        // Act
+        List<AccommodationListingResponse> result = recommendationService.getRecommendations(userId, 1, "Paris", new BigDecimal("100"), "FLAT");
+
+        // Assert
+        assertEquals(1, result.size());
+    }
 }

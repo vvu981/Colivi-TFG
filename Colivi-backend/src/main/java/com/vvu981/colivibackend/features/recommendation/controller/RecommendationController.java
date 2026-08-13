@@ -27,9 +27,9 @@ public class RecommendationController {
             @RequestParam(required = false) String city,
             @RequestParam(required = false) BigDecimal maxPrice,
             @RequestParam(required = false) String accommodationType,
-            @AuthenticationPrincipal com.vvu981.colivibackend.features.user.domain.User user) {
+            @AuthenticationPrincipal com.vvu981.colivibackend.core.security.UserPrincipal userPrincipal) {
 
-        UUID currentUserId = user != null ? user.getId() : null;
+        UUID currentUserId = userPrincipal != null ? userPrincipal.getId() : null;
         List<AccommodationListingResponse> recommendations = recommendationService.getRecommendations(
                 currentUserId, limit, city, maxPrice, accommodationType
         );
