@@ -372,6 +372,19 @@ public class BookingRequestServiceImplTest {
                                         .setStatusBookingRequest(RequestStatus.REJECTED, bookingRequest.getId(),
                                                         host.getId()));
                 }
+
+                @Test
+                void failsIfHostAcceptsButListingNotFoundForLock() {
+                        when(userRepository.findActiveById(host.getId())).thenReturn(Optional.of(host));
+                        when(requestRepository.findById(bookingRequest.getId()))
+                                        .thenReturn(Optional.of(bookingRequest));
+                        when(listingRepository.findByIdWithPessimisticLock(listing.getId()))
+                                        .thenReturn(Optional.empty());
+
+                        assertThrows(ResourceNotFoundException.class, () -> bookingRequestService
+                                        .setStatusBookingRequest(RequestStatus.ACCEPTED, bookingRequest.getId(),
+                                                        host.getId()));
+                }
         }
 
         @Nested
@@ -559,6 +572,86 @@ public class BookingRequestServiceImplTest {
                                                         paymentDto, requester.getId()));
 
                         verify(paymentService).refund("TXN-12345");
+                }
+
+                @Test
+                void failsIfRequestNotAccepted() {
+                        bookingRequest.setStatus(RequestStatus.PENDING);
+                        when(requestRepository.findById(bookingRequest.getId()))
+                                        .thenReturn(Optional.of(bookingRequest));
+
+                        PaymentConfirmationDto paymentDto = new PaymentConfirmationDto("tok_123", "CC");
+
+                        assertThrows(BusinessRuleValidationException.class,
+                                        () -> bookingRequestService.confirmBookingPayment(bookingRequest.getId(),
+                                                        paymentDto, requester.getId()));
+                }
+
+                @Test
+                void failsIfListingNotAvailableInFirstTransaction() {
+                        bookingRequest.setStatus(RequestStatus.ACCEPTED);
+                        listing.setStatus(ListingStatus.UNAVAILABLE);
+                        when(requestRepository.findById(bookingRequest.getId()))
+                                        .thenReturn(Optional.of(bookingRequest));
+
+                        PaymentConfirmationDto paymentDto = new PaymentConfirmationDto("tok_123", "CC");
+
+                        assertThrows(BusinessRuleValidationException.class,
+                                        () -> bookingRequestService.confirmBookingPayment(bookingRequest.getId(),
+                                                        paymentDto, requester.getId()));
+                }
+
+                @Test
+                void failsIfPaymentServiceThrows() {
+                        bookingRequest.setStatus(RequestStatus.ACCEPTED);
+                        when(requestRepository.findById(bookingRequest.getId()))
+                                        .thenReturn(Optional.of(bookingRequest));
+                        when(paymentService.processPayment(anyString(), any())).thenThrow(new RuntimeException("Payment Error"));
+
+                        PaymentConfirmationDto paymentDto = new PaymentConfirmationDto("tok_123", "CC");
+
+                        assertThrows(BusinessRuleValidationException.class,
+                                        () -> bookingRequestService.confirmBookingPayment(bookingRequest.getId(),
+                                                        paymentDto, requester.getId()));
+                }
+
+                @Test
+                void failsAndRefundsIfListingNotFoundInSecondTransaction() {
+                        bookingRequest.setStatus(RequestStatus.ACCEPTED);
+                        when(requestRepository.findById(bookingRequest.getId()))
+                                        .thenReturn(Optional.of(bookingRequest));
+                        when(listingRepository.findByIdWithPessimisticLock(any(UUID.class)))
+                                        .thenReturn(Optional.empty());
+                        when(paymentService.processPayment(anyString(), any())).thenReturn("TXN-123");
+
+                        PaymentConfirmationDto paymentDto = new PaymentConfirmationDto("tok_123", "CC");
+
+                        assertThrows(BusinessRuleValidationException.class,
+                                        () -> bookingRequestService.confirmBookingPayment(bookingRequest.getId(),
+                                                        paymentDto, requester.getId()));
+                        verify(paymentService).refund("TXN-123");
+                }
+
+                @Test
+                void failsAndRefundsIfRequestConfirmThrowsIllegalState() {
+                        bookingRequest.setStatus(RequestStatus.ACCEPTED);
+                        listing.setStatus(ListingStatus.AVAILABLE);
+
+                        BookingRequest mockRequest = spy(bookingRequest);
+                        when(requestRepository.findById(mockRequest.getId()))
+                                        .thenReturn(Optional.of(mockRequest));
+                        when(listingRepository.findByIdWithPessimisticLock(any(UUID.class)))
+                                        .thenReturn(Optional.of(listing));
+                        when(paymentService.processPayment(anyString(), any())).thenReturn("TXN-123");
+
+                        doThrow(new IllegalStateException("Estado inválido para confirmar")).when(mockRequest).confirm(anyString(), anyString());
+
+                        PaymentConfirmationDto paymentDto = new PaymentConfirmationDto("tok_123", "CC");
+
+                        assertThrows(BusinessRuleValidationException.class,
+                                        () -> bookingRequestService.confirmBookingPayment(mockRequest.getId(),
+                                                        paymentDto, requester.getId()));
+                        verify(paymentService).refund("TXN-123");
                 }
         }
 }
