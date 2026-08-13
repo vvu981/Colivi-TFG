@@ -135,4 +135,23 @@ class RecommendationSpecificationTest {
         assertEquals(1, results.size());
         assertEquals(listing2.getId(), results.get(0).getId());
     }
+
+    @Test
+    void buildRecommendationSpec_EmptyParameters() {
+        Specification<AccommodationListing> spec = RecommendationSpecification.buildRecommendationSpec("   ", null, "   ", new java.util.ArrayList<>());
+        List<AccommodationListing> results = listingRepository.findAll(spec);
+        assertEquals(2, results.size());
+    }
+
+    @Test
+    void testPrivateConstructor() throws Exception {
+        java.lang.reflect.Constructor<RecommendationSpecification> constructor = RecommendationSpecification.class.getDeclaredConstructor();
+        constructor.setAccessible(true);
+        try {
+            constructor.newInstance();
+            fail("Expected UnsupportedOperationException");
+        } catch (java.lang.reflect.InvocationTargetException e) {
+            assertTrue(e.getCause() instanceof UnsupportedOperationException);
+        }
+    }
 }

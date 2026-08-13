@@ -148,4 +148,21 @@ public class BookingRequestTest {
         request.setStatus(RequestStatus.REJECTED);
         assertThrows(IllegalStateException.class, request::cancel);
     }
+
+    @Test
+    void confirm_ShouldChangeStatus_WhenAccepted() {
+        BookingRequest request = new BookingRequest();
+        request.setStatus(RequestStatus.ACCEPTED);
+        request.confirm("txn_123", "card");
+        assertEquals(RequestStatus.CONFIRMED, request.getStatus());
+        assertEquals("txn_123", request.getTransactionId());
+        assertEquals("card", request.getPaymentMethod());
+    }
+
+    @Test
+    void confirm_ShouldThrowException_WhenNotAccepted() {
+        BookingRequest request = new BookingRequest();
+        request.setStatus(RequestStatus.PENDING);
+        assertThrows(IllegalStateException.class, () -> request.confirm("txn_123", "card"));
+    }
 }

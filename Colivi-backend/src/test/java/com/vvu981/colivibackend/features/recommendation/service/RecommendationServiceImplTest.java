@@ -186,4 +186,38 @@ class RecommendationServiceImplTest {
         // Assert
         assertEquals(1, result.size());
     }
+
+    @Test
+    void testGetRecommendations_EmptyHistory_UsesMethodArguments() {
+        // Arrange
+        when(historyRepository.findTop3ByUserIdOrderByCreatedAtDesc(userId))
+                .thenReturn(List.of());
+
+        Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
+        when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(page);
+
+        // Act
+        List<AccommodationListingResponse> result = recommendationService.getRecommendations(userId, 1, "London", null, null);
+
+        // Assert
+        assertEquals(1, result.size());
+    }
+
+    @Test
+    void testGetRecommendations_NoHistoryAndNoCriteria_OnlyFallback() {
+        // Arrange
+        when(historyRepository.findTop3ByUserIdOrderByCreatedAtDesc(userId))
+                .thenReturn(List.of());
+
+        Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
+        when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(page);
+
+        // Act
+        List<AccommodationListingResponse> result = recommendationService.getRecommendations(userId, 1, null, null, null);
+
+        // Assert
+        assertEquals(1, result.size());
+    }
 }

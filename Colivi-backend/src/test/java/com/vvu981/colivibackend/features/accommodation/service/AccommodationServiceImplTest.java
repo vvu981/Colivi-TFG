@@ -2,7 +2,9 @@ package com.vvu981.colivibackend.features.accommodation.service;
 
 import com.vvu981.colivibackend.features.accommodation.domain.Accommodation;
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationImage;
+import com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing;
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationVisibility;
+
 import com.vvu981.colivibackend.features.accommodation.domain.AmenityType;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationImageOrderRequest;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationRequest;
@@ -204,10 +206,25 @@ class AccommodationServiceImplTest {
                                         .thenReturn(Optional.empty());
 
                         // Act & Assert
-                        assertThatThrownBy(() -> accommodationService.deleteAccommodationSoft(UUID.randomUUID(), owner.getId()))
+                        assertThatThrownBy(() -> accommodationService.deleteAccommodationSoft(UUID.randomUUID(),
+                                        owner.getId()))
                                         .isInstanceOf(ResourceNotFoundException.class)
                                         .hasMessageContaining("not found");
                         verify(accommodationRepository, never()).save(any(Accommodation.class));
+                }
+
+                @Test
+                @DisplayName("debe lanzar excepcion si el usuario actual no existe")
+                void shouldThrowExceptionIfUserDoesNotExist() {
+                        when(accommodationRepository.findByIdAndDeletedAtIsNull(accommodation.getId()))
+                                        .thenReturn(Optional.of(accommodation));
+                        UUID nonExistentUserId = UUID.randomUUID();
+                        when(userRepository.findActiveById(nonExistentUserId)).thenReturn(Optional.empty());
+
+                        assertThatThrownBy(() -> accommodationService.deleteAccommodationSoft(accommodation.getId(),
+                                        nonExistentUserId))
+                                        .isInstanceOf(ResourceNotFoundException.class)
+                                        .hasMessageContaining("Usuario no encontrado");
                 }
         }
 
@@ -222,11 +239,18 @@ class AccommodationServiceImplTest {
                         when(accommodationRepository.findById(accommodation.getId()))
                                         .thenReturn(Optional.of(accommodation));
 
+                        AccommodationListing mockListing = new AccommodationListing();
+                        mockListing.setId(UUID.randomUUID());
+                        when(listingService.findListingsByAccommodationId(accommodation.getId()))
+                                        .thenReturn(List.of(mockListing));
+
                         // Act
                         accommodationService.deleteAccommodationHard(accommodation.getId(), admin.getId());
 
                         // Assert
                         verify(accommodationRepository, times(1)).delete(accommodation);
+                        verify(listingService, times(1)).deleteAccommodationListingHard(mockListing.getId(),
+                                        admin.getId());
                 }
 
                 @Test
@@ -237,7 +261,8 @@ class AccommodationServiceImplTest {
                                         .thenReturn(Optional.empty());
 
                         // Act & Assert
-                        assertThatThrownBy(() -> accommodationService.deleteAccommodationHard(UUID.randomUUID(), admin.getId()))
+                        assertThatThrownBy(() -> accommodationService.deleteAccommodationHard(UUID.randomUUID(),
+                                        admin.getId()))
                                         .isInstanceOf(ResourceNotFoundException.class)
                                         .hasMessageContaining("Accommodation not found");
                         verify(accommodationRepository, never()).delete(any(Accommodation.class));
@@ -467,8 +492,17 @@ class AccommodationServiceImplTest {
 
                         // Assert
                         assertThat(result).isNotNull();
-                        // verify(imageStorageService, times(1)).uploadImage(mockFile); // Sync handles this
+                        // verify(imageStorageService, times(1)).uploadImage(mockFile); // Sync handles
+                        // this
                         verify(accommodationRepository, times(1)).save(accommodation);
+
+                        // Trigger TransactionSynchronization rollback hook manually
+                        List<org.springframework.transaction.support.TransactionSynchronization> syncs = TransactionSynchronizationManager
+                                        .getSynchronizations();
+                        assertThat(syncs).isNotEmpty();
+                        syncs.get(0).afterCompletion(
+                                        org.springframework.transaction.support.TransactionSynchronization.STATUS_ROLLED_BACK);
+                        verify(imageStorageService, times(1)).deleteImage("http://example.com/image.jpg");
                 }
 
                 @Test
@@ -526,12 +560,21 @@ class AccommodationServiceImplTest {
                                         .thenReturn(Optional.of(image));
 
                         // Act
-                        accommodationService.removeImageFromAccommodation(accommodation.getId(), image.getId(), owner.getId());
+                        accommodationService.removeImageFromAccommodation(accommodation.getId(), image.getId(),
+                                        owner.getId());
 
                         // Assert
                         assertThat(accommodation.getImages()).doesNotContain(image);
-                        // verify(imageStorageService, times(1)).deleteImage("http://secure-url.com/img.png"); // Sync handles this
+                        // verify(imageStorageService,
+                        // times(1)).deleteImage("http://secure-url.com/img.png"); // Sync handles this
                         verify(accommodationRepository, times(1)).save(accommodation);
+
+                        // Trigger TransactionSynchronization commit hook manually
+                        List<org.springframework.transaction.support.TransactionSynchronization> syncs = TransactionSynchronizationManager
+                                        .getSynchronizations();
+                        assertThat(syncs).isNotEmpty();
+                        syncs.get(0).afterCommit();
+                        verify(imageStorageService, times(1)).deleteImage("http://secure-url.com/img.png");
                 }
 
                 @Test
@@ -548,10 +591,12 @@ class AccommodationServiceImplTest {
                         when(accommodationImageRepository.findById(image.getId()))
                                         .thenReturn(Optional.of(image));
 
-                        accommodationService.removeImageFromAccommodation(accommodation.getId(), image.getId(), admin.getId());
+                        accommodationService.removeImageFromAccommodation(accommodation.getId(), image.getId(),
+                                        admin.getId());
 
                         assertThat(accommodation.getImages()).doesNotContain(image);
-                        // verify(imageStorageService, times(1)).deleteImage("http://secure-url.com/img.png"); // Sync handles this
+                        // verify(imageStorageService,
+                        // times(1)).deleteImage("http://secure-url.com/img.png"); // Sync handles this
                 }
 
                 @Test
@@ -597,7 +642,8 @@ class AccommodationServiceImplTest {
                                         .thenReturn(Optional.of(image));
 
                         assertThatThrownBy(() -> accommodationService
-                                        .removeImageFromAccommodation(accommodation.getId(), image.getId(), owner.getId()))
+                                        .removeImageFromAccommodation(accommodation.getId(), image.getId(),
+                                                        owner.getId()))
                                         .isInstanceOf(BusinessRuleValidationException.class)
                                         .hasMessageContaining("La imagen no pertenece al alojamiento especificado");
                 }

@@ -36,7 +36,19 @@ class UserSearchHistoryTest {
         assertEquals(type, history.getAccommodationType());
         assertEquals(now, history.getCreatedAt());
         
-        // Test NoArgsConstructor / AllArgsConstructor via builder if present or just instantiation
-        assertNotNull(history);
+        history.onCreate();
+        assertNotNull(history.getCreatedAt());
+        
+        UserSearchHistory builderHistory = UserSearchHistory.builder()
+                .id(id)
+                .userId(userId)
+                .city(city)
+                .maxPrice(maxPrice)
+                .accommodationType(type)
+                .createdAt(now)
+                .build();
+                
+        assertNotNull(builderHistory);
+        assertEquals(id, builderHistory.getId());
     }
 }

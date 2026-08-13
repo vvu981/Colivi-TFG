@@ -24,6 +24,8 @@ class AccommodationListingTest {
 
         assertThat(listing.getCreatedAt()).isNotNull();
         assertThat(listing.getStatus()).isEqualTo(ListingStatus.AVAILABLE);
+        assertThat(listing.getPreviousStatus()).isEqualTo(ListingStatus.AVAILABLE);
+        assertThat(listing.getIsPromoted()).isFalse();
     }
 
     @Test
@@ -31,10 +33,14 @@ class AccommodationListingTest {
     void shouldKeepExistingStatus_WhenStatusAlreadySet() {
         AccommodationListing listing = new AccommodationListing();
         listing.setStatus(ListingStatus.AVAILABLE);
+        listing.setPreviousStatus(ListingStatus.AVAILABLE);
+        listing.setIsPromoted(true);
 
         listing.onCreate();
 
         assertThat(listing.getStatus()).isEqualTo(ListingStatus.AVAILABLE);
+        assertThat(listing.getPreviousStatus()).isEqualTo(ListingStatus.AVAILABLE);
+        assertThat(listing.getIsPromoted()).isTrue();
         assertThat(listing.getCreatedAt()).isNotNull();
     }
 

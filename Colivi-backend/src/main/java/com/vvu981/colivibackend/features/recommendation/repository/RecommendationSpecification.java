@@ -16,6 +16,10 @@ import java.util.UUID;
 
 public class RecommendationSpecification {
 
+    private RecommendationSpecification() {
+        throw new UnsupportedOperationException("Utility class");
+    }
+
     public static Specification<AccommodationListing> buildRecommendationSpec(
             String city,
             BigDecimal maxPrice,

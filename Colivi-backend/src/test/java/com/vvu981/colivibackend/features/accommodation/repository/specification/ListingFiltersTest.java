@@ -17,11 +17,13 @@ class ListingFiltersTest {
 
     private CityFilter cityFilter;
     private MaxPriceFilter maxPriceFilter;
+    private ListingStatusFilter listingStatusFilter;
 
     @BeforeEach
     void setUp() {
         cityFilter = new CityFilter();
         maxPriceFilter = new MaxPriceFilter();
+        listingStatusFilter = new ListingStatusFilter();
     }
 
     @Test
@@ -30,6 +32,9 @@ class ListingFiltersTest {
         assertThat(cityFilter.isApplicable(null)).isFalse();
         
         Map<String, String> params = new HashMap<>();
+        assertThat(cityFilter.isApplicable(params)).isFalse();
+
+        params.put("city", null);
         assertThat(cityFilter.isApplicable(params)).isFalse();
 
         params.put("city", "");
@@ -74,6 +79,9 @@ class ListingFiltersTest {
         Map<String, String> params = new HashMap<>();
         assertThat(maxPriceFilter.isApplicable(params)).isFalse();
 
+        params.put("maxPrice", null);
+        assertThat(maxPriceFilter.isApplicable(params)).isFalse();
+
         params.put("maxPrice", "");
         assertThat(maxPriceFilter.isApplicable(params)).isFalse();
 
@@ -111,6 +119,9 @@ class ListingFiltersTest {
         assertThat(rentalTypeFilter.isApplicable(null)).isFalse();
         
         Map<String, String> params = new HashMap<>();
+        assertThat(rentalTypeFilter.isApplicable(params)).isFalse();
+
+        params.put("rentalType", null);
         assertThat(rentalTypeFilter.isApplicable(params)).isFalse();
 
         params.put("rentalType", "");
@@ -163,5 +174,57 @@ class ListingFiltersTest {
 
         assertThat(result).isEqualTo(conjunctionPredicate);
         verify(cb, times(1)).conjunction();
+    }
+
+    @Test
+    @DisplayName("ListingStatusFilter debe ser aplicable si existe el parametro 'status' no vacio")
+    void testListingStatusFilterApplicability() {
+        assertThat(listingStatusFilter.isApplicable(new HashMap<>())).isFalse();
+        
+        Map<String, String> params = new HashMap<>();
+        params.put("status", "");
+        assertThat(listingStatusFilter.isApplicable(params)).isFalse();
+
+        params.put("status", "AVAILABLE");
+        assertThat(listingStatusFilter.isApplicable(params)).isTrue();
+    }
+
+    @Test
+    @DisplayName("ListingStatusFilter apply debe generar equal para status valido")
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    void testListingStatusFilterApplyValid() {
+        Map<String, String> params = Map.of("status", "AVAILABLE");
+        Specification<AccommodationListing> spec = listingStatusFilter.apply(params);
+
+        Root root = mock(Root.class);
+        CriteriaQuery query = mock(CriteriaQuery.class);
+        CriteriaBuilder cb = mock(CriteriaBuilder.class);
+        Path path = mock(Path.class);
+        Predicate equalPredicate = mock(Predicate.class);
+
+        when(root.get("status")).thenReturn(path);
+        when(cb.equal(eq(path), any(com.vvu981.colivibackend.features.accommodation.domain.ListingStatus.class))).thenReturn(equalPredicate);
+
+        Predicate result = spec.toPredicate(root, query, cb);
+        assertThat(result).isEqualTo(equalPredicate);
+        verify(cb).equal(eq(path), eq(com.vvu981.colivibackend.features.accommodation.domain.ListingStatus.AVAILABLE));
+    }
+
+    @Test
+    @DisplayName("ListingStatusFilter apply debe devolver conjunction si enum es invalido")
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    void testListingStatusFilterApplyInvalid() {
+        Map<String, String> params = Map.of("status", "INVALID_ENUM");
+        Specification<AccommodationListing> spec = listingStatusFilter.apply(params);
+
+        Root root = mock(Root.class);
+        CriteriaQuery query = mock(CriteriaQuery.class);
+        CriteriaBuilder cb = mock(CriteriaBuilder.class);
+        Predicate conjunctionPredicate = mock(Predicate.class);
+
+        when(cb.conjunction()).thenReturn(conjunctionPredicate);
+
+        Predicate result = spec.toPredicate(root, query, cb);
+        assertThat(result).isEqualTo(conjunctionPredicate);
     }
 }

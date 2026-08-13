@@ -101,4 +101,31 @@ class ListingSpecificationBuilderTest {
         Predicate result = finalSpec.toPredicate(root, query, cb);
         assertThat(result).isEqualTo(combinedPredicate);
     }
+
+    @Test
+    @DisplayName("debe construir la especificacion para admin sin la condicion restrictiva base")
+    @SuppressWarnings({ "unchecked" })
+    void shouldBuildAdminSpecification() {
+        ListingFilter filter = mock(ListingFilter.class);
+        Map<String, String> params = new HashMap<>();
+        
+        Predicate filterPredicate = mock(Predicate.class);
+        Specification<AccommodationListing> filterSpec = (r, q, c) -> filterPredicate;
+        
+        when(filter.isApplicable(params)).thenReturn(true);
+        when(filter.apply(params)).thenReturn(filterSpec);
+        
+        ListingSpecificationBuilder builder = new ListingSpecificationBuilder(List.of(filter));
+        Specification<AccommodationListing> adminSpec = builder.buildAdminSpecification(params);
+        
+        assertThat(adminSpec).isNotNull();
+        
+        Root<AccommodationListing> root = mock(Root.class);
+        CriteriaQuery<?> query = mock(CriteriaQuery.class);
+        CriteriaBuilder cb = mock(CriteriaBuilder.class);
+        
+        // When combined with Specification.where(null), it just returns the filter's predicate
+        Predicate result = adminSpec.toPredicate(root, query, cb);
+        assertThat(result).isEqualTo(filterPredicate);
+    }
 }

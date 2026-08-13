@@ -150,6 +150,36 @@ class AccommodationListingControllerTest {
                     .param("maxPrice", "invalid_price"))
                     .andExpect(status().isBadRequest());
         }
+
+        @Test
+        @DisplayName("debe llamar a saveSearchAsync cuando el usuario esta autenticado y maxPrice es valido o vacio")
+        void shouldCallSaveSearchAsyncWhenAuthenticated() throws Exception {
+            Page<AccommodationListingResponse> page = new PageImpl<>(List.of(listingResponse));
+            when(listingService.searchListings(any(), anyInt(), anyInt())).thenReturn(page);
+
+            mockMvc.perform(get("/api/v1/listings")
+                    .with(authentication(buildAuth(hostUser)))
+                    .param("city", "Madrid")
+                    .param("maxPrice", "1000")
+                    .param("rentalType", "ROOM")
+                    .param("page", "0")
+                    .param("size", "10"))
+                    .andExpect(status().isOk());
+            
+            verify(searchHistoryService).saveSearchAsync(eq(hostUser.getId()), eq("Madrid"), eq(new BigDecimal("1000")), eq("ROOM"));
+
+            // Con maxPrice vacío
+            mockMvc.perform(get("/api/v1/listings")
+                    .with(authentication(buildAuth(hostUser)))
+                    .param("city", "Madrid")
+                    .param("maxPrice", "   ") // vacío o blank
+                    .param("rentalType", "ROOM")
+                    .param("page", "0")
+                    .param("size", "10"))
+                    .andExpect(status().isOk());
+            
+            verify(searchHistoryService).saveSearchAsync(eq(hostUser.getId()), eq("Madrid"), isNull(), eq("ROOM"));
+        }
     }
 
     @Nested
@@ -355,6 +385,26 @@ class AccommodationListingControllerTest {
                             .with(authentication(buildAuth(hostUser)))))
                     .hasCauseInstanceOf(RuntimeException.class)
                     .hasMessageContaining("no tienes permisos para esta accion");
+        }
+    }
+
+    @Nested
+    @DisplayName("PATCH /api/v1/listings/status/{id}")
+    class ChangeStatus {
+
+        @Test
+        @DisplayName("debe cambiar el estado del anuncio exitosamente")
+        void shouldChangeStatusSuccessfully() throws Exception {
+            doNothing().when(listingService).changeStatusListing(eq(listingId), any(ListingStatus.class), any(UUID.class));
+
+            mockMvc.perform(patch("/api/v1/listings/status/{id}", listingId)
+                    .with(csrf())
+                    .with(authentication(buildAuth(hostUser)))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("\"UNAVAILABLE\""))
+                    .andExpect(status().isNoContent());
+
+            verify(listingService, times(1)).changeStatusListing(eq(listingId), eq(ListingStatus.UNAVAILABLE), eq(hostUser.getId()));
         }
     }
 }
