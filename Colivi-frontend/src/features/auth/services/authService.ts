@@ -26,20 +26,6 @@ export interface AuthResponse {
   expiresIn: number;
 }
 
-/** Respuesta de GET /users/me (MyProfileResponse del backend) */
-export interface UserProfile {
-  id: string;
-  email: string;
-  phone: string | null;
-  role: 'TENANT' | 'OWNER' | 'ADMIN';
-  nickname: string;
-  firstName: string;
-  lastName1: string | null;
-  lastName2: string | null;
-  profilePicUrl: string | null;
-  createdAt: string;
-}
-
 // ── Servicio ──────────────────────────────────────────────────────
 
 export const authService = {
@@ -57,20 +43,5 @@ export const authService = {
     const response = await api.post<AuthResponse>('/auth/register', data);
     return response.data;
   },
-
-  uploadProfilePicture: async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    const response = await api.patch<{ profilePicUrl: string }>(
-      '/users/me/profile-picture',
-      formData,
-      { headers: { 'Content-Type': 'multipart/form-data' } }
-    );
-    return response.data.profilePicUrl;
-  },
-
-  getMe: async (): Promise<UserProfile> => {
-    const response = await api.get<UserProfile>('/users/me');
-    return response.data;
-  },
 };
+

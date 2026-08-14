@@ -1,10 +1,10 @@
 import React, { useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { authService } from "../services/authService";
-import PhoneInput, { type Value as PhoneValue } from "react-phone-number-input";
-import "react-phone-number-input/style.css";
-import { PhoneCountrySelect } from "../../../components/ui/PhoneCountrySelect";
+import { userService } from "../../user/services/userService";
+import { type Value as PhoneValue } from "react-phone-number-input";
+import { ColiviPhoneInput } from "../../../components/ui/ColiviPhoneInput";
+import { PasswordWithStrengthInput } from "../../../components/ui/PasswordWithStrengthInput";
 
 export const RegisterForm = () => {
   const { register, logout } = useAuth();
@@ -17,7 +17,6 @@ export const RegisterForm = () => {
   const [phone, setPhone] = useState<PhoneValue | undefined>(undefined);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
   const [profilePhotoPreview, setProfilePhotoPreview] = useState<string | null>(null);
   const [terms, setTerms] = useState(false);
@@ -53,7 +52,7 @@ export const RegisterForm = () => {
       // Si hay foto, la subimos (el token ya está en localStorage tras register)
       if (profilePhoto) {
         try {
-          await authService.uploadProfilePicture(profilePhoto);
+          await userService.uploadProfilePicture(profilePhoto);
         } catch {
           // La foto falla silenciosamente: el usuario ya está registrado
           console.warn('Profile picture upload failed, continuing...');
@@ -72,8 +71,7 @@ export const RegisterForm = () => {
     }
   };
 
-  const passwordStrength = Math.min(Math.floor(password.length / 3), 4);
-  const strengthColors = ["bg-red-400", "bg-orange-400", "bg-yellow-400", "bg-green-400"];
+
 
   return (
     <div className="w-full">
@@ -194,15 +192,10 @@ export const RegisterForm = () => {
             <label className="text-sm font-medium text-[#0b1c30]" htmlFor="phone">
               Teléfono
             </label>
-            <PhoneInput
+            <ColiviPhoneInput
               id="phone"
-              international
-              defaultCountry="ES"
               value={phone}
               onChange={setPhone}
-              countrySelectComponent={PhoneCountrySelect}
-              className="phone-input-colivi"
-              placeholder="+34 600 000 000"
             />
           </div>
         </div>
@@ -225,56 +218,16 @@ export const RegisterForm = () => {
         </div>
 
         {/* Password */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-[#0b1c30]" htmlFor="reg-password">
-            Contraseña <span className="text-[#9f3c16]">*</span>
-          </label>
-          <div className="relative">
-            <input
-              id="reg-password"
-              type={showPassword ? "text" : "password"}
-              placeholder="Mín. 8 caracteres"
-              required
-              minLength={8}
-              autoComplete="new-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-white border border-[#dec0b7] text-[#0b1c30] text-sm rounded-lg py-3 px-4 pr-12 focus:border-[#0b1c30] focus:ring-2 focus:ring-[#dae2fd] focus:outline-none placeholder-[#565e74]/60 transition-all duration-200"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((v) => !v)}
-              className="absolute inset-y-0 right-0 pr-4 flex items-center text-[#565e74] hover:text-[#0b1c30] transition-colors focus:outline-none"
-              aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-            >
-              {showPassword ? (
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/>
-                  <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/>
-                  <line x1="1" y1="1" x2="23" y2="23"/>
-                </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                  <circle cx="12" cy="12" r="3"/>
-                </svg>
-              )}
-            </button>
-          </div>
-          {/* Barra de fortaleza */}
-          {password.length > 0 && (
-            <div className="flex gap-1 mt-1">
-              {[0, 1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className={`flex-1 h-1 rounded-full transition-all duration-300 ${
-                    i < passwordStrength ? strengthColors[passwordStrength - 1] : "bg-[#dec0b7]"
-                  }`}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+        <PasswordWithStrengthInput
+          id="reg-password"
+          label="Contraseña"
+          value={password}
+          onChange={setPassword}
+          required
+          minLength={8}
+          placeholder="Mín. 8 caracteres"
+          showStrength
+        />
 
         {/* Términos */}
         <div className="flex items-start gap-3 mt-1">
