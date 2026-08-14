@@ -12,7 +12,6 @@ import com.vvu981.colivibackend.features.user.exception.InvalidReactivationToken
 import com.vvu981.colivibackend.features.user.exception.InvalidTokenException;
 import com.vvu981.colivibackend.features.user.exception.StaleSessionException;
 import com.vvu981.colivibackend.features.user.exception.UserNotFoundException;
-import org.springframework.beans.factory.annotation.Value;
 import com.vvu981.colivibackend.features.home.repository.ActivityLogRepository;
 import com.vvu981.colivibackend.features.user.mapper.UserMapper;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
@@ -24,6 +23,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 import com.vvu981.colivibackend.features.user.domain.event.UserDeletedEvent;
 
@@ -43,9 +44,7 @@ public class UserServiceImpl implements UserService {
     private final UserMapper userMapper;
     private final ApplicationEventPublisher eventPublisher;
     private final IImageStorageService imageStorageService;
-
-    @Value("${app.google.client-id}")
-    private String googleClientId;
+    private final GoogleTokenValidator googleTokenValidator;
 
     // Centralizamos el tiempo de expiración (24 horas) para no tener 'magic
     // numbers'
@@ -57,10 +56,12 @@ public class UserServiceImpl implements UserService {
     @Override
     public AuthResponse login(LoginRequest loginRequest) {
         User user = userRepository.findActiveByEmail(loginRequest.email())
-                .orElseThrow(() -> new com.vvu981.colivibackend.core.exception.UnauthorizedActionException("Error: Credenciales inválidas."));
+                .orElseThrow(() -> new com.vvu981.colivibackend.core.exception.UnauthorizedActionException(
+                        "Error: Credenciales inválidas."));
 
         if (!passwordEncoder.matches(loginRequest.password(), user.getPasswordHash())) {
-            throw new com.vvu981.colivibackend.core.exception.UnauthorizedActionException("Error: Credenciales inválidas.");
+            throw new com.vvu981.colivibackend.core.exception.UnauthorizedActionException(
+                    "Error: Credenciales inválidas.");
         }
 
         String accessToken = jwtTokenProvider.generateAccessToken(user);
@@ -70,9 +71,10 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public AuthResponse loginWithGoogle(GoogleLoginRequest request) {
-        var payload = decodeGoogleToken(request.idToken());
-        String email = (String) payload.get("email");
+        var payload = googleTokenValidator.validateAndExtractPayload(request.idToken());
+        String email = payload.getEmail();
 
         if (email == null || email.isBlank()) {
             throw new IllegalArgumentException("El token de Google no contiene un correo válido.");
@@ -80,7 +82,8 @@ public class UserServiceImpl implements UserService {
 
         User user = userRepository.findActiveByEmail(email)
                 .orElseGet(() -> {
-                    String givenName = (String) payload.getOrDefault("given_name", payload.getOrDefault("name", "Usuario Google"));
+                    String givenName = (String) payload.getOrDefault("given_name",
+                            payload.getOrDefault("name", "Usuario Google"));
                     String familyName = (String) payload.getOrDefault("family_name", "");
                     String picture = (String) payload.get("picture");
 
@@ -89,15 +92,9 @@ public class UserServiceImpl implements UserService {
                     newUser.setFirstName(givenName);
                     newUser.setLastName1(familyName);
                     newUser.setLastName2("");
-                    
+
                     String baseNickname = email.split("@")[0];
-                    String nickname = baseNickname;
-                    int counter = 1;
-                    while (userRepository.findActiveByNickname(nickname).isPresent()) {
-                        nickname = baseNickname + counter;
-                        counter++;
-                    }
-                    newUser.setNickname(nickname);
+                    newUser.setNickname(baseNickname + "_" + UUID.randomUUID().toString().substring(0, 6));
 
                     newUser.setPasswordHash(passwordEncoder.encode(UUID.randomUUID().toString()));
                     newUser.setRole(UserRole.USER);
@@ -107,8 +104,9 @@ public class UserServiceImpl implements UserService {
 
         // Sincronizar la foto de perfil de Google si el usuario no la tiene configurada
         String googlePicture = (String) payload.get("picture");
-        if (googlePicture != null && !googlePicture.isBlank() && 
-            (user.getProfilePicUrl() == null || user.getProfilePicUrl().isBlank() || user.getProfilePicUrl().startsWith("http://example.com"))) {
+        if (googlePicture != null && !googlePicture.isBlank() &&
+                (user.getProfilePicUrl() == null || user.getProfilePicUrl().isBlank()
+                        || user.getProfilePicUrl().startsWith("http://example.com"))) {
             user.setProfilePicUrl(googlePicture);
             User saved = userRepository.save(user);
             if (saved != null) {
@@ -120,35 +118,6 @@ public class UserServiceImpl implements UserService {
         String refreshToken = jwtTokenProvider.generateRefreshToken(user);
 
         return new AuthResponse(accessToken, refreshToken, ACCESS_TOKEN_EXPIRATION);
-    }
-
-    java.util.Map<String, Object> decodeGoogleToken(String token) {
-        try {
-            java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
-            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
-                    .uri(java.net.URI.create("https://oauth2.googleapis.com/tokeninfo?id_token=" + token))
-                    .GET()
-                    .build();
-            java.net.http.HttpResponse<String> response = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
-
-            if (response.statusCode() != 200) {
-                throw new IllegalArgumentException("El token de Google no es válido.");
-            }
-
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            @SuppressWarnings("unchecked")
-            java.util.Map<String, Object> payload = mapper.readValue(response.body(), java.util.Map.class);
-
-            String aud = (String) payload.get("aud");
-            if (googleClientId != null && !googleClientId.isBlank() && !googleClientId.equals(aud)) {
-                throw new IllegalArgumentException("El token no pertenece a esta aplicación.");
-            }
-
-            return payload;
-        } catch (Exception e) {
-            log.error("Error al validar el token de Google", e);
-            throw new IllegalArgumentException("El token de Google no es válido.");
-        }
     }
 
     @Override
@@ -238,14 +207,19 @@ public class UserServiceImpl implements UserService {
 
         User user = getActiveUserById(userId);
 
-        // Eliminamos la foto anterior de Cloudinary si existía
-        if (user.getProfilePicUrl() != null) {
-            imageStorageService.deleteImage(user.getProfilePicUrl());
-        }
-
+        String oldUrl = user.getProfilePicUrl();
         String url = imageStorageService.uploadImage(file);
         user.setProfilePicUrl(url);
         userRepository.save(user);
+
+        if (oldUrl != null) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    imageStorageService.deleteImage(oldUrl);
+                }
+            });
+        }
 
         return url;
     }

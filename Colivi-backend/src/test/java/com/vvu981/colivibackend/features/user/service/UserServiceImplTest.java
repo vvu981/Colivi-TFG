@@ -9,6 +9,8 @@ import com.vvu981.colivibackend.features.user.exception.AccountAlreadyActiveExce
 import com.vvu981.colivibackend.features.user.exception.InvalidReactivationTokenException;
 import com.vvu981.colivibackend.features.user.mapper.UserMapper;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
+
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -70,6 +72,8 @@ class UserServiceImplTest {
         private ApplicationEventPublisher eventPublisher;
         @Mock
         private com.vvu981.colivibackend.core.storage.service.IImageStorageService imageStorageService;
+        @Mock
+        private GoogleTokenValidator googleTokenValidator;
 
         @InjectMocks
         private UserServiceImpl userService;
@@ -188,15 +192,14 @@ class UserServiceImplTest {
                 void givenExistingUser_whenLoginWithGoogle_thenReturnsAuthResponse() {
                         // Arrange
                         GoogleLoginRequest request = new GoogleLoginRequest("mock_token");
-                        java.util.Map<String, Object> payload = new java.util.HashMap<>();
-                        payload.put("email", "victor@colivi.com");
-                        payload.put("name", "Víctor Vallejo");
-                        payload.put("given_name", "Víctor");
-                        payload.put("family_name", "Vallejo");
-                        payload.put("picture", "https://google.com/real_avatar.jpg");
+                        com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload payload = new com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload();
+                        payload.setEmail("victor@colivi.com");
+                        payload.set("name", "Víctor Vallejo");
+                        payload.set("given_name", "Víctor");
+                        payload.set("family_name", "Vallejo");
+                        payload.set("picture", "https://google.com/real_avatar.jpg");
 
-                        UserServiceImpl spyService = spy(userService);
-                        doReturn(payload).when(spyService).decodeGoogleToken("mock_token");
+                        when(googleTokenValidator.validateAndExtractPayload("mock_token")).thenReturn(payload);
 
                         persistedUser.setProfilePicUrl("https://google.com/real_avatar.jpg");
 
@@ -206,7 +209,7 @@ class UserServiceImplTest {
                         when(jwtTokenProvider.generateRefreshToken(persistedUser)).thenReturn("refresh.token");
 
                         // Act
-                        AuthResponse response = spyService.loginWithGoogle(request);
+                        AuthResponse response = userService.loginWithGoogle(request);
 
                         // Assert
                         assertThat(response.accessToken()).isEqualTo("access.token");
@@ -219,45 +222,43 @@ class UserServiceImplTest {
                 void givenNewUser_whenLoginWithGoogle_thenRegistersAndReturnsAuthResponse() {
                         // Arrange
                         GoogleLoginRequest request = new GoogleLoginRequest("mock_token");
-                        java.util.Map<String, Object> payload = new java.util.HashMap<>();
-                        payload.put("email", "new_user@colivi.com");
-                        payload.put("name", "New User");
-                        payload.put("given_name", "New");
-                        payload.put("family_name", "User");
-                        payload.put("picture", "https://google.com/real_avatar.jpg");
+                        com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload payload = new com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload();
+                        payload.setEmail("new_user@colivi.com");
+                        payload.set("name", "New User");
+                        payload.set("given_name", "New");
+                        payload.set("family_name", "User");
+                        payload.set("picture", "https://google.com/real_avatar.jpg");
 
-                        UserServiceImpl spyService = spy(userService);
-                        doReturn(payload).when(spyService).decodeGoogleToken("mock_token");
+                        when(googleTokenValidator.validateAndExtractPayload("mock_token")).thenReturn(payload);
 
                         when(userRepository.findActiveByEmail("new_user@colivi.com"))
                                         .thenReturn(Optional.empty());
                         when(passwordEncoder.encode(anyString())).thenReturn("hashed_random");
-                        
+
                         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
                         User savedUser = new User();
                         savedUser.setEmail("new_user@colivi.com");
                         savedUser.setFirstName("New");
                         savedUser.setLastName1("User");
-                        savedUser.setNickname("new_user_12345");
                         savedUser.setRole(UserRole.USER);
                         savedUser.setProfilePicUrl("https://google.com/real_avatar.jpg");
-                        
+
                         when(userRepository.save(userCaptor.capture())).thenReturn(savedUser);
                         when(jwtTokenProvider.generateAccessToken(savedUser)).thenReturn("access.token");
                         when(jwtTokenProvider.generateRefreshToken(savedUser)).thenReturn("refresh.token");
 
                         // Act
-                        AuthResponse response = spyService.loginWithGoogle(request);
+                        AuthResponse response = userService.loginWithGoogle(request);
 
                         // Assert
                         assertThat(response.accessToken()).isEqualTo("access.token");
                         assertThat(response.refreshToken()).isEqualTo("refresh.token");
-                        
+
                         User captured = userCaptor.getValue();
                         assertThat(captured.getEmail()).isEqualTo("new_user@colivi.com");
                         assertThat(captured.getFirstName()).isEqualTo("New");
                         assertThat(captured.getLastName1()).isEqualTo("User");
-                        assertThat(captured.getNickname()).isEqualTo("new_user");
+                        assertThat(captured.getNickname()).startsWith("new_user_");
                         assertThat(captured.getRole()).isEqualTo(UserRole.USER);
                         assertThat(captured.getProfilePicUrl()).isEqualTo("https://google.com/real_avatar.jpg");
                 }
@@ -267,14 +268,13 @@ class UserServiceImplTest {
                 void givenTokenWithoutEmail_whenLoginWithGoogle_thenThrowsIllegalArgumentException() {
                         // Arrange
                         GoogleLoginRequest request = new GoogleLoginRequest("mock_token");
-                        java.util.Map<String, Object> payload = new java.util.HashMap<>();
-                        payload.put("name", "No Email User");
+                        com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload payload = new com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload();
+                        payload.set("name", "No Email User");
 
-                        UserServiceImpl spyService = spy(userService);
-                        doReturn(payload).when(spyService).decodeGoogleToken("mock_token");
+                        when(googleTokenValidator.validateAndExtractPayload("mock_token")).thenReturn(payload);
 
                         // Act & Assert
-                        assertThatThrownBy(() -> spyService.loginWithGoogle(request))
+                        assertThatThrownBy(() -> userService.loginWithGoogle(request))
                                         .isInstanceOf(IllegalArgumentException.class)
                                         .hasMessageContaining("El token de Google no contiene un correo válido");
                 }
@@ -284,12 +284,11 @@ class UserServiceImplTest {
                 void givenInvalidToken_whenLoginWithGoogle_thenThrowsIllegalArgumentException() {
                         // Arrange
                         GoogleLoginRequest request = new GoogleLoginRequest("invalid_token");
-                        UserServiceImpl spyService = spy(userService);
-                        doThrow(new IllegalArgumentException("El token de Google no es válido."))
-                                        .when(spyService).decodeGoogleToken("invalid_token");
+                        when(googleTokenValidator.validateAndExtractPayload("invalid_token"))
+                                        .thenThrow(new IllegalArgumentException("El token de Google no es válido."));
 
                         // Act & Assert
-                        assertThatThrownBy(() -> spyService.loginWithGoogle(request))
+                        assertThatThrownBy(() -> userService.loginWithGoogle(request))
                                         .isInstanceOf(IllegalArgumentException.class)
                                         .hasMessageContaining("El token de Google no es válido");
                 }
@@ -1175,6 +1174,23 @@ class UserServiceImplTest {
         @Nested
         @DisplayName("uploadProfilePicture")
         class UploadProfilePicture {
+
+                @BeforeEach
+                void initTx() {
+                        org.springframework.transaction.support.TransactionSynchronizationManager.initSynchronization();
+                }
+
+                @AfterEach
+                void clearTx() {
+                        org.springframework.transaction.support.TransactionSynchronizationManager.clear();
+                }
+
+                private void simulateTransactionCommit() {
+                        for (org.springframework.transaction.support.TransactionSynchronization sync : org.springframework.transaction.support.TransactionSynchronizationManager.getSynchronizations()) {
+                                sync.afterCommit();
+                        }
+                }
+
                 @Test
                 @DisplayName("happy path: sube foto nueva, borra la anterior si existe y guarda en BD")
                 void givenExistingUserWithOldPic_whenUploadProfilePicture_thenUploadsNewAndDeletesOldAndSaves() {
@@ -1189,6 +1205,7 @@ class UserServiceImplTest {
 
                         // Act
                         String result = userService.uploadProfilePicture(userId, mockFile);
+                        simulateTransactionCommit();
 
                         // Assert
                         assertThat(result).isEqualTo("https://cloudinary.com/new.jpg");
@@ -1212,6 +1229,7 @@ class UserServiceImplTest {
 
                         // Act
                         String result = userService.uploadProfilePicture(userId, mockFile);
+                        simulateTransactionCommit();
 
                         // Assert
                         assertThat(result).isEqualTo("https://cloudinary.com/new.jpg");
@@ -1238,4 +1256,3 @@ class UserServiceImplTest {
                 }
         }
 }
-
