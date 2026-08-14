@@ -1,6 +1,7 @@
 package com.vvu981.colivibackend.features.user.service;
 
 import com.vvu981.colivibackend.core.security.JwtTokenProvider;
+import com.vvu981.colivibackend.core.storage.service.IImageStorageService;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserPasswordResetRequestedEvent;
 import com.vvu981.colivibackend.features.user.domain.UserReactivationRequestedEvent;
@@ -22,6 +23,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import com.vvu981.colivibackend.features.user.domain.event.UserDeletedEvent;
 
 import java.time.LocalDateTime;
@@ -36,9 +38,11 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final ActivityLogRepository activityLogRepository;
     private final JwtTokenProvider jwtTokenProvider;
-    private final PasswordEncoder passwordEncoder; // Inyección directa de la herramienta
-    private final UserMapper userMapper; // <-- Nuestra nueva herramienta
+    private final PasswordEncoder passwordEncoder;
+    private final UserMapper userMapper;
     private final ApplicationEventPublisher eventPublisher;
+    private final IImageStorageService imageStorageService;
+    private final GoogleTokenValidator googleTokenValidator;
 
     // Centralizamos el tiempo de expiración (24 horas) para no tener 'magic
     // numbers'
@@ -50,10 +54,69 @@ public class UserServiceImpl implements UserService {
     @Override
     public AuthResponse login(LoginRequest loginRequest) {
         User user = userRepository.findActiveByEmail(loginRequest.email())
-                .orElseThrow(() -> new UnauthorizedActionException("Error: Credenciales inválidas."));
+                .orElseThrow(() -> new com.vvu981.colivibackend.core.exception.UnauthorizedActionException(
+                        "Error: Credenciales inválidas."));
 
         if (!passwordEncoder.matches(loginRequest.password(), user.getPasswordHash())) {
-            throw new UnauthorizedActionException("Error: Credenciales inválidas.");
+            throw new com.vvu981.colivibackend.core.exception.UnauthorizedActionException(
+                    "Error: Credenciales inválidas.");
+        }
+
+        String accessToken = jwtTokenProvider.generateAccessToken(user);
+        String refreshToken = jwtTokenProvider.generateRefreshToken(user);
+
+        return new AuthResponse(accessToken, refreshToken, ACCESS_TOKEN_EXPIRATION);
+    }
+
+    @Override
+    @Transactional
+    public AuthResponse loginWithGoogle(GoogleLoginRequest request) {
+        var payload = googleTokenValidator.validateAndExtractPayload(request.idToken());
+        String email = payload.getEmail();
+
+        if (email == null || email.isBlank()) {
+            throw new IllegalArgumentException("El token de Google no contiene un correo válido.");
+        }
+
+        User user = userRepository.findByEmailIgnoreCase(email)
+                .orElseGet(() -> {
+                    String givenName = (String) payload.getOrDefault("given_name",
+                            payload.getOrDefault("name", "Usuario Google"));
+                    String familyName = (String) payload.getOrDefault("family_name", "");
+                    String picture = (String) payload.get("picture");
+
+                    User newUser = new User();
+                    newUser.setEmail(email);
+                    newUser.setFirstName(givenName);
+                    newUser.setLastName1(familyName);
+                    newUser.setLastName2("");
+
+                    String baseNickname = email.split("@")[0];
+                    newUser.setNickname(baseNickname + "_" + UUID.randomUUID().toString().substring(0, 6));
+
+                    newUser.setPasswordHash(passwordEncoder.encode(UUID.randomUUID().toString()));
+                    newUser.setRole(UserRole.USER);
+                    newUser.setProfilePicUrl(picture);
+                    return userRepository.save(newUser);
+                });
+
+        if (user.isBanned()) {
+            throw new UnauthorizedActionException("Esta cuenta ha sido suspendida.");
+        }
+        if (user.getDeletedAt() != null) {
+            throw new UnauthorizedActionException("Esta cuenta ha sido eliminada. Solicite reactivación.");
+        }
+
+        // Sincronizar la foto de perfil de Google si el usuario no la tiene configurada
+        String googlePicture = (String) payload.get("picture");
+        if (googlePicture != null && !googlePicture.isBlank() &&
+                (user.getProfilePicUrl() == null || user.getProfilePicUrl().isBlank()
+                        || user.getProfilePicUrl().startsWith("http://example.com"))) {
+            user.setProfilePicUrl(googlePicture);
+            User saved = userRepository.save(user);
+            if (saved != null) {
+                user = saved;
+            }
         }
 
         String accessToken = jwtTokenProvider.generateAccessToken(user);
@@ -141,6 +204,28 @@ public class UserServiceImpl implements UserService {
 
         // 3. Empaquetamos la respuesta limpia y la devolvemos.
         return userMapper.toUpdateNonSensibleDto(savedUser);
+    }
+
+    @Override
+    public String uploadProfilePicture(UUID userId, MultipartFile file) {
+
+        User user = getActiveUserById(userId);
+
+        String oldUrl = user.getProfilePicUrl();
+        String url = imageStorageService.uploadImage(file);
+        user.setProfilePicUrl(url);
+        userRepository.save(user);
+
+        if (oldUrl != null) {
+            try {
+                imageStorageService.deleteImage(oldUrl);
+            } catch (Exception e) {
+                log.error("No se pudo eliminar la imagen anterior en Cloudinary (posible recurso huérfano): {}", oldUrl,
+                        e);
+            }
+        }
+
+        return url;
     }
 
     @Override
@@ -237,12 +322,12 @@ public class UserServiceImpl implements UserService {
 
         return userMapper.toMyProfileDto(user);
     }
-    
+
     @Override
     public AdminUserProfileResponse getAdminUserProfile(UUID userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Error: Usuario no encontrado"));
-                
+
         return userMapper.toAdminUserProfileDto(user);
     }
 
@@ -349,14 +434,15 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void forgotPassword(String email) {
-        // Find user by email (using findByEmail to include potentially banned/deleted users to evaluate them)
+        // Find user by email (using findByEmail to include potentially banned/deleted
+        // users to evaluate them)
         userRepository.findByEmailIgnoreCase(email).ifPresentOrElse(user -> {
             if (user.isBanned() || user.getDeletedAt() != null) {
                 // Silently ignore to prevent timing/enumeration attacks
                 log.warn("Password reset requested for banned or inactive email: {}", email);
                 return;
             }
-            
+
             String token = UUID.randomUUID().toString();
             user.setPasswordResetToken(token);
             user.setPasswordResetTokenExpiresAt(LocalDateTime.now().plusHours(24));

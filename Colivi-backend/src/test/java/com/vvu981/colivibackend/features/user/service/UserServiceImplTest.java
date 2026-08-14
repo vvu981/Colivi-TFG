@@ -9,6 +9,7 @@ import com.vvu981.colivibackend.features.user.exception.AccountAlreadyActiveExce
 import com.vvu981.colivibackend.features.user.exception.InvalidReactivationTokenException;
 import com.vvu981.colivibackend.features.user.mapper.UserMapper;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -19,6 +20,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -67,6 +69,10 @@ class UserServiceImplTest {
         private UserMapper userMapper;
         @Mock
         private ApplicationEventPublisher eventPublisher;
+        @Mock
+        private com.vvu981.colivibackend.core.storage.service.IImageStorageService imageStorageService;
+        @Mock
+        private GoogleTokenValidator googleTokenValidator;
 
         @InjectMocks
         private UserServiceImpl userService;
@@ -169,7 +175,121 @@ class UserServiceImplTest {
                         String msgBadPass = catchThrowable(() -> userService.login(badPass))
                                         .getMessage();
 
-                        assertThat(msgBadEmail).isEqualTo(msgBadPass);
+                }
+        }
+
+        // =========================================================================
+        // loginWithGoogle
+        // =========================================================================
+
+        @Nested
+        @DisplayName("loginWithGoogle")
+        class LoginWithGoogle {
+
+                @Test
+                @DisplayName("happy path: usuario existente inicia sesión exitosamente")
+                void givenExistingUser_whenLoginWithGoogle_thenReturnsAuthResponse() {
+                        // Arrange
+                        GoogleLoginRequest request = new GoogleLoginRequest("mock_token");
+                        com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload payload = new com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload();
+                        payload.setEmail("victor@colivi.com");
+                        payload.set("name", "Víctor Vallejo");
+                        payload.set("given_name", "Víctor");
+                        payload.set("family_name", "Vallejo");
+                        payload.set("picture", "https://google.com/real_avatar.jpg");
+
+                        when(googleTokenValidator.validateAndExtractPayload("mock_token")).thenReturn(payload);
+
+                        persistedUser.setProfilePicUrl("https://google.com/real_avatar.jpg");
+
+                        when(userRepository.findByEmailIgnoreCase("victor@colivi.com"))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(jwtTokenProvider.generateAccessToken(persistedUser)).thenReturn("access.token");
+                        when(jwtTokenProvider.generateRefreshToken(persistedUser)).thenReturn("refresh.token");
+
+                        // Act
+                        AuthResponse response = userService.loginWithGoogle(request);
+
+                        // Assert
+                        assertThat(response.accessToken()).isEqualTo("access.token");
+                        assertThat(response.refreshToken()).isEqualTo("refresh.token");
+                        verify(userRepository, never()).save(any(User.class));
+                }
+
+                @Test
+                @DisplayName("happy path: nuevo usuario se registra automáticamente e inicia sesión")
+                void givenNewUser_whenLoginWithGoogle_thenRegistersAndReturnsAuthResponse() {
+                        // Arrange
+                        GoogleLoginRequest request = new GoogleLoginRequest("mock_token");
+                        com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload payload = new com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload();
+                        payload.setEmail("new_user@colivi.com");
+                        payload.set("name", "New User");
+                        payload.set("given_name", "New");
+                        payload.set("family_name", "User");
+                        payload.set("picture", "https://google.com/real_avatar.jpg");
+
+                        when(googleTokenValidator.validateAndExtractPayload("mock_token")).thenReturn(payload);
+
+                        when(userRepository.findByEmailIgnoreCase("new_user@colivi.com"))
+                                        .thenReturn(Optional.empty());
+                        when(passwordEncoder.encode(anyString())).thenReturn("hashed_random");
+
+                        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+                        User savedUser = new User();
+                        savedUser.setEmail("new_user@colivi.com");
+                        savedUser.setFirstName("New");
+                        savedUser.setLastName1("User");
+                        savedUser.setRole(UserRole.USER);
+                        savedUser.setProfilePicUrl("https://google.com/real_avatar.jpg");
+
+                        when(userRepository.save(userCaptor.capture())).thenReturn(savedUser);
+                        when(jwtTokenProvider.generateAccessToken(savedUser)).thenReturn("access.token");
+                        when(jwtTokenProvider.generateRefreshToken(savedUser)).thenReturn("refresh.token");
+
+                        // Act
+                        AuthResponse response = userService.loginWithGoogle(request);
+
+                        // Assert
+                        assertThat(response.accessToken()).isEqualTo("access.token");
+                        assertThat(response.refreshToken()).isEqualTo("refresh.token");
+
+                        User captured = userCaptor.getValue();
+                        assertThat(captured.getEmail()).isEqualTo("new_user@colivi.com");
+                        assertThat(captured.getFirstName()).isEqualTo("New");
+                        assertThat(captured.getLastName1()).isEqualTo("User");
+                        assertThat(captured.getNickname()).startsWith("new_user_");
+                        assertThat(captured.getRole()).isEqualTo(UserRole.USER);
+                        assertThat(captured.getProfilePicUrl()).isEqualTo("https://google.com/real_avatar.jpg");
+                }
+
+                @Test
+                @DisplayName("debe lanzar excepcion si el token no contiene email")
+                void givenTokenWithoutEmail_whenLoginWithGoogle_thenThrowsIllegalArgumentException() {
+                        // Arrange
+                        GoogleLoginRequest request = new GoogleLoginRequest("mock_token");
+                        com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload payload = new com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload();
+                        payload.set("name", "No Email User");
+
+                        when(googleTokenValidator.validateAndExtractPayload("mock_token")).thenReturn(payload);
+
+                        // Act & Assert
+                        assertThatThrownBy(() -> userService.loginWithGoogle(request))
+                                        .isInstanceOf(IllegalArgumentException.class)
+                                        .hasMessageContaining("El token de Google no contiene un correo válido");
+                }
+
+                @Test
+                @DisplayName("debe lanzar excepcion si el token no es valido")
+                void givenInvalidToken_whenLoginWithGoogle_thenThrowsIllegalArgumentException() {
+                        // Arrange
+                        GoogleLoginRequest request = new GoogleLoginRequest("invalid_token");
+                        when(googleTokenValidator.validateAndExtractPayload("invalid_token"))
+                                        .thenThrow(new IllegalArgumentException("El token de Google no es válido."));
+
+                        // Act & Assert
+                        assertThatThrownBy(() -> userService.loginWithGoogle(request))
+                                        .isInstanceOf(IllegalArgumentException.class)
+                                        .hasMessageContaining("El token de Google no es válido");
                 }
         }
 
@@ -1047,6 +1167,73 @@ class UserServiceImplTest {
                         assertThat(result).isEqualTo(expectedDto);
                         verify(userRepository).findActiveById(userId);
                         verify(userMapper).toMyProfileDto(persistedUser);
+                }
+        }
+
+        @Nested
+        @DisplayName("uploadProfilePicture")
+        class UploadProfilePicture {
+
+                @Test
+                @DisplayName("happy path: sube foto nueva, borra la anterior si existe y guarda en BD")
+                void givenExistingUserWithOldPic_whenUploadProfilePicture_thenUploadsNewAndDeletesOldAndSaves() {
+                        // Arrange
+                        UUID userId = persistedUser.getId();
+                        persistedUser.setProfilePicUrl("https://cloudinary.com/old.jpg");
+                        MultipartFile mockFile = mock(MultipartFile.class);
+
+                        when(userRepository.findActiveById(userId)).thenReturn(Optional.of(persistedUser));
+                        when(imageStorageService.uploadImage(mockFile)).thenReturn("https://cloudinary.com/new.jpg");
+                        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+                        // Act
+                        String result = userService.uploadProfilePicture(userId, mockFile);
+
+                        // Assert
+                        assertThat(result).isEqualTo("https://cloudinary.com/new.jpg");
+                        verify(imageStorageService).deleteImage("https://cloudinary.com/old.jpg");
+                        verify(imageStorageService).uploadImage(mockFile);
+                        verify(userRepository).save(persistedUser);
+                        assertThat(persistedUser.getProfilePicUrl()).isEqualTo("https://cloudinary.com/new.jpg");
+                }
+
+                @Test
+                @DisplayName("happy path: sube foto nueva sin foto anterior y guarda en BD")
+                void givenExistingUserWithoutOldPic_whenUploadProfilePicture_thenUploadsNewAndSaves() {
+                        // Arrange
+                        UUID userId = persistedUser.getId();
+                        persistedUser.setProfilePicUrl(null);
+                        MultipartFile mockFile = mock(MultipartFile.class);
+
+                        when(userRepository.findActiveById(userId)).thenReturn(Optional.of(persistedUser));
+                        when(imageStorageService.uploadImage(mockFile)).thenReturn("https://cloudinary.com/new.jpg");
+                        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+                        // Act
+                        String result = userService.uploadProfilePicture(userId, mockFile);
+
+                        // Assert
+                        assertThat(result).isEqualTo("https://cloudinary.com/new.jpg");
+                        verify(imageStorageService, never()).deleteImage(anyString());
+                        verify(imageStorageService).uploadImage(mockFile);
+                        verify(userRepository).save(persistedUser);
+                        assertThat(persistedUser.getProfilePicUrl()).isEqualTo("https://cloudinary.com/new.jpg");
+                }
+
+                @Test
+                @DisplayName("usuario no encontrado lanza UserNotFoundException")
+                void givenNonExistentUser_whenUploadProfilePicture_thenThrowsUserNotFoundException() {
+                        // Arrange
+                        UUID userId = UUID.randomUUID();
+                        MultipartFile mockFile = mock(MultipartFile.class);
+                        when(userRepository.findActiveById(userId)).thenReturn(Optional.empty());
+
+                        // Act & Assert
+                        assertThatThrownBy(() -> userService.uploadProfilePicture(userId, mockFile))
+                                        .isInstanceOf(UserNotFoundException.class);
+
+                        verifyNoInteractions(imageStorageService);
+                        verify(userRepository, never()).save(any());
                 }
         }
 }

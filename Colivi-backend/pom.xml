@@ -15,6 +15,7 @@
 
     <properties>
         <java.version>21</java.version>
+        <lombok.version>1.18.46</lombok.version>
     </properties>
 
     <dependencies>
@@ -119,6 +120,12 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.api-client</groupId>
+            <artifactId>google-api-client</artifactId>
+            <version>2.2.0</version>
         </dependency>
 
         <dependency>

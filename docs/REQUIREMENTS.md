@@ -75,3 +75,4 @@
 | RF-71 | Cierre Automático de Hogar Vacío | El Sistema archiva o marca automáticamente un hogar como inactivo/borrado cuando se detecta que su único y último miembro activo sale del mismo o elimina su cuenta. |
 | RF-72 | Flujo de Recuperación de Contraseña Olvidada | Permite a un usuario no logueado solicitar (Forgot Password) y consumir (Reset Password) un token de recuperación para cambiar su contraseña. |
 | RF-73 | Consultar Expediente de Denuncia (Admin) | Permite a un Administrador obtener la información detallada de una denuncia específica mediante su ID. |
+| RF-74 | Recomendación de Anuncios Promocionados | El Sistema selecciona y muestra anuncios destacados/promocionados alineados dinámicamente con los criterios de la última búsqueda realizada por el usuario (ubicación, rango de precio, tipo).

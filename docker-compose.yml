@@ -74,42 +74,44 @@ services:
       timeout: 10s
       retries: 3
 
-  # ──────────────────────────────────────────────
-  # SERVIDOR MCP — Node.js / TypeScript
-  # ──────────────────────────────────────────────
-  mcp-server:
-    build:
-      context: ./mcp-server
-      dockerfile: Dockerfile
-    container_name: tfg_mcp
-    restart: unless-stopped
-    depends_on:
-      backend:
-        condition: service_healthy
-    environment:
-      SPRING_API_BASE_URL: http://backend:8080/api/v1
-      MCP_PORT: 3001
-    ports:
-      - "3001:3001"
+#  # ──────────────────────────────────────────────
+#  # SERVIDOR MCP — Node.js / TypeScript
+#  # ──────────────────────────────────────────────
+#  mcp-server:
+#    build:
+#      context: ./mcp-server
+#      dockerfile: Dockerfile
+#    container_name: tfg_mcp
+#    restart: unless-stopped
+#    depends_on:
+#      backend:
+#        condition: service_healthy
+#    environment:
+#      SPRING_API_BASE_URL: http://backend:8080/api/v1
+#      MCP_PORT: 3001
+#    ports:
+#      - "3001:3001"
 
   # ──────────────────────────────────────────────
-  # FRONTEND — Next.js
+  # FRONTEND — Vite React
   # ──────────────────────────────────────────────
   frontend:
     build:
-      context: ./frontend
+      context: ./Colivi-frontend
       dockerfile: Dockerfile
     container_name: tfg_frontend
     restart: unless-stopped
     depends_on:
       - backend
-      - mcp-server
     environment:
-      NEXT_PUBLIC_API_URL: http://backend:8080/api/v1
-      NEXT_PUBLIC_MCP_URL: http://mcp-server:3001
-      NEXT_PUBLIC_MAP_TOKEN: ${MAP_TOKEN}
+      BACKEND_URL: ${BACKEND_URL}
     ports:
-      - "3000:3000"
+      - "5173:5173"
+    volumes:
+      - ./Colivi-frontend/src:/app/src
+      - ./Colivi-frontend/public:/app/public
+      - ./Colivi-frontend/index.html:/app/index.html
+      - ./Colivi-frontend/vite.config.ts:/app/vite.config.ts
 
 volumes:
   postgres_data:
