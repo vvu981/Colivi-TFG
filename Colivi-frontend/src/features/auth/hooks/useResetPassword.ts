@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { isAxiosError } from 'axios';
 import { authService } from '../services/authService';
 
 interface UseResetPasswordResult {
@@ -32,13 +33,15 @@ export const useResetPassword = (): UseResetPasswordResult => {
     try {
       await authService.resetPassword(token, password);
       setSuccess(true);
-    } catch (err: any) {
-      console.error('Reset password failed', err);
-      let msg = 'No se ha podido restablecer la contraseña. El enlace puede haber expirado.';
-      if (err.response?.data?.message) {
-        msg = err.response.data.message;
+    } catch (err) {
+      if (isAxiosError(err)) {
+        setError(
+          err.response?.data?.message ||
+            'No se ha podido restablecer la contraseña. El enlace puede haber expirado o ser inválido.'
+        );
+      } else {
+        setError('Ocurrió un error inesperado al intentar restablecer la contraseña.');
       }
-      setError(msg);
     } finally {
       setIsLoading(false);
     }

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { isAxiosError } from 'axios';
 import { authService } from '../services/authService';
 
 interface UseForgotPasswordResult {
@@ -26,14 +27,15 @@ export const useForgotPassword = (): UseForgotPasswordResult => {
     try {
       await authService.forgotPassword(email);
       setSuccess(true);
-    } catch (err: any) {
-      console.error('Forgot password failed', err);
-      let msg =
-        'No se ha podido enviar el correo de recuperación. Verifica que la dirección es correcta.';
-      if (err.response?.data?.message) {
-        msg = err.response.data.message;
+    } catch (err) {
+      if (isAxiosError(err)) {
+        setError(
+          err.response?.data?.message ||
+            'No se ha podido enviar el correo de recuperación. Verifica que la dirección es correcta.'
+        );
+      } else {
+        setError('Ocurrió un error inesperado al intentar enviar el correo.');
       }
-      setError(msg);
     } finally {
       setIsLoading(false);
     }

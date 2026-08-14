@@ -7,7 +7,7 @@ import { resetPasswordSchema, type ResetPasswordFormData } from '../validations/
 import { useResetPassword } from '../hooks/useResetPassword';
 
 export const ResetPasswordForm = () => {
-  const { isLoading, success, error, submitResetPassword } = useResetPassword();
+  const { isLoading, success, error, token, submitResetPassword } = useResetPassword();
 
   const {
     control,
@@ -24,6 +24,25 @@ export const ResetPasswordForm = () => {
   const onSubmit = (data: ResetPasswordFormData) => {
     submitResetPassword(data.newPassword);
   };
+
+  if (!token) {
+    return (
+      <div className="w-full">
+        <div className="flex flex-col items-center text-center gap-4">
+          <h3 className="text-xl font-semibold text-red-600">Enlace inválido</h3>
+          <p className="text-sm text-[#565e74]">
+            El enlace de recuperación no es válido o carece de credenciales de seguridad.
+          </p>
+          <Link
+            to="/login"
+            className="mt-4 w-full bg-[#0b1c30] text-white font-medium py-3 rounded-lg hover:bg-[#1a2d45] transition-colors"
+          >
+            Volver a inicio de sesión
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (success) {
     return (
