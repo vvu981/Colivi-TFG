@@ -190,12 +190,12 @@ export const LoginForm = () => {
               Recordar sesión
             </span>
           </label>
-          <a
-            href="#"
+          <Link
+            to="/forgot-password"
             className="text-sm font-medium text-[#9f3c16] hover:text-[#bf542c] hover:underline underline-offset-4 transition-colors"
           >
             ¿Olvidaste tu contraseña?
-          </a>
+          </Link>
         </div>
 
         {/* Submit */}
