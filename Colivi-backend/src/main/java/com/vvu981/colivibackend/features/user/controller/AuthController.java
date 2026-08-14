@@ -2,6 +2,7 @@ package com.vvu981.colivibackend.features.user.controller;
 
 import com.vvu981.colivibackend.features.user.dto.AuthResponse;
 import com.vvu981.colivibackend.features.user.dto.LoginRequest;
+import com.vvu981.colivibackend.features.user.dto.GoogleLoginRequest;
 import com.vvu981.colivibackend.features.user.dto.ReactivateAccountRequest;
 import com.vvu981.colivibackend.features.user.dto.ReactivationRequestDto;
 import com.vvu981.colivibackend.features.user.dto.RefreshTokenRequest;
@@ -39,6 +40,12 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         AuthResponse response = userService.login(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<AuthResponse> loginWithGoogle(@Valid @RequestBody GoogleLoginRequest request) {
+        AuthResponse response = userService.loginWithGoogle(request);
         return ResponseEntity.ok(response);
     }
 

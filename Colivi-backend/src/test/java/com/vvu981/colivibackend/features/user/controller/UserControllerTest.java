@@ -384,4 +384,30 @@ class UserControllerTest {
             verify(userService).unbanUser(targetId);
         }
     }
+
+    // =========================================================================
+    // PATCH /api/v1/users/me/profile-picture
+    // =========================================================================
+    @Nested
+    @DisplayName("PATCH /me/profile-picture")
+    class UploadProfilePictureEndpoint {
+        @Test
+        @DisplayName("usuario autenticado sube foto de perfil y recibe 200 con la URL")
+        void givenAuthenticatedUser_whenUploadProfilePicture_thenReturns200WithUrl() throws Exception {
+            // Arrange
+            org.springframework.mock.web.MockMultipartFile file = new org.springframework.mock.web.MockMultipartFile(
+                    "file", "avatar.jpg", MediaType.IMAGE_JPEG_VALUE, "image-content".getBytes());
+            when(userService.uploadProfilePicture(any(UUID.class), any())).thenReturn("https://cloudinary.com/avatar.jpg");
+
+            // Act & Assert
+            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/api/v1/users/me/profile-picture")
+                    .file(file)
+                    .with(request -> { request.setMethod("PATCH"); return request; })
+                    .with(authentication(buildAuth(authenticatedUser))))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.profilePicUrl").value("https://cloudinary.com/avatar.jpg"));
+
+            verify(userService).uploadProfilePicture(eq(authenticatedUser.getId()), any());
+        }
+    }
 }

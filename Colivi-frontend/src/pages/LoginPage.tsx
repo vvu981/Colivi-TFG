@@ -1,12 +1,11 @@
-import React from "react";
 import { AuthLayout } from "../layouts/AuthLayout";
 import { LoginForm } from "../features/auth";
 
 export const LoginPage = () => {
   return (
-    <AuthLayout 
+    <AuthLayout
       title="Inicia sesión en tu cuenta"
-      subtitle="Bienvenido de nuevo a la comunidad Colivi."
+      subtitle="Introduce tus datos para acceder a tu panel de hogar o reservas."
     >
       <LoginForm />
     </AuthLayout>

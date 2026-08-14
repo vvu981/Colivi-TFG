@@ -8,4 +8,13 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  server: {
+    host: true, // necesario para que Docker exponga el puerto
+    proxy: {
+      '/api': {
+        target: process.env.BACKEND_URL ?? 'http://localhost:8080',
+        changeOrigin: true,
+      },
+    },
+  },
 })

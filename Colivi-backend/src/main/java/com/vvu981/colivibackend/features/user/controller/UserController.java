@@ -7,11 +7,14 @@ import com.vvu981.colivibackend.features.user.service.UserService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -64,6 +67,15 @@ public class UserController {
 
         // Devuelve un 200 OK con los datos actualizados
         return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping(value = "/me/profile-picture", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String, String>> uploadProfilePicture(
+            @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal(expression = "id") UUID userId) {
+
+        String url = userService.uploadProfilePicture(userId, file);
+        return ResponseEntity.ok(Map.of("profilePicUrl", url));
     }
 
     @PatchMapping("/me/credentials")

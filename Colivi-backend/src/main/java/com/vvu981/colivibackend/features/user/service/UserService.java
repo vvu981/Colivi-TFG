@@ -2,6 +2,7 @@ package com.vvu981.colivibackend.features.user.service;
 
 import com.vvu981.colivibackend.features.user.dto.*;
 
+import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -9,13 +10,25 @@ public interface UserService {
 
     AuthResponse login(LoginRequest loginRequest);
 
+    AuthResponse loginWithGoogle(GoogleLoginRequest request);
+
     AuthResponse register(RegisterRequest request);
+
 
     AuthResponse refreshToken(RefreshTokenRequest request);
 
     void setAdmin(UUID targetUserId);
 
     UpdateNonSensible updateNonSensibleData(UUID userId, UpdateNonSensible updateData);
+
+    /**
+     * Sube una nueva foto de perfil a Cloudinary y actualiza la URL en el usuario.
+     *
+     * @param userId ID del usuario autenticado.
+     * @param file   imagen enviada como multipart/form-data.
+     * @return URL pública de la imagen subida.
+     */
+    String uploadProfilePicture(UUID userId, MultipartFile file);
 
     void updateSensibleData(UUID userId, UpdateSensible updateSensible);
 
