@@ -10,7 +10,6 @@ import com.vvu981.colivibackend.features.user.exception.InvalidReactivationToken
 import com.vvu981.colivibackend.features.user.mapper.UserMapper;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -1175,22 +1174,6 @@ class UserServiceImplTest {
         @DisplayName("uploadProfilePicture")
         class UploadProfilePicture {
 
-                @BeforeEach
-                void initTx() {
-                        org.springframework.transaction.support.TransactionSynchronizationManager.initSynchronization();
-                }
-
-                @AfterEach
-                void clearTx() {
-                        org.springframework.transaction.support.TransactionSynchronizationManager.clear();
-                }
-
-                private void simulateTransactionCommit() {
-                        for (org.springframework.transaction.support.TransactionSynchronization sync : org.springframework.transaction.support.TransactionSynchronizationManager.getSynchronizations()) {
-                                sync.afterCommit();
-                        }
-                }
-
                 @Test
                 @DisplayName("happy path: sube foto nueva, borra la anterior si existe y guarda en BD")
                 void givenExistingUserWithOldPic_whenUploadProfilePicture_thenUploadsNewAndDeletesOldAndSaves() {
@@ -1205,7 +1188,6 @@ class UserServiceImplTest {
 
                         // Act
                         String result = userService.uploadProfilePicture(userId, mockFile);
-                        simulateTransactionCommit();
 
                         // Assert
                         assertThat(result).isEqualTo("https://cloudinary.com/new.jpg");
@@ -1229,7 +1211,6 @@ class UserServiceImplTest {
 
                         // Act
                         String result = userService.uploadProfilePicture(userId, mockFile);
-                        simulateTransactionCommit();
 
                         // Assert
                         assertThat(result).isEqualTo("https://cloudinary.com/new.jpg");

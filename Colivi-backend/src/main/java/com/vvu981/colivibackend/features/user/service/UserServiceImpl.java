@@ -23,8 +23,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 import com.vvu981.colivibackend.features.user.domain.event.UserDeletedEvent;
 
@@ -209,7 +207,6 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    @Transactional
     public String uploadProfilePicture(UUID userId, MultipartFile file) {
 
         User user = getActiveUserById(userId);
@@ -220,16 +217,12 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
 
         if (oldUrl != null) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    try {
-                        imageStorageService.deleteImage(oldUrl);
-                    } catch (Exception e) {
-                        log.error("No se pudo eliminar la imagen anterior en Cloudinary (posible recurso huérfano): {}", oldUrl, e);
-                    }
-                }
-            });
+            try {
+                imageStorageService.deleteImage(oldUrl);
+            } catch (Exception e) {
+                log.error("No se pudo eliminar la imagen anterior en Cloudinary (posible recurso huérfano): {}", oldUrl,
+                        e);
+            }
         }
 
         return url;
