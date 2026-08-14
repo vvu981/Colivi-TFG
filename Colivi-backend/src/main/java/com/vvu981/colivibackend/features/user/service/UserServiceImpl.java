@@ -223,7 +223,11 @@ public class UserServiceImpl implements UserService {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void afterCommit() {
-                    imageStorageService.deleteImage(oldUrl);
+                    try {
+                        imageStorageService.deleteImage(oldUrl);
+                    } catch (Exception e) {
+                        log.error("No se pudo eliminar la imagen anterior en Cloudinary (posible recurso huérfano): {}", oldUrl, e);
+                    }
                 }
             });
         }
