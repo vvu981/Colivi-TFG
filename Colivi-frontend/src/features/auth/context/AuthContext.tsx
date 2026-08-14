@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import { authService, type UserProfile, type LoginData, type RegisterData } from '../services/authService';
+import { authService, type LoginData, type RegisterData } from '../services/authService';
+import { userService, type UserProfile } from '../../user/services/userService';
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -9,6 +10,7 @@ interface AuthContextType {
   login: (data: LoginData) => Promise<void>;
   loginWithGoogle: (idToken: string) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
+  updateUserContextData: (data: Partial<UserProfile>) => void;
   logout: () => void;
 }
 
@@ -23,7 +25,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const fetchUser = async () => {
       if (token) {
         try {
-          const userData = await authService.getMe();
+          const userData = await userService.getMe();
           setUser(userData);
         } catch (error) {
           console.error("Failed to fetch user profile", error);
@@ -56,6 +58,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const updateUserContextData = (data: Partial<UserProfile>) => {
+    if (user) {
+      setUser({ ...user, ...data });
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     setToken(null);
@@ -63,7 +71,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isAuthenticated: !!user, isLoading, login, loginWithGoogle, register, logout }}>
+    <AuthContext.Provider value={{ user, token, isAuthenticated: !!user, isLoading, login, loginWithGoogle, register, updateUserContextData, logout }}>
       {children}
     </AuthContext.Provider>
   );
