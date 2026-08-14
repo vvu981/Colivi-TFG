@@ -80,7 +80,7 @@ public class UserServiceImpl implements UserService {
             throw new IllegalArgumentException("El token de Google no contiene un correo válido.");
         }
 
-        User user = userRepository.findActiveByEmail(email)
+        User user = userRepository.findByEmailIgnoreCase(email)
                 .orElseGet(() -> {
                     String givenName = (String) payload.getOrDefault("given_name",
                             payload.getOrDefault("name", "Usuario Google"));
@@ -101,6 +101,13 @@ public class UserServiceImpl implements UserService {
                     newUser.setProfilePicUrl(picture);
                     return userRepository.save(newUser);
                 });
+
+        if (user.isBanned()) {
+            throw new UnauthorizedActionException("Esta cuenta ha sido suspendida.");
+        }
+        if (user.getDeletedAt() != null) {
+            throw new UnauthorizedActionException("Esta cuenta ha sido eliminada. Solicite reactivación.");
+        }
 
         // Sincronizar la foto de perfil de Google si el usuario no la tiene configurada
         String googlePicture = (String) payload.get("picture");

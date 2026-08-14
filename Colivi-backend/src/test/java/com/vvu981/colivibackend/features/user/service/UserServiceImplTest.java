@@ -203,7 +203,7 @@ class UserServiceImplTest {
 
                         persistedUser.setProfilePicUrl("https://google.com/real_avatar.jpg");
 
-                        when(userRepository.findActiveByEmail("victor@colivi.com"))
+                        when(userRepository.findByEmailIgnoreCase("victor@colivi.com"))
                                         .thenReturn(Optional.of(persistedUser));
                         when(jwtTokenProvider.generateAccessToken(persistedUser)).thenReturn("access.token");
                         when(jwtTokenProvider.generateRefreshToken(persistedUser)).thenReturn("refresh.token");
@@ -231,7 +231,7 @@ class UserServiceImplTest {
 
                         when(googleTokenValidator.validateAndExtractPayload("mock_token")).thenReturn(payload);
 
-                        when(userRepository.findActiveByEmail("new_user@colivi.com"))
+                        when(userRepository.findByEmailIgnoreCase("new_user@colivi.com"))
                                         .thenReturn(Optional.empty());
                         when(passwordEncoder.encode(anyString())).thenReturn("hashed_random");
 
