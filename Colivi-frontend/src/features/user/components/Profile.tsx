@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { useAuth } from "../../auth/context/AuthContext";
+import { useUser } from "../hooks/useUser";
 import { Spinner } from "../../../components/feedback/Spinner";
 import { ChangePasswordModal } from "./ChangePasswordModal";
 import { type Value as PhoneValue } from "react-phone-number-input";
 import { ProfileHeader } from "./ProfileHeader";
 import { ProfilePersonalInfoForm } from "./ProfilePersonalInfoForm";
 export const Profile = () => {
-  const { user, logout, updateProfile, updateProfilePicture } = useAuth();
+  const { logout } = useAuth();
+  const { user, updateProfile, updateProfilePicture } = useUser();
   
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -19,6 +21,7 @@ export const Profile = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (!user) {
     return (
@@ -38,10 +41,12 @@ export const Profile = () => {
       lastName2: user.lastName2 || "",
       phone: user.phone || "",
     });
+    setError(null);
     setIsEditing(true);
   };
 
   const handleCancelClick = () => {
+    setError(null);
     setIsEditing(false);
   };
 
@@ -69,6 +74,18 @@ export const Profile = () => {
 
   const handleSave = async () => {
     try {
+      setError(null);
+      
+      // Basic frontend validations
+      if (!formData.firstName.trim()) {
+        setError("El nombre es obligatorio.");
+        return;
+      }
+      if (!formData.nickname.trim()) {
+        setError("El nickname es obligatorio.");
+        return;
+      }
+
       setIsSaving(true);
       await updateProfile({
         nickname: formData.nickname,
@@ -78,8 +95,17 @@ export const Profile = () => {
         phone: formData.phone,
       });
       setIsEditing(false);
-    } catch (error) {
-      console.error("Error updating profile", error);
+    } catch (err: any) {
+      console.error("Error updating profile", err);
+      let msg = "No se pudo actualizar el perfil. Verifica los datos o si el nickname ya está en uso.";
+      if (err.response?.data?.message) {
+         msg = err.response.data.message;
+      } else if (err.response?.data?.error) {
+         msg = err.response.data.error;
+      } else if (Array.isArray(err.response?.data?.errors) && err.response.data.errors.length > 0) {
+         msg = err.response.data.errors[0].defaultMessage || err.response.data.errors[0].msg || msg;
+      }
+      setError(msg);
     } finally {
       setIsSaving(false);
     }
@@ -100,6 +126,14 @@ export const Profile = () => {
         onChange={handleChange}
         onPhoneChange={handlePhoneChange}
       />
+
+      {error && (
+        <div className="w-full max-w-3xl mt-md">
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm font-medium">
+            {error}
+          </div>
+        </div>
+      )}
 
       {/* Actions Section */}
       <section className="w-full max-w-3xl flex flex-col md:flex-row items-center justify-between gap-md mt-lg">

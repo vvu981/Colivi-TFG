@@ -41,6 +41,11 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
       return;
     }
 
+    if (currentPassword === newPassword) {
+      setError("La nueva contraseña no puede ser igual a la actual.");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -57,9 +62,15 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
       }, 2000);
     } catch (err: any) {
       console.error("Change password failed", err);
-      setError(
-        err.response?.data?.message || "Error al actualizar la contraseña. Verifica tu contraseña actual."
-      );
+      let msg = "Error al actualizar la contraseña. Verifica tu contraseña actual.";
+      if (err.response?.data?.message) {
+         msg = err.response.data.message;
+      } else if (err.response?.data?.error) {
+         msg = err.response.data.error;
+      } else if (Array.isArray(err.response?.data?.errors) && err.response.data.errors.length > 0) {
+         msg = err.response.data.errors[0].defaultMessage || err.response.data.errors[0].msg || msg;
+      }
+      setError(msg);
     } finally {
       setIsLoading(false);
     }

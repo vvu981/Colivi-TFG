@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { authService, type LoginData, type RegisterData } from '../services/authService';
-import { userService, type UserProfile, type UpdateProfileData } from '../../user/services/userService';
+import { userService, type UserProfile } from '../../user/services/userService';
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -10,8 +10,7 @@ interface AuthContextType {
   login: (data: LoginData) => Promise<void>;
   loginWithGoogle: (idToken: string) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
-  updateProfile: (data: UpdateProfileData) => Promise<void>;
-  updateProfilePicture: (file: File) => Promise<void>;
+  updateUserContextData: (data: Partial<UserProfile>) => void;
   logout: () => void;
 }
 
@@ -59,17 +58,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const updateProfile = async (data: UpdateProfileData) => {
-    const updatedData = await userService.updateProfile(data);
+  const updateUserContextData = (data: Partial<UserProfile>) => {
     if (user) {
-      setUser({ ...user, ...updatedData });
-    }
-  };
-
-  const updateProfilePicture = async (file: File) => {
-    const newUrl = await userService.uploadProfilePicture(file);
-    if (user) {
-      setUser({ ...user, profilePicUrl: newUrl });
+      setUser({ ...user, ...data });
     }
   };
 
@@ -80,7 +71,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isAuthenticated: !!user, isLoading, login, loginWithGoogle, register, updateProfile, updateProfilePicture, logout }}>
+    <AuthContext.Provider value={{ user, token, isAuthenticated: !!user, isLoading, login, loginWithGoogle, register, updateUserContextData, logout }}>
       {children}
     </AuthContext.Provider>
   );
