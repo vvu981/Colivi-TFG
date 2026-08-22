@@ -1,15 +1,33 @@
 import { MainLayout } from "../layouts/MainLayout";
+import { RecommendedListings } from "../features/housing/components/RecommendedListings";
+import { SearchBar } from "../features/housing/components/SearchBar";
+import { useRecommendations } from "../features/housing/hooks/useRecommendations";
 
 export const HomePage = () => {
+  const { data, isLoading, error, refresh } = useRecommendations();
+
   return (
     <MainLayout>
-      <div className="w-full px-margin-mobile md:px-margin-desktop py-xl">
-        <h1 className="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-on-surface mb-lg">
-          Explorar Coliving
-        </h1>
-        <p className="text-on-surface-variant font-body-lg text-body-lg">
-          Página de búsqueda en construcción...
-        </p>
+      <div className="w-full px-[var(--spacing-margin-mobile)] md:px-[var(--spacing-margin-desktop)] py-10 flex flex-col gap-10">
+        {/* Hero heading */}
+        <div>
+          <h1 className="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-on-surface mb-3">
+            Explorar Coliving
+          </h1>
+          <p className="text-body-lg text-[#565e74]">
+            Encuentra tu próximo hogar compartido entre miles de anuncios verificados.
+          </p>
+        </div>
+
+        {/* Search bar — saves to localStorage and triggers re-fetch */}
+        <SearchBar onSearch={refresh} />
+
+        {/* Recommendations section */}
+        <RecommendedListings
+          listings={data}
+          isLoading={isLoading}
+          error={error}
+        />
       </div>
     </MainLayout>
   );
