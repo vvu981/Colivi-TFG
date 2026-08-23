@@ -273,4 +273,10 @@ public class AccommodationServiceImpl implements AccommodationService {
         return isOwner || isAdmin;
     }
 
+    @Override
+    public Accommodation findAccommodationWithImagesByIdAndDeletedAtIsNull(UUID id) {
+        return accommodationRepository.findByIdAndDeletedAtIsNullWithImages(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Error: Accommodation with id: " + id + " not found."));
+    }
+
 }

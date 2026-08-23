@@ -93,6 +93,7 @@ public class AccommodationListing {
         this.pricePerMonth = dto.pricePerMonth();
         this.securityDeposit = dto.securityDeposit();
         this.rentalType = dto.rentalType();
+        this.images = new ArrayList<>();
     }
 
     @PrePersist
@@ -126,6 +127,17 @@ public class AccommodationListing {
         if (this.status.equals(ListingStatus.BANNED)) {
             this.status = this.previousStatus;
             this.bannedAt = null;
+        }
+    }
+
+    public void updateImages(List<AccommodationImage> newImages) {
+        this.images.clear();
+        for (int i = 0; i < newImages.size(); i++) {
+            this.images.add(ListingImageSelection.builder()
+                .listing(this)
+                .image(newImages.get(i))
+                .displayOrder(i + 1)
+                .build());
         }
     }
 

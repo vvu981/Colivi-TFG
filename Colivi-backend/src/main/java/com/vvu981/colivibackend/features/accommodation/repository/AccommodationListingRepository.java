@@ -36,6 +36,12 @@ public interface AccommodationListingRepository
 
         long countByAccommodationIdAndRentalTypeAndDeletedAtIsNull(UUID accommodationId, com.vvu981.colivibackend.features.accommodation.domain.RentalType rentalType);
 
+        @org.springframework.data.jpa.repository.Query("SELECT new com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingStatsDTO(" +
+                "COALESCE(SUM(CASE WHEN l.rentalType = 'ENTIRE_PLACE' THEN 1L ELSE 0L END), 0L), " +
+                "COALESCE(SUM(CASE WHEN l.rentalType = 'ROOM' THEN 1L ELSE 0L END), 0L)) " +
+                "FROM AccommodationListing l WHERE l.accommodation.id = :accommodationId AND l.deletedAt IS NULL")
+        com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingStatsDTO getListingStatsForAccommodation(@org.springframework.data.repository.query.Param("accommodationId") UUID accommodationId);
+
         boolean existsByIdAndHostId(UUID listingId, UUID landlordId);
 
         @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.OPTIMISTIC_FORCE_INCREMENT)

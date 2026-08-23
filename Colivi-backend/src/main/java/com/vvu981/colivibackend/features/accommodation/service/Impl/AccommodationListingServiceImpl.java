@@ -25,7 +25,9 @@ import com.vvu981.colivibackend.features.accommodation.domain.ListingImageSelect
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingRequest;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingResponse;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingUpdateRequest;
+import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingStatsDTO;
 import java.util.ArrayList;
+import java.util.stream.Collectors;
 import com.vvu981.colivibackend.features.accommodation.repository.AccommodationListingRepository;
 import com.vvu981.colivibackend.features.accommodation.repository.specification.ListingSpecificationBuilder;
 import com.vvu981.colivibackend.features.accommodation.service.AccommodationListingService;
@@ -50,11 +52,13 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
                 .orElseThrow(() -> new ResourceNotFoundException("Error: Usuario no encontrado"));
     }
 
+    @Override
+    @Transactional
     public AccommodationListingResponse createAccommodationListing(
             AccommodationListingRequest accommodationListingRequest, UUID currentUserId) {
 
         Accommodation accommodation = accommodationService
-                .findAccommodationByIdAndDeletedAtIsNull(accommodationListingRequest.accommodationId());
+                .findAccommodationWithImagesByIdAndDeletedAtIsNull(accommodationListingRequest.accommodationId());
 
         User currentUser = getUser(currentUserId);
         boolean isOwner = accommodation.getOwner().getId().equals(currentUser.getId());
@@ -67,20 +71,21 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
         // --- BLINDAJE DE REGLAS DE NEGOCIO ---
         UUID accId = accommodation.getId();
         
+        AccommodationListingStatsDTO stats = listingRepository.getListingStatsForAccommodation(accId);
+
         // REGLA 1: Bloqueo Total
-        if (listingRepository.existsByAccommodationIdAndRentalTypeAndDeletedAtIsNull(accId, RentalType.ENTIRE_PLACE)) {
+        if (stats.entirePlaceCount() > 0) {
             throw new BusinessRuleValidationException("El inmueble ya está alquilado por completo.");
         }
         
         if (accommodationListingRequest.rentalType() == RentalType.ENTIRE_PLACE) {
             // REGLA 2: Exclusión Mutua
-            if (listingRepository.existsByAccommodationIdAndRentalTypeAndDeletedAtIsNull(accId, RentalType.ROOM)) {
+            if (stats.roomCount() > 0) {
                 throw new BusinessRuleValidationException("No se puede alquilar la casa entera si ya hay habitaciones comprometidas.");
             }
         } else if (accommodationListingRequest.rentalType() == RentalType.ROOM) {
             // REGLA 3: Capacidad Máxima
-            long activeRooms = listingRepository.countByAccommodationIdAndRentalTypeAndDeletedAtIsNull(accId, RentalType.ROOM);
-            if (activeRooms >= accommodation.getTotalRooms()) {
+            if (stats.roomCount() >= accommodation.getTotalRooms()) {
                 throw new BusinessRuleValidationException("Se alcanzó el límite de habitaciones del inmueble.");
             }
         }
@@ -91,23 +96,21 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
 
         // --- MAPEO DE IMÁGENES SELECCIONADAS ---
         if (accommodationListingRequest.selectedImages() != null && !accommodationListingRequest.selectedImages().isEmpty()) {
-            List<ListingImageSelection> selectedImages = new ArrayList<>();
+            List<AccommodationImage> mappedImages = new ArrayList<>();
             List<UUID> requestedImageIds = accommodationListingRequest.selectedImages();
+            
+            Map<UUID, AccommodationImage> accImagesMap = accommodation.getImages().stream()
+                    .collect(Collectors.toMap(AccommodationImage::getId, img -> img));
+
             for (int i = 0; i < requestedImageIds.size(); i++) {
                 UUID imageId = requestedImageIds.get(i);
-                AccommodationImage accImage = accommodation.getImages().stream()
-                        .filter(img -> img.getId().equals(imageId))
-                        .findFirst()
-                        .orElseThrow(() -> new BusinessRuleValidationException("La imagen con id " + imageId + " no pertenece a este alojamiento."));
-                
-                ListingImageSelection selection = ListingImageSelection.builder()
-                        .listing(accommodationListingToUpload)
-                        .image(accImage)
-                        .displayOrder(i)
-                        .build();
-                selectedImages.add(selection);
+                AccommodationImage accImage = accImagesMap.get(imageId);
+                if (accImage == null) {
+                    throw new BusinessRuleValidationException("La imagen con id " + imageId + " no pertenece a este alojamiento.");
+                }
+                mappedImages.add(accImage);
             }
-            accommodationListingToUpload.setImages(selectedImages);
+            accommodationListingToUpload.updateImages(mappedImages);
         }
 
         listingRepository.save(accommodationListingToUpload);
@@ -117,6 +120,7 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
     }
 
     @Override
+    @Transactional
     public void deleteAccommodationListingSoft(UUID accommodationId, UUID currentUserId) {
         AccommodationListing accommodationListing = findAccommodationListingById(accommodationId);
         User currentUser = getUser(currentUserId);
@@ -132,6 +136,7 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
     }
 
     @Override
+    @Transactional
     public void deleteAccommodationListingHard(UUID accommodationId, UUID currentUserId) {
         AccommodationListing accommodationListing = findAccommodationListingById(accommodationId);
         User currentUser = getUser(currentUserId);
@@ -161,28 +166,25 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
 
         // --- MAPEO DE IMÁGENES SELECCIONADAS ---
         if (dto.selectedImages() != null) {
-            listing.getImages().clear();
-            
             if (!dto.selectedImages().isEmpty()) {
-                List<ListingImageSelection> selectedImages = new ArrayList<>();
+                List<AccommodationImage> mappedImages = new ArrayList<>();
                 List<UUID> requestedImageIds = dto.selectedImages();
                 Accommodation accommodation = listing.getAccommodation();
                 
+                Map<UUID, AccommodationImage> accImagesMap = accommodation.getImages().stream()
+                        .collect(Collectors.toMap(AccommodationImage::getId, img -> img));
+
                 for (int i = 0; i < requestedImageIds.size(); i++) {
                     UUID imageId = requestedImageIds.get(i);
-                    AccommodationImage accImage = accommodation.getImages().stream()
-                            .filter(img -> img.getId().equals(imageId))
-                            .findFirst()
-                            .orElseThrow(() -> new BusinessRuleValidationException("La imagen con id " + imageId + " no pertenece a este alojamiento."));
-                    
-                    ListingImageSelection selection = ListingImageSelection.builder()
-                            .listing(listing)
-                            .image(accImage)
-                            .displayOrder(i)
-                            .build();
-                    selectedImages.add(selection);
+                    AccommodationImage accImage = accImagesMap.get(imageId);
+                    if (accImage == null) {
+                        throw new BusinessRuleValidationException("La imagen con id " + imageId + " no pertenece a este alojamiento.");
+                    }
+                    mappedImages.add(accImage);
                 }
-                listing.getImages().addAll(selectedImages);
+                listing.updateImages(mappedImages);
+            } else {
+                listing.updateImages(new ArrayList<>());
             }
         }
 
@@ -192,6 +194,7 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
     }
 
     @Override
+    @Transactional
     public void banAccommodationListing(UUID accommodationListingId, UUID currentUserId) { // solo admin
         User currentUser = getUser(currentUserId);
         if (!isAdmin(currentUser)) {
@@ -208,6 +211,7 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
     }
 
     @Override
+    @Transactional
     public void unBanAccommodationListing(UUID accommodationListingId, UUID currentUserId) { // solo admin
         User currentUser = getUser(currentUserId);
         if (!isAdmin(currentUser)) {
@@ -237,6 +241,7 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
     }
 
     @Override
+    @Transactional
     public AccommodationListingResponse recoverAccommodationListing(UUID accommodationId, UUID currentUserId) {
         AccommodationListing accommodationListing = findAccommodationListingById(accommodationId);
         User currentUser = getUser(currentUserId);
@@ -275,6 +280,7 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
     }
 
     @Override
+    @Transactional
     public void changeStatusListing(UUID accommodationId, ListingStatus listingStatus, UUID currentUserId) {
         if (listingStatus.equals(ListingStatus.BANNED))
             throw new UnauthorizedActionException("Donde ibas pillin?");

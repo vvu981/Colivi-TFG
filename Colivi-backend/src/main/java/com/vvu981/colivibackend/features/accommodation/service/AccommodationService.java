@@ -35,4 +35,6 @@ public interface AccommodationService {
                         List<AccommodationImageOrderRequest> orderRequests, UUID currentUserId);
 
         Accommodation findAccommodationByIdAndDeletedAtIsNull(UUID id);
+
+        Accommodation findAccommodationWithImagesByIdAndDeletedAtIsNull(UUID id);
 }

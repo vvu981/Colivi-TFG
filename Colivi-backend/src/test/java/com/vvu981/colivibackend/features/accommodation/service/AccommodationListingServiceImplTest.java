@@ -7,6 +7,7 @@ import com.vvu981.colivibackend.features.accommodation.domain.RentalType;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingRequest;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingResponse;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingUpdateRequest;
+import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingStatsDTO;
 import com.vvu981.colivibackend.features.accommodation.repository.AccommodationListingRepository;
 import com.vvu981.colivibackend.features.accommodation.repository.specification.ListingSpecificationBuilder;
 import com.vvu981.colivibackend.features.accommodation.service.Impl.AccommodationListingServiceImpl;
@@ -107,8 +108,10 @@ class AccommodationListingServiceImplTest {
             AccommodationListingRequest request = new AccommodationListingRequest(
                     accommodation.getId(), "Title", "Desc", BigDecimal.valueOf(500),
                     com.vvu981.colivibackend.features.accommodation.domain.RentalType.ENTIRE_PLACE, BigDecimal.valueOf(100), null);
-            when(accommodationService.findAccommodationByIdAndDeletedAtIsNull(accommodation.getId()))
+            when(accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNull(accommodation.getId()))
                     .thenReturn(accommodation);
+            when(listingRepository.getListingStatsForAccommodation(accommodation.getId()))
+                    .thenReturn(new AccommodationListingStatsDTO(0L, 0L));
             when(listingRepository.save(any(AccommodationListing.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -125,8 +128,10 @@ class AccommodationListingServiceImplTest {
             AccommodationListingRequest request = new AccommodationListingRequest(
                     accommodation.getId(), "Title", "Desc", BigDecimal.valueOf(500),
                     com.vvu981.colivibackend.features.accommodation.domain.RentalType.ENTIRE_PLACE, BigDecimal.valueOf(100), null);
-            when(accommodationService.findAccommodationByIdAndDeletedAtIsNull(accommodation.getId()))
+            when(accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNull(accommodation.getId()))
                     .thenReturn(accommodation);
+            when(listingRepository.getListingStatsForAccommodation(accommodation.getId()))
+                    .thenReturn(new AccommodationListingStatsDTO(0L, 0L));
             when(listingRepository.save(any(AccommodationListing.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -142,7 +147,7 @@ class AccommodationListingServiceImplTest {
             AccommodationListingRequest request = new AccommodationListingRequest(
                     accommodation.getId(), "Title", "Desc", BigDecimal.valueOf(500),
                     com.vvu981.colivibackend.features.accommodation.domain.RentalType.ENTIRE_PLACE, BigDecimal.valueOf(100), null);
-            when(accommodationService.findAccommodationByIdAndDeletedAtIsNull(accommodation.getId()))
+            when(accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNull(accommodation.getId()))
                     .thenReturn(accommodation);
 
             assertThatThrownBy(() -> listingServiceImpl.createAccommodationListing(request, otherUser.getId()))
@@ -156,10 +161,10 @@ class AccommodationListingServiceImplTest {
             AccommodationListingRequest request = new AccommodationListingRequest(
                     accommodation.getId(), "Title", "Desc", BigDecimal.valueOf(500),
                     RentalType.ROOM, BigDecimal.valueOf(100), null);
-            when(accommodationService.findAccommodationByIdAndDeletedAtIsNull(accommodation.getId()))
+            when(accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNull(accommodation.getId()))
                     .thenReturn(accommodation);
-            when(listingRepository.existsByAccommodationIdAndRentalTypeAndDeletedAtIsNull(accommodation.getId(), RentalType.ENTIRE_PLACE))
-                    .thenReturn(true);
+            when(listingRepository.getListingStatsForAccommodation(accommodation.getId()))
+                    .thenReturn(new AccommodationListingStatsDTO(1L, 0L));
 
             assertThatThrownBy(() -> listingServiceImpl.createAccommodationListing(request, host.getId()))
                     .isInstanceOf(BusinessRuleValidationException.class)
@@ -172,12 +177,10 @@ class AccommodationListingServiceImplTest {
             AccommodationListingRequest request = new AccommodationListingRequest(
                     accommodation.getId(), "Title", "Desc", BigDecimal.valueOf(500),
                     RentalType.ENTIRE_PLACE, BigDecimal.valueOf(100), null);
-            when(accommodationService.findAccommodationByIdAndDeletedAtIsNull(accommodation.getId()))
+            when(accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNull(accommodation.getId()))
                     .thenReturn(accommodation);
-            when(listingRepository.existsByAccommodationIdAndRentalTypeAndDeletedAtIsNull(accommodation.getId(), RentalType.ENTIRE_PLACE))
-                    .thenReturn(false);
-            when(listingRepository.existsByAccommodationIdAndRentalTypeAndDeletedAtIsNull(accommodation.getId(), RentalType.ROOM))
-                    .thenReturn(true);
+            when(listingRepository.getListingStatsForAccommodation(accommodation.getId()))
+                    .thenReturn(new AccommodationListingStatsDTO(0L, 1L));
 
             assertThatThrownBy(() -> listingServiceImpl.createAccommodationListing(request, host.getId()))
                     .isInstanceOf(BusinessRuleValidationException.class)
@@ -191,12 +194,10 @@ class AccommodationListingServiceImplTest {
             AccommodationListingRequest request = new AccommodationListingRequest(
                     accommodation.getId(), "Title", "Desc", BigDecimal.valueOf(500),
                     RentalType.ROOM, BigDecimal.valueOf(100), null);
-            when(accommodationService.findAccommodationByIdAndDeletedAtIsNull(accommodation.getId()))
+            when(accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNull(accommodation.getId()))
                     .thenReturn(accommodation);
-            when(listingRepository.existsByAccommodationIdAndRentalTypeAndDeletedAtIsNull(accommodation.getId(), RentalType.ENTIRE_PLACE))
-                    .thenReturn(false);
-            when(listingRepository.countByAccommodationIdAndRentalTypeAndDeletedAtIsNull(accommodation.getId(), RentalType.ROOM))
-                    .thenReturn(3L);
+            when(listingRepository.getListingStatsForAccommodation(accommodation.getId()))
+                    .thenReturn(new AccommodationListingStatsDTO(0L, 3L));
 
             assertThatThrownBy(() -> listingServiceImpl.createAccommodationListing(request, host.getId()))
                     .isInstanceOf(BusinessRuleValidationException.class)
@@ -215,8 +216,10 @@ class AccommodationListingServiceImplTest {
                     accommodation.getId(), "Title", "Desc", BigDecimal.valueOf(500),
                     RentalType.ENTIRE_PLACE, BigDecimal.valueOf(100), List.of(image1.getId()));
             
-            when(accommodationService.findAccommodationByIdAndDeletedAtIsNull(accommodation.getId()))
+            when(accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNull(accommodation.getId()))
                     .thenReturn(accommodation);
+            when(listingRepository.getListingStatsForAccommodation(accommodation.getId()))
+                    .thenReturn(new AccommodationListingStatsDTO(0L, 0L));
             when(listingRepository.save(any(AccommodationListing.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -233,8 +236,10 @@ class AccommodationListingServiceImplTest {
                     accommodation.getId(), "Title", "Desc", BigDecimal.valueOf(500),
                     RentalType.ENTIRE_PLACE, BigDecimal.valueOf(100), List.of(UUID.randomUUID()));
             
-            when(accommodationService.findAccommodationByIdAndDeletedAtIsNull(accommodation.getId()))
+            when(accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNull(accommodation.getId()))
                     .thenReturn(accommodation);
+            when(listingRepository.getListingStatsForAccommodation(accommodation.getId()))
+                    .thenReturn(new AccommodationListingStatsDTO(0L, 0L));
 
             assertThatThrownBy(() -> listingServiceImpl.createAccommodationListing(request, host.getId()))
                     .isInstanceOf(BusinessRuleValidationException.class)
