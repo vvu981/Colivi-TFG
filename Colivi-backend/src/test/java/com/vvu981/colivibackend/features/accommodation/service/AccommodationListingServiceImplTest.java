@@ -149,6 +149,97 @@ class AccommodationListingServiceImplTest {
                     .isInstanceOf(UnauthorizedActionException.class)
                     .hasMessageContaining("No tienes permisos para publicar un anuncio");
         }
+
+        @Test
+        @DisplayName("debe lanzar excepcion si el inmueble ya esta alquilado por completo")
+        void shouldThrowIfEntirePlaceAlreadyRented() {
+            AccommodationListingRequest request = new AccommodationListingRequest(
+                    accommodation.getId(), "Title", "Desc", BigDecimal.valueOf(500),
+                    RentalType.ROOM, BigDecimal.valueOf(100), null);
+            when(accommodationService.findAccommodationByIdAndDeletedAtIsNull(accommodation.getId()))
+                    .thenReturn(accommodation);
+            when(listingRepository.existsByAccommodationIdAndRentalTypeAndDeletedAtIsNull(accommodation.getId(), RentalType.ENTIRE_PLACE))
+                    .thenReturn(true);
+
+            assertThatThrownBy(() -> listingServiceImpl.createAccommodationListing(request, host.getId()))
+                    .isInstanceOf(BusinessRuleValidationException.class)
+                    .hasMessageContaining("ya está alquilado por completo");
+        }
+
+        @Test
+        @DisplayName("debe lanzar excepcion si se intenta alquilar entero pero hay habitaciones comprometidas")
+        void shouldThrowIfRentingEntirePlaceButRoomsExist() {
+            AccommodationListingRequest request = new AccommodationListingRequest(
+                    accommodation.getId(), "Title", "Desc", BigDecimal.valueOf(500),
+                    RentalType.ENTIRE_PLACE, BigDecimal.valueOf(100), null);
+            when(accommodationService.findAccommodationByIdAndDeletedAtIsNull(accommodation.getId()))
+                    .thenReturn(accommodation);
+            when(listingRepository.existsByAccommodationIdAndRentalTypeAndDeletedAtIsNull(accommodation.getId(), RentalType.ENTIRE_PLACE))
+                    .thenReturn(false);
+            when(listingRepository.existsByAccommodationIdAndRentalTypeAndDeletedAtIsNull(accommodation.getId(), RentalType.ROOM))
+                    .thenReturn(true);
+
+            assertThatThrownBy(() -> listingServiceImpl.createAccommodationListing(request, host.getId()))
+                    .isInstanceOf(BusinessRuleValidationException.class)
+                    .hasMessageContaining("habitaciones comprometidas");
+        }
+
+        @Test
+        @DisplayName("debe lanzar excepcion si se alcanzo el limite de habitaciones")
+        void shouldThrowIfRoomLimitReached() {
+            accommodation.setTotalRooms(3);
+            AccommodationListingRequest request = new AccommodationListingRequest(
+                    accommodation.getId(), "Title", "Desc", BigDecimal.valueOf(500),
+                    RentalType.ROOM, BigDecimal.valueOf(100), null);
+            when(accommodationService.findAccommodationByIdAndDeletedAtIsNull(accommodation.getId()))
+                    .thenReturn(accommodation);
+            when(listingRepository.existsByAccommodationIdAndRentalTypeAndDeletedAtIsNull(accommodation.getId(), RentalType.ENTIRE_PLACE))
+                    .thenReturn(false);
+            when(listingRepository.countByAccommodationIdAndRentalTypeAndDeletedAtIsNull(accommodation.getId(), RentalType.ROOM))
+                    .thenReturn(3L);
+
+            assertThatThrownBy(() -> listingServiceImpl.createAccommodationListing(request, host.getId()))
+                    .isInstanceOf(BusinessRuleValidationException.class)
+                    .hasMessageContaining("límite de habitaciones");
+        }
+
+        @Test
+        @DisplayName("debe procesar imagenes seleccionadas correctamente")
+        void shouldProcessSelectedImages() {
+            com.vvu981.colivibackend.features.accommodation.domain.AccommodationImage image1 = new com.vvu981.colivibackend.features.accommodation.domain.AccommodationImage();
+            image1.setId(UUID.randomUUID());
+            image1.setDisplayOrder(1);
+            accommodation.setImages(List.of(image1));
+
+            AccommodationListingRequest request = new AccommodationListingRequest(
+                    accommodation.getId(), "Title", "Desc", BigDecimal.valueOf(500),
+                    RentalType.ENTIRE_PLACE, BigDecimal.valueOf(100), List.of(image1.getId()));
+            
+            when(accommodationService.findAccommodationByIdAndDeletedAtIsNull(accommodation.getId()))
+                    .thenReturn(accommodation);
+            when(listingRepository.save(any(AccommodationListing.class)))
+                    .thenAnswer(invocation -> invocation.getArgument(0));
+
+            AccommodationListingResponse response = listingServiceImpl.createAccommodationListing(request, host.getId());
+
+            assertThat(response).isNotNull();
+            verify(listingRepository, times(1)).save(any(AccommodationListing.class));
+        }
+
+        @Test
+        @DisplayName("debe lanzar excepcion si la imagen no pertenece al alojamiento al crear")
+        void shouldThrowIfImageNotBelongsToAccommodationCreate() {
+            AccommodationListingRequest request = new AccommodationListingRequest(
+                    accommodation.getId(), "Title", "Desc", BigDecimal.valueOf(500),
+                    RentalType.ENTIRE_PLACE, BigDecimal.valueOf(100), List.of(UUID.randomUUID()));
+            
+            when(accommodationService.findAccommodationByIdAndDeletedAtIsNull(accommodation.getId()))
+                    .thenReturn(accommodation);
+
+            assertThatThrownBy(() -> listingServiceImpl.createAccommodationListing(request, host.getId()))
+                    .isInstanceOf(BusinessRuleValidationException.class)
+                    .hasMessageContaining("no pertenece a este alojamiento");
+        }
     }
 
     @Nested
@@ -279,6 +370,40 @@ class AccommodationListingServiceImplTest {
                     () -> listingServiceImpl.updateAccommodationListing(listing.getId(), updateDto, otherUser.getId()))
                     .isInstanceOf(UnauthorizedActionException.class)
                     .hasMessageContaining("No tienes permiso para editar este anuncio");
+        }
+
+        @Test
+        @DisplayName("debe procesar imagenes seleccionadas correctamente al actualizar")
+        void shouldProcessSelectedImagesUpdate() {
+            com.vvu981.colivibackend.features.accommodation.domain.AccommodationImage image1 = new com.vvu981.colivibackend.features.accommodation.domain.AccommodationImage();
+            image1.setId(UUID.randomUUID());
+            image1.setDisplayOrder(1);
+            accommodation.setImages(List.of(image1));
+
+            AccommodationListingUpdateRequest updateDto = new AccommodationListingUpdateRequest("New Title", "New Desc",
+                    BigDecimal.valueOf(700), List.of(image1.getId()));
+            
+            when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
+            when(listingRepository.save(any(AccommodationListing.class)))
+                    .thenAnswer(invocation -> invocation.getArgument(0));
+
+            AccommodationListingResponse response = listingServiceImpl.updateAccommodationListing(listing.getId(), updateDto, host.getId());
+
+            assertThat(response).isNotNull();
+            verify(listingRepository, times(1)).save(any(AccommodationListing.class));
+        }
+
+        @Test
+        @DisplayName("debe lanzar excepcion si la imagen no pertenece al alojamiento al actualizar")
+        void shouldThrowIfImageNotBelongsToAccommodationUpdate() {
+            AccommodationListingUpdateRequest updateDto = new AccommodationListingUpdateRequest("New Title", "New Desc",
+                    BigDecimal.valueOf(700), List.of(UUID.randomUUID()));
+            
+            when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
+
+            assertThatThrownBy(() -> listingServiceImpl.updateAccommodationListing(listing.getId(), updateDto, host.getId()))
+                    .isInstanceOf(BusinessRuleValidationException.class)
+                    .hasMessageContaining("no pertenece a este alojamiento");
         }
     }
 
@@ -540,6 +665,22 @@ class AccommodationListingServiceImplTest {
             assertThatThrownBy(() -> listingServiceImpl.banAccommodationListing(listing.getId(), nonExistentId))
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Usuario no encontrado");
+        }
+    }
+
+    @Nested
+    @DisplayName("findListingsByAccommodationId")
+    class FindListingsByAccommodationId {
+        @Test
+        @DisplayName("debe retornar los listings por id de alojamiento")
+        void shouldReturnListingsByAccommodationId() {
+            when(listingRepository.findByAccommodationIdAndDeletedAtIsNull(accommodation.getId()))
+                    .thenReturn(List.of(listing));
+
+            List<AccommodationListing> results = listingServiceImpl.findListingsByAccommodationId(accommodation.getId());
+
+            assertThat(results).hasSize(1);
+            assertThat(results.get(0).getId()).isEqualTo(listing.getId());
         }
     }
 }
