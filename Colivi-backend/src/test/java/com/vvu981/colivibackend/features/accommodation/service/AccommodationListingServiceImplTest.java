@@ -106,7 +106,7 @@ class AccommodationListingServiceImplTest {
         void shouldCreateListingWhenOwner() {
             AccommodationListingRequest request = new AccommodationListingRequest(
                     accommodation.getId(), "Title", "Desc", BigDecimal.valueOf(500),
-                    com.vvu981.colivibackend.features.accommodation.domain.RentalType.ENTIRE_PLACE, BigDecimal.valueOf(100));
+                    com.vvu981.colivibackend.features.accommodation.domain.RentalType.ENTIRE_PLACE, BigDecimal.valueOf(100), null);
             when(accommodationService.findAccommodationByIdAndDeletedAtIsNull(accommodation.getId()))
                     .thenReturn(accommodation);
             when(listingRepository.save(any(AccommodationListing.class)))
@@ -124,7 +124,7 @@ class AccommodationListingServiceImplTest {
         void shouldCreateListingWhenAdmin() {
             AccommodationListingRequest request = new AccommodationListingRequest(
                     accommodation.getId(), "Title", "Desc", BigDecimal.valueOf(500),
-                    com.vvu981.colivibackend.features.accommodation.domain.RentalType.ENTIRE_PLACE, BigDecimal.valueOf(100));
+                    com.vvu981.colivibackend.features.accommodation.domain.RentalType.ENTIRE_PLACE, BigDecimal.valueOf(100), null);
             when(accommodationService.findAccommodationByIdAndDeletedAtIsNull(accommodation.getId()))
                     .thenReturn(accommodation);
             when(listingRepository.save(any(AccommodationListing.class)))
@@ -141,7 +141,7 @@ class AccommodationListingServiceImplTest {
         void shouldThrowExceptionWhenNotOwnerNorAdmin() {
             AccommodationListingRequest request = new AccommodationListingRequest(
                     accommodation.getId(), "Title", "Desc", BigDecimal.valueOf(500),
-                    com.vvu981.colivibackend.features.accommodation.domain.RentalType.ENTIRE_PLACE, BigDecimal.valueOf(100));
+                    com.vvu981.colivibackend.features.accommodation.domain.RentalType.ENTIRE_PLACE, BigDecimal.valueOf(100), null);
             when(accommodationService.findAccommodationByIdAndDeletedAtIsNull(accommodation.getId()))
                     .thenReturn(accommodation);
 
@@ -255,7 +255,7 @@ class AccommodationListingServiceImplTest {
         @DisplayName("debe actualizar los datos del anuncio correctamente")
         void shouldUpdateListing() {
             AccommodationListingUpdateRequest updateDto = new AccommodationListingUpdateRequest("New Title", "New Desc",
-                    BigDecimal.valueOf(700));
+                    BigDecimal.valueOf(700), null);
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
             when(listingRepository.save(any(AccommodationListing.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
@@ -272,7 +272,7 @@ class AccommodationListingServiceImplTest {
         @DisplayName("debe lanzar excepcion si no es el host o owner ni admin")
         void shouldThrowIfNoPermissionToUpdate() {
             AccommodationListingUpdateRequest updateDto = new AccommodationListingUpdateRequest("New Title", "New Desc",
-                    BigDecimal.valueOf(700));
+                    BigDecimal.valueOf(700), null);
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
             assertThatThrownBy(

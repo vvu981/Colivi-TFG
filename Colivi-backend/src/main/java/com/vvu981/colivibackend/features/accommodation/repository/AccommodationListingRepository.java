@@ -32,6 +32,10 @@ public interface AccommodationListingRepository
 
         List<AccommodationListing> findByAccommodationIdAndDeletedAtIsNull(UUID accommodationId);
 
+        boolean existsByAccommodationIdAndRentalTypeAndDeletedAtIsNull(UUID accommodationId, com.vvu981.colivibackend.features.accommodation.domain.RentalType rentalType);
+
+        long countByAccommodationIdAndRentalTypeAndDeletedAtIsNull(UUID accommodationId, com.vvu981.colivibackend.features.accommodation.domain.RentalType rentalType);
+
         boolean existsByIdAndHostId(UUID listingId, UUID landlordId);
 
         @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.OPTIMISTIC_FORCE_INCREMENT)

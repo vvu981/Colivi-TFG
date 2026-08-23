@@ -19,9 +19,13 @@ import com.vvu981.colivibackend.core.exception.UnauthorizedActionException;
 import com.vvu981.colivibackend.features.accommodation.domain.Accommodation;
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing;
 import com.vvu981.colivibackend.features.accommodation.domain.ListingStatus;
+import com.vvu981.colivibackend.features.accommodation.domain.RentalType;
+import com.vvu981.colivibackend.features.accommodation.domain.AccommodationImage;
+import com.vvu981.colivibackend.features.accommodation.domain.ListingImageSelection;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingRequest;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingResponse;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingUpdateRequest;
+import java.util.ArrayList;
 import com.vvu981.colivibackend.features.accommodation.repository.AccommodationListingRepository;
 import com.vvu981.colivibackend.features.accommodation.repository.specification.ListingSpecificationBuilder;
 import com.vvu981.colivibackend.features.accommodation.service.AccommodationListingService;
@@ -60,8 +64,51 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
             throw new UnauthorizedActionException("Error: No tienes permisos para publicar un anuncio en este alojamiento");
         }
 
+        // --- BLINDAJE DE REGLAS DE NEGOCIO ---
+        UUID accId = accommodation.getId();
+        
+        // REGLA 1: Bloqueo Total
+        if (listingRepository.existsByAccommodationIdAndRentalTypeAndDeletedAtIsNull(accId, RentalType.ENTIRE_PLACE)) {
+            throw new BusinessRuleValidationException("El inmueble ya está alquilado por completo.");
+        }
+        
+        if (accommodationListingRequest.rentalType() == RentalType.ENTIRE_PLACE) {
+            // REGLA 2: Exclusión Mutua
+            if (listingRepository.existsByAccommodationIdAndRentalTypeAndDeletedAtIsNull(accId, RentalType.ROOM)) {
+                throw new BusinessRuleValidationException("No se puede alquilar la casa entera si ya hay habitaciones comprometidas.");
+            }
+        } else if (accommodationListingRequest.rentalType() == RentalType.ROOM) {
+            // REGLA 3: Capacidad Máxima
+            long activeRooms = listingRepository.countByAccommodationIdAndRentalTypeAndDeletedAtIsNull(accId, RentalType.ROOM);
+            if (activeRooms >= accommodation.getTotalRooms()) {
+                throw new BusinessRuleValidationException("Se alcanzó el límite de habitaciones del inmueble.");
+            }
+        }
+        // -------------------------------------
+
         AccommodationListing accommodationListingToUpload = new AccommodationListing(accommodationListingRequest,
                 accommodation);
+
+        // --- MAPEO DE IMÁGENES SELECCIONADAS ---
+        if (accommodationListingRequest.selectedImages() != null && !accommodationListingRequest.selectedImages().isEmpty()) {
+            List<ListingImageSelection> selectedImages = new ArrayList<>();
+            List<UUID> requestedImageIds = accommodationListingRequest.selectedImages();
+            for (int i = 0; i < requestedImageIds.size(); i++) {
+                UUID imageId = requestedImageIds.get(i);
+                AccommodationImage accImage = accommodation.getImages().stream()
+                        .filter(img -> img.getId().equals(imageId))
+                        .findFirst()
+                        .orElseThrow(() -> new BusinessRuleValidationException("La imagen con id " + imageId + " no pertenece a este alojamiento."));
+                
+                ListingImageSelection selection = ListingImageSelection.builder()
+                        .listing(accommodationListingToUpload)
+                        .image(accImage)
+                        .displayOrder(i)
+                        .build();
+                selectedImages.add(selection);
+            }
+            accommodationListingToUpload.setImages(selectedImages);
+        }
 
         listingRepository.save(accommodationListingToUpload);
         AccommodationListingResponse accommodationListingResponse = new AccommodationListingResponse(
@@ -111,6 +158,33 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
         listing.setTitle(dto.title());
         listing.setDescription(dto.description());
         listing.setPricePerMonth(dto.pricePerMonth());
+
+        // --- MAPEO DE IMÁGENES SELECCIONADAS ---
+        if (dto.selectedImages() != null) {
+            listing.getImages().clear();
+            
+            if (!dto.selectedImages().isEmpty()) {
+                List<ListingImageSelection> selectedImages = new ArrayList<>();
+                List<UUID> requestedImageIds = dto.selectedImages();
+                Accommodation accommodation = listing.getAccommodation();
+                
+                for (int i = 0; i < requestedImageIds.size(); i++) {
+                    UUID imageId = requestedImageIds.get(i);
+                    AccommodationImage accImage = accommodation.getImages().stream()
+                            .filter(img -> img.getId().equals(imageId))
+                            .findFirst()
+                            .orElseThrow(() -> new BusinessRuleValidationException("La imagen con id " + imageId + " no pertenece a este alojamiento."));
+                    
+                    ListingImageSelection selection = ListingImageSelection.builder()
+                            .listing(listing)
+                            .image(accImage)
+                            .displayOrder(i)
+                            .build();
+                    selectedImages.add(selection);
+                }
+                listing.getImages().addAll(selectedImages);
+            }
+        }
 
         AccommodationListing updatedListing = listingRepository.save(listing);
 

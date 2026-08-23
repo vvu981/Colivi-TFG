@@ -7,6 +7,8 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import java.util.List;
+import java.util.ArrayList;
 
 @Entity
 @Table(name = "accommodation_listing")
@@ -77,6 +79,11 @@ public class AccommodationListing {
 
     @Column(name = "banned_at")
     private LocalDateTime bannedAt;
+
+    @Builder.Default
+    @OneToMany(mappedBy = "listing", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("displayOrder ASC")
+    private List<ListingImageSelection> images = new ArrayList<>();
 
     public AccommodationListing(AccommodationListingRequest dto, Accommodation accommodation) {
         this.accommodation = accommodation;

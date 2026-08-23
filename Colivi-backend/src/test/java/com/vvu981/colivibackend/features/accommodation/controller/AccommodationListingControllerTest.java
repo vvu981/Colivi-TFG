@@ -101,7 +101,7 @@ class AccommodationListingControllerTest {
                 null,
                 hostUser.getId(),
                 hostUser.getNickname(),
-                false);
+                false, null);
     }
 
     private UsernamePasswordAuthenticationToken buildAuth(User user) {
@@ -209,7 +209,7 @@ class AccommodationListingControllerTest {
                     accommodationId, "Cozy Room in Center", "Nice and warm room in city center",
                     BigDecimal.valueOf(450.0),
                     com.vvu981.colivibackend.features.accommodation.domain.RentalType.ENTIRE_PLACE,
-                    BigDecimal.valueOf(100.0));
+                    BigDecimal.valueOf(100.0), null);
             when(listingService.createAccommodationListing(any(AccommodationListingRequest.class), any(UUID.class)))
                     .thenReturn(listingResponse);
 
@@ -231,7 +231,7 @@ class AccommodationListingControllerTest {
         @DisplayName("debe actualizar el anuncio si es el propietario")
         void shouldUpdateListing() throws Exception {
             AccommodationListingUpdateRequest request = new AccommodationListingUpdateRequest(
-                    "Updated Title", "Updated Description", BigDecimal.valueOf(500.0));
+                    "Updated Title", "Updated Description", BigDecimal.valueOf(500.0), null);
             AccommodationListingResponse updatedResponse = new AccommodationListingResponse(
                     listingId,
                     "Updated Title",
@@ -244,7 +244,7 @@ class AccommodationListingControllerTest {
                     null,
                     hostUser.getId(),
                     hostUser.getNickname(),
-                    false);
+                    false, null);
             when(listingService.updateAccommodationListing(eq(listingId), any(AccommodationListingUpdateRequest.class),
                     any(UUID.class)))
                     .thenReturn(updatedResponse);

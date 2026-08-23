@@ -1,5 +1,6 @@
 package com.vvu981.colivibackend.features.accommodation.controller;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -137,6 +138,15 @@ public class AccommodationListingController {
         AccommodationListingResponse listingResponse = listingService.getAccommodationListing(listingId);
         return ResponseEntity.ok(listingResponse);
 
+    }
+
+    @GetMapping("/accommodation/{id}")
+    public ResponseEntity<List<AccommodationListingResponse>> getListingsByAccommodationId(@PathVariable("id") UUID accommodationId) {
+        List<com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing> listings = listingService.findListingsByAccommodationId(accommodationId);
+        List<AccommodationListingResponse> response = listings.stream()
+                .map(AccommodationListingResponse::new)
+                .toList();
+        return ResponseEntity.ok(response);
     }
 
     @PatchMapping("/status/{id}")
