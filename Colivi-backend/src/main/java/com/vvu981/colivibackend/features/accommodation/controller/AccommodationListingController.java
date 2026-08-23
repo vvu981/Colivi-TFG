@@ -142,7 +142,7 @@ public class AccommodationListingController {
 
     @GetMapping("/accommodation/{id}")
     public ResponseEntity<List<AccommodationListingResponse>> getListingsByAccommodationId(@PathVariable("id") UUID accommodationId) {
-        List<com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing> listings = listingService.findListingsByAccommodationId(accommodationId);
+        List<com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing> listings = listingService.findAvailableListingsByAccommodationId(accommodationId);
         List<AccommodationListingResponse> response = listings.stream()
                 .map(AccommodationListingResponse::new)
                 .toList();

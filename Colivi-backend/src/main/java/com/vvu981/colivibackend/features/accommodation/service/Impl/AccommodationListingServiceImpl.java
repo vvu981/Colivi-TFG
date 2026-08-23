@@ -21,7 +21,6 @@ import com.vvu981.colivibackend.features.accommodation.domain.AccommodationListi
 import com.vvu981.colivibackend.features.accommodation.domain.ListingStatus;
 import com.vvu981.colivibackend.features.accommodation.domain.RentalType;
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationImage;
-import com.vvu981.colivibackend.features.accommodation.domain.ListingImageSelection;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingRequest;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingResponse;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingUpdateRequest;
@@ -65,23 +64,25 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
         boolean isAdmin = isAdmin(currentUser);
 
         if (!isOwner && !isAdmin) {
-            throw new UnauthorizedActionException("Error: No tienes permisos para publicar un anuncio en este alojamiento");
+            throw new UnauthorizedActionException(
+                    "Error: No tienes permisos para publicar un anuncio en este alojamiento");
         }
 
         // --- BLINDAJE DE REGLAS DE NEGOCIO ---
         UUID accId = accommodation.getId();
-        
+
         AccommodationListingStatsDTO stats = listingRepository.getListingStatsForAccommodation(accId);
 
         // REGLA 1: Bloqueo Total
         if (stats.entirePlaceCount() > 0) {
             throw new BusinessRuleValidationException("El inmueble ya está alquilado por completo.");
         }
-        
+
         if (accommodationListingRequest.rentalType() == RentalType.ENTIRE_PLACE) {
             // REGLA 2: Exclusión Mutua
             if (stats.roomCount() > 0) {
-                throw new BusinessRuleValidationException("No se puede alquilar la casa entera si ya hay habitaciones comprometidas.");
+                throw new BusinessRuleValidationException(
+                        "No se puede alquilar la casa entera si ya hay habitaciones comprometidas.");
             }
         } else if (accommodationListingRequest.rentalType() == RentalType.ROOM) {
             // REGLA 3: Capacidad Máxima
@@ -95,10 +96,12 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
                 accommodation);
 
         // --- MAPEO DE IMÁGENES SELECCIONADAS ---
-        if (accommodationListingRequest.selectedImages() != null && !accommodationListingRequest.selectedImages().isEmpty()) {
+        if (accommodationListingRequest.selectedImages() != null
+                && !accommodationListingRequest.selectedImages().isEmpty()) {
             List<AccommodationImage> mappedImages = new ArrayList<>();
-            List<UUID> requestedImageIds = accommodationListingRequest.selectedImages();
-            
+            List<UUID> requestedImageIds = new ArrayList<>(
+                    new java.util.LinkedHashSet<>(accommodationListingRequest.selectedImages()));
+
             Map<UUID, AccommodationImage> accImagesMap = accommodation.getImages().stream()
                     .collect(Collectors.toMap(AccommodationImage::getId, img -> img));
 
@@ -106,7 +109,8 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
                 UUID imageId = requestedImageIds.get(i);
                 AccommodationImage accImage = accImagesMap.get(imageId);
                 if (accImage == null) {
-                    throw new BusinessRuleValidationException("La imagen con id " + imageId + " no pertenece a este alojamiento.");
+                    throw new BusinessRuleValidationException(
+                            "La imagen con id " + imageId + " no pertenece a este alojamiento.");
                 }
                 mappedImages.add(accImage);
             }
@@ -114,9 +118,7 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
         }
 
         listingRepository.save(accommodationListingToUpload);
-        AccommodationListingResponse accommodationListingResponse = new AccommodationListingResponse(
-                accommodationListingToUpload);
-        return accommodationListingResponse;
+        return new AccommodationListingResponse(accommodationListingToUpload);
     }
 
     @Override
@@ -125,10 +127,12 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
         AccommodationListing accommodationListing = findAccommodationListingById(accommodationId);
         User currentUser = getUser(currentUserId);
         if (!canEdit(accommodationListing, currentUser))
-            throw new UnauthorizedActionException("Error: no puedes eliminar el anuncio con id: " + accommodationId + ".");
+            throw new UnauthorizedActionException(
+                    "Error: no puedes eliminar el anuncio con id: " + accommodationId + ".");
 
         if (accommodationListing.getDeletedAt() != null)
-            throw new BusinessRuleValidationException("Error: el anuncio con id: " + accommodationId + " ya esta eliminado.");
+            throw new BusinessRuleValidationException(
+                    "Error: el anuncio con id: " + accommodationId + " ya esta eliminado.");
 
         accommodationListing.setDeletedAt(LocalDateTime.now());
         listingRepository.save(accommodationListing);
@@ -168,9 +172,9 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
         if (dto.selectedImages() != null) {
             if (!dto.selectedImages().isEmpty()) {
                 List<AccommodationImage> mappedImages = new ArrayList<>();
-                List<UUID> requestedImageIds = dto.selectedImages();
+                List<UUID> requestedImageIds = new ArrayList<>(new java.util.LinkedHashSet<>(dto.selectedImages()));
                 Accommodation accommodation = listing.getAccommodation();
-                
+
                 Map<UUID, AccommodationImage> accImagesMap = accommodation.getImages().stream()
                         .collect(Collectors.toMap(AccommodationImage::getId, img -> img));
 
@@ -178,7 +182,8 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
                     UUID imageId = requestedImageIds.get(i);
                     AccommodationImage accImage = accImagesMap.get(imageId);
                     if (accImage == null) {
-                        throw new BusinessRuleValidationException("La imagen con id " + imageId + " no pertenece a este alojamiento.");
+                        throw new BusinessRuleValidationException(
+                                "La imagen con id " + imageId + " no pertenece a este alojamiento.");
                     }
                     mappedImages.add(accImage);
                 }
@@ -249,10 +254,12 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
             throw new UnauthorizedActionException("Error: no tienes permisos para esta accion.");
 
         if (accommodationListing.getDeletedAt() == null)
-            throw new BusinessRuleValidationException("Error: el anuncio con id: " + accommodationId + " no esta eliminado.");
+            throw new BusinessRuleValidationException(
+                    "Error: el anuncio con id: " + accommodationId + " no esta eliminado.");
 
         if (accommodationListing.getBannedAt() != null)
-            throw new BusinessRuleValidationException("Error: el anuncio con id: " + accommodationId + " esta baneado.");
+            throw new BusinessRuleValidationException(
+                    "Error: el anuncio con id: " + accommodationId + " esta baneado.");
 
         if (accommodationListing.getDeletedAt().plusDays(7).isBefore(LocalDateTime.now()))
             throw new BusinessRuleValidationException("Error: se te ha pasado el tiempo de recuperacion.");
@@ -264,13 +271,15 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
     }
 
     @Override
+    @Transactional(readOnly = true)
     public AccommodationListingResponse getAccommodationListing(UUID accommodationId) {
         return new AccommodationListingResponse(findAccommodationListingById(accommodationId));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<AccommodationListingResponse> searchAllListingsForAdmin(Map<String, String> filters, int page, int size) {
+    public Page<AccommodationListingResponse> searchAllListingsForAdmin(Map<String, String> filters, int page,
+            int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
         Specification<AccommodationListing> spec = specificationBuilder.buildAdminSpecification(filters);
@@ -306,8 +315,16 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<AccommodationListing> findListingsByAccommodationId(UUID accommodationId) {
         return listingRepository.findByAccommodationIdAndDeletedAtIsNull(accommodationId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AccommodationListing> findAvailableListingsByAccommodationId(UUID accommodationId) {
+        return listingRepository.findByAccommodationIdAndStatusAndDeletedAtIsNull(accommodationId,
+                ListingStatus.AVAILABLE);
     }
 
     private boolean isAdmin(User currentUser) {

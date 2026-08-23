@@ -45,4 +45,6 @@ public interface AccommodationListingService {
 
         List<AccommodationListing> findListingsByAccommodationId(UUID accommodationId);
 
+        List<AccommodationListing> findAvailableListingsByAccommodationId(UUID accommodationId);
+
 }

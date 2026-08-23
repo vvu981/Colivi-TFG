@@ -30,7 +30,15 @@ public interface AccommodationListingRepository
 
         Page<AccommodationListing> findByTitle(String title, Pageable pageable);
 
+        @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"images", "images.image", "host", "accommodation", "accommodation.images"})
         List<AccommodationListing> findByAccommodationIdAndDeletedAtIsNull(UUID accommodationId);
+
+        @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"images", "images.image", "host", "accommodation", "accommodation.images"})
+        List<AccommodationListing> findByAccommodationIdAndStatusAndDeletedAtIsNull(UUID accommodationId, ListingStatus status);
+
+        @Override
+        @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"images", "images.image", "host", "accommodation", "accommodation.images"})
+        java.util.Optional<AccommodationListing> findById(UUID id);
 
         boolean existsByAccommodationIdAndRentalTypeAndDeletedAtIsNull(UUID accommodationId, com.vvu981.colivibackend.features.accommodation.domain.RentalType rentalType);
 

@@ -199,6 +199,35 @@ class AccommodationListingControllerTest {
     }
 
     @Nested
+    @DisplayName("GET /api/v1/listings/accommodation/{id}")
+    class GetListingsByAccommodation {
+
+        @Test
+        @DisplayName("debe retornar 200 con la lista de anuncios disponibles del alojamiento")
+        void shouldReturnAvailableListingsByAccommodation() throws Exception {
+            com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing mockListing = new com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing();
+            mockListing.setId(listingId);
+            mockListing.setTitle("Cozy Room in Center");
+            mockListing.setPricePerMonth(BigDecimal.valueOf(450.0));
+            mockListing.setSecurityDeposit(BigDecimal.valueOf(100.0));
+            mockListing.setStatus(ListingStatus.AVAILABLE);
+            mockListing.setRentalType(com.vvu981.colivibackend.features.accommodation.domain.RentalType.ENTIRE_PLACE);
+            
+            com.vvu981.colivibackend.features.accommodation.domain.Accommodation mockAcc = new com.vvu981.colivibackend.features.accommodation.domain.Accommodation();
+            mockAcc.setId(accommodationId);
+            mockListing.setAccommodation(mockAcc);
+            mockListing.setHost(hostUser);
+            
+            when(listingService.findAvailableListingsByAccommodationId(accommodationId))
+                    .thenReturn(List.of(mockListing));
+
+            mockMvc.perform(get("/api/v1/listings/accommodation/{id}", accommodationId))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0].title").value("Cozy Room in Center"));
+        }
+    }
+
+    @Nested
     @DisplayName("POST /api/v1/listings")
     class CreateListing {
 
