@@ -745,7 +745,7 @@ class AccommodationListingServiceImplTest {
                         when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
                         AccommodationListingResponse response = listingServiceImpl
-                                        .getAccommodationListing(listing.getId());
+                                        .getAccommodationListing(listing.getId(), null);
 
                         assertThat(response).isNotNull();
                         assertThat(response.id()).isEqualTo(listing.getId());
@@ -757,7 +757,7 @@ class AccommodationListingServiceImplTest {
                         UUID randomId = UUID.randomUUID();
                         when(listingRepository.findById(randomId)).thenReturn(Optional.empty());
 
-                        assertThatThrownBy(() -> listingServiceImpl.getAccommodationListing(randomId))
+                        assertThatThrownBy(() -> listingServiceImpl.getAccommodationListing(randomId, null))
                                         .isInstanceOf(ResourceNotFoundException.class)
                                         .hasMessageContaining("no se encuentra el anuncio con id");
                 }
@@ -768,9 +768,20 @@ class AccommodationListingServiceImplTest {
                         listing.setDeletedAt(LocalDateTime.now());
                         when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
-                        assertThatThrownBy(() -> listingServiceImpl.getAccommodationListing(listing.getId()))
+                        assertThatThrownBy(() -> listingServiceImpl.getAccommodationListing(listing.getId(), null))
                                         .isInstanceOf(ResourceNotFoundException.class)
                                         .hasMessageContaining("no existe o fue eliminado");
+                }
+                
+                @Test
+                @DisplayName("debe lanzar excepcion si el anuncio esta baneado y el usuario no tiene permisos")
+                void shouldThrowIfListingIsBannedAndNotOwner() {
+                        listing.setStatus(ListingStatus.BANNED);
+                        when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
+
+                        assertThatThrownBy(() -> listingServiceImpl.getAccommodationListing(listing.getId(), otherUser.getId()))
+                                        .isInstanceOf(ResourceNotFoundException.class)
+                                        .hasMessageContaining("no se encuentra el anuncio");
                 }
         }
 

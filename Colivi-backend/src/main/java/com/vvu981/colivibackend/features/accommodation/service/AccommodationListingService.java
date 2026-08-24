@@ -38,7 +38,7 @@ public interface AccommodationListingService {
 
         Page<AccommodationListingResponse> searchAllListingsForAdmin(Map<String, String> filters, int page, int size);
 
-        AccommodationListingResponse getAccommodationListing(UUID listingId);
+        AccommodationListingResponse getAccommodationListing(UUID listingId, UUID currentUserId);
 
         void changeStatusListing(UUID listingId, ListingStatus listingStatus, UUID currentUserId);
 

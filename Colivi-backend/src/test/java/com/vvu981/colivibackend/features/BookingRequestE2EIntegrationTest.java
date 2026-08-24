@@ -140,7 +140,7 @@ public class BookingRequestE2EIntegrationTest extends BaseIntegrationTest {
                 .header("Authorization", "Bearer " + landlordToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(listingPayload)))
-                .andExpect(status().isOk()) // En ApiE2E está testado como isOk() o isCreated()
+                .andExpect(status().isCreated()) // En ApiE2E está testado como isOk() o isCreated()
                 .andReturn();
 
         Map<String, Object> listingResponse = objectMapper.readValue(listingResult.getResponse().getContentAsString(), new TypeReference<>() {});

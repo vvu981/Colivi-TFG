@@ -266,8 +266,20 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
 
     @Override
     @Transactional(readOnly = true)
-    public AccommodationListingResponse getAccommodationListing(UUID listingId) {
-        return new AccommodationListingResponse(findAccommodationListingById(listingId));
+    public AccommodationListingResponse getAccommodationListing(UUID listingId, UUID currentUserId) {
+        AccommodationListing listing = findAccommodationListingById(listingId);
+        
+        if (listing.getStatus() != ListingStatus.AVAILABLE) {
+            if (currentUserId == null) {
+                throw new ResourceNotFoundException("Error: no se encuentra el anuncio con id: " + listingId + ".");
+            }
+            User currentUser = getUser(currentUserId);
+            if (!canEdit(listing, currentUser)) {
+                throw new ResourceNotFoundException("Error: no se encuentra el anuncio con id: " + listingId + ".");
+            }
+        }
+        
+        return new AccommodationListingResponse(listing);
     }
 
     @Override

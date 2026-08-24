@@ -86,7 +86,7 @@ public class AccommodationListingController {
 
         AccommodationListingResponse request = listingService.createAccommodationListing(listingRequest, currentUserId);
 
-        return ResponseEntity.ok(request);
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(request);
     }
 
     @PreAuthorize("hasAuthority('ADMIN')")
@@ -135,10 +135,12 @@ public class AccommodationListingController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<AccommodationListingResponse> getAccommodationListing(@PathVariable("id") UUID listingId) {
-        AccommodationListingResponse listingResponse = listingService.getAccommodationListing(listingId);
+    public ResponseEntity<AccommodationListingResponse> getAccommodationListing(
+            @PathVariable("id") UUID listingId,
+            @AuthenticationPrincipal com.vvu981.colivibackend.core.security.UserPrincipal userPrincipal) {
+        UUID currentUserId = userPrincipal != null ? userPrincipal.getId() : null;
+        AccommodationListingResponse listingResponse = listingService.getAccommodationListing(listingId, currentUserId);
         return ResponseEntity.ok(listingResponse);
-
     }
 
     @GetMapping("/accommodation/{id}")

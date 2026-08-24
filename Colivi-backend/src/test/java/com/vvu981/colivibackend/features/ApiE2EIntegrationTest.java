@@ -345,7 +345,7 @@ public class ApiE2EIntegrationTest extends BaseIntegrationTest {
                                 .header("Authorization", "Bearer " + userToken)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(payload)))
-                                .andExpect(status().isOk()) // Assuming 200 or 201, script checks 200
+                                .andExpect(status().isCreated()) // Assuming 200 or 201, script checks 200
                                 .andReturn();
 
                 Map<String, Object> response = objectMapper.readValue(result.getResponse().getContentAsString(),

@@ -190,7 +190,7 @@ class AccommodationListingControllerTest {
         @DisplayName("debe retornar 200 con el anuncio solicitado")
         @WithMockUser
         void shouldReturnListing() throws Exception {
-            when(listingService.getAccommodationListing(listingId)).thenReturn(listingResponse);
+            when(listingService.getAccommodationListing(eq(listingId), any())).thenReturn(listingResponse);
 
             mockMvc.perform(get("/api/v1/listings/{id}", listingId))
                     .andExpect(status().isOk())
@@ -201,7 +201,7 @@ class AccommodationListingControllerTest {
         @DisplayName("debe retornar 404 si el anuncio esta eliminado logicamente o no existe")
         @WithMockUser
         void shouldReturn404WhenGettingDeletedListing() throws Exception {
-            when(listingService.getAccommodationListing(listingId))
+            when(listingService.getAccommodationListing(eq(listingId), any()))
                 .thenThrow(new com.vvu981.colivibackend.core.exception.ResourceNotFoundException("Error: el anuncio con id: " + listingId + " no existe o fue eliminado."));
 
             mockMvc.perform(get("/api/v1/listings/{id}", listingId))
@@ -258,7 +258,7 @@ class AccommodationListingControllerTest {
                     .with(authentication(buildAuth(hostUser)))
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isOk())
+                    .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.title").value("Cozy Room in Center"));
         }
 

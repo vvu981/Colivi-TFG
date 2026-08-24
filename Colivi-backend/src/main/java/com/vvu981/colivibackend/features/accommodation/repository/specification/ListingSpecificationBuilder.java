@@ -24,10 +24,6 @@ public class ListingSpecificationBuilder {
         // administrador
         Specification<AccommodationListing> spec = Specification.where(
                 (root, query, cb) -> {
-                    if (Long.class != query.getResultType() && long.class != query.getResultType()) {
-                        root.fetch("accommodation", jakarta.persistence.criteria.JoinType.INNER);
-                        root.fetch("host", jakarta.persistence.criteria.JoinType.INNER);
-                    }
                     return cb.and(
                             cb.equal(root.get("status"), ListingStatus.AVAILABLE),
                             cb.isNull(root.get("deletedAt"))
@@ -42,10 +38,6 @@ public class ListingSpecificationBuilder {
         // Para admin, empezamos sin condiciones restrictivas (devuelve TODO, incluyendo borrados y baneados)
         Specification<AccommodationListing> spec = Specification.where(
                 (root, query, cb) -> {
-                    if (Long.class != query.getResultType() && long.class != query.getResultType()) {
-                        root.fetch("accommodation", jakarta.persistence.criteria.JoinType.INNER);
-                        root.fetch("host", jakarta.persistence.criteria.JoinType.INNER);
-                    }
                     return null;
                 }
         );
