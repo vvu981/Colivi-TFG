@@ -4,11 +4,12 @@ import com.vvu981.colivibackend.features.accommodation.domain.Accommodation;
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationImage;
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing;
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationVisibility;
-
 import com.vvu981.colivibackend.features.accommodation.domain.AmenityType;
+
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationImageOrderRequest;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationRequest;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationResponse;
+import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingStatsDTO;
 import com.vvu981.colivibackend.features.accommodation.repository.AccommodationRepository;
 import com.vvu981.colivibackend.features.accommodation.repository.AccommodationImageRepository;
 import com.vvu981.colivibackend.features.accommodation.service.Impl.AccommodationServiceImpl;
@@ -120,6 +121,7 @@ class AccommodationServiceImplTest {
                 lenient().when(userRepository.getReferenceById(owner.getId())).thenReturn(owner);
                 lenient().when(userRepository.getReferenceById(admin.getId())).thenReturn(admin);
                 lenient().when(userRepository.getReferenceById(otherUser.getId())).thenReturn(otherUser);
+                lenient().when(listingService.getListingStatsForAccommodation(accommodation.getId())).thenReturn(new AccommodationListingStatsDTO(0L, 0L));
         }
 
         @Nested
@@ -277,7 +279,7 @@ class AccommodationServiceImplTest {
                 @DisplayName("debe actualizar los campos correctamente si el usuario es el dueño")
                 void shouldUpdateSuccessfullyIfOwner() {
                         // Arrange
-                        when(accommodationRepository.findByIdAndDeletedAtIsNull(accommodation.getId()))
+                        when(accommodationRepository.findByIdAndDeletedAtIsNullWithPessimisticLock(accommodation.getId()))
                                         .thenReturn(Optional.of(accommodation));
                         when(accommodationRepository.save(any(Accommodation.class))).thenReturn(accommodation);
 
@@ -311,7 +313,7 @@ class AccommodationServiceImplTest {
                 @DisplayName("debe lanzar excepción al actualizar si no está autorizado")
                 void shouldThrowExceptionIfUserNotAuthorized() {
                         // Arrange
-                        when(accommodationRepository.findByIdAndDeletedAtIsNull(accommodation.getId()))
+                        when(accommodationRepository.findByIdAndDeletedAtIsNullWithPessimisticLock(accommodation.getId()))
                                         .thenReturn(Optional.of(accommodation));
 
                         // Act & Assert
@@ -327,7 +329,7 @@ class AccommodationServiceImplTest {
                 @DisplayName("debe actualizar correctamente si el usuario es administrador")
                 void shouldUpdateSuccessfullyIfAdmin() {
                         // Arrange
-                        when(accommodationRepository.findByIdAndDeletedAtIsNull(accommodation.getId()))
+                        when(accommodationRepository.findByIdAndDeletedAtIsNullWithPessimisticLock(accommodation.getId()))
                                         .thenReturn(Optional.of(accommodation));
                         when(accommodationRepository.save(any(Accommodation.class))).thenReturn(accommodation);
 
@@ -348,7 +350,7 @@ class AccommodationServiceImplTest {
                                         "New Address", 5, 3, 3, 150, "Barcelona", "Spain", "Barcelona", 41.3851, 2.1734,
                                         null // amenities null
                         );
-                        when(accommodationRepository.findByIdAndDeletedAtIsNull(accommodation.getId()))
+                        when(accommodationRepository.findByIdAndDeletedAtIsNullWithPessimisticLock(accommodation.getId()))
                                         .thenReturn(Optional.of(accommodation));
                         when(accommodationRepository.save(any(Accommodation.class))).thenReturn(accommodation);
 
@@ -365,7 +367,7 @@ class AccommodationServiceImplTest {
                 @DisplayName("debe lanzar excepción si el alojamiento no existe al actualizar")
                 void shouldThrowExceptionIfAccommodationNotFoundOnUpdate() {
                         // Arrange
-                        when(accommodationRepository.findByIdAndDeletedAtIsNull(any(UUID.class)))
+                        when(accommodationRepository.findByIdAndDeletedAtIsNullWithPessimisticLock(any(UUID.class)))
                                         .thenReturn(Optional.empty());
 
                         // Act & Assert

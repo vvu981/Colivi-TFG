@@ -74,6 +74,7 @@ public class Accommodation {
     @Column(name = "amenity_name", nullable = false)
     @Enumerated(EnumType.STRING)
     @Builder.Default
+    @org.hibernate.annotations.BatchSize(size = 50)
     private Set<AmenityType> amenities = new HashSet<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -82,6 +83,7 @@ public class Accommodation {
 
     @Builder.Default
     @OneToMany(mappedBy = "accommodation", cascade = CascadeType.ALL, orphanRemoval = true)
+    @org.hibernate.annotations.BatchSize(size = 50)
     private List<AccommodationImage> images = new ArrayList<>();
 
     public Accommodation(AccommodationRequest dto, User owner) {

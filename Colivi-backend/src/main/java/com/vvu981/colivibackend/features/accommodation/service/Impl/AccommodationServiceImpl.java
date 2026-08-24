@@ -26,6 +26,7 @@ import com.vvu981.colivibackend.features.accommodation.domain.AccommodationVisib
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationImageOrderRequest;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationRequest;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationResponse;
+import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingStatsDTO;
 import com.vvu981.colivibackend.features.accommodation.repository.AccommodationImageRepository;
 import com.vvu981.colivibackend.features.accommodation.repository.AccommodationRepository;
 import com.vvu981.colivibackend.features.accommodation.service.AccommodationListingService;
@@ -86,12 +87,7 @@ public class AccommodationServiceImpl implements AccommodationService {
         accommodationToSoftDelete.setDeletedAt(LocalDateTime.now());
         Accommodation accommodationDeleted = accommodationRepository.save(accommodationToSoftDelete);
 
-        List<AccommodationListing> associatedListings = listingService
-                .findListingsByAccommodationId(accommodationDeleted.getId());
-
-        for (AccommodationListing listing : associatedListings) {
-            listingService.deleteAccommodationListingSoft(listing.getId(), currentUserId);
-        }
+        listingService.softDeleteAllByAccommodationId(accommodationDeleted.getId());
 
         return new AccommodationResponse(accommodationDeleted);
     }
@@ -118,7 +114,7 @@ public class AccommodationServiceImpl implements AccommodationService {
     @Override
     @Transactional
     public AccommodationResponse updateAccommodation(UUID id, AccommodationRequest dto, UUID currentUserId) {
-        Accommodation accommodationToUpdate = findAccommodationByIdAndDeletedAtIsNull(id);
+        Accommodation accommodationToUpdate = findAccommodationWithImagesByIdAndDeletedAtIsNullWithPessimisticLock(id);
         User currentUser = getUser(currentUserId);
         if (!canEdit(accommodationToUpdate, currentUser))
             throw new UnauthorizedActionException("Error: no puedes editar");
@@ -132,6 +128,11 @@ public class AccommodationServiceImpl implements AccommodationService {
         accommodationToUpdate.setProvince(dto.province());
         accommodationToUpdate.setSquareMeters(dto.squareMeters());
         accommodationToUpdate.setTotalBathrooms(dto.totalBathrooms());
+        
+        AccommodationListingStatsDTO stats = listingService.getListingStatsForAccommodation(id);
+        if (dto.totalRooms() < stats.roomCount()) {
+            throw new BusinessRuleValidationException("No puedes reducir el número de habitaciones por debajo de las actualmente comprometidas en anuncios (" + stats.roomCount() + ").");
+        }
         accommodationToUpdate.setTotalRooms(dto.totalRooms());
         accommodationToUpdate.setUpdatedAt(LocalDateTime.now());
 
@@ -271,6 +272,19 @@ public class AccommodationServiceImpl implements AccommodationService {
         boolean isOwner = accommodationToUpdate.getOwner().getId().equals(currentUser.getId());
         boolean isAdmin = currentUser.getRole() == UserRole.ADMIN;
         return isOwner || isAdmin;
+    }
+
+    @Override
+    public Accommodation findAccommodationWithImagesByIdAndDeletedAtIsNull(UUID id) {
+        return accommodationRepository.findByIdAndDeletedAtIsNullWithImages(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Error: Accommodation with id: " + id + " not found."));
+    }
+
+    @Override
+    @Transactional
+    public Accommodation findAccommodationWithImagesByIdAndDeletedAtIsNullWithPessimisticLock(UUID id) {
+        return accommodationRepository.findByIdAndDeletedAtIsNullWithPessimisticLock(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Error: Accommodation with id: " + id + " not found."));
     }
 
 }

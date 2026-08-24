@@ -2,6 +2,7 @@ package com.vvu981.colivibackend.features.accommodation.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing;
@@ -19,7 +20,8 @@ public record AccommodationListingResponse(
                 AccommodationResponse accommodation, // Reutilizamos tu DTO para enviar la info de la casa limpia
                 UUID hostId,
                 String hostNickname,
-                Boolean isPromoted) {
+                Boolean isPromoted,
+                List<AccommodationImageResponse> selectedImages) {
 
         // 🔍 SOLUCIÓN: El constructor que Java estaba buscando desesperadamente para el
         // método .map()
@@ -43,7 +45,14 @@ public record AccommodationListingResponse(
                                 // Datos mínimos y seguros del casero
                                 listing.getHost() != null ? listing.getHost().getId() : null,
                                 listing.getHost() != null ? listing.getHost().getNickname() : null,
-                                
-                                listing.getIsPromoted() != null ? listing.getIsPromoted() : false);
+
+                                listing.getIsPromoted() != null ? listing.getIsPromoted() : false,
+
+                                listing.getImages() != null ? listing.getImages().stream()
+                                                .map(selection -> new AccommodationImageResponse(
+                                                                selection.getImage().getId(),
+                                                                selection.getImage().getImageUrl(),
+                                                                selection.getDisplayOrder()))
+                                                .toList() : new java.util.ArrayList<>());
         }
 }

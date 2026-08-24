@@ -67,7 +67,7 @@ class RecommendationControllerTest {
                                 null,
                                 null,
                                 null,
-                                true);
+                                true, null);
         }
 
         @Test

@@ -12,6 +12,7 @@ import com.vvu981.colivibackend.features.accommodation.domain.ListingStatus;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingRequest;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingResponse;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingUpdateRequest;
+import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingStatsDTO;
 
 @Service
 public interface AccommodationListingService {
@@ -29,20 +30,27 @@ public interface AccommodationListingService {
 
         void unBanAccommodationListing(UUID accommodationListingId, UUID currentUserId); // solo admin
 
-        void deleteAccommodationListingSoft(UUID accommodationId, UUID currentUserId);
+        void deleteAccommodationListingSoft(UUID listingId, UUID currentUserId);
 
-        void deleteAccommodationListingHard(UUID accommodationId, UUID currentUserId); // solo admin
+        void deleteAccommodationListingHard(UUID listingId, UUID currentUserId); // solo admin
 
-        AccommodationListingResponse recoverAccommodationListing(UUID accommodationId, UUID currentUserId); // solo admin
+        AccommodationListingResponse recoverAccommodationListing(UUID listingId, UUID currentUserId); // solo admin
 
         Page<AccommodationListingResponse> searchAllListingsForAdmin(Map<String, String> filters, int page, int size);
 
-        AccommodationListingResponse getAccommodationListing(UUID accommodationId);
+        AccommodationListingResponse getAccommodationListing(UUID listingId, UUID currentUserId);
 
-        void changeStatusListing(UUID accommodationId, ListingStatus listingStatus, UUID currentUserId);
+        void changeStatusListing(UUID listingId, ListingStatus listingStatus, UUID currentUserId);
 
         AccommodationListing findAccommodationListingById(UUID accommodationListingId);
 
+        AccommodationListing findAccommodationListingIncludingDeletedById(UUID accommodationListingId);
+
         List<AccommodationListing> findListingsByAccommodationId(UUID accommodationId);
 
+        List<AccommodationListingResponse> findAvailableListingsByAccommodationId(UUID accommodationId);
+
+        void softDeleteAllByAccommodationId(UUID accommodationId);
+
+        AccommodationListingStatsDTO getListingStatsForAccommodation(UUID accommodationId);
 }
