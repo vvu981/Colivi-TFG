@@ -31,11 +31,11 @@ public interface AccommodationListingRepository
         Page<AccommodationListing> findByTitle(String title, Pageable pageable);
 
         @org.springframework.data.jpa.repository.EntityGraph(attributePaths = { "images", "images.image", "host",
-                        "accommodation" })
+                        "accommodation", "accommodation.owner" })
         List<AccommodationListing> findByAccommodationIdAndDeletedAtIsNull(UUID accommodationId);
 
         @org.springframework.data.jpa.repository.EntityGraph(attributePaths = { "images", "images.image", "host",
-                        "accommodation" })
+                        "accommodation", "accommodation.owner" })
         List<AccommodationListing> findByAccommodationIdAndStatusAndDeletedAtIsNull(UUID accommodationId,
                         ListingStatus status);
 

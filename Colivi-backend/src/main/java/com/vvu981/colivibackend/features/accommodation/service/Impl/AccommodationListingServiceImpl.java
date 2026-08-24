@@ -349,9 +349,9 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
 
     @Override
     @Transactional(readOnly = true)
-    public List<AccommodationListing> findAvailableListingsByAccommodationId(UUID accommodationId) {
+    public List<AccommodationListingResponse> findAvailableListingsByAccommodationId(UUID accommodationId) {
         return listingRepository.findByAccommodationIdAndStatusAndDeletedAtIsNull(accommodationId,
-                ListingStatus.AVAILABLE);
+                ListingStatus.AVAILABLE).stream().map(AccommodationListingResponse::new).toList();
     }
 
     private boolean isAdmin(User currentUser) {

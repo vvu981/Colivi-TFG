@@ -48,7 +48,7 @@ public interface AccommodationListingService {
 
         List<AccommodationListing> findListingsByAccommodationId(UUID accommodationId);
 
-        List<AccommodationListing> findAvailableListingsByAccommodationId(UUID accommodationId);
+        List<AccommodationListingResponse> findAvailableListingsByAccommodationId(UUID accommodationId);
 
         void softDeleteAllByAccommodationId(UUID accommodationId);
 

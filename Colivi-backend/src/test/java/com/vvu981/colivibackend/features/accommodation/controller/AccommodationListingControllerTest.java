@@ -229,8 +229,9 @@ class AccommodationListingControllerTest {
             mockListing.setAccommodation(mockAcc);
             mockListing.setHost(hostUser);
             
+            AccommodationListingResponse responseDTO = new AccommodationListingResponse(mockListing);
             when(listingService.findAvailableListingsByAccommodationId(accommodationId))
-                    .thenReturn(List.of(mockListing));
+                    .thenReturn(List.of(responseDTO));
 
             mockMvc.perform(get("/api/v1/listings/accommodation/{id}", accommodationId))
                     .andExpect(status().isOk())
