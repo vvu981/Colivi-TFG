@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.List;
 import java.util.ArrayList;
+import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
 
 @Entity
 @Table(name = "accommodation_listing")
@@ -83,9 +84,16 @@ public class AccommodationListing {
     @Builder.Default
     @OneToMany(mappedBy = "listing", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("displayOrder ASC")
+    @org.hibernate.annotations.BatchSize(size = 50)
     private List<ListingImageSelection> images = new ArrayList<>();
 
     public AccommodationListing(AccommodationListingRequest dto, Accommodation accommodation) {
+        if (dto.pricePerMonth() == null || dto.pricePerMonth().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessRuleValidationException("El precio mensual debe ser mayor a 0.");
+        }
+        if (dto.securityDeposit() == null || dto.securityDeposit().compareTo(BigDecimal.ZERO) < 0) {
+            throw new BusinessRuleValidationException("El depósito de seguridad no puede ser negativo.");
+        }
         this.accommodation = accommodation;
         this.host = accommodation.getOwner();
         this.title = dto.title();
@@ -139,6 +147,18 @@ public class AccommodationListing {
                 .displayOrder(i + 1)
                 .build());
         }
+    }
+
+    public void updateInformation(String title, String description, BigDecimal pricePerMonth) {
+        if (this.status == ListingStatus.UNAVAILABLE || this.status == ListingStatus.BANNED) {
+            throw new BusinessRuleValidationException("No se puede modificar un anuncio en estado " + this.status.name());
+        }
+        if (pricePerMonth == null || pricePerMonth.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessRuleValidationException("El precio mensual debe ser mayor a 0.");
+        }
+        this.title = title;
+        this.description = description;
+        this.pricePerMonth = pricePerMonth;
     }
 
 }

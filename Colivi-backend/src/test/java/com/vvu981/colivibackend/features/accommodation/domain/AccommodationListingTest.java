@@ -2,6 +2,7 @@ package com.vvu981.colivibackend.features.accommodation.domain;
 
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingRequest;
 import com.vvu981.colivibackend.features.user.domain.User;
+import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -10,6 +11,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DisplayName("AccommodationListing Entity")
 class AccommodationListingTest {
@@ -187,5 +189,42 @@ class AccommodationListingTest {
         listing.onUpdate();
 
         assertThat(listing.getUpdatedAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("debe lanzar excepcion al crear si el precio es negativo o cero")
+    void shouldThrowIfPriceIsInvalidOnCreate() {
+        User host = new User();
+        Accommodation acc = new Accommodation();
+        acc.setOwner(host);
+
+        AccommodationListingRequest requestZero = new AccommodationListingRequest(
+                UUID.randomUUID(), "Title", "Desc", BigDecimal.ZERO, RentalType.ENTIRE_PLACE, BigDecimal.valueOf(1000), null);
+
+        assertThatThrownBy(() -> new AccommodationListing(requestZero, acc))
+                .isInstanceOf(BusinessRuleValidationException.class)
+                .hasMessageContaining("El precio mensual debe ser mayor a 0.");
+
+        AccommodationListingRequest requestNegative = new AccommodationListingRequest(
+                UUID.randomUUID(), "Title", "Desc", BigDecimal.valueOf(-100), RentalType.ENTIRE_PLACE, BigDecimal.valueOf(1000), null);
+
+        assertThatThrownBy(() -> new AccommodationListing(requestNegative, acc))
+                .isInstanceOf(BusinessRuleValidationException.class)
+                .hasMessageContaining("El precio mensual debe ser mayor a 0.");
+    }
+
+    @Test
+    @DisplayName("debe lanzar excepcion al crear si el deposito es negativo")
+    void shouldThrowIfDepositIsNegativeOnCreate() {
+        User host = new User();
+        Accommodation acc = new Accommodation();
+        acc.setOwner(host);
+
+        AccommodationListingRequest requestNegative = new AccommodationListingRequest(
+                UUID.randomUUID(), "Title", "Desc", BigDecimal.valueOf(500), RentalType.ENTIRE_PLACE, BigDecimal.valueOf(-100), null);
+
+        assertThatThrownBy(() -> new AccommodationListing(requestNegative, acc))
+                .isInstanceOf(BusinessRuleValidationException.class)
+                .hasMessageContaining("El depósito de seguridad no puede ser negativo.");
     }
 }

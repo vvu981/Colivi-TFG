@@ -4,11 +4,12 @@ import com.vvu981.colivibackend.features.accommodation.domain.Accommodation;
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationImage;
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing;
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationVisibility;
-
 import com.vvu981.colivibackend.features.accommodation.domain.AmenityType;
+
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationImageOrderRequest;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationRequest;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationResponse;
+import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingStatsDTO;
 import com.vvu981.colivibackend.features.accommodation.repository.AccommodationRepository;
 import com.vvu981.colivibackend.features.accommodation.repository.AccommodationImageRepository;
 import com.vvu981.colivibackend.features.accommodation.service.Impl.AccommodationServiceImpl;
@@ -120,6 +121,7 @@ class AccommodationServiceImplTest {
                 lenient().when(userRepository.getReferenceById(owner.getId())).thenReturn(owner);
                 lenient().when(userRepository.getReferenceById(admin.getId())).thenReturn(admin);
                 lenient().when(userRepository.getReferenceById(otherUser.getId())).thenReturn(otherUser);
+                lenient().when(listingService.getListingStatsForAccommodation(accommodation.getId())).thenReturn(new AccommodationListingStatsDTO(0L, 0L));
         }
 
         @Nested

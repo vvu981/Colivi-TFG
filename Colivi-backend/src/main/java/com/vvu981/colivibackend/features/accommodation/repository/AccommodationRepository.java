@@ -21,6 +21,11 @@ public interface AccommodationRepository extends JpaRepository<Accommodation, UU
         @Query("SELECT a FROM Accommodation a WHERE a.id = :id AND a.deletedAt IS NULL")
         Optional<Accommodation> findByIdAndDeletedAtIsNullWithImages(@Param("id") UUID id);
 
+        @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+        @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"images"})
+        @Query("SELECT a FROM Accommodation a WHERE a.id = :id AND a.deletedAt IS NULL")
+        Optional<Accommodation> findByIdAndDeletedAtIsNullWithPessimisticLock(@Param("id") UUID id);
+
         @Query("SELECT a FROM Accommodation a WHERE " +
                         "(:ownerId IS NULL OR a.owner.id = :ownerId) AND (" +
                         "(:visibility = 'ALL') OR " +

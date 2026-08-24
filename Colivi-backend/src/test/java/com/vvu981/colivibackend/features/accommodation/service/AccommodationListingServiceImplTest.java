@@ -96,6 +96,7 @@ class AccommodationListingServiceImplTest {
         lenient().when(userRepository.findActiveById(host.getId())).thenReturn(Optional.of(host));
         lenient().when(userRepository.findActiveById(admin.getId())).thenReturn(Optional.of(admin));
         lenient().when(userRepository.findActiveById(otherUser.getId())).thenReturn(Optional.of(otherUser));
+        lenient().when(accommodationService.findAccommodationByIdAndDeletedAtIsNull(accommodation.getId())).thenReturn(accommodation);
     }
 
     @Nested
@@ -108,7 +109,9 @@ class AccommodationListingServiceImplTest {
             AccommodationListingRequest request = new AccommodationListingRequest(
                     accommodation.getId(), "Title", "Desc", BigDecimal.valueOf(500),
                     com.vvu981.colivibackend.features.accommodation.domain.RentalType.ENTIRE_PLACE, BigDecimal.valueOf(100), null);
-            when(accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNull(accommodation.getId()))
+            lenient().when(userRepository.findActiveById(host.getId())).thenReturn(Optional.of(host));
+            when(accommodationService.findAccommodationByIdAndDeletedAtIsNull(accommodation.getId())).thenReturn(accommodation);
+            when(accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNullWithPessimisticLock(accommodation.getId()))
                     .thenReturn(accommodation);
             when(listingRepository.getListingStatsForAccommodation(accommodation.getId()))
                     .thenReturn(new AccommodationListingStatsDTO(0L, 0L));
@@ -128,7 +131,8 @@ class AccommodationListingServiceImplTest {
             AccommodationListingRequest request = new AccommodationListingRequest(
                     accommodation.getId(), "Title", "Desc", BigDecimal.valueOf(500),
                     com.vvu981.colivibackend.features.accommodation.domain.RentalType.ENTIRE_PLACE, BigDecimal.valueOf(100), null);
-            when(accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNull(accommodation.getId()))
+            when(accommodationService.findAccommodationByIdAndDeletedAtIsNull(accommodation.getId())).thenReturn(accommodation);
+            when(accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNullWithPessimisticLock(accommodation.getId()))
                     .thenReturn(accommodation);
             when(listingRepository.getListingStatsForAccommodation(accommodation.getId()))
                     .thenReturn(new AccommodationListingStatsDTO(0L, 0L));
@@ -147,8 +151,8 @@ class AccommodationListingServiceImplTest {
             AccommodationListingRequest request = new AccommodationListingRequest(
                     accommodation.getId(), "Title", "Desc", BigDecimal.valueOf(500),
                     com.vvu981.colivibackend.features.accommodation.domain.RentalType.ENTIRE_PLACE, BigDecimal.valueOf(100), null);
-            when(accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNull(accommodation.getId()))
-                    .thenReturn(accommodation);
+
+            when(accommodationService.findAccommodationByIdAndDeletedAtIsNull(accommodation.getId())).thenReturn(accommodation);
 
             assertThatThrownBy(() -> listingServiceImpl.createAccommodationListing(request, otherUser.getId()))
                     .isInstanceOf(UnauthorizedActionException.class)
@@ -161,7 +165,7 @@ class AccommodationListingServiceImplTest {
             AccommodationListingRequest request = new AccommodationListingRequest(
                     accommodation.getId(), "Title", "Desc", BigDecimal.valueOf(500),
                     RentalType.ROOM, BigDecimal.valueOf(100), null);
-            when(accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNull(accommodation.getId()))
+            when(accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNullWithPessimisticLock(accommodation.getId()))
                     .thenReturn(accommodation);
             when(listingRepository.getListingStatsForAccommodation(accommodation.getId()))
                     .thenReturn(new AccommodationListingStatsDTO(1L, 0L));
@@ -177,7 +181,7 @@ class AccommodationListingServiceImplTest {
             AccommodationListingRequest request = new AccommodationListingRequest(
                     accommodation.getId(), "Title", "Desc", BigDecimal.valueOf(500),
                     RentalType.ENTIRE_PLACE, BigDecimal.valueOf(100), null);
-            when(accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNull(accommodation.getId()))
+            when(accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNullWithPessimisticLock(accommodation.getId()))
                     .thenReturn(accommodation);
             when(listingRepository.getListingStatsForAccommodation(accommodation.getId()))
                     .thenReturn(new AccommodationListingStatsDTO(0L, 1L));
@@ -194,7 +198,7 @@ class AccommodationListingServiceImplTest {
             AccommodationListingRequest request = new AccommodationListingRequest(
                     accommodation.getId(), "Title", "Desc", BigDecimal.valueOf(500),
                     RentalType.ROOM, BigDecimal.valueOf(100), null);
-            when(accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNull(accommodation.getId()))
+            when(accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNullWithPessimisticLock(accommodation.getId()))
                     .thenReturn(accommodation);
             when(listingRepository.getListingStatsForAccommodation(accommodation.getId()))
                     .thenReturn(new AccommodationListingStatsDTO(0L, 3L));
@@ -216,7 +220,7 @@ class AccommodationListingServiceImplTest {
                     accommodation.getId(), "Title", "Desc", BigDecimal.valueOf(500),
                     RentalType.ENTIRE_PLACE, BigDecimal.valueOf(100), List.of(image1.getId()));
             
-            when(accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNull(accommodation.getId()))
+            when(accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNullWithPessimisticLock(accommodation.getId()))
                     .thenReturn(accommodation);
             when(listingRepository.getListingStatsForAccommodation(accommodation.getId()))
                     .thenReturn(new AccommodationListingStatsDTO(0L, 0L));
@@ -236,7 +240,7 @@ class AccommodationListingServiceImplTest {
                     accommodation.getId(), "Title", "Desc", BigDecimal.valueOf(500),
                     RentalType.ENTIRE_PLACE, BigDecimal.valueOf(100), List.of(UUID.randomUUID()));
             
-            when(accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNull(accommodation.getId()))
+            when(accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNullWithPessimisticLock(accommodation.getId()))
                     .thenReturn(accommodation);
             when(listingRepository.getListingStatsForAccommodation(accommodation.getId()))
                     .thenReturn(new AccommodationListingStatsDTO(0L, 0L));
@@ -365,6 +369,19 @@ class AccommodationListingServiceImplTest {
         }
 
         @Test
+        @DisplayName("debe lanzar excepcion si se intenta actualizar un anuncio UNAVAILABLE")
+        void shouldThrowIfUpdatingUnavailableListing() {
+            listing.setStatus(ListingStatus.UNAVAILABLE);
+            AccommodationListingUpdateRequest updateDto = new AccommodationListingUpdateRequest("New Title", "New Desc",
+                    BigDecimal.valueOf(700), null);
+            when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
+
+            assertThatThrownBy(() -> listingServiceImpl.updateAccommodationListing(listing.getId(), updateDto, host.getId()))
+                    .isInstanceOf(BusinessRuleValidationException.class)
+                    .hasMessageContaining("No se puede modificar un anuncio en estado UNAVAILABLE");
+        }
+
+        @Test
         @DisplayName("debe lanzar excepcion si no es el host o owner ni admin")
         void shouldThrowIfNoPermissionToUpdate() {
             AccommodationListingUpdateRequest updateDto = new AccommodationListingUpdateRequest("New Title", "New Desc",
@@ -409,6 +426,19 @@ class AccommodationListingServiceImplTest {
             assertThatThrownBy(() -> listingServiceImpl.updateAccommodationListing(listing.getId(), updateDto, host.getId()))
                     .isInstanceOf(BusinessRuleValidationException.class)
                     .hasMessageContaining("no pertenece a este alojamiento");
+        }
+
+        @Test
+        @DisplayName("debe lanzar excepcion si se intenta actualizar con precio negativo")
+        void shouldThrowIfPriceIsNegative() {
+            AccommodationListingUpdateRequest updateDto = new AccommodationListingUpdateRequest("New Title", "New Desc",
+                    BigDecimal.valueOf(-100), null);
+            
+            when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
+
+            assertThatThrownBy(() -> listingServiceImpl.updateAccommodationListing(listing.getId(), updateDto, host.getId()))
+                    .isInstanceOf(BusinessRuleValidationException.class)
+                    .hasMessageContaining("El precio mensual debe ser mayor a 0");
         }
     }
 
@@ -457,6 +487,10 @@ class AccommodationListingServiceImplTest {
             listing.setStatus(ListingStatus.BANNED);
             listing.setPreviousStatus(ListingStatus.AVAILABLE);
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
+            when(accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNullWithPessimisticLock(accommodation.getId()))
+                    .thenReturn(accommodation);
+            when(listingRepository.getListingStatsForAccommodation(accommodation.getId()))
+                    .thenReturn(new AccommodationListingStatsDTO(0L, 0L));
 
             listingServiceImpl.unBanAccommodationListing(listing.getId(), admin.getId());
 
@@ -480,6 +514,27 @@ class AccommodationListingServiceImplTest {
             assertThatThrownBy(() -> listingServiceImpl.unBanAccommodationListing(listing.getId(), host.getId()))
                     .isInstanceOf(UnauthorizedActionException.class)
                     .hasMessageContaining("no tienes permisos");
+        }
+
+        @Test
+        @DisplayName("debe lanzar excepcion si se alcanzo el limite de habitaciones al desbanear")
+        void shouldThrowIfRoomLimitReachedWhenUnbanning() {
+            listing.setStatus(ListingStatus.BANNED);
+            listing.setPreviousStatus(ListingStatus.AVAILABLE);
+            listing.setRentalType(com.vvu981.colivibackend.features.accommodation.domain.RentalType.ROOM);
+            accommodation.setTotalRooms(3);
+            
+            when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
+            when(accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNullWithPessimisticLock(accommodation.getId()))
+                    .thenReturn(accommodation);
+            
+            // Simulamos que ya hay 3 habitaciones alquiladas (sin contar la baneada porque el repo la ignora)
+            when(listingRepository.getListingStatsForAccommodation(accommodation.getId()))
+                    .thenReturn(new AccommodationListingStatsDTO(0L, 3L));
+
+            assertThatThrownBy(() -> listingServiceImpl.unBanAccommodationListing(listing.getId(), admin.getId()))
+                    .isInstanceOf(BusinessRuleValidationException.class)
+                    .hasMessageContaining("Se alcanzó el límite de habitaciones del inmueble");
         }
     }
 
@@ -515,6 +570,10 @@ class AccommodationListingServiceImplTest {
         void shouldRecoverListingIfAdmin() {
             listing.setDeletedAt(LocalDateTime.now());
             when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
+            when(accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNullWithPessimisticLock(accommodation.getId()))
+                    .thenReturn(accommodation);
+            when(listingRepository.getListingStatsForAccommodation(accommodation.getId()))
+                    .thenReturn(new AccommodationListingStatsDTO(0L, 0L));
 
             AccommodationListingResponse response = listingServiceImpl.recoverAccommodationListing(listing.getId(),
                     admin.getId());
@@ -566,6 +625,51 @@ class AccommodationListingServiceImplTest {
             assertThatThrownBy(() -> listingServiceImpl.recoverAccommodationListing(listing.getId(), admin.getId()))
                     .isInstanceOf(BusinessRuleValidationException.class)
                     .hasMessageContaining("tiempo de recuperacion");
+        }
+
+        @Test
+        @DisplayName("debe lanzar excepcion si el alojamiento padre esta eliminado")
+        void shouldThrowIfRecoveringListingWithDeletedAccommodation() {
+            listing.setDeletedAt(LocalDateTime.now());
+            accommodation.setDeletedAt(LocalDateTime.now()); // Padre eliminado
+            when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
+
+            assertThatThrownBy(() -> listingServiceImpl.recoverAccommodationListing(listing.getId(), admin.getId()))
+                    .isInstanceOf(BusinessRuleValidationException.class)
+                    .hasMessageContaining("alojamiento eliminado");
+        }
+
+        @Test
+        @DisplayName("debe lanzar excepcion si recuperar supera la capacidad")
+        void shouldThrowIfRecoveringExceedsCapacity() {
+            listing.setDeletedAt(LocalDateTime.now());
+            listing.setRentalType(RentalType.ROOM);
+            accommodation.setTotalRooms(3);
+            when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
+            when(accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNullWithPessimisticLock(accommodation.getId()))
+                    .thenReturn(accommodation);
+            when(listingRepository.getListingStatsForAccommodation(accommodation.getId()))
+                    .thenReturn(new AccommodationListingStatsDTO(0L, 3L));
+
+            assertThatThrownBy(() -> listingServiceImpl.recoverAccommodationListing(listing.getId(), admin.getId()))
+                    .isInstanceOf(BusinessRuleValidationException.class)
+                    .hasMessageContaining("límite de habitaciones");
+        }
+
+        @Test
+        @DisplayName("debe lanzar excepcion si recuperar rompe exclusion mutua")
+        void shouldThrowIfRecoveringBreaksMutualExclusion() {
+            listing.setDeletedAt(LocalDateTime.now());
+            listing.setRentalType(RentalType.ENTIRE_PLACE);
+            when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
+            when(accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNullWithPessimisticLock(accommodation.getId()))
+                    .thenReturn(accommodation);
+            when(listingRepository.getListingStatsForAccommodation(accommodation.getId()))
+                    .thenReturn(new AccommodationListingStatsDTO(0L, 1L));
+
+            assertThatThrownBy(() -> listingServiceImpl.recoverAccommodationListing(listing.getId(), admin.getId()))
+                    .isInstanceOf(BusinessRuleValidationException.class)
+                    .hasMessageContaining("habitaciones comprometidas");
         }
     }
 
@@ -634,6 +738,17 @@ class AccommodationListingServiceImplTest {
             assertThatThrownBy(() -> listingServiceImpl.changeStatusListing(listing.getId(), ListingStatus.BANNED, admin.getId()))
                     .isInstanceOf(UnauthorizedActionException.class)
                     .hasMessageContaining("Donde ibas pillin");
+        }
+
+        @Test
+        @DisplayName("debe lanzar excepcion si el anuncio esta baneado actualmente")
+        void shouldThrowIfListingIsCurrentlyBanned() {
+            listing.setStatus(ListingStatus.BANNED);
+            when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
+
+            assertThatThrownBy(() -> listingServiceImpl.changeStatusListing(listing.getId(), ListingStatus.AVAILABLE, host.getId()))
+                    .isInstanceOf(UnauthorizedActionException.class)
+                    .hasMessageContaining("No puedes modificar el estado de un anuncio baneado");
         }
 
         @Test

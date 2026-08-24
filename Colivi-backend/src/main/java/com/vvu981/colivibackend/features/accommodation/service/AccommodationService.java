@@ -37,4 +37,6 @@ public interface AccommodationService {
         Accommodation findAccommodationByIdAndDeletedAtIsNull(UUID id);
 
         Accommodation findAccommodationWithImagesByIdAndDeletedAtIsNull(UUID id);
+
+        Accommodation findAccommodationWithImagesByIdAndDeletedAtIsNullWithPessimisticLock(UUID id);
 }

@@ -56,11 +56,12 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
     public AccommodationListingResponse createAccommodationListing(
             AccommodationListingRequest accommodationListingRequest, UUID currentUserId) {
 
-        Accommodation accommodation = accommodationService
-                .findAccommodationWithImagesByIdAndDeletedAtIsNull(accommodationListingRequest.accommodationId());
+        // --- PREVENCION DE DoS: Verificar autorizacion ANTES del bloqueo pesimista ---
+        Accommodation authCheckAcc = accommodationService
+                .findAccommodationByIdAndDeletedAtIsNull(accommodationListingRequest.accommodationId());
 
         User currentUser = getUser(currentUserId);
-        boolean isOwner = accommodation.getOwner().getId().equals(currentUser.getId());
+        boolean isOwner = authCheckAcc.getOwner().getId().equals(currentUser.getId());
         boolean isAdmin = isAdmin(currentUser);
 
         if (!isOwner && !isAdmin) {
@@ -68,28 +69,12 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
                     "Error: No tienes permisos para publicar un anuncio en este alojamiento");
         }
 
+        // --- BLOQUEO PESIMISTA: Ahora es seguro bloquear la fila ---
+        Accommodation accommodation = accommodationService
+                .findAccommodationWithImagesByIdAndDeletedAtIsNullWithPessimisticLock(accommodationListingRequest.accommodationId());
+
         // --- BLINDAJE DE REGLAS DE NEGOCIO ---
-        UUID accId = accommodation.getId();
-
-        AccommodationListingStatsDTO stats = listingRepository.getListingStatsForAccommodation(accId);
-
-        // REGLA 1: Bloqueo Total
-        if (stats.entirePlaceCount() > 0) {
-            throw new BusinessRuleValidationException("El inmueble ya está alquilado por completo.");
-        }
-
-        if (accommodationListingRequest.rentalType() == RentalType.ENTIRE_PLACE) {
-            // REGLA 2: Exclusión Mutua
-            if (stats.roomCount() > 0) {
-                throw new BusinessRuleValidationException(
-                        "No se puede alquilar la casa entera si ya hay habitaciones comprometidas.");
-            }
-        } else if (accommodationListingRequest.rentalType() == RentalType.ROOM) {
-            // REGLA 3: Capacidad Máxima
-            if (stats.roomCount() >= accommodation.getTotalRooms()) {
-                throw new BusinessRuleValidationException("Se alcanzó el límite de habitaciones del inmueble.");
-            }
-        }
+        validateCapacityRules(accommodation, accommodationListingRequest.rentalType());
         // -------------------------------------
 
         AccommodationListing accommodationListingToUpload = new AccommodationListing(accommodationListingRequest,
@@ -123,16 +108,16 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
 
     @Override
     @Transactional
-    public void deleteAccommodationListingSoft(UUID accommodationId, UUID currentUserId) {
-        AccommodationListing accommodationListing = findAccommodationListingById(accommodationId);
+    public void deleteAccommodationListingSoft(UUID listingId, UUID currentUserId) {
+        AccommodationListing accommodationListing = findAccommodationListingById(listingId);
         User currentUser = getUser(currentUserId);
         if (!canEdit(accommodationListing, currentUser))
             throw new UnauthorizedActionException(
-                    "Error: no puedes eliminar el anuncio con id: " + accommodationId + ".");
+                    "Error: no puedes eliminar el anuncio con id: " + listingId + ".");
 
         if (accommodationListing.getDeletedAt() != null)
             throw new BusinessRuleValidationException(
-                    "Error: el anuncio con id: " + accommodationId + " ya esta eliminado.");
+                    "Error: el anuncio con id: " + listingId + " ya esta eliminado.");
 
         accommodationListing.setDeletedAt(LocalDateTime.now());
         listingRepository.save(accommodationListing);
@@ -141,8 +126,8 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
 
     @Override
     @Transactional
-    public void deleteAccommodationListingHard(UUID accommodationId, UUID currentUserId) {
-        AccommodationListing accommodationListing = findAccommodationListingById(accommodationId);
+    public void deleteAccommodationListingHard(UUID listingId, UUID currentUserId) {
+        AccommodationListing accommodationListing = findAccommodationListingById(listingId);
         User currentUser = getUser(currentUserId);
         if (!isAdmin(currentUser))
             throw new UnauthorizedActionException("Error: no tienes permisos para esa accion.");
@@ -164,9 +149,7 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
             throw new UnauthorizedActionException("Error: No tienes permiso para editar este anuncio");
         }
 
-        listing.setTitle(dto.title());
-        listing.setDescription(dto.description());
-        listing.setPricePerMonth(dto.pricePerMonth());
+        listing.updateInformation(dto.title(), dto.description(), dto.pricePerMonth());
 
         // --- MAPEO DE IMÁGENES SELECCIONADAS ---
         if (dto.selectedImages() != null) {
@@ -227,6 +210,9 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
         if (!accommodationToUnBan.getStatus().equals(ListingStatus.BANNED))
             throw new BusinessRuleValidationException("Error: este anuncio no está baneado.");
 
+        Accommodation lockedAccommodation = accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNullWithPessimisticLock(accommodationToUnBan.getAccommodation().getId());
+        validateCapacityRules(lockedAccommodation, accommodationToUnBan.getRentalType());
+
         accommodationToUnBan.unBan();
 
         listingRepository.save(accommodationToUnBan);
@@ -247,22 +233,30 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
 
     @Override
     @Transactional
-    public AccommodationListingResponse recoverAccommodationListing(UUID accommodationId, UUID currentUserId) {
-        AccommodationListing accommodationListing = findAccommodationListingById(accommodationId);
+    public AccommodationListingResponse recoverAccommodationListing(UUID listingId, UUID currentUserId) {
+        AccommodationListing accommodationListing = findAccommodationListingById(listingId);
         User currentUser = getUser(currentUserId);
         if (!canEdit(accommodationListing, currentUser))
             throw new UnauthorizedActionException("Error: no tienes permisos para esta accion.");
 
         if (accommodationListing.getDeletedAt() == null)
             throw new BusinessRuleValidationException(
-                    "Error: el anuncio con id: " + accommodationId + " no esta eliminado.");
+                    "Error: el anuncio con id: " + listingId + " no esta eliminado.");
 
         if (accommodationListing.getBannedAt() != null)
             throw new BusinessRuleValidationException(
-                    "Error: el anuncio con id: " + accommodationId + " esta baneado.");
+                    "Error: el anuncio con id: " + listingId + " esta baneado.");
 
         if (accommodationListing.getDeletedAt().plusDays(7).isBefore(LocalDateTime.now()))
             throw new BusinessRuleValidationException("Error: se te ha pasado el tiempo de recuperacion.");
+
+        if (accommodationListing.getAccommodation().getDeletedAt() != null)
+            throw new BusinessRuleValidationException(
+                    "Error: no puedes recuperar un anuncio de un alojamiento eliminado.");
+
+        // Volver a validar reglas de capacidad para evitar estados inconsistentes
+        Accommodation lockedAccommodation = accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNullWithPessimisticLock(accommodationListing.getAccommodation().getId());
+        validateCapacityRules(lockedAccommodation, accommodationListing.getRentalType());
 
         accommodationListing.setDeletedAt(null);
         listingRepository.save(accommodationListing);
@@ -290,17 +284,20 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
 
     @Override
     @Transactional
-    public void changeStatusListing(UUID accommodationId, ListingStatus listingStatus, UUID currentUserId) {
-        if (listingStatus.equals(ListingStatus.BANNED))
+    public void changeStatusListing(UUID listingId, ListingStatus listingStatus, UUID currentUserId) {
+        if (ListingStatus.BANNED == listingStatus)
             throw new UnauthorizedActionException("Donde ibas pillin?");
 
-        AccommodationListing accommodationListing = findAccommodationListingById(accommodationId);
+        AccommodationListing accommodationListing = findAccommodationListingById(listingId);
         User currentUser = getUser(currentUserId);
         if (!canEdit(accommodationListing, currentUser))
             throw new UnauthorizedActionException("Error: No tienes permiso para editar este anuncio");
 
-        if (accommodationListing.getStatus().equals(listingStatus))
-            throw new BusinessRuleValidationException("Error: Este anuncio ya esta " + listingStatus.toString());
+        if (accommodationListing.getStatus() == ListingStatus.BANNED)
+            throw new UnauthorizedActionException("Error: No puedes modificar el estado de un anuncio baneado.");
+
+        if (accommodationListing.getStatus() == listingStatus)
+            throw new BusinessRuleValidationException("Error: Este anuncio ya esta " + listingStatus);
 
         accommodationListing.setStatus(listingStatus);
         listingRepository.save(accommodationListing);
@@ -336,6 +333,38 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
         boolean isOwner = accommodationListing.getAccommodation().getOwner().getId().equals(currentUser.getId());
         boolean isHost = accommodationListing.getHost().getId().equals(currentUser.getId());
         return isAdmin || isOwner || isHost;
+    }
+
+    private void validateCapacityRules(Accommodation accommodation, RentalType rentalType) {
+        UUID accId = accommodation.getId();
+        AccommodationListingStatsDTO stats = listingRepository.getListingStatsForAccommodation(accId);
+
+        if (stats.entirePlaceCount() > 0) {
+            throw new BusinessRuleValidationException("El inmueble ya está alquilado por completo.");
+        }
+
+        if (rentalType == RentalType.ENTIRE_PLACE) {
+            if (stats.roomCount() > 0) {
+                throw new BusinessRuleValidationException(
+                        "No se puede alquilar la casa entera si ya hay habitaciones comprometidas.");
+            }
+        } else if (rentalType == RentalType.ROOM) {
+            if (stats.roomCount() >= accommodation.getTotalRooms()) {
+                throw new BusinessRuleValidationException("Se alcanzó el límite de habitaciones del inmueble.");
+            }
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public AccommodationListingStatsDTO getListingStatsForAccommodation(UUID accommodationId) {
+        return listingRepository.getListingStatsForAccommodation(accommodationId);
+    }
+
+    @Override
+    @Transactional
+    public void softDeleteAllByAccommodationId(UUID accommodationId) {
+        listingRepository.softDeleteAllByAccommodationId(accommodationId, LocalDateTime.now());
     }
 
 }

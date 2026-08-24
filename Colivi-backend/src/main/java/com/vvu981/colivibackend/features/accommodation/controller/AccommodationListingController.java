@@ -18,8 +18,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import jakarta.validation.Valid;
 
-import com.vvu981.colivibackend.features.accommodation.domain.ListingStatus;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingRequest;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingResponse;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingUpdateRequest;
@@ -44,7 +44,7 @@ public class AccommodationListingController {
             @AuthenticationPrincipal com.vvu981.colivibackend.core.security.UserPrincipal userPrincipal) {
 
         Page<AccommodationListingResponse> catalog = listingService.searchListings(allParams, page, size);
-        
+
         UUID currentUserId = userPrincipal != null ? userPrincipal.getId() : null;
 
         // Save search async
@@ -57,10 +57,11 @@ public class AccommodationListingController {
                     maxPrice = new java.math.BigDecimal(maxPriceStr);
                 }
             } catch (NumberFormatException e) {
-                throw new IllegalStateException("Invalid maxPrice value", e);
+                throw new com.vvu981.colivibackend.core.exception.BusinessRuleValidationException(
+                        "Invalid maxPrice value");
             }
             String type = allParams.get("rentalType"); // Or whatever the frontend sends
-            
+
             searchHistoryService.saveSearchAsync(currentUserId, city, maxPrice, type);
         }
 
@@ -70,7 +71,7 @@ public class AccommodationListingController {
     @PutMapping("/{id}")
     public ResponseEntity<AccommodationListingResponse> updateListing(
             @PathVariable("id") UUID listingId, // Atrapamos el ID desde la URL
-            @RequestBody AccommodationListingUpdateRequest updateRequest, // Atrapamos los cambios del JSON
+            @Valid @RequestBody AccommodationListingUpdateRequest updateRequest, // Atrapamos los cambios del JSON
             @AuthenticationPrincipal(expression = "id") UUID currentUserId) { // Atrapamos al usuario que navega
 
         AccommodationListingResponse updated = listingService.updateAccommodationListing(listingId, updateRequest,
@@ -80,7 +81,7 @@ public class AccommodationListingController {
 
     @PostMapping
     public ResponseEntity<AccommodationListingResponse> createAccommodationListing(
-            @RequestBody AccommodationListingRequest listingRequest,
+            @Valid @RequestBody AccommodationListingRequest listingRequest,
             @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
 
         AccommodationListingResponse request = listingService.createAccommodationListing(listingRequest, currentUserId);
@@ -141,8 +142,10 @@ public class AccommodationListingController {
     }
 
     @GetMapping("/accommodation/{id}")
-    public ResponseEntity<List<AccommodationListingResponse>> getListingsByAccommodationId(@PathVariable("id") UUID accommodationId) {
-        List<com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing> listings = listingService.findAvailableListingsByAccommodationId(accommodationId);
+    public ResponseEntity<List<AccommodationListingResponse>> getListingsByAccommodationId(
+            @PathVariable("id") UUID accommodationId) {
+        List<com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing> listings = listingService
+                .findAvailableListingsByAccommodationId(accommodationId);
         List<AccommodationListingResponse> response = listings.stream()
                 .map(AccommodationListingResponse::new)
                 .toList();
@@ -151,8 +154,9 @@ public class AccommodationListingController {
 
     @PatchMapping("/status/{id}")
     public ResponseEntity<Void> changeStatus(@PathVariable("id") UUID listingId,
-            @RequestBody ListingStatus listingStatus, @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
-        listingService.changeStatusListing(listingId, listingStatus, currentUserId);
+            @Valid @RequestBody com.vvu981.colivibackend.features.accommodation.dto.ChangeStatusRequest request,
+            @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
+        listingService.changeStatusListing(listingId, request.status(), currentUserId);
         return ResponseEntity.noContent().build();
 
     }
