@@ -56,22 +56,18 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
     public AccommodationListingResponse createAccommodationListing(
             AccommodationListingRequest accommodationListingRequest, UUID currentUserId) {
 
-        // --- PREVENCION DE DoS: Verificar autorizacion ANTES del bloqueo pesimista ---
-        Accommodation authCheckAcc = accommodationService
-                .findAccommodationByIdAndDeletedAtIsNull(accommodationListingRequest.accommodationId());
+        // --- BLOQUEO PESIMISTA ---
+        Accommodation accommodation = accommodationService
+                .findAccommodationWithImagesByIdAndDeletedAtIsNullWithPessimisticLock(accommodationListingRequest.accommodationId());
 
         User currentUser = getUser(currentUserId);
-        boolean isOwner = authCheckAcc.getOwner().getId().equals(currentUser.getId());
+        boolean isOwner = accommodation.getOwner().getId().equals(currentUser.getId());
         boolean isAdmin = isAdmin(currentUser);
 
         if (!isOwner && !isAdmin) {
             throw new UnauthorizedActionException(
                     "Error: No tienes permisos para publicar un anuncio en este alojamiento");
         }
-
-        // --- BLOQUEO PESIMISTA: Ahora es seguro bloquear la fila ---
-        Accommodation accommodation = accommodationService
-                .findAccommodationWithImagesByIdAndDeletedAtIsNullWithPessimisticLock(accommodationListingRequest.accommodationId());
 
         // --- BLINDAJE DE REGLAS DE NEGOCIO ---
         validateCapacityRules(accommodation, accommodationListingRequest.rentalType());
@@ -314,6 +310,9 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
             throw new BusinessRuleValidationException("Error: Este anuncio ya esta " + listingStatus);
 
         if (listingStatus == ListingStatus.AVAILABLE) {
+            if (accommodationListing.getAccommodation().getDeletedAt() != null) {
+                throw new BusinessRuleValidationException("No puedes activar un anuncio cuyo alojamiento ha sido eliminado.");
+            }
             Accommodation lockedAccommodation = accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNullWithPessimisticLock(accommodationListing.getAccommodation().getId());
             validateCapacityRules(lockedAccommodation, accommodationListing.getRentalType());
         }

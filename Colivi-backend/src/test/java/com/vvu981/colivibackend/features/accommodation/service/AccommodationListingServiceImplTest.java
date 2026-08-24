@@ -112,8 +112,7 @@ class AccommodationListingServiceImplTest {
                                         com.vvu981.colivibackend.features.accommodation.domain.RentalType.ENTIRE_PLACE,
                                         BigDecimal.valueOf(100), null);
                         lenient().when(userRepository.findActiveById(host.getId())).thenReturn(Optional.of(host));
-                        when(accommodationService.findAccommodationByIdAndDeletedAtIsNull(accommodation.getId()))
-                                        .thenReturn(accommodation);
+
                         when(accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNullWithPessimisticLock(
                                         accommodation.getId()))
                                         .thenReturn(accommodation);
@@ -137,8 +136,7 @@ class AccommodationListingServiceImplTest {
                                         accommodation.getId(), "Title", "Desc", BigDecimal.valueOf(500),
                                         com.vvu981.colivibackend.features.accommodation.domain.RentalType.ENTIRE_PLACE,
                                         BigDecimal.valueOf(100), null);
-                        when(accommodationService.findAccommodationByIdAndDeletedAtIsNull(accommodation.getId()))
-                                        .thenReturn(accommodation);
+
                         when(accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNullWithPessimisticLock(
                                         accommodation.getId()))
                                         .thenReturn(accommodation);
@@ -162,7 +160,7 @@ class AccommodationListingServiceImplTest {
                                         com.vvu981.colivibackend.features.accommodation.domain.RentalType.ENTIRE_PLACE,
                                         BigDecimal.valueOf(100), null);
 
-                        when(accommodationService.findAccommodationByIdAndDeletedAtIsNull(accommodation.getId()))
+                        when(accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNullWithPessimisticLock(accommodation.getId()))
                                         .thenReturn(accommodation);
 
                         assertThatThrownBy(

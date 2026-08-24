@@ -83,7 +83,9 @@ public class AccommodationListingConcurrencyIntegrationTest extends BaseIntegrat
 
         Runnable task = () -> {
             try {
-                latch.await(); // Esperar hasta que se libere el latch para ejecución concurrente
+                if (!latch.await(5, TimeUnit.SECONDS)) {
+                    throw new RuntimeException("Timeout esperando inicio concurrente");
+                }
 
                 AccommodationListingRequest request = new AccommodationListingRequest(
                         testAccommodation.getId(),
