@@ -114,7 +114,7 @@ public class AccommodationServiceImpl implements AccommodationService {
     @Override
     @Transactional
     public AccommodationResponse updateAccommodation(UUID id, AccommodationRequest dto, UUID currentUserId) {
-        Accommodation accommodationToUpdate = findAccommodationByIdAndDeletedAtIsNull(id);
+        Accommodation accommodationToUpdate = findAccommodationWithImagesByIdAndDeletedAtIsNullWithPessimisticLock(id);
         User currentUser = getUser(currentUserId);
         if (!canEdit(accommodationToUpdate, currentUser))
             throw new UnauthorizedActionException("Error: no puedes editar");

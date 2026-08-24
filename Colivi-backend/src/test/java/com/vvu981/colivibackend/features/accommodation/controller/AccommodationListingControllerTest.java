@@ -288,7 +288,7 @@ class AccommodationListingControllerTest {
         @DisplayName("debe actualizar el anuncio si es el propietario")
         void shouldUpdateListing() throws Exception {
             AccommodationListingUpdateRequest request = new AccommodationListingUpdateRequest(
-                    "Updated Title", "Updated Description", BigDecimal.valueOf(500.0), null);
+                    "Updated Title", "Updated Description", BigDecimal.valueOf(500.0), BigDecimal.valueOf(100.0), null);
             AccommodationListingResponse updatedResponse = new AccommodationListingResponse(
                     listingId,
                     "Updated Title",
@@ -319,7 +319,7 @@ class AccommodationListingControllerTest {
         @DisplayName("debe retornar 403 Forbidden si el usuario no es propietario ni admin")
         void updateListing_WhenUserIsNotOwner_Returns403Forbidden() throws Exception {
             AccommodationListingUpdateRequest request = new AccommodationListingUpdateRequest(
-                    "Updated Title", "Updated Description", BigDecimal.valueOf(500.0), null);
+                    "Updated Title", "Updated Description", BigDecimal.valueOf(500.0), BigDecimal.valueOf(100.0), null);
             
             when(listingService.updateAccommodationListing(eq(listingId), any(AccommodationListingUpdateRequest.class), any(UUID.class)))
                     .thenThrow(new com.vvu981.colivibackend.core.exception.UnauthorizedActionException("No tienes permiso"));
@@ -336,7 +336,7 @@ class AccommodationListingControllerTest {
         @DisplayName("debe retornar 400 Bad Request si la actualizacion viola reglas de negocio (ej. estado bloqueado)")
         void updateListing_WhenStatusIsUnavailable_Returns400BadRequest() throws Exception {
             AccommodationListingUpdateRequest request = new AccommodationListingUpdateRequest(
-                    "Updated Title", "Updated Description", BigDecimal.valueOf(-5.0), null);
+                    "Updated Title", "Updated Description", BigDecimal.valueOf(-5.0), BigDecimal.valueOf(100.0), null);
             
             when(listingService.updateAccommodationListing(eq(listingId), any(AccommodationListingUpdateRequest.class), any(UUID.class)))
                     .thenThrow(new com.vvu981.colivibackend.core.exception.BusinessRuleValidationException("Precio invalido"));

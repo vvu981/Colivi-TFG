@@ -15,6 +15,8 @@ public record AccommodationListingUpdateRequest(
 
                 @NotNull(message = "Price per month is required") @Min(value = 1, message = "Price per month must be greater than 0") BigDecimal pricePerMonth,
 
+                @NotNull(message = "Security deposit is required") @Min(value = 0, message = "Security deposit cannot be negative") BigDecimal securityDeposit,
+
                 List<UUID> selectedImages) {
 
 }

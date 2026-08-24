@@ -381,7 +381,7 @@ class AccommodationListingServiceImplTest {
                 void shouldUpdateListing() {
                         AccommodationListingUpdateRequest updateDto = new AccommodationListingUpdateRequest("New Title",
                                         "New Desc",
-                                        BigDecimal.valueOf(700), null);
+                                        BigDecimal.valueOf(700), BigDecimal.valueOf(100), null);
                         when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
                         when(listingRepository.save(any(AccommodationListing.class)))
                                         .thenAnswer(invocation -> invocation.getArgument(0));
@@ -401,7 +401,7 @@ class AccommodationListingServiceImplTest {
                         listing.setStatus(ListingStatus.UNAVAILABLE);
                         AccommodationListingUpdateRequest updateDto = new AccommodationListingUpdateRequest("New Title",
                                         "New Desc",
-                                        BigDecimal.valueOf(700), null);
+                                        BigDecimal.valueOf(700), BigDecimal.valueOf(100), null);
                         when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
                         assertThatThrownBy(() -> listingServiceImpl.updateAccommodationListing(listing.getId(),
@@ -415,7 +415,7 @@ class AccommodationListingServiceImplTest {
                 void shouldThrowIfNoPermissionToUpdate() {
                         AccommodationListingUpdateRequest updateDto = new AccommodationListingUpdateRequest("New Title",
                                         "New Desc",
-                                        BigDecimal.valueOf(700), null);
+                                        BigDecimal.valueOf(700), BigDecimal.valueOf(100), null);
                         when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 
                         assertThatThrownBy(
@@ -435,7 +435,7 @@ class AccommodationListingServiceImplTest {
 
                         AccommodationListingUpdateRequest updateDto = new AccommodationListingUpdateRequest("New Title",
                                         "New Desc",
-                                        BigDecimal.valueOf(700), List.of(image1.getId()));
+                                        BigDecimal.valueOf(700), BigDecimal.valueOf(100), List.of(image1.getId()));
 
                         when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
                         when(accommodationService
@@ -456,7 +456,7 @@ class AccommodationListingServiceImplTest {
                 void shouldThrowIfImageNotBelongsToAccommodationUpdate() {
                         AccommodationListingUpdateRequest updateDto = new AccommodationListingUpdateRequest("New Title",
                                         "New Desc",
-                                        BigDecimal.valueOf(700), List.of(UUID.randomUUID()));
+                                        BigDecimal.valueOf(700), BigDecimal.valueOf(100), List.of(UUID.randomUUID()));
 
                         when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
                         when(accommodationService
@@ -474,7 +474,7 @@ class AccommodationListingServiceImplTest {
                 void shouldThrowIfPriceIsNegative() {
                         AccommodationListingUpdateRequest updateDto = new AccommodationListingUpdateRequest("New Title",
                                         "New Desc",
-                                        BigDecimal.valueOf(-100), null);
+                                        BigDecimal.valueOf(-100), BigDecimal.valueOf(100), null);
 
                         when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
 

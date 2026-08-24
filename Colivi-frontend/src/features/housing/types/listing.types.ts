@@ -22,6 +22,7 @@ export interface AccommodationListingUpdateRequest {
   title?: string;
   description?: string;
   pricePerMonth?: number;
+  securityDeposit?: number;
   selectedImages?: string[];
 }
 

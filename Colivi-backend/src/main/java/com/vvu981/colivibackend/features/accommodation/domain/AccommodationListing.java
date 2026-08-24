@@ -167,7 +167,7 @@ public class AccommodationListing {
         this.images.sort(java.util.Comparator.comparing(ListingImageSelection::getDisplayOrder));
     }
 
-    public void updateInformation(String title, String description, BigDecimal pricePerMonth) {
+    public void updateInformation(String title, String description, BigDecimal pricePerMonth, BigDecimal securityDeposit) {
         if (this.deletedAt != null) {
             throw new BusinessRuleValidationException("No se puede modificar un anuncio eliminado.");
         }
@@ -177,9 +177,13 @@ public class AccommodationListing {
         if (pricePerMonth == null || pricePerMonth.compareTo(BigDecimal.ZERO) <= 0) {
             throw new BusinessRuleValidationException("El precio mensual debe ser mayor a 0.");
         }
+        if (securityDeposit == null || securityDeposit.compareTo(BigDecimal.ZERO) < 0) {
+            throw new BusinessRuleValidationException("El depósito de seguridad no puede ser negativo.");
+        }
         this.title = title;
         this.description = description;
         this.pricePerMonth = pricePerMonth;
+        this.securityDeposit = securityDeposit;
     }
 
 }

@@ -149,7 +149,7 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
             throw new UnauthorizedActionException("Error: No tienes permiso para editar este anuncio");
         }
 
-        listing.updateInformation(dto.title(), dto.description(), dto.pricePerMonth());
+        listing.updateInformation(dto.title(), dto.description(), dto.pricePerMonth(), dto.securityDeposit());
 
         // --- MAPEO DE IMÁGENES SELECCIONADAS ---
         if (dto.selectedImages() != null) {
@@ -211,7 +211,9 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
             throw new BusinessRuleValidationException("Error: este anuncio no está baneado.");
 
         Accommodation lockedAccommodation = accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNullWithPessimisticLock(accommodationToUnBan.getAccommodation().getId());
-        validateCapacityRules(lockedAccommodation, accommodationToUnBan.getRentalType());
+        if (accommodationToUnBan.getPreviousStatus() == ListingStatus.AVAILABLE) {
+            validateCapacityRules(lockedAccommodation, accommodationToUnBan.getRentalType());
+        }
 
         accommodationToUnBan.unBan();
 
