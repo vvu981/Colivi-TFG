@@ -127,7 +127,7 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
     @Override
     @Transactional
     public void deleteAccommodationListingHard(UUID listingId, UUID currentUserId) {
-        AccommodationListing accommodationListing = findAccommodationListingById(listingId);
+        AccommodationListing accommodationListing = findAccommodationListingIncludingDeletedById(listingId);
         User currentUser = getUser(currentUserId);
         if (!isAdmin(currentUser))
             throw new UnauthorizedActionException("Error: no tienes permisos para esa accion.");
@@ -156,7 +156,7 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
             if (!dto.selectedImages().isEmpty()) {
                 List<AccommodationImage> mappedImages = new ArrayList<>();
                 List<UUID> requestedImageIds = new ArrayList<>(new java.util.LinkedHashSet<>(dto.selectedImages()));
-                Accommodation accommodation = listing.getAccommodation();
+                Accommodation accommodation = accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNull(listing.getAccommodation().getId());
 
                 Map<UUID, AccommodationImage> accImagesMap = accommodation.getImages().stream()
                         .collect(Collectors.toMap(AccommodationImage::getId, img -> img));
@@ -205,7 +205,7 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
         if (!isAdmin(currentUser)) {
             throw new UnauthorizedActionException("Error: no tienes permisos");
         }
-        AccommodationListing accommodationToUnBan = findAccommodationListingById(accommodationListingId);
+        AccommodationListing accommodationToUnBan = findAccommodationListingIncludingDeletedById(accommodationListingId);
 
         if (!accommodationToUnBan.getStatus().equals(ListingStatus.BANNED))
             throw new BusinessRuleValidationException("Error: este anuncio no está baneado.");
@@ -234,7 +234,7 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
     @Override
     @Transactional
     public AccommodationListingResponse recoverAccommodationListing(UUID listingId, UUID currentUserId) {
-        AccommodationListing accommodationListing = findAccommodationListingById(listingId);
+        AccommodationListing accommodationListing = findAccommodationListingIncludingDeletedById(listingId);
         User currentUser = getUser(currentUserId);
         if (!canEdit(accommodationListing, currentUser))
             throw new UnauthorizedActionException("Error: no tienes permisos para esta accion.");
@@ -286,7 +286,7 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
     @Transactional
     public void changeStatusListing(UUID listingId, ListingStatus listingStatus, UUID currentUserId) {
         if (ListingStatus.BANNED == listingStatus)
-            throw new UnauthorizedActionException("Donde ibas pillin?");
+            throw new UnauthorizedActionException("Error: Operación no permitida. Sólo administradores pueden aplicar baneos.");
 
         AccommodationListing accommodationListing = findAccommodationListingById(listingId);
         User currentUser = getUser(currentUserId);
@@ -299,6 +299,11 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
         if (accommodationListing.getStatus() == listingStatus)
             throw new BusinessRuleValidationException("Error: Este anuncio ya esta " + listingStatus);
 
+        if (listingStatus == ListingStatus.AVAILABLE) {
+            Accommodation lockedAccommodation = accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNullWithPessimisticLock(accommodationListing.getAccommodation().getId());
+            validateCapacityRules(lockedAccommodation, accommodationListing.getRentalType());
+        }
+
         accommodationListing.setStatus(listingStatus);
         listingRepository.save(accommodationListing);
     }
@@ -308,7 +313,18 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
         AccommodationListing accommodationListing = listingRepository.findById(accommodationListingId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Error: no se encuentra el anuncio con id: " + accommodationListingId + "."));
+        
+        if (accommodationListing.getDeletedAt() != null) {
+            throw new ResourceNotFoundException("Error: el anuncio con id: " + accommodationListingId + " no existe o fue eliminado.");
+        }
         return accommodationListing;
+    }
+
+    @Override
+    public AccommodationListing findAccommodationListingIncludingDeletedById(UUID accommodationListingId) {
+        return listingRepository.findById(accommodationListingId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Error: no se encuentra el anuncio con id: " + accommodationListingId + "."));
     }
 
     @Override

@@ -52,7 +52,7 @@ public class AccommodationListing {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private ListingStatus status; // PENDIENTE, ACTIVO, RECHAZADO, FINALIZADO
+    private ListingStatus status;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -150,6 +150,9 @@ public class AccommodationListing {
     }
 
     public void updateInformation(String title, String description, BigDecimal pricePerMonth) {
+        if (this.deletedAt != null) {
+            throw new BusinessRuleValidationException("No se puede modificar un anuncio eliminado.");
+        }
         if (this.status == ListingStatus.UNAVAILABLE || this.status == ListingStatus.BANNED) {
             throw new BusinessRuleValidationException("No se puede modificar un anuncio en estado " + this.status.name());
         }
