@@ -45,9 +45,9 @@ public interface AccommodationListingRepository
         long countByAccommodationIdAndRentalTypeAndDeletedAtIsNull(UUID accommodationId, com.vvu981.colivibackend.features.accommodation.domain.RentalType rentalType);
 
         @org.springframework.data.jpa.repository.Query("SELECT new com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingStatsDTO(" +
-                "COALESCE(SUM(CASE WHEN l.rentalType = 'ENTIRE_PLACE' THEN 1L ELSE 0L END), 0L), " +
-                "COALESCE(SUM(CASE WHEN l.rentalType = 'ROOM' THEN 1L ELSE 0L END), 0L)) " +
-                "FROM AccommodationListing l WHERE l.accommodation.id = :accommodationId AND l.deletedAt IS NULL AND l.status = 'AVAILABLE'")
+                "COALESCE(SUM(CASE WHEN l.rentalType = com.vvu981.colivibackend.features.accommodation.domain.RentalType.ENTIRE_PLACE THEN 1L ELSE 0L END), 0L), " +
+                "COALESCE(SUM(CASE WHEN l.rentalType = com.vvu981.colivibackend.features.accommodation.domain.RentalType.ROOM THEN 1L ELSE 0L END), 0L)) " +
+                "FROM AccommodationListing l WHERE l.accommodation.id = :accommodationId AND l.deletedAt IS NULL AND l.status = com.vvu981.colivibackend.features.accommodation.domain.ListingStatus.AVAILABLE")
         com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingStatsDTO getListingStatsForAccommodation(@org.springframework.data.repository.query.Param("accommodationId") UUID accommodationId);
 
         @org.springframework.data.jpa.repository.Modifying

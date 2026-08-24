@@ -816,7 +816,7 @@ class AccommodationListingServiceImplTest {
                         assertThatThrownBy(() -> listingServiceImpl.changeStatusListing(listing.getId(),
                                         ListingStatus.BANNED, admin.getId()))
                                         .isInstanceOf(UnauthorizedActionException.class)
-                                        .hasMessageContaining("Operación no permitida");
+                                        .hasMessageContaining("El estado BANNED no puede establecerse");
                 }
 
                 @Test

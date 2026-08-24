@@ -266,8 +266,8 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
 
     @Override
     @Transactional(readOnly = true)
-    public AccommodationListingResponse getAccommodationListing(UUID accommodationId) {
-        return new AccommodationListingResponse(findAccommodationListingById(accommodationId));
+    public AccommodationListingResponse getAccommodationListing(UUID listingId) {
+        return new AccommodationListingResponse(findAccommodationListingById(listingId));
     }
 
     @Override
@@ -286,7 +286,7 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
     @Transactional
     public void changeStatusListing(UUID listingId, ListingStatus listingStatus, UUID currentUserId) {
         if (ListingStatus.BANNED == listingStatus)
-            throw new UnauthorizedActionException("Error: Operación no permitida. Sólo administradores pueden aplicar baneos.");
+            throw new UnauthorizedActionException("Error: El estado BANNED no puede establecerse por esta vía. Utilice el endpoint específico de moderación (/ban).");
 
         AccommodationListing accommodationListing = findAccommodationListingById(listingId);
         User currentUser = getUser(currentUserId);
