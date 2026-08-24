@@ -7,6 +7,9 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import java.util.List;
+import java.util.ArrayList;
+import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
 
 @Entity
 @Table(name = "accommodation_listing")
@@ -49,7 +52,7 @@ public class AccommodationListing {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private ListingStatus status; // PENDIENTE, ACTIVO, RECHAZADO, FINALIZADO
+    private ListingStatus status;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -78,7 +81,19 @@ public class AccommodationListing {
     @Column(name = "banned_at")
     private LocalDateTime bannedAt;
 
+    @Builder.Default
+    @OneToMany(mappedBy = "listing", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("displayOrder ASC")
+    @org.hibernate.annotations.BatchSize(size = 50)
+    private List<ListingImageSelection> images = new ArrayList<>();
+
     public AccommodationListing(AccommodationListingRequest dto, Accommodation accommodation) {
+        if (dto.pricePerMonth() == null || dto.pricePerMonth().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessRuleValidationException("El precio mensual debe ser mayor a 0.");
+        }
+        if (dto.securityDeposit() == null || dto.securityDeposit().compareTo(BigDecimal.ZERO) < 0) {
+            throw new BusinessRuleValidationException("El depósito de seguridad no puede ser negativo.");
+        }
         this.accommodation = accommodation;
         this.host = accommodation.getOwner();
         this.title = dto.title();
@@ -86,6 +101,7 @@ public class AccommodationListing {
         this.pricePerMonth = dto.pricePerMonth();
         this.securityDeposit = dto.securityDeposit();
         this.rentalType = dto.rentalType();
+        this.images = new ArrayList<>();
     }
 
     @PrePersist
@@ -120,6 +136,54 @@ public class AccommodationListing {
             this.status = this.previousStatus;
             this.bannedAt = null;
         }
+    }
+
+    public void updateImages(List<AccommodationImage> newImages) {
+        List<UUID> newImageIds = newImages.stream()
+                .map(AccommodationImage::getId)
+                .toList();
+
+        this.images.removeIf(selection -> !newImageIds.contains(selection.getImage().getId()));
+
+        for (int i = 0; i < newImages.size(); i++) {
+            AccommodationImage newImage = newImages.get(i);
+            int displayOrder = i + 1;
+
+            java.util.Optional<ListingImageSelection> existingSelection = this.images.stream()
+                    .filter(selection -> selection.getImage().getId().equals(newImage.getId()))
+                    .findFirst();
+
+            if (existingSelection.isPresent()) {
+                existingSelection.get().setDisplayOrder(displayOrder);
+            } else {
+                this.images.add(ListingImageSelection.builder()
+                        .listing(this)
+                        .image(newImage)
+                        .displayOrder(displayOrder)
+                        .build());
+            }
+        }
+        
+        this.images.sort(java.util.Comparator.comparing(ListingImageSelection::getDisplayOrder));
+    }
+
+    public void updateInformation(String title, String description, BigDecimal pricePerMonth, BigDecimal securityDeposit) {
+        if (this.deletedAt != null) {
+            throw new BusinessRuleValidationException("No se puede modificar un anuncio eliminado.");
+        }
+        if (this.status == ListingStatus.UNAVAILABLE || this.status == ListingStatus.BANNED) {
+            throw new BusinessRuleValidationException("No se puede modificar un anuncio en estado " + this.status.name());
+        }
+        if (pricePerMonth == null || pricePerMonth.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessRuleValidationException("El precio mensual debe ser mayor a 0.");
+        }
+        if (securityDeposit == null || securityDeposit.compareTo(BigDecimal.ZERO) < 0) {
+            throw new BusinessRuleValidationException("El depósito de seguridad no puede ser negativo.");
+        }
+        this.title = title;
+        this.description = description;
+        this.pricePerMonth = pricePerMonth;
+        this.securityDeposit = securityDeposit;
     }
 
 }

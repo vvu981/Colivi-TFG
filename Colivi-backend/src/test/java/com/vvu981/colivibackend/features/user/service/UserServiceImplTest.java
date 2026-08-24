@@ -291,6 +291,40 @@ class UserServiceImplTest {
                                         .isInstanceOf(IllegalArgumentException.class)
                                         .hasMessageContaining("El token de Google no es válido");
                 }
+
+                @Test
+                @DisplayName("debe lanzar excepcion si la cuenta esta baneada al loguear con google")
+                void givenBannedUser_whenLoginWithGoogle_thenThrowsException() {
+                        GoogleLoginRequest request = new GoogleLoginRequest("mock_token");
+                        com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload payload = new com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload();
+                        payload.setEmail("victor@colivi.com");
+                        when(googleTokenValidator.validateAndExtractPayload("mock_token")).thenReturn(payload);
+
+                        persistedUser.setBannedAt(LocalDateTime.now());
+                        when(userRepository.findByEmailIgnoreCase("victor@colivi.com"))
+                                        .thenReturn(Optional.of(persistedUser));
+
+                        assertThatThrownBy(() -> userService.loginWithGoogle(request))
+                                        .isInstanceOf(UnauthorizedActionException.class)
+                                        .hasMessageContaining("suspendida");
+                }
+
+                @Test
+                @DisplayName("debe lanzar excepcion si la cuenta esta eliminada al loguear con google")
+                void givenDeletedUser_whenLoginWithGoogle_thenThrowsException() {
+                        GoogleLoginRequest request = new GoogleLoginRequest("mock_token");
+                        com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload payload = new com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload();
+                        payload.setEmail("victor@colivi.com");
+                        when(googleTokenValidator.validateAndExtractPayload("mock_token")).thenReturn(payload);
+
+                        persistedUser.setDeletedAt(LocalDateTime.now());
+                        when(userRepository.findByEmailIgnoreCase("victor@colivi.com"))
+                                        .thenReturn(Optional.of(persistedUser));
+
+                        assertThatThrownBy(() -> userService.loginWithGoogle(request))
+                                        .isInstanceOf(UnauthorizedActionException.class)
+                                        .hasMessageContaining("eliminada");
+                }
         }
 
         // =========================================================================
@@ -1234,6 +1268,102 @@ class UserServiceImplTest {
 
                         verifyNoInteractions(imageStorageService);
                         verify(userRepository, never()).save(any());
+                }
+        }
+
+        // =========================================================================
+        // forgotPassword / resetPassword
+        // =========================================================================
+
+        @Nested
+        @DisplayName("forgotPassword")
+        class ForgotPassword {
+                @Test
+                @DisplayName("happy path: envia token de recuperacion si el usuario existe y no esta baneado ni eliminado")
+                void shouldSendResetToken() {
+                        when(userRepository.findByEmailIgnoreCase("victor@colivi.com"))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(userRepository.save(any(User.class))).thenReturn(persistedUser);
+
+                        userService.forgotPassword("victor@colivi.com");
+
+                        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+                        verify(userRepository).save(captor.capture());
+                        assertThat(captor.getValue().getPasswordResetToken()).isNotNull();
+                        assertThat(captor.getValue().getPasswordResetTokenExpiresAt()).isNotNull();
+                        verify(eventPublisher).publishEvent(any(com.vvu981.colivibackend.features.user.domain.UserPasswordResetRequestedEvent.class));
+                }
+
+                @Test
+                @DisplayName("silent return si el usuario esta baneado")
+                void shouldSilentReturnIfBanned() {
+                        persistedUser.setBannedAt(LocalDateTime.now());
+                        when(userRepository.findByEmailIgnoreCase("victor@colivi.com"))
+                                        .thenReturn(Optional.of(persistedUser));
+
+                        userService.forgotPassword("victor@colivi.com");
+
+                        verify(userRepository, never()).save(any());
+                        verifyNoInteractions(eventPublisher);
+                }
+
+                @Test
+                @DisplayName("silent return si el usuario no existe")
+                void shouldSilentReturnIfUnknown() {
+                        when(userRepository.findByEmailIgnoreCase("unknown@colivi.com"))
+                                        .thenReturn(Optional.empty());
+
+                        userService.forgotPassword("unknown@colivi.com");
+
+                        verify(userRepository, never()).save(any());
+                        verifyNoInteractions(eventPublisher);
+                }
+        }
+
+        @Nested
+        @DisplayName("resetPassword")
+        class ResetPassword {
+                @Test
+                @DisplayName("happy path: resetea la contrasena con token valido")
+                void shouldResetPassword() {
+                        persistedUser.setPasswordResetToken("valid-token");
+                        persistedUser.setPasswordResetTokenExpiresAt(LocalDateTime.now().plusHours(1));
+                        int originalVersion = persistedUser.getTokenVersion();
+
+                        when(userRepository.findByPasswordResetToken("valid-token"))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(passwordEncoder.encode("new-password")).thenReturn("$2a$12$newHashed");
+
+                        userService.resetPassword("valid-token", "new-password");
+
+                        assertThat(persistedUser.getPasswordHash()).isEqualTo("$2a$12$newHashed");
+                        assertThat(persistedUser.getPasswordResetToken()).isNull();
+                        assertThat(persistedUser.getPasswordResetTokenExpiresAt()).isNull();
+                        assertThat(persistedUser.getTokenVersion()).isEqualTo(originalVersion + 1);
+                        verify(userRepository).save(persistedUser);
+                }
+
+                @Test
+                @DisplayName("lanza excepcion si el token no existe")
+                void shouldThrowIfTokenInvalid() {
+                        when(userRepository.findByPasswordResetToken("bad-token"))
+                                        .thenReturn(Optional.empty());
+
+                        assertThatThrownBy(() -> userService.resetPassword("bad-token", "pass"))
+                                        .isInstanceOf(InvalidTokenException.class);
+                }
+
+                @Test
+                @DisplayName("lanza excepcion si el token expiro")
+                void shouldThrowIfTokenExpired() {
+                        persistedUser.setPasswordResetToken("valid-token");
+                        persistedUser.setPasswordResetTokenExpiresAt(LocalDateTime.now().minusHours(1));
+
+                        when(userRepository.findByPasswordResetToken("valid-token"))
+                                        .thenReturn(Optional.of(persistedUser));
+
+                        assertThatThrownBy(() -> userService.resetPassword("valid-token", "pass"))
+                                        .isInstanceOf(InvalidTokenException.class);
                 }
         }
 }

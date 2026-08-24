@@ -345,7 +345,7 @@ public class ApiE2EIntegrationTest extends BaseIntegrationTest {
                                 .header("Authorization", "Bearer " + userToken)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(payload)))
-                                .andExpect(status().isOk()) // Assuming 200 or 201, script checks 200
+                                .andExpect(status().isCreated()) // Assuming 200 or 201, script checks 200
                                 .andReturn();
 
                 Map<String, Object> response = objectMapper.readValue(result.getResponse().getContentAsString(),
@@ -392,7 +392,7 @@ public class ApiE2EIntegrationTest extends BaseIntegrationTest {
         }
 
         @Test
-        @Order(19)
+        @Order(24)
         void step14_softDeleteAccommodation() throws Exception {
                 mockMvc.perform(patch("/api/v1/accommodation/delete/" + accommodationId)
                                 .header("Authorization", "Bearer " + userToken))
@@ -451,10 +451,6 @@ public class ApiE2EIntegrationTest extends BaseIntegrationTest {
         @Test
         @Order(23)
         void step22_adminBanUnbanFlow() throws Exception {
-                // Recuperar el listing que fue soft-deleted en step14 por el borrado en cascada
-                mockMvc.perform(patch("/api/v1/listings/recover/" + listingId)
-                                .header("Authorization", "Bearer " + adminToken))
-                                .andExpect(status().isOk());
 
                 mockMvc.perform(patch("/api/v1/listings/ban/" + listingId)
                                 .header("Authorization", "Bearer " + adminToken))

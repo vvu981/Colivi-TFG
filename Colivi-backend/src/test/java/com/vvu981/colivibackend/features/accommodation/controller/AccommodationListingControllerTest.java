@@ -101,7 +101,7 @@ class AccommodationListingControllerTest {
                 null,
                 hostUser.getId(),
                 hostUser.getNickname(),
-                false);
+                false, null);
     }
 
     private UsernamePasswordAuthenticationToken buildAuth(User user) {
@@ -190,11 +190,52 @@ class AccommodationListingControllerTest {
         @DisplayName("debe retornar 200 con el anuncio solicitado")
         @WithMockUser
         void shouldReturnListing() throws Exception {
-            when(listingService.getAccommodationListing(listingId)).thenReturn(listingResponse);
+            when(listingService.getAccommodationListing(eq(listingId), any())).thenReturn(listingResponse);
 
             mockMvc.perform(get("/api/v1/listings/{id}", listingId))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.title").value("Cozy Room in Center"));
+        }
+
+        @Test
+        @DisplayName("debe retornar 404 si el anuncio esta eliminado logicamente o no existe")
+        @WithMockUser
+        void shouldReturn404WhenGettingDeletedListing() throws Exception {
+            when(listingService.getAccommodationListing(eq(listingId), any()))
+                .thenThrow(new com.vvu981.colivibackend.core.exception.ResourceNotFoundException("Error: el anuncio con id: " + listingId + " no existe o fue eliminado."));
+
+            mockMvc.perform(get("/api/v1/listings/{id}", listingId))
+                    .andExpect(status().isNotFound());
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/v1/listings/accommodation/{id}")
+    class GetListingsByAccommodation {
+
+        @Test
+        @DisplayName("debe retornar 200 con la lista de anuncios disponibles del alojamiento")
+        void shouldReturnAvailableListingsByAccommodation() throws Exception {
+            com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing mockListing = new com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing();
+            mockListing.setId(listingId);
+            mockListing.setTitle("Cozy Room in Center");
+            mockListing.setPricePerMonth(BigDecimal.valueOf(450.0));
+            mockListing.setSecurityDeposit(BigDecimal.valueOf(100.0));
+            mockListing.setStatus(ListingStatus.AVAILABLE);
+            mockListing.setRentalType(com.vvu981.colivibackend.features.accommodation.domain.RentalType.ENTIRE_PLACE);
+            
+            com.vvu981.colivibackend.features.accommodation.domain.Accommodation mockAcc = new com.vvu981.colivibackend.features.accommodation.domain.Accommodation();
+            mockAcc.setId(accommodationId);
+            mockListing.setAccommodation(mockAcc);
+            mockListing.setHost(hostUser);
+            
+            AccommodationListingResponse responseDTO = new AccommodationListingResponse(mockListing);
+            when(listingService.findAvailableListingsByAccommodationId(accommodationId))
+                    .thenReturn(List.of(responseDTO));
+
+            mockMvc.perform(get("/api/v1/listings/accommodation/{id}", accommodationId))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0].title").value("Cozy Room in Center"));
         }
     }
 
@@ -209,7 +250,7 @@ class AccommodationListingControllerTest {
                     accommodationId, "Cozy Room in Center", "Nice and warm room in city center",
                     BigDecimal.valueOf(450.0),
                     com.vvu981.colivibackend.features.accommodation.domain.RentalType.ENTIRE_PLACE,
-                    BigDecimal.valueOf(100.0));
+                    BigDecimal.valueOf(100.0), null);
             when(listingService.createAccommodationListing(any(AccommodationListingRequest.class), any(UUID.class)))
                     .thenReturn(listingResponse);
 
@@ -218,8 +259,25 @@ class AccommodationListingControllerTest {
                     .with(authentication(buildAuth(hostUser)))
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isOk())
+                    .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.title").value("Cozy Room in Center"));
+        }
+
+        @Test
+        @DisplayName("debe retornar 400 Bad Request si el precio mensual es negativo")
+        void shouldReturn400WhenPriceIsNegative() throws Exception {
+            AccommodationListingRequest request = new AccommodationListingRequest(
+                    accommodationId, "Cozy Room in Center", "Nice and warm room in city center",
+                    BigDecimal.valueOf(-450.0), // Invalid price
+                    com.vvu981.colivibackend.features.accommodation.domain.RentalType.ENTIRE_PLACE,
+                    BigDecimal.valueOf(100.0), null);
+
+            mockMvc.perform(post("/api/v1/listings")
+                    .with(csrf())
+                    .with(authentication(buildAuth(hostUser)))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest());
         }
     }
 
@@ -231,7 +289,7 @@ class AccommodationListingControllerTest {
         @DisplayName("debe actualizar el anuncio si es el propietario")
         void shouldUpdateListing() throws Exception {
             AccommodationListingUpdateRequest request = new AccommodationListingUpdateRequest(
-                    "Updated Title", "Updated Description", BigDecimal.valueOf(500.0));
+                    "Updated Title", "Updated Description", BigDecimal.valueOf(500.0), BigDecimal.valueOf(100.0), null);
             AccommodationListingResponse updatedResponse = new AccommodationListingResponse(
                     listingId,
                     "Updated Title",
@@ -244,7 +302,7 @@ class AccommodationListingControllerTest {
                     null,
                     hostUser.getId(),
                     hostUser.getNickname(),
-                    false);
+                    false, null);
             when(listingService.updateAccommodationListing(eq(listingId), any(AccommodationListingUpdateRequest.class),
                     any(UUID.class)))
                     .thenReturn(updatedResponse);
@@ -256,6 +314,40 @@ class AccommodationListingControllerTest {
                     .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.title").value("Updated Title"));
+        }
+
+        @Test
+        @DisplayName("debe retornar 403 Forbidden si el usuario no es propietario ni admin")
+        void updateListing_WhenUserIsNotOwner_Returns403Forbidden() throws Exception {
+            AccommodationListingUpdateRequest request = new AccommodationListingUpdateRequest(
+                    "Updated Title", "Updated Description", BigDecimal.valueOf(500.0), BigDecimal.valueOf(100.0), null);
+            
+            when(listingService.updateAccommodationListing(eq(listingId), any(AccommodationListingUpdateRequest.class), any(UUID.class)))
+                    .thenThrow(new com.vvu981.colivibackend.core.exception.UnauthorizedActionException("No tienes permiso"));
+
+            mockMvc.perform(put("/api/v1/listings/{id}", listingId)
+                    .with(csrf())
+                    .with(authentication(buildAuth(hostUser)))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("debe retornar 400 Bad Request si la actualizacion viola reglas de negocio (ej. estado bloqueado)")
+        void updateListing_WhenStatusIsUnavailable_Returns400BadRequest() throws Exception {
+            AccommodationListingUpdateRequest request = new AccommodationListingUpdateRequest(
+                    "Updated Title", "Updated Description", BigDecimal.valueOf(-5.0), BigDecimal.valueOf(100.0), null);
+            
+            when(listingService.updateAccommodationListing(eq(listingId), any(AccommodationListingUpdateRequest.class), any(UUID.class)))
+                    .thenThrow(new com.vvu981.colivibackend.core.exception.BusinessRuleValidationException("Precio invalido"));
+
+            mockMvc.perform(put("/api/v1/listings/{id}", listingId)
+                    .with(csrf())
+                    .with(authentication(buildAuth(hostUser)))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest());
         }
     }
 
@@ -401,10 +493,21 @@ class AccommodationListingControllerTest {
                     .with(csrf())
                     .with(authentication(buildAuth(hostUser)))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content("\"UNAVAILABLE\""))
+                    .content("{\"status\": \"UNAVAILABLE\"}"))
                     .andExpect(status().isNoContent());
 
             verify(listingService, times(1)).changeStatusListing(eq(listingId), eq(ListingStatus.UNAVAILABLE), eq(hostUser.getId()));
+        }
+
+        @Test
+        @DisplayName("debe retornar 400 Bad Request si el status es nulo o invalido")
+        void shouldReturn400IfStatusIsInvalid() throws Exception {
+            mockMvc.perform(patch("/api/v1/listings/status/{id}", listingId)
+                    .with(csrf())
+                    .with(authentication(buildAuth(hostUser)))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{}"))
+                    .andExpect(status().isBadRequest());
         }
     }
 }

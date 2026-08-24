@@ -23,10 +23,12 @@ public class ListingSpecificationBuilder {
         // Condición base obligatoria: El anuncio debe estar aprobado por el
         // administrador
         Specification<AccommodationListing> spec = Specification.where(
-                (root, query, cb) -> cb.and(
-                        cb.equal(root.get("status"), ListingStatus.AVAILABLE),
-                        cb.isNull(root.get("deletedAt"))
-                )
+                (root, query, cb) -> {
+                    return cb.and(
+                            cb.equal(root.get("status"), ListingStatus.AVAILABLE),
+                            cb.isNull(root.get("deletedAt"))
+                    );
+                }
         );
 
         return applyFilters(spec, params);
@@ -34,7 +36,11 @@ public class ListingSpecificationBuilder {
 
     public Specification<AccommodationListing> buildAdminSpecification(Map<String, String> params) {
         // Para admin, empezamos sin condiciones restrictivas (devuelve TODO, incluyendo borrados y baneados)
-        Specification<AccommodationListing> spec = Specification.where(null);
+        Specification<AccommodationListing> spec = Specification.where(
+                (root, query, cb) -> {
+                    return null;
+                }
+        );
         return applyFilters(spec, params);
     }
 
