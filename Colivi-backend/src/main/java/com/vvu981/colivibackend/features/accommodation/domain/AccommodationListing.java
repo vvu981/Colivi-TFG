@@ -139,14 +139,32 @@ public class AccommodationListing {
     }
 
     public void updateImages(List<AccommodationImage> newImages) {
-        this.images.clear();
+        List<UUID> newImageIds = newImages.stream()
+                .map(AccommodationImage::getId)
+                .toList();
+
+        this.images.removeIf(selection -> !newImageIds.contains(selection.getImage().getId()));
+
         for (int i = 0; i < newImages.size(); i++) {
-            this.images.add(ListingImageSelection.builder()
-                .listing(this)
-                .image(newImages.get(i))
-                .displayOrder(i + 1)
-                .build());
+            AccommodationImage newImage = newImages.get(i);
+            int displayOrder = i + 1;
+
+            java.util.Optional<ListingImageSelection> existingSelection = this.images.stream()
+                    .filter(selection -> selection.getImage().getId().equals(newImage.getId()))
+                    .findFirst();
+
+            if (existingSelection.isPresent()) {
+                existingSelection.get().setDisplayOrder(displayOrder);
+            } else {
+                this.images.add(ListingImageSelection.builder()
+                        .listing(this)
+                        .image(newImage)
+                        .displayOrder(displayOrder)
+                        .build());
+            }
         }
+        
+        this.images.sort(java.util.Comparator.comparing(ListingImageSelection::getDisplayOrder));
     }
 
     public void updateInformation(String title, String description, BigDecimal pricePerMonth) {

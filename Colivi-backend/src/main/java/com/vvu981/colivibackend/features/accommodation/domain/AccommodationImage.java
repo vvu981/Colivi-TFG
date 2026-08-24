@@ -7,6 +7,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "accommodation_image")
+@org.hibernate.annotations.BatchSize(size = 50)
 @Getter
 @Setter
 @NoArgsConstructor

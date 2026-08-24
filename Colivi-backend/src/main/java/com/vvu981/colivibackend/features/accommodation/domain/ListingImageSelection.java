@@ -7,6 +7,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "listing_image_selection")
+@org.hibernate.annotations.BatchSize(size = 50)
 @Getter
 @Setter
 @NoArgsConstructor
