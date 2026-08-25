@@ -81,10 +81,22 @@ class RecommendationControllerTest {
                                 .param("city", "Madrid")
                                 .param("minPrice", "200")
                                 .param("maxPrice", "1000")
-                                .param("rentalType", "ROOM"))
+                                .param("rentalType", "ROOM")
+                                .param("amenities", "WIFI,HEATING"))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$").isArray())
                                 .andExpect(jsonPath("$[0].title").value("Title"));
+        }
+
+        @Test
+        void testGetRecommendations_WithAccommodationTypeFallback() throws Exception {
+                when(recommendationService.getRecommendations(any(), anyInt(), any(), any(), any(), any(), any()))
+                                .thenReturn(List.of(responseDto));
+
+                mockMvc.perform(get("/api/v1/listings/recommendations")
+                                .param("accommodationType", "ROOM"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$").isArray());
         }
 
         @Test

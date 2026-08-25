@@ -33,6 +33,8 @@ class EmailServiceImplTest {
         ReflectionTestUtils.setField(emailService, "reactivationUrlBase", "http://localhost:3000/reactivate?token=");
         ReflectionTestUtils.setField(emailService, "bookingAcceptedSubject", "¡Tu reserva ha sido aceptada!");
         ReflectionTestUtils.setField(emailService, "bookingRejectedSubject", "Actualización sobre tu solicitud de reserva");
+        ReflectionTestUtils.setField(emailService, "passwordResetSubject", "Restablece tu contraseña en Colivi");
+        ReflectionTestUtils.setField(emailService, "passwordResetUrlBase", "http://localhost:3000/reset-password?token=");
     }
 
     @Test
@@ -120,5 +122,23 @@ class EmailServiceImplTest {
         assertThat(capturedMessage.getText()).contains("RECHAZADA");
         assertThat(capturedMessage.getText()).contains("Habitación pequeña");
         assertThat(capturedMessage.getText()).contains("no ha podido aprobar tu solicitud");
+    }
+
+    @Test
+    @DisplayName("debe enviar correo de restablecimiento de contraseña con enlace correcto")
+    void shouldSendPasswordResetEmail() {
+        String toEmail = "reset@test.com";
+        String token = "reset-token-xyz";
+
+        emailService.sendPasswordResetEmail(toEmail, token);
+
+        ArgumentCaptor<SimpleMailMessage> messageCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(mailSender).send(messageCaptor.capture());
+
+        SimpleMailMessage capturedMessage = messageCaptor.getValue();
+        assertThat(capturedMessage.getTo()).containsExactly("reset@test.com");
+        assertThat(capturedMessage.getSubject()).isEqualTo("Restablece tu contraseña en Colivi");
+        assertThat(capturedMessage.getText()).contains("http://localhost:3000/reset-password?token=reset-token-xyz");
+        assertThat(capturedMessage.getText()).contains("24 horas");
     }
 }

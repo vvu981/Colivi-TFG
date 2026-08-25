@@ -117,6 +117,23 @@ class ListingFiltersTest {
     }
 
     @Test
+    @DisplayName("MinPriceFilter apply con formato invalido retorna conjunction")
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    void testMinPriceFilterApplyInvalidFormat() {
+        Map<String, String> params = Map.of("minPrice", "invalid_number");
+        Specification<AccommodationListing> spec = minPriceFilter.apply(params);
+
+        Root root = mock(Root.class);
+        CriteriaQuery query = mock(CriteriaQuery.class);
+        CriteriaBuilder cb = mock(CriteriaBuilder.class);
+        Predicate conjunction = mock(Predicate.class);
+        when(cb.conjunction()).thenReturn(conjunction);
+
+        Predicate result = spec.toPredicate(root, query, cb);
+        assertThat(result).isEqualTo(conjunction);
+    }
+
+    @Test
     @DisplayName("MaxPriceFilter debe ser aplicable si existe el parametro 'maxPrice' no vacio")
     void testMaxPriceFilterApplicability() {
         assertThat(maxPriceFilter.isApplicable(null)).isFalse();

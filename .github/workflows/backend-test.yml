@@ -1,4 +1,4 @@
-name: CI — Test & Coverage Gate
+name: CI — Backend Test & Coverage Gate
 
 on:
   push:
@@ -56,7 +56,7 @@ jobs:
         with:
           paths: ${{ github.workspace }}/Colivi-backend/target/site/jacoco/jacoco.xml
           token: ${{ secrets.GITHUB_TOKEN }}
-          min-coverage-default: 90
+          min-coverage-overall: 90
           min-coverage-changed-files: 90
           title: "Backend Build & Test summary"
           update-comment: true

@@ -227,4 +227,82 @@ class AccommodationListingTest {
                 .isInstanceOf(BusinessRuleValidationException.class)
                 .hasMessageContaining("El depósito de seguridad no puede ser negativo.");
     }
+
+    @Test
+    @DisplayName("debe actualizar informacion correctamente cuando los datos son validos")
+    void shouldUpdateInformationSuccessfully() {
+        AccommodationListing listing = new AccommodationListing();
+        listing.setStatus(ListingStatus.AVAILABLE);
+
+        listing.updateInformation("New Title", "New Desc", BigDecimal.valueOf(600), BigDecimal.valueOf(200));
+
+        assertThat(listing.getTitle()).isEqualTo("New Title");
+        assertThat(listing.getDescription()).isEqualTo("New Desc");
+        assertThat(listing.getPricePerMonth()).isEqualByComparingTo(BigDecimal.valueOf(600));
+        assertThat(listing.getSecurityDeposit()).isEqualByComparingTo(BigDecimal.valueOf(200));
+    }
+
+    @Test
+    @DisplayName("debe fallar al actualizar informacion si esta eliminado o en estado invalido")
+    void shouldFailUpdateInformationWhenDeletedOrInvalidStatus() {
+        AccommodationListing deletedListing = new AccommodationListing();
+        deletedListing.setDeletedAt(LocalDateTime.now());
+        assertThatThrownBy(() -> deletedListing.updateInformation("T", "D", BigDecimal.valueOf(100), BigDecimal.ZERO))
+                .isInstanceOf(BusinessRuleValidationException.class)
+                .hasMessageContaining("eliminado");
+
+        AccommodationListing bannedListing = new AccommodationListing();
+        bannedListing.setStatus(ListingStatus.BANNED);
+        assertThatThrownBy(() -> bannedListing.updateInformation("T", "D", BigDecimal.valueOf(100), BigDecimal.ZERO))
+                .isInstanceOf(BusinessRuleValidationException.class)
+                .hasMessageContaining("BANNED");
+
+        AccommodationListing unavailableListing = new AccommodationListing();
+        unavailableListing.setStatus(ListingStatus.UNAVAILABLE);
+        assertThatThrownBy(() -> unavailableListing.updateInformation("T", "D", BigDecimal.valueOf(100), BigDecimal.ZERO))
+                .isInstanceOf(BusinessRuleValidationException.class)
+                .hasMessageContaining("UNAVAILABLE");
+    }
+
+    @Test
+    @DisplayName("debe fallar al actualizar informacion con precios o fianzas nulos o invalidos")
+    void shouldFailUpdateInformationWithInvalidPrices() {
+        AccommodationListing listing = new AccommodationListing();
+        listing.setStatus(ListingStatus.AVAILABLE);
+
+        assertThatThrownBy(() -> listing.updateInformation("T", "D", null, BigDecimal.ZERO))
+                .isInstanceOf(BusinessRuleValidationException.class);
+        assertThatThrownBy(() -> listing.updateInformation("T", "D", BigDecimal.valueOf(-10), BigDecimal.ZERO))
+                .isInstanceOf(BusinessRuleValidationException.class);
+        assertThatThrownBy(() -> listing.updateInformation("T", "D", BigDecimal.valueOf(100), null))
+                .isInstanceOf(BusinessRuleValidationException.class);
+        assertThatThrownBy(() -> listing.updateInformation("T", "D", BigDecimal.valueOf(100), BigDecimal.valueOf(-1)))
+                .isInstanceOf(BusinessRuleValidationException.class);
+    }
+
+    @Test
+    @DisplayName("debe actualizar y sincronizar lista de imagenes preservando y reordenando")
+    void shouldUpdateAndSyncImages() {
+        AccommodationListing listing = new AccommodationListing();
+        listing.setImages(new java.util.ArrayList<>());
+
+        AccommodationImage img1 = AccommodationImage.builder().id(UUID.randomUUID()).build();
+        AccommodationImage img2 = AccommodationImage.builder().id(UUID.randomUUID()).build();
+        AccommodationImage img3 = AccommodationImage.builder().id(UUID.randomUUID()).build();
+
+        // 1. Add img1 and img2
+        listing.updateImages(java.util.List.of(img1, img2));
+        assertThat(listing.getImages()).hasSize(2);
+        assertThat(listing.getImages().get(0).getImage().getId()).isEqualTo(img1.getId());
+        assertThat(listing.getImages().get(0).getDisplayOrder()).isEqualTo(1);
+        assertThat(listing.getImages().get(1).getDisplayOrder()).isEqualTo(2);
+
+        // 2. Reorder (img2 first) and swap img1 with img3
+        listing.updateImages(java.util.List.of(img2, img3));
+        assertThat(listing.getImages()).hasSize(2);
+        assertThat(listing.getImages().get(0).getImage().getId()).isEqualTo(img2.getId());
+        assertThat(listing.getImages().get(0).getDisplayOrder()).isEqualTo(1);
+        assertThat(listing.getImages().get(1).getImage().getId()).isEqualTo(img3.getId());
+        assertThat(listing.getImages().get(1).getDisplayOrder()).isEqualTo(2);
+    }
 }

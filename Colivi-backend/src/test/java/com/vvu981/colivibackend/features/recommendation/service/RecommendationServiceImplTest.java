@@ -220,4 +220,17 @@ class RecommendationServiceImplTest {
         // Assert
         assertEquals(1, result.size());
     }
+
+    @Test
+    void testGetRecommendations_WithMinPriceAndAmenities() {
+        Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
+        when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(page);
+
+        List<AccommodationListingResponse> result = recommendationService.getRecommendations(
+                null, 1, "Valencia", new BigDecimal("200"), new BigDecimal("800"), "ROOM", List.of("WIFI", "AIR_CONDITIONING")
+        );
+
+        assertEquals(1, result.size());
+    }
 }

@@ -75,4 +75,13 @@ class ReportControllerTest {
                 mockMvc.perform(get("/api/v1/reports/me"))
                                 .andExpect(status().isOk());
         }
+
+        @Test
+        void cancelReport_shouldReturn204() throws Exception {
+                UUID reportId = UUID.randomUUID();
+
+                mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/v1/reports/" + reportId + "/cancel")
+                                .with(csrf()))
+                                .andExpect(status().isNoContent());
+        }
 }

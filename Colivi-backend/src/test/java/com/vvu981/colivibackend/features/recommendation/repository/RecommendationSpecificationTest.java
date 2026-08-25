@@ -163,6 +163,15 @@ class RecommendationSpecificationTest {
     }
 
     @Test
+    void buildRecommendationSpec_FiltersByAmenitiesAndRentalType() {
+        Specification<AccommodationListing> spec = RecommendationSpecification.buildRecommendationSpec(
+                null, null, null, "ROOM", List.of("WIFI", "INVALID_AMENITY"), null
+        );
+        List<AccommodationListing> results = listingRepository.findAll(spec);
+        assertNotNull(results);
+    }
+
+    @Test
     void testPrivateConstructor() throws Exception {
         java.lang.reflect.Constructor<RecommendationSpecification> constructor = RecommendationSpecification.class.getDeclaredConstructor();
         constructor.setAccessible(true);
