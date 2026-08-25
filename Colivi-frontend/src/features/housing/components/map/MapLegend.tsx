@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Home, Bed, Info, ChevronUp, ChevronDown } from 'lucide-react';
+import { MAP_THEME } from './mapTheme';
 
 export const MapLegend: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const { pin: pinTheme, badge: badgeTheme, cluster: clusterTheme } = MAP_THEME;
 
   return (
     <div className="absolute bottom-4 right-4 z-[1000] flex flex-col items-end">
@@ -30,14 +32,18 @@ export const MapLegend: React.FC = () => {
               Tipo de alquiler
             </span>
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-md bg-primary-fixed border border-primary/20 flex items-center justify-center flex-shrink-0">
-                <Home size={13} className="text-on-surface-variant" />
+              <div
+                className={`w-6 h-6 rounded-md ${pinTheme.dropFill.replace('fill-', 'bg-')} ${badgeTheme.border} flex items-center justify-center flex-shrink-0 ${badgeTheme.shadow}`}
+              >
+                <Home size={13} style={{ color: pinTheme.iconColor }} />
               </div>
               <span className="text-on-surface">Alojamiento completo</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-md bg-primary-fixed border border-primary/20 flex items-center justify-center flex-shrink-0">
-                <Bed size={13} className="text-on-surface-variant" />
+              <div
+                className={`w-6 h-6 rounded-md ${pinTheme.dropFill.replace('fill-', 'bg-')} ${badgeTheme.border} flex items-center justify-center flex-shrink-0 ${badgeTheme.shadow}`}
+              >
+                <Bed size={13} style={{ color: pinTheme.iconColor }} />
               </div>
               <span className="text-on-surface">Habitación</span>
             </div>
@@ -49,13 +55,17 @@ export const MapLegend: React.FC = () => {
               Varios anuncios juntos
             </span>
             <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-tertiary-container text-on-tertiary-container flex items-center justify-center text-[10px] font-bold flex-shrink-0 shadow-sm">
+              <span
+                className={`w-5 h-5 rounded-full ${badgeTheme.sameAccommodation} flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${badgeTheme.shadow} ${badgeTheme.border}`}
+              >
                 4
               </span>
               <span className="text-on-surface">Mismo inmueble (Coliving)</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center text-[10px] font-bold flex-shrink-0 shadow-sm">
+              <span
+                className={`w-5 h-5 rounded-full ${badgeTheme.differentAccommodation} flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${badgeTheme.shadow} ${badgeTheme.border}`}
+              >
                 2
               </span>
               <span className="text-on-surface">Inmuebles distintos</span>
@@ -68,7 +78,9 @@ export const MapLegend: React.FC = () => {
               Interacción
             </span>
             <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-primary-fixed text-on-surface-variant flex items-center justify-center text-[10px] font-bold flex-shrink-0 shadow-sm">
+              <span
+                className={`w-5 h-5 rounded-full ${clusterTheme.background} ${clusterTheme.textColor} flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${clusterTheme.shadow} ${clusterTheme.border} ring-1 ring-primary-container/20`}
+              >
                 +
               </span>
               <span className="text-on-surface">Macro-clúster (clic: zoom)</span>

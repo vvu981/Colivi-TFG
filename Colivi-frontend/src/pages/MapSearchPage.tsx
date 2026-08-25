@@ -10,8 +10,14 @@ import { ClusterBadge } from '../features/housing/components/map/ClusterBadge';
 import { ClusterFan } from '../features/housing/components/map/ClusterFan';
 import { MarkerPin } from '../features/housing/components/map/MarkerPin';
 import { MapLegend } from '../features/housing/components/map/MapLegend';
+import { MAP_THEME } from '../features/housing/components/map/mapTheme';
+import { PriceRangeFilter } from '../components/ui/PriceRangeFilter';
+import { Select } from '../components/ui/Select';
+import { MultiSelect } from '../components/ui/MultiSelect';
+import { AMENITY_CONFIG, ALL_AMENITIES } from '../features/housing/constants/amenityConfig';
 import { MainLayout } from '../layouts/MainLayout';
 import type { AccommodationListingResponse, RentalType } from '../features/housing/types/listing.types';
+import type { AmenityType } from '../features/housing/types/accommodation.types';
 
 // ── Fix Leaflet icon paths broken by bundlers ──────────────────────────
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
@@ -98,99 +104,144 @@ const SidebarCard: React.FC<ListingCardProps> = ({ listing, isHighlighted, onCli
 
 interface FilterValues {
   city: string;
-  maxPrice: string;
+  minPrice?: number;
+  maxPrice?: number;
   rentalType: '' | RentalType;
+  amenities: AmenityType[];
 }
 
 interface FilterPanelProps {
   filters: FilterValues;
+  maxPriceLimit: number;
+  histogramData?: number[];
   onChange: (f: FilterValues) => void;
-  onApply: () => void;
+  onApply: (f?: FilterValues) => void;
   onReset: () => void;
   onClose: () => void;
 }
 
 const FilterPanel: React.FC<FilterPanelProps> = ({
-  filters,
+  filters: initialFilters,
+  maxPriceLimit,
+  histogramData,
   onChange,
   onApply,
   onReset,
   onClose,
 }) => {
+  const [localFilters, setLocalFilters] = useState<FilterValues>(initialFilters);
+
+  useEffect(() => {
+    setLocalFilters(initialFilters);
+  }, [initialFilters]);
+
+  const handleFieldChange = (updated: FilterValues) => {
+    setLocalFilters(updated);
+    onChange(updated);
+  };
+
   const inputClass =
-    'w-full px-3 py-2.5 rounded-xl border border-outline-variant text-body-md text-on-surface bg-surface-container-lowest focus:outline-none focus:border-on-surface focus:ring-2 focus:ring-secondary-container transition-all';
+    'w-full px-3 py-2 rounded-xl border border-outline-variant text-body-md text-on-surface bg-surface-container-lowest focus:outline-none focus:border-on-surface focus:ring-2 focus:ring-secondary-container transition-all';
 
   return (
-    <div className="absolute top-14 left-4 z-[1000] w-72 bg-surface-container-lowest border border-outline-variant rounded-2xl shadow-xl p-4 flex flex-col gap-3">
+    <div className="px-4 py-4 bg-surface-container-low border-b border-outline-variant flex flex-col gap-4 animate-in fade-in slide-in-from-top-2 duration-200">
       <div className="flex items-center justify-between">
-        <span className="text-headline-sm text-on-surface">Filtros</span>
+        <span className="text-label-lg font-bold text-on-surface">Filtros de búsqueda</span>
         <button
           type="button"
           onClick={onClose}
           aria-label="Cerrar filtros"
-          className="text-on-surface-variant hover:text-on-surface transition-colors"
+          className="text-on-surface-variant hover:text-on-surface p-1 rounded-lg hover:bg-surface-container transition-colors cursor-pointer"
         >
-          <X size={18} />
+          <X size={16} />
         </button>
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className="text-label-sm text-on-surface-variant uppercase tracking-wide">
+        <label className="text-label-sm text-on-surface-variant uppercase tracking-wide font-medium">
           Ciudad
         </label>
         <input
           type="text"
-          value={filters.city}
-          onChange={(e) => onChange({ ...filters, city: e.target.value })}
+          value={localFilters.city}
+          onChange={(e) => handleFieldChange({ ...localFilters, city: e.target.value })}
           placeholder="Madrid, Barcelona…"
           className={inputClass}
         />
       </div>
 
+      {/* Rango de Precios con Histograma y Dual Slider */}
+      <PriceRangeFilter
+        min={0}
+        max={maxPriceLimit}
+        step={Math.max(10, Math.round(maxPriceLimit / 50))}
+        initialMin={localFilters.minPrice ?? 0}
+        initialMax={localFilters.maxPrice ?? maxPriceLimit}
+        data={histogramData}
+        title="Rango de precios"
+        subtitle="Precio mensual del alquiler"
+        className="!p-0 !bg-transparent"
+        onChange={({ min, max }) => {
+          handleFieldChange({
+            ...localFilters,
+            minPrice: min > 0 ? min : undefined,
+            maxPrice: max < maxPriceLimit ? max : undefined,
+          });
+        }}
+      />
+
       <div className="flex flex-col gap-1">
-        <label className="text-label-sm text-on-surface-variant uppercase tracking-wide">
-          Precio máximo (€/mes)
+        <label className="text-label-sm text-on-surface-variant uppercase tracking-wide font-medium">
+          Tipo de alquiler
         </label>
-        <input
-          type="number"
-          min={0}
-          step={50}
-          value={filters.maxPrice}
-          onChange={(e) => onChange({ ...filters, maxPrice: e.target.value })}
-          placeholder="Sin límite"
-          className={inputClass}
+        <Select
+          value={localFilters.rentalType}
+          onChange={(val) =>
+            handleFieldChange({ ...localFilters, rentalType: val as FilterValues['rentalType'] })
+          }
+          options={[
+            { value: '', label: 'Cualquier tipo' },
+            { value: 'ENTIRE_PLACE', label: 'Alojamiento completo', icon: <Home size={16} className="text-primary" /> },
+            { value: 'ROOM', label: 'Habitación', icon: <Bed size={16} className="text-primary" /> },
+          ]}
+          placeholder="Cualquier tipo"
         />
       </div>
 
+      {/* Comodidades / Amenities Multi-select Dropdown */}
       <div className="flex flex-col gap-1">
-        <label className="text-label-sm text-on-surface-variant uppercase tracking-wide">
-          Tipo de alquiler
+        <label className="text-label-sm text-on-surface-variant uppercase tracking-wide font-medium">
+          Comodidades
         </label>
-        <select
-          value={filters.rentalType}
-          onChange={(e) =>
-            onChange({ ...filters, rentalType: e.target.value as FilterValues['rentalType'] })
+        <MultiSelect
+          value={localFilters.amenities}
+          onChange={(newAmenities) =>
+            handleFieldChange({ ...localFilters, amenities: newAmenities as AmenityType[] })
           }
-          className={`${inputClass} cursor-pointer appearance-none`}
-        >
-          <option value="">Cualquier tipo</option>
-          <option value="ENTIRE_PLACE">Alojamiento completo</option>
-          <option value="ROOM">Habitación</option>
-        </select>
+          options={ALL_AMENITIES.map((amenity) => {
+            const { label, icon: Icon } = AMENITY_CONFIG[amenity];
+            return {
+              value: amenity,
+              label,
+              icon: <Icon size={16} />,
+            };
+          })}
+          placeholder="Cualquier comodidad"
+        />
       </div>
 
       <div className="flex gap-2 pt-1">
         <button
           type="button"
           onClick={onReset}
-          className="flex-1 py-2 rounded-xl border border-outline-variant text-on-surface-variant text-label-md hover:border-outline transition-colors"
+          className="flex-1 py-2 rounded-xl border border-outline-variant bg-surface text-on-surface-variant text-label-md font-medium hover:border-outline hover:text-on-surface transition-colors cursor-pointer"
         >
           Limpiar
         </button>
         <button
           type="button"
-          onClick={onApply}
-          className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground text-label-md hover:opacity-90 active:scale-95 transition-all"
+          onClick={() => onApply(localFilters)}
+          className="flex-1 py-2 rounded-xl bg-primary-container text-white text-label-md font-medium hover:opacity-90 active:scale-95 transition-all cursor-pointer shadow-sm"
         >
           Aplicar
         </button>
@@ -264,9 +315,123 @@ export const MapSearchPage: React.FC = () => {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filters, setFilters] = useState<FilterValues>({
     city: '',
-    maxPrice: '',
+    minPrice: undefined,
+    maxPrice: undefined,
     rentalType: '',
+    amenities: [],
   });
+
+  // ── Preservar el precio máximo global y distribución del catálogo sin filtrar ──
+  const [globalMaxPrice, setGlobalMaxPrice] = useState<number>(1000);
+  const [globalHistogramData, setGlobalHistogramData] = useState<number[] | undefined>(undefined);
+
+  // ── Resizable Sidebar State ──────────────────────────────────────────
+  const MIN_SIDEBAR_WIDTH = 320;
+  const MAX_SIDEBAR_WIDTH = 680;
+  const DEFAULT_SIDEBAR_WIDTH = 384;
+
+  const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('colivi_map_sidebar_width');
+      const parsed = saved ? parseInt(saved, 10) : DEFAULT_SIDEBAR_WIDTH;
+      return !isNaN(parsed) && parsed >= MIN_SIDEBAR_WIDTH && parsed <= MAX_SIDEBAR_WIDTH
+        ? parsed
+        : DEFAULT_SIDEBAR_WIDTH;
+    } catch {
+      return DEFAULT_SIDEBAR_WIDTH;
+    }
+  });
+
+  const [isResizing, setIsResizing] = useState(false);
+  const resizeStartXRef = useRef(0);
+  const resizeStartWidthRef = useRef(sidebarWidth);
+
+  const handleResizeStart = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsResizing(true);
+    resizeStartXRef.current = e.clientX;
+    resizeStartWidthRef.current = sidebarWidth;
+    try {
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {
+      // Ignore if pointer capture fails
+    }
+  };
+
+  const handleResizeMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isResizing) return;
+    const deltaX = resizeStartXRef.current - e.clientX;
+    const maxAllowed = Math.min(MAX_SIDEBAR_WIDTH, window.innerWidth - 300);
+    const newWidth = Math.max(
+      MIN_SIDEBAR_WIDTH,
+      Math.min(maxAllowed, resizeStartWidthRef.current + deltaX)
+    );
+    setSidebarWidth(newWidth);
+    mapRef.current?.invalidateSize();
+  };
+
+  const handleResizeEnd = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isResizing) return;
+    setIsResizing(false);
+    try {
+      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch {
+      // Ignore if pointer capture fails
+    }
+    try {
+      localStorage.setItem('colivi_map_sidebar_width', sidebarWidth.toString());
+    } catch {
+      // Ignore localStorage errors
+    }
+    mapRef.current?.invalidateSize();
+  };
+
+  useEffect(() => {
+    mapRef.current?.invalidateSize();
+  }, [sidebarWidth]);
+
+  useEffect(() => {
+    if (listings && listings.length > 0) {
+      const prices = listings.map((l) => Number(l.pricePerMonth) || 0).filter((p) => p > 0);
+      if (prices.length > 0) {
+        const currentMax = Math.max(...prices);
+        const roundedMax = Math.ceil(currentMax / 10) * 10;
+        const isPriceFiltered = filters.minPrice !== undefined || filters.maxPrice !== undefined;
+
+        setGlobalMaxPrice((prev) => {
+          if (!isPriceFiltered) {
+            return roundedMax;
+          }
+          return Math.max(prev, roundedMax);
+        });
+
+        if (!isPriceFiltered) {
+          const numBuckets = 20;
+          const maxScale = roundedMax;
+          const step = maxScale / numBuckets;
+          const buckets = new Array(numBuckets).fill(0);
+
+          listings.forEach((l) => {
+            const price = Number(l.pricePerMonth) || 0;
+            const idx = Math.min(Math.floor(price / (step || 1)), numBuckets - 1);
+            if (idx >= 0 && idx < numBuckets) {
+              buckets[idx]++;
+            }
+          });
+
+          setGlobalHistogramData(buckets);
+        }
+      }
+    }
+  }, [listings, filters.minPrice, filters.maxPrice]);
+
+  const hasActiveFilters = Boolean(
+    filters.city ||
+    (filters.minPrice !== undefined && filters.minPrice > 0) ||
+    (filters.maxPrice !== undefined && filters.maxPrice < globalMaxPrice) ||
+    filters.rentalType ||
+    filters.amenities.length > 0
+  );
 
   // ── Cluster computation (pure, memoised) ──────────────────────────
   const clusterItems = useMapClusters(listings, viewport);
@@ -294,12 +459,12 @@ export const MapSearchPage: React.FC = () => {
       wheelPxPerZoomLevel: 120,
     });
 
-    // CartoDB Positron: clean, light base map styled via CSS filters to match the brand
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
-      subdomains: 'abcd',
-      minZoom: 3,
-      maxZoom: 20,
+    // Base map configured via MAP_THEME (SOLID / Single Source of Truth)
+    L.tileLayer(MAP_THEME.tiles.url, {
+      attribution: MAP_THEME.tiles.attribution,
+      subdomains: MAP_THEME.tiles.subdomains,
+      minZoom: MAP_THEME.tiles.minZoom,
+      maxZoom: MAP_THEME.tiles.maxZoom,
       noWrap: true, // Guarantees that tiles never replicate horizontally
       bounds: worldBounds,
       keepBuffer: 8, // Keeps extra tile layers in memory to eliminate grey flash on zoom/pan
@@ -472,11 +637,14 @@ export const MapSearchPage: React.FC = () => {
     markersMap.forEach((entry, key) => {
       if (!activeKeys.has(key)) {
         entry.marker.remove();
-        try {
-          entry.root.unmount();
-        } catch {
-          // Ignore if already unmounted
-        }
+        const rootToUnmount = entry.root;
+        queueMicrotask(() => {
+          try {
+            rootToUnmount.unmount();
+          } catch {
+            // Ignore if already unmounted
+          }
+        });
         markersMap.delete(key);
       }
     });
@@ -488,11 +656,14 @@ export const MapSearchPage: React.FC = () => {
     return () => {
       markersMap.forEach((entry) => {
         entry.marker.remove();
-        try {
-          entry.root.unmount();
-        } catch {
-          // Ignore
-        }
+        const rootToUnmount = entry.root;
+        queueMicrotask(() => {
+          try {
+            rootToUnmount.unmount();
+          } catch {
+            // Ignore
+          }
+        });
       });
       markersMap.clear();
     };
@@ -513,14 +684,17 @@ export const MapSearchPage: React.FC = () => {
   }, [listings]);
 
   // ── Apply / reset filters ──────────────────────────────────────────
-  const applyFilters = () => {
+  const applyFilters = (appliedFilters?: FilterValues) => {
+    const f = appliedFilters ?? filters;
     setExpandedCoordinate(null); // Collapse any open groups
     setFilteredListings(null);   // Reset sidebar filters
     hasFittedBoundsRef.current = false; // Reset to allow fitting bounds on next render
     search({
-      city: filters.city.trim() || undefined,
-      maxPrice: filters.maxPrice !== '' ? Number(filters.maxPrice) : undefined,
-      rentalType: filters.rentalType || undefined,
+      city: f.city.trim() || undefined,
+      minPrice: f.minPrice,
+      maxPrice: f.maxPrice,
+      rentalType: f.rentalType || undefined,
+      amenities: f.amenities.length > 0 ? f.amenities.join(',') : undefined,
     });
     setFiltersOpen(false);
   };
@@ -529,7 +703,7 @@ export const MapSearchPage: React.FC = () => {
     setExpandedCoordinate(null); // Collapse any open groups
     setFilteredListings(null);   // Reset sidebar filters
     hasFittedBoundsRef.current = false; // Reset to allow fitting bounds on next render
-    setFilters({ city: '', maxPrice: '', rentalType: '' });
+    setFilters({ city: '', minPrice: undefined, maxPrice: undefined, rentalType: '', amenities: [] });
     search({});
     setFiltersOpen(false);
   };
@@ -537,7 +711,7 @@ export const MapSearchPage: React.FC = () => {
   // ── Render ─────────────────────────────────────────────────────────
   return (
     <MainLayout>
-      <div className="flex h-[calc(100vh-80px)] overflow-hidden">
+      <div className={`flex h-[calc(100vh-80px)] overflow-hidden ${isResizing ? 'cursor-col-resize select-none' : ''}`}>
 
         {/* ── Left: Map panel ────────────────────────────────────── */}
         <div className="relative flex-1 min-w-0">
@@ -548,18 +722,6 @@ export const MapSearchPage: React.FC = () => {
             className="isolate w-full h-full"
           />
 
-          {/* Filter toggle */}
-          <button
-            type="button"
-            id="map-filter-btn"
-            onClick={() => setFiltersOpen((prev) => !prev)}
-            aria-label="Abrir filtros"
-            className="absolute top-4 left-4 z-[1000] flex items-center gap-2 px-4 py-2 bg-surface-container-lowest border border-outline-variant rounded-xl shadow-md text-label-md text-on-surface hover:border-outline transition-colors"
-          >
-            <SlidersHorizontal size={16} className="text-primary" />
-            Filtros
-          </button>
-
           {/* Zoom state legend (dev aid, subtle) */}
           <div className="absolute bottom-4 left-4 z-[1000] px-3 py-1.5 bg-surface-container-lowest/90 backdrop-blur-sm border border-outline-variant rounded-lg text-label-sm text-on-surface-variant shadow">
             Zoom {viewport.zoom} — {clusterItems.length} marcador{clusterItems.length !== 1 ? 'es' : ''}
@@ -568,57 +730,110 @@ export const MapSearchPage: React.FC = () => {
           {/* Interactive bottom-right Map Legend */}
           <MapLegend />
 
-          {filtersOpen && (
-            <FilterPanel
-              filters={filters}
-              onChange={setFilters}
-              onApply={applyFilters}
-              onReset={resetFilters}
-              onClose={() => setFiltersOpen(false)}
-            />
-          )}
-
           {/* Loading overlay */}
           {isLoading && (
             <div className="absolute inset-0 z-[999] flex items-center justify-center bg-surface/60 backdrop-blur-sm">
               <div className="flex flex-col items-center gap-3">
-                <Loader2 size={32} className="text-primary animate-spin" />
+                <Loader2 size={32} className="text-primary-container animate-spin" />
                 <span className="text-label-md text-on-surface">Cargando anuncios…</span>
               </div>
             </div>
           )}
         </div>
 
+        {/* ── Resizer Divider Handle ──────────────────────────────── */}
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          aria-valuenow={sidebarWidth}
+          aria-valuemin={MIN_SIDEBAR_WIDTH}
+          aria-valuemax={MAX_SIDEBAR_WIDTH}
+          aria-label="Ajustar ancho de la barra lateral"
+          onPointerDown={handleResizeStart}
+          onPointerMove={handleResizeMove}
+          onPointerUp={handleResizeEnd}
+          onPointerCancel={handleResizeEnd}
+          className={`relative group flex items-center justify-center w-2 -ml-1 -mr-1 z-30 cursor-col-resize select-none transition-colors ${
+            isResizing ? 'bg-primary/20 cursor-col-resize' : 'hover:bg-primary/10'
+          }`}
+        >
+          {/* Visual indicator handle pill */}
+          <div
+            className={`w-1 h-8 rounded-full transition-all duration-150 ${
+              isResizing ? 'bg-primary scale-y-125' : 'bg-outline-variant/60 group-hover:bg-primary/80'
+            }`}
+          />
+        </div>
+
         {/* ── Right: Sidebar ─────────────────────────────────────── */}
-        <aside className="w-80 xl:w-96 flex-shrink-0 flex flex-col border-l border-outline-variant bg-surface-container-lowest overflow-hidden">
-          <div className="px-4 py-4 border-b border-outline-variant flex-shrink-0">
-            <h1 className="text-headline-sm text-on-surface">Explorar en el mapa</h1>
-            {!isLoading && !error && (
-              <div className="text-label-sm text-on-surface-variant mt-0.5">
-                {filteredListings ? (
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span>Mostrando {filteredListings.length} de {listings.length} anuncios</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFilteredListings(null);
-                        setHighlightedId(null);
-                        setExpandedCoordinate(null);
-                      }}
-                      className="text-primary hover:underline font-semibold cursor-pointer"
-                    >
-                      Ver todos
-                    </button>
-                  </div>
-                ) : (
-                  <p>
-                    {listings.length} anuncio{listings.length !== 1 ? 's' : ''} encontrado
-                    {listings.length !== 1 ? 's' : ''}
-                  </p>
-                )}
-              </div>
-            )}
+        <aside
+          style={{ width: `${sidebarWidth}px` }}
+          className="flex-shrink-0 flex flex-col border-l border-outline-variant bg-surface-container-lowest overflow-hidden"
+        >
+          <div className="px-4 py-3.5 border-b border-outline-variant flex-shrink-0 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="text-headline-sm text-on-surface truncate">Explorar mapa</h1>
+              {!isLoading && !error && (
+                <div className="text-label-sm text-on-surface-variant mt-0.5">
+                  {filteredListings ? (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span>{filteredListings.length} de {listings.length}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFilteredListings(null);
+                          setHighlightedId(null);
+                          setExpandedCoordinate(null);
+                        }}
+                        className="text-primary-container hover:underline font-semibold cursor-pointer text-[12px]"
+                      >
+                        Ver todos
+                      </button>
+                    </div>
+                  ) : (
+                    <p>
+                      {listings.length} anuncio{listings.length !== 1 ? 's' : ''} encontrado{listings.length !== 1 ? 's' : ''}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Filter Toggle Button in Sidebar */}
+            <button
+              type="button"
+              id="sidebar-filter-btn"
+              onClick={() => setFiltersOpen((prev) => !prev)}
+              aria-label={filtersOpen ? 'Ocultar filtros' : 'Abrir filtros de búsqueda'}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-label-sm font-medium transition-all cursor-pointer shadow-sm active:scale-95 flex-shrink-0 ${
+                filtersOpen || hasActiveFilters
+                  ? 'bg-primary-container text-white border-primary-container'
+                  : 'bg-surface-container-low border-outline-variant text-on-surface hover:bg-surface-container hover:border-outline'
+              }`}
+            >
+              <SlidersHorizontal
+                size={14}
+                className={filtersOpen || hasActiveFilters ? 'text-white' : 'text-primary-container'}
+              />
+              <span>Filtros</span>
+              {hasActiveFilters && !filtersOpen && (
+                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+              )}
+            </button>
           </div>
+
+          {/* Collapsible Filter Panel in Sidebar */}
+          {filtersOpen && (
+            <FilterPanel
+              filters={filters}
+              maxPriceLimit={globalMaxPrice}
+              histogramData={globalHistogramData}
+              onChange={setFilters}
+              onApply={applyFilters}
+              onReset={resetFilters}
+              onClose={() => setFiltersOpen(false)}
+            />
+          )}
 
           <div
             ref={sidebarContainerRef}

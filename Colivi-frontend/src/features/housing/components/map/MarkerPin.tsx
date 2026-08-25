@@ -1,5 +1,6 @@
 import { Home, Bed } from 'lucide-react';
 import type { AccommodationListingResponse } from '../../types/listing.types';
+import { MAP_THEME } from './mapTheme';
 
 // ── Props ─────────────────────────────────────────────────────────────
 
@@ -36,6 +37,18 @@ export const MarkerPin = ({
     onClick?.(listing);
   };
 
+  const { pin: pinTheme, badge: badgeTheme } = MAP_THEME;
+
+  const strokeClass = isSelected
+    ? pinTheme.strokeSelected
+    : partOfSameAccommodation
+    ? pinTheme.strokeGroupSameAcc
+    : pinTheme.strokeDefault;
+
+  const badgeBgClass = isSameAccommodationGroup
+    ? badgeTheme.sameAccommodation
+    : badgeTheme.differentAccommodation;
+
   return (
     <div
       role="button"
@@ -61,11 +74,7 @@ export const MarkerPin = ({
       {/* Group Count Badge */}
       {groupCount && groupCount > 1 && (
         <span
-          className={`absolute -top-1.5 -right-1.5 z-20 flex h-5 min-w-[20px] items-center justify-center rounded-full px-1 text-[9px] font-bold shadow-md border border-background transition-colors ${
-            isSameAccommodationGroup
-              ? 'bg-tertiary-container text-on-tertiary-container'
-              : 'bg-secondary-container text-on-secondary-container'
-          }`}
+          className={`absolute -top-1.5 -right-1.5 z-20 flex h-5 min-w-[20px] items-center justify-center rounded-full px-1 text-[9px] font-bold ${badgeTheme.shadow} ${badgeTheme.border} ${badgeBgClass} transition-colors`}
           title={
             isSameAccommodationGroup
               ? `${groupCount} habitaciones en este alojamiento`
@@ -81,7 +90,7 @@ export const MarkerPin = ({
         width="40"
         height="48"
         viewBox="0 0 40 48"
-        className="pointer-events-none"
+        className={`pointer-events-none ${pinTheme.shadow}`}
         style={{
           position: 'absolute',
           top: 0,
@@ -95,13 +104,7 @@ export const MarkerPin = ({
       >
         <path
           d="M 20 48 C 20 48, 0 32, 0 20 C 0 9, 9 0, 20 0 C 31 0, 40 9, 40 20 C 40 32, 20 48, 20 48 Z"
-          className={`fill-primary-fixed transition-colors ${
-            isSelected
-              ? 'stroke-primary stroke-[3px]'
-              : partOfSameAccommodation
-              ? 'stroke-primary stroke-[2.5px]'
-              : 'stroke-background stroke-[2px]'
-          }`}
+          className={`${pinTheme.dropFill} ${strokeClass} transition-colors`}
         />
       </svg>
 
@@ -122,7 +125,7 @@ export const MarkerPin = ({
             size={18}
             strokeWidth={2.5}
             style={{
-              color: '#57423b',
+              color: pinTheme.iconColor,
               transform: `rotate(${-safeAngle}deg)`,
               transformOrigin: 'center',
             }}
@@ -132,7 +135,7 @@ export const MarkerPin = ({
             size={18}
             strokeWidth={2.5}
             style={{
-              color: '#57423b',
+              color: pinTheme.iconColor,
               transform: `rotate(${-safeAngle}deg)`,
               transformOrigin: 'center',
             }}

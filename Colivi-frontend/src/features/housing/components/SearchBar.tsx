@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { saveRecentSearch, type RecentSearch } from '../../../utils/recentSearch';
+import { Select } from '../../../components/ui/Select';
 
 // ── Accommodation type options ─────────────────────────────────────────────────
 
@@ -127,22 +128,18 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
         <div className="flex flex-col gap-1 w-full md:w-48">
           <label
             htmlFor="search-accommodation-type"
-            className="text-label-sm text-[#57423b] uppercase tracking-wide"
+            className="text-label-sm text-[#57423b] uppercase tracking-wide font-medium"
           >
             Tipo
           </label>
-          <select
+          <Select
             id="search-accommodation-type"
             value={accommodationType}
-            onChange={(e) => setAccommodationType(e.target.value)}
-            className="w-full px-3 py-2.5 rounded-xl border border-[#dec0b7] text-body-md text-[#0b1c30] bg-white focus:outline-none focus:border-[#0b1c30] focus:ring-2 focus:ring-[#dae2fd] transition-all appearance-none cursor-pointer"
-          >
-            {ACCOMMODATION_TYPES.map(({ value, label }) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => setAccommodationType(val)}
+            options={ACCOMMODATION_TYPES.map(({ value, label }) => ({ value, label }))}
+            placeholder="Cualquier tipo"
+            className="!py-2.5"
+          />
         </div>
 
         {/* Actions */}

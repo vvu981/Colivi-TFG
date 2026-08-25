@@ -148,8 +148,8 @@
   color: rgba(86, 94, 116, 0.6);
 }
 
-/* ── Leaflet Brand Cohesive Style ── */
+/* ── Leaflet Tile Pane ── */
 .leaflet-tile-pane {
-  filter: sepia(35%) hue-rotate(330deg) saturate(70%) brightness(1.01) contrast(0.98);
+  /* Native crisp rendering for CartoDB Voyager */
 }
 

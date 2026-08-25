@@ -33,9 +33,11 @@ export { ClusterFan } from './components/map/ClusterFan';
 export { MarkerPin } from './components/map/MarkerPin';
 export { ClusterBadge } from './components/map/ClusterBadge';
 
-// Utils — Map
+// Utils & Theme — Map
 export { clusterListings } from './utils/mapUtils';
 export type { CoordinateKey, ListingClusterMap } from './utils/mapUtils';
+export { MAP_THEME } from './components/map/mapTheme';
+export type { MapThemeConfig, MapPinTheme, MapTileTheme, MapBadgeTheme, MapClusterTheme } from './components/map/mapTheme';
 
 // Hooks — Map
 export { useMapClusters } from './hooks/useMapClusters';

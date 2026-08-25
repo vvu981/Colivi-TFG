@@ -1,3 +1,5 @@
+import { MAP_THEME } from './mapTheme';
+
 // ── Props ─────────────────────────────────────────────────────────────
 
 interface ClusterBadgeProps {
@@ -25,12 +27,14 @@ export const ClusterBadge = ({ count, onClick }: ClusterBadgeProps) => {
     onClick();
   };
 
+  const { cluster } = MAP_THEME;
+
   return (
     <button
       type="button"
       aria-label={`Clúster de ${count} anuncios. Haz clic para acercar.`}
       onClick={handleClick}
-      className="w-10 h-10 rounded-full bg-primary-fixed text-on-surface-variant border-2 border-background flex items-center justify-center font-bold shadow-md cursor-pointer transition-transform hover:scale-110 text-label-sm"
+      className={`w-10 h-10 rounded-full ${cluster.background} ${cluster.textColor} ${cluster.border} ${cluster.shadow} ${cluster.ring} flex items-center justify-center font-bold cursor-pointer transition-all hover:scale-110 active:scale-95 text-label-sm`}
     >
       {count}
     </button>

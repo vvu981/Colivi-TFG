@@ -35,6 +35,7 @@ export interface ListingFilterParams {
   maxPrice?: number;
   requiredFreeRooms?: number;
   rentalType?: RentalType;
+  amenities?: string;
   hostId?: string;
   page?: number;
   size?: number;
