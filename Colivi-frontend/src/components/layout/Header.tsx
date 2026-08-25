@@ -1,8 +1,9 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../../features/auth/context/AuthContext';
 import { UserMenu } from './UserMenu';
 import { CreationDropdown } from './CreationDropdown';
+import { Map } from 'lucide-react';
 
 // ── Header principal ───────────────────────────────────────────────────
 export const Header: React.FC = () => {
@@ -18,9 +19,30 @@ export const Header: React.FC = () => {
 
         {/* Navigation Links (Desktop) */}
         <div className="hidden md:flex space-x-lg items-center h-full flex-grow justify-center">
-          <Link to="/" className="text-[#9f3c16] border-b-2 border-[#9f3c16] font-semibold pb-1 flex flex-col justify-center h-full opacity-80 transition-opacity text-sm">
+          <NavLink
+            to="/"
+            end
+            className={({ isActive }) =>
+              isActive
+                ? 'text-[#9f3c16] border-b-2 border-[#9f3c16] font-semibold pb-1 flex flex-col justify-center h-full text-sm'
+                : 'text-[#565e74] hover:text-[#9f3c16] transition-colors duration-200 flex flex-col justify-center h-full text-sm'
+            }
+          >
             Explorar
-          </Link>
+          </NavLink>
+          <NavLink
+            to="/map"
+            className={({ isActive }) =>
+              isActive
+                ? 'text-[#9f3c16] border-b-2 border-[#9f3c16] font-semibold pb-1 flex items-center gap-1.5 flex-col justify-center h-full text-sm'
+                : 'text-[#565e74] hover:text-[#9f3c16] transition-colors duration-200 flex items-center gap-1.5 flex-col justify-center h-full text-sm'
+            }
+          >
+            <span className="flex items-center gap-1.5">
+              <Map size={14} />
+              Mapa
+            </span>
+          </NavLink>
           <Link to="/community" className="text-[#565e74] hover:text-[#9f3c16] transition-colors duration-200 flex flex-col justify-center h-full text-sm">
             Comunidad
           </Link>

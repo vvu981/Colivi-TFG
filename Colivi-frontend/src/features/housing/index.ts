@@ -17,6 +17,7 @@ export { listingService } from './api/listingService';
 export { useCreateAccommodation } from './hooks/useCreateAccommodation';
 export { useMyAccommodations } from './hooks/useMyAccommodations';
 export { useCreateListing } from './hooks/useCreateListing';
+export { useMapListings } from './hooks/useMapListings';
 
 // Components — Accommodation
 export { AccommodationForm } from './components/accommodation/AccommodationForm';
@@ -26,3 +27,16 @@ export { MapPicker } from './components/accommodation/MapPicker';
 
 // Components — Listing
 export { ListingForm } from './components/listing/ListingForm';
+
+// Components — Map
+export { ClusterFan } from './components/map/ClusterFan';
+export { MarkerPin } from './components/map/MarkerPin';
+export { ClusterBadge } from './components/map/ClusterBadge';
+
+// Utils — Map
+export { clusterListings } from './utils/mapUtils';
+export type { CoordinateKey, ListingClusterMap } from './utils/mapUtils';
+
+// Hooks — Map
+export { useMapClusters } from './hooks/useMapClusters';
+export type { MapClusterItem, MacroCluster, ExactFan, SingleLeaf, MapViewport } from './hooks/useMapClusters';

@@ -1,5 +1,5 @@
 import React from 'react';
-import type { AccommodationListingResponse } from '../../../types/listing';
+import type { AccommodationListingResponse } from '../types/listing.types';
 
 // ── Skeleton card ─────────────────────────────────────────────────────────────
 
@@ -21,7 +21,7 @@ interface ListingCardProps {
 }
 
 const ListingCard: React.FC<ListingCardProps> = ({ listing }) => {
-  const coverImage = listing.imageUrls?.[0];
+  const coverImage = listing.selectedImages?.[0]?.imageUrl || listing.accommodation?.images?.[0]?.imageUrl;
   const formattedPrice = new Intl.NumberFormat('es-ES', {
     style: 'currency',
     currency: 'EUR',
@@ -75,7 +75,7 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing }) => {
 
         {/* Accommodation type pill */}
         <span className="absolute top-3 right-3 bg-white/80 backdrop-blur-sm text-[#0b1c30] text-xs font-medium px-2.5 py-1 rounded-full border border-[#dec0b7]">
-          {listing.accommodationType}
+          {listing.rentalType === 'ROOM' ? 'Habitación' : 'Alojamiento completo'}
         </span>
       </div>
 
@@ -105,7 +105,10 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing }) => {
               d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"
             />
           </svg>
-          <span className="truncate">{listing.city}</span>
+          <span className="truncate">
+            {listing.accommodation?.city}
+            {listing.accommodation?.address ? `, ${listing.accommodation.address}` : ''}
+          </span>
         </p>
 
         {/* Price */}

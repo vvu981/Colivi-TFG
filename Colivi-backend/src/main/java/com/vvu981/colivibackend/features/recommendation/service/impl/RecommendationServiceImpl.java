@@ -47,9 +47,9 @@ public class RecommendationServiceImpl implements RecommendationService {
             if (!recentSearches.isEmpty()) {
                 // Use the most recent search that has at least some criteria, or just the very first one
                 UserSearchHistory latest = recentSearches.get(0);
-                searchCity = latest.getCity() != null ? latest.getCity() : searchCity;
-                searchMaxPrice = latest.getMaxPrice() != null ? latest.getMaxPrice() : searchMaxPrice;
-                searchType = latest.getAccommodationType() != null ? latest.getAccommodationType() : searchType;
+                searchCity = searchCity != null ? searchCity : latest.getCity();
+                searchMaxPrice = searchMaxPrice != null ? searchMaxPrice : latest.getMaxPrice();
+                searchType = searchType != null ? searchType : latest.getAccommodationType();
             }
         }
 

@@ -1,5 +1,5 @@
 import api from '../../../lib/api';
-import type { AccommodationListingResponse } from '../../../types/listing';
+import type { AccommodationListingResponse } from '../types/listing.types';
 
 export interface RecommendationsParams {
   city?: string;

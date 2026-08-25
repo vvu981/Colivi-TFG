@@ -5,7 +5,7 @@ import {
   fetchRecommendations,
   type RecommendationsParams,
 } from '../api/recommendationsService';
-import type { AccommodationListingResponse } from '../../../types/listing';
+import type { AccommodationListingResponse } from '../types/listing.types';
 
 interface UseRecommendationsResult {
   data: AccommodationListingResponse[];
@@ -49,9 +49,7 @@ export const useRecommendations = (): UseRecommendationsResult => {
       setError(null);
 
       try {
-        const recentSearch: RecentSearch | null = isAuthenticated
-          ? null
-          : getRecentSearch();
+        const recentSearch: RecentSearch | null = getRecentSearch();
 
         const params: RecommendationsParams | undefined =
           recentSearch ?? undefined;

@@ -8,6 +8,11 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  // supercluster and its dependency kdbush are pure-ESM packages.
+  // Without this hint Vite's pre-bundler fails to resolve them in dev mode.
+  optimizeDeps: {
+    include: ['supercluster', 'kdbush'],
+  },
   server: {
     host: true, // necesario para que Docker exponga el puerto
     proxy: {
@@ -17,4 +22,4 @@ export default defineConfig({
       },
     },
   },
-});
+});

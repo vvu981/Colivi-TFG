@@ -19,9 +19,9 @@ public interface UserSearchHistoryRepository extends JpaRepository<UserSearchHis
         FROM UserSearchHistory h 
         WHERE h.userId = :userId 
         AND h.createdAt >= :since 
-        AND (h.city = :city OR (h.city IS NULL AND :city IS NULL))
-        AND (h.maxPrice = :maxPrice OR (h.maxPrice IS NULL AND :maxPrice IS NULL))
-        AND (h.accommodationType = :accommodationType OR (h.accommodationType IS NULL AND :accommodationType IS NULL))
+        AND (h.city = :city OR (h.city IS NULL AND CAST(:city AS string) IS NULL))
+        AND (h.maxPrice = :maxPrice OR (h.maxPrice IS NULL AND CAST(:maxPrice AS big_decimal) IS NULL))
+        AND (h.accommodationType = :accommodationType OR (h.accommodationType IS NULL AND CAST(:accommodationType AS string) IS NULL))
     """)
     boolean existsRecentSearch(
         @Param("userId") UUID userId,
