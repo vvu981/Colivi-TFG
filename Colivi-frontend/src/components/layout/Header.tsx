@@ -3,7 +3,7 @@ import { Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../../features/auth/context/AuthContext';
 import { UserMenu } from './UserMenu';
 import { CreationDropdown } from './CreationDropdown';
-import { Map } from 'lucide-react';
+import { Map, Search } from 'lucide-react';
 
 // ── Header principal ───────────────────────────────────────────────────
 export const Header: React.FC = () => {
@@ -28,7 +28,10 @@ export const Header: React.FC = () => {
                 : 'text-[#565e74] hover:text-[#9f3c16] transition-colors duration-200 flex flex-col justify-center h-full text-sm'
             }
           >
-            Explorar
+            <span className="flex items-center gap-1.5">
+              <Search size={14} />
+              Explorar
+            </span>
           </NavLink>
           <NavLink
             to="/map"

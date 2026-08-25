@@ -22,6 +22,7 @@ export const EditListingPage = () => {
       description: data.description,
       pricePerMonth: data.pricePerMonth,
       securityDeposit: data.securityDeposit,
+      selectedImages: data.selectedImages,
     });
     
     if (updated) {

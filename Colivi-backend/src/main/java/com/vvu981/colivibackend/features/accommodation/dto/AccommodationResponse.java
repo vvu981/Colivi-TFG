@@ -29,6 +29,7 @@ public record AccommodationResponse(
                 Set<AmenityType> amenities,
                 UUID ownerId,
                 String ownerNickname,
+                String ownerProfilePicUrl,
                 List<AccommodationImageResponse> images) {
 
         public AccommodationResponse(Accommodation accommodation) {
@@ -54,6 +55,7 @@ public record AccommodationResponse(
 
                                 accommodation != null && accommodation.getOwner() != null ? accommodation.getOwner().getId() : null,
                                 accommodation != null && accommodation.getOwner() != null ? accommodation.getOwner().getNickname() : null,
+                                accommodation != null && accommodation.getOwner() != null ? accommodation.getOwner().getProfilePicUrl() : null,
 
                                 accommodation != null && accommodation.getImages() != null
                                                 ? accommodation.getImages().stream()

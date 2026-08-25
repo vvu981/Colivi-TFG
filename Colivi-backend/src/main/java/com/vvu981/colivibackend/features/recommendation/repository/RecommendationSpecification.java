@@ -25,6 +25,16 @@ public class RecommendationSpecification {
             BigDecimal maxPrice,
             String accommodationType,
             List<UUID> excludedIds) {
+        return buildRecommendationSpec(city, null, maxPrice, accommodationType, null, excludedIds);
+    }
+
+    public static Specification<AccommodationListing> buildRecommendationSpec(
+            String city,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            String accommodationType,
+            List<String> amenities,
+            List<UUID> excludedIds) {
         
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -38,17 +48,24 @@ public class RecommendationSpecification {
                 predicates.add(cb.not(root.get("id").in(excludedIds)));
             }
 
-            // Eager fetch to avoid N+1 problem
-            jakarta.persistence.criteria.Fetch<AccommodationListing, Accommodation> accommodationFetch = root.fetch("accommodation", JoinType.INNER);
-            root.fetch("host", JoinType.LEFT);
+            // Eager fetch to avoid N+1 problem ONLY for SELECT queries (never in COUNT queries)
+            boolean isCountQuery = Long.class.equals(query.getResultType()) || long.class.equals(query.getResultType());
+            if (!isCountQuery) {
+                root.fetch("accommodation", JoinType.INNER);
+                root.fetch("host", JoinType.LEFT);
+            }
 
             // Optional Criteria
             if (city != null && !city.trim().isEmpty()) {
-                Join<AccommodationListing, Accommodation> accommodationJoin = (Join<AccommodationListing, Accommodation>) accommodationFetch;
+                Join<AccommodationListing, Accommodation> accommodationJoin = root.join("accommodation", JoinType.INNER);
                 predicates.add(cb.equal(cb.lower(accommodationJoin.get("city")), city.toLowerCase()));
             }
 
-            if (maxPrice != null) {
+            if (minPrice != null && minPrice.compareTo(BigDecimal.ZERO) > 0) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("pricePerMonth"), minPrice));
+            }
+
+            if (maxPrice != null && maxPrice.compareTo(BigDecimal.ZERO) > 0) {
                 predicates.add(cb.lessThanOrEqualTo(root.get("pricePerMonth"), maxPrice));
             }
 
@@ -58,6 +75,18 @@ public class RecommendationSpecification {
                     predicates.add(cb.equal(root.get("rentalType"), type));
                 } catch (IllegalArgumentException e) {
                     throw new IllegalArgumentException("Invalid accommodation type: " + accommodationType);
+                }
+            }
+
+            if (amenities != null && !amenities.isEmpty()) {
+                Join<AccommodationListing, Accommodation> accommodationJoin = root.join("accommodation", JoinType.INNER);
+                for (String am : amenities) {
+                    try {
+                        com.vvu981.colivibackend.features.accommodation.domain.AmenityType amenityType =
+                                com.vvu981.colivibackend.features.accommodation.domain.AmenityType.valueOf(am.toUpperCase());
+                        predicates.add(cb.isMember(amenityType, accommodationJoin.get("amenities")));
+                    } catch (IllegalArgumentException ignored) {
+                    }
                 }
             }
 

@@ -1,4 +1,6 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
+import { Bed, Home } from 'lucide-react';
 import type { AccommodationListingResponse } from '../types/listing.types';
 
 // ── Skeleton card ─────────────────────────────────────────────────────────────
@@ -29,10 +31,11 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing }) => {
   }).format(listing.pricePerMonth);
 
   return (
-    <article
+    <Link
+      to={`/listings/${listing.id}`}
       className={[
-        'group bg-white rounded-2xl overflow-hidden flex flex-col transition-shadow duration-300',
-        'hover:shadow-[0_8px_32px_rgba(15,23,42,0.12)]',
+        'group bg-white rounded-2xl overflow-hidden flex flex-col transition-all duration-300 block',
+        'hover:shadow-[0_8px_32px_rgba(15,23,42,0.12)] hover:-translate-y-1',
         listing.isPromoted
           ? 'border-2 border-[#9f3c16] shadow-[0_0_0_1px_rgba(159,60,22,0.15)]'
           : 'border border-[#dec0b7]',
@@ -74,8 +77,18 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing }) => {
         )}
 
         {/* Accommodation type pill */}
-        <span className="absolute top-3 right-3 bg-white/80 backdrop-blur-sm text-[#0b1c30] text-xs font-medium px-2.5 py-1 rounded-full border border-[#dec0b7]">
-          {listing.rentalType === 'ROOM' ? 'Habitación' : 'Alojamiento completo'}
+        <span className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm text-[#0b1c30] text-xs font-semibold px-2.5 py-1 rounded-full border border-[#dec0b7] shadow-xs flex items-center gap-1.5">
+          {listing.rentalType === 'ROOM' ? (
+            <>
+              <Bed size={13} className="text-[#9f3c16]" />
+              <span>Habitación</span>
+            </>
+          ) : (
+            <>
+              <Home size={13} className="text-[#9f3c16]" />
+              <span>Alojamiento completo</span>
+            </>
+          )}
         </span>
       </div>
 
@@ -117,7 +130,7 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing }) => {
           <span className="text-sm text-[#565e74] font-normal">/mes</span>
         </p>
       </div>
-    </article>
+    </Link>
   );
 };
 

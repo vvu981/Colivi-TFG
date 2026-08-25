@@ -1,16 +1,10 @@
 import React, { useState } from 'react';
+import { Home, Bed, Search, RotateCcw, MapPin } from 'lucide-react';
 import { saveRecentSearch, type RecentSearch } from '../../../utils/recentSearch';
 import { Select } from '../../../components/ui/Select';
-
-// ── Accommodation type options ─────────────────────────────────────────────────
-
-const ACCOMMODATION_TYPES = [
-  { value: '', label: 'Cualquier tipo' },
-  { value: 'ROOM', label: 'Habitación' },
-  { value: 'STUDIO', label: 'Estudio' },
-  { value: 'APARTMENT', label: 'Apartamento' },
-  { value: 'HOUSE', label: 'Casa' },
-] as const;
+import { MultiSelect } from '../../../components/ui/MultiSelect';
+import { PriceRangeDropdown } from '../../../components/ui/PriceRangeDropdown';
+import { AMENITY_CONFIG, ALL_AMENITIES } from '../constants/amenityConfig';
 
 // ── Props ──────────────────────────────────────────────────────────────────────
 
@@ -23,16 +17,20 @@ interface SearchBarProps {
 
 export const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
   const [city, setCity] = useState('');
-  const [maxPrice, setMaxPrice] = useState('');
-  const [accommodationType, setAccommodationType] = useState('');
+  const [minPrice, setMinPrice] = useState<number | undefined>(undefined);
+  const [maxPrice, setMaxPrice] = useState<number | undefined>(undefined);
+  const [rentalType, setRentalType] = useState('');
+  const [amenities, setAmenities] = useState<string[]>([]);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     const params: RecentSearch = {
       city: city.trim() || undefined,
-      maxPrice: maxPrice !== '' ? Number(maxPrice) : undefined,
-      accommodationType: accommodationType || undefined,
+      minPrice: minPrice,
+      maxPrice: maxPrice,
+      rentalType: rentalType || undefined,
+      amenities: amenities.length > 0 ? amenities.join(',') : undefined,
     };
 
     // Persist for future anonymous recommendation fetches
@@ -44,140 +42,137 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
 
   const handleReset = () => {
     setCity('');
-    setMaxPrice('');
-    setAccommodationType('');
+    setMinPrice(undefined);
+    setMaxPrice(undefined);
+    setRentalType('');
+    setAmenities([]);
     const empty: RecentSearch = {};
     saveRecentSearch(empty);
     onSearch(empty);
   };
 
+  const hasActiveFilters = Boolean(
+    city ||
+    (minPrice !== undefined && minPrice > 0) ||
+    (maxPrice !== undefined && maxPrice > 0) ||
+    rentalType ||
+    amenities.length > 0
+  );
+
   return (
     <form
       onSubmit={handleSubmit}
       aria-label="Buscador de alojamientos"
-      className="w-full bg-white border border-[#dec0b7] rounded-2xl shadow-[0_4px_20px_rgba(15,23,42,0.06)] p-4 md:p-5"
+      className="w-full bg-surface-container-lowest border border-outline-variant rounded-3xl shadow-md p-4 md:p-6"
     >
-      <div className="flex flex-col md:flex-row gap-3">
-        {/* City input */}
-        <div className="flex flex-col gap-1 flex-1 min-w-0">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5 items-end">
+        {/* City input (4 cols) */}
+        <div className="flex flex-col gap-1.5 lg:col-span-3 min-w-0">
           <label
             htmlFor="search-city"
-            className="text-label-sm text-[#57423b] uppercase tracking-wide"
+            className="text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold"
           >
             Ciudad
           </label>
           <div className="relative">
-            <span className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-[#8a726a]">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="w-4 h-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"
-                />
-              </svg>
+            <span className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-primary">
+              <MapPin size={16} />
             </span>
             <input
               id="search-city"
               type="text"
               value={city}
               onChange={(e) => setCity(e.target.value)}
-              placeholder="Madrid, Barcelona…"
-              className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#dec0b7] text-body-md text-[#0b1c30] placeholder:text-[#8a726a] focus:outline-none focus:border-[#0b1c30] focus:ring-2 focus:ring-[#dae2fd] transition-all"
+              placeholder="Madrid, Barcelona, Sevilla…"
+              className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-outline-variant text-body-md text-on-surface bg-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-on-surface focus:ring-2 focus:ring-secondary-container transition-all"
             />
           </div>
         </div>
 
-        {/* Max price input */}
-        <div className="flex flex-col gap-1 w-full md:w-40">
+        {/* Rental Type Select (3 cols) */}
+        <div className="flex flex-col gap-1.5 lg:col-span-3 min-w-0">
           <label
-            htmlFor="search-max-price"
-            className="text-label-sm text-[#57423b] uppercase tracking-wide"
+            htmlFor="search-rental-type"
+            className="text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold"
           >
-            Precio máximo
-          </label>
-          <div className="relative">
-            <span className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-[#8a726a] text-sm font-medium">
-              €
-            </span>
-            <input
-              id="search-max-price"
-              type="number"
-              min={0}
-              step={50}
-              value={maxPrice}
-              onChange={(e) => setMaxPrice(e.target.value)}
-              placeholder="Sin límite"
-              className="w-full pl-7 pr-3 py-2.5 rounded-xl border border-[#dec0b7] text-body-md text-[#0b1c30] placeholder:text-[#8a726a] focus:outline-none focus:border-[#0b1c30] focus:ring-2 focus:ring-[#dae2fd] transition-all"
-            />
-          </div>
-        </div>
-
-        {/* Accommodation type select */}
-        <div className="flex flex-col gap-1 w-full md:w-48">
-          <label
-            htmlFor="search-accommodation-type"
-            className="text-label-sm text-[#57423b] uppercase tracking-wide font-medium"
-          >
-            Tipo
+            Tipo de alquiler
           </label>
           <Select
-            id="search-accommodation-type"
-            value={accommodationType}
-            onChange={(val) => setAccommodationType(val)}
-            options={ACCOMMODATION_TYPES.map(({ value, label }) => ({ value, label }))}
+            id="search-rental-type"
+            value={rentalType}
+            onChange={(val) => setRentalType(val)}
+            options={[
+              { value: '', label: 'Cualquier tipo' },
+              { value: 'ENTIRE_PLACE', label: 'Alojamiento completo', icon: <Home size={16} className="text-primary" /> },
+              { value: 'ROOM', label: 'Habitación', icon: <Bed size={16} className="text-primary" /> },
+            ]}
             placeholder="Cualquier tipo"
             className="!py-2.5"
           />
         </div>
 
-        {/* Actions */}
-        <div className="flex items-end gap-2">
-          {/* Reset */}
-          {(city || maxPrice || accommodationType) && (
-            <button
-              type="button"
-              onClick={handleReset}
-              aria-label="Limpiar búsqueda"
-              className="h-10 px-3 rounded-xl border border-[#dec0b7] text-[#565e74] hover:text-[#9f3c16] hover:border-[#9f3c16] transition-colors text-sm font-medium whitespace-nowrap"
-            >
-              Limpiar
-            </button>
-          )}
-
-          {/* Submit */}
-          <button
-            type="submit"
-            className="h-10 px-5 bg-[#9f3c16] text-white rounded-xl text-sm font-semibold hover:bg-[#bf542c] active:scale-95 transition-all duration-150 whitespace-nowrap flex items-center gap-2"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2.5}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803 7.5 7.5 0 0015.803 15.803z"
-              />
-            </svg>
-            Buscar
-          </button>
+        {/* Price Range Dropdown with Histogram (3 cols) */}
+        <div className="flex flex-col gap-1.5 lg:col-span-3 min-w-0">
+          <label className="text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">
+            Rango de precio
+          </label>
+          <PriceRangeDropdown
+            min={0}
+            max={2500}
+            minPrice={minPrice}
+            maxPrice={maxPrice}
+            onChange={({ min, max }) => {
+              setMinPrice(min);
+              setMaxPrice(max);
+            }}
+            placeholder="Cualquier precio"
+            className="!py-2.5"
+          />
         </div>
+
+        {/* Amenities MultiSelect dropdown (3 cols) */}
+        <div className="flex flex-col gap-1.5 lg:col-span-3 min-w-0">
+          <label className="text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">
+            Comodidades
+          </label>
+          <MultiSelect
+            value={amenities}
+            onChange={setAmenities}
+            options={ALL_AMENITIES.map((amenity) => {
+              const { label, icon: Icon } = AMENITY_CONFIG[amenity];
+              return {
+                value: amenity,
+                label,
+                icon: <Icon size={16} />,
+              };
+            })}
+            placeholder="Cualquier comodidad"
+            className="!py-2.5"
+          />
+        </div>
+      </div>
+
+      {/* Action buttons row */}
+      <div className="flex items-center justify-end gap-2.5 mt-4 pt-3 border-t border-outline-variant">
+        {hasActiveFilters && (
+          <button
+            type="button"
+            onClick={handleReset}
+            aria-label="Limpiar búsqueda"
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-outline-variant bg-surface text-on-surface-variant hover:text-primary hover:border-primary transition-all text-xs font-semibold cursor-pointer"
+          >
+            <RotateCcw size={14} />
+            <span>Limpiar filtros</span>
+          </button>
+        )}
+
+        <button
+          type="submit"
+          className="flex items-center gap-2 px-6 py-2.5 bg-primary text-on-primary rounded-xl text-xs font-bold hover:opacity-95 active:scale-95 transition-all duration-150 shadow-sm cursor-pointer"
+        >
+          <Search size={15} />
+          <span>Buscar alojamientos</span>
+        </button>
       </div>
     </form>
   );

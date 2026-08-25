@@ -144,6 +144,25 @@ class RecommendationSpecificationTest {
     }
 
     @Test
+    void buildRecommendationSpec_PaginationAndCountQueryWorks() {
+        Specification<AccommodationListing> spec = RecommendationSpecification.buildRecommendationSpec("Madrid", null, null, null);
+        org.springframework.data.domain.Page<AccommodationListing> page = listingRepository.findAll(spec, org.springframework.data.domain.PageRequest.of(0, 10));
+        assertEquals(1, page.getTotalElements());
+        assertEquals(1, page.getContent().size());
+        assertEquals(listing1.getId(), page.getContent().get(0).getId());
+    }
+
+    @Test
+    void buildRecommendationSpec_FiltersByMinPrice() {
+        Specification<AccommodationListing> spec = RecommendationSpecification.buildRecommendationSpec(
+                null, BigDecimal.valueOf(550), null, null, null, null
+        );
+        List<AccommodationListing> results = listingRepository.findAll(spec);
+        assertEquals(1, results.size());
+        assertEquals(listing2.getId(), results.get(0).getId());
+    }
+
+    @Test
     void testPrivateConstructor() throws Exception {
         java.lang.reflect.Constructor<RecommendationSpecification> constructor = RecommendationSpecification.class.getDeclaredConstructor();
         constructor.setAccessible(true);

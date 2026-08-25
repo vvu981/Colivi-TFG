@@ -2,8 +2,10 @@ const STORAGE_KEY = 'colivi_recent_search';
 
 export interface RecentSearch {
   city?: string;
+  minPrice?: number;
   maxPrice?: number;
-  accommodationType?: string;
+  rentalType?: string;
+  amenities?: string;
 }
 
 /**
@@ -16,11 +18,17 @@ export const saveRecentSearch = (search: RecentSearch): void => {
   if (search.city && search.city.trim() !== '') {
     sanitized.city = search.city.trim();
   }
+  if (search.minPrice !== undefined && search.minPrice > 0) {
+    sanitized.minPrice = search.minPrice;
+  }
   if (search.maxPrice !== undefined && search.maxPrice > 0) {
     sanitized.maxPrice = search.maxPrice;
   }
-  if (search.accommodationType && search.accommodationType.trim() !== '') {
-    sanitized.accommodationType = search.accommodationType.trim();
+  if (search.rentalType && search.rentalType.trim() !== '') {
+    sanitized.rentalType = search.rentalType.trim();
+  }
+  if (search.amenities && search.amenities.trim() !== '') {
+    sanitized.amenities = search.amenities.trim();
   }
 
   localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitized));

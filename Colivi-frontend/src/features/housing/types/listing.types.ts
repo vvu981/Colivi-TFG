@@ -55,6 +55,7 @@ export interface AccommodationListingResponse {
   accommodation: AccommodationResponse;
   hostId: string;
   hostNickname: string;
+  hostProfilePicUrl?: string;
   isPromoted: boolean;
   selectedImages: AccommodationImageResponse[];
 }

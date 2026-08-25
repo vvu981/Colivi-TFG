@@ -20,5 +20,21 @@ public interface RecommendationService {
      * @param accommodationType optional accommodation type for anonymous fallback
      * @return list of recommended listings
      */
-    List<AccommodationListingResponse> getRecommendations(UUID userId, Integer limit, String city, BigDecimal maxPrice, String accommodationType);
+    List<AccommodationListingResponse> getRecommendations(
+            UUID userId,
+            Integer limit,
+            String city,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            String accommodationType,
+            List<String> amenities);
+
+    default List<AccommodationListingResponse> getRecommendations(
+            UUID userId,
+            Integer limit,
+            String city,
+            BigDecimal maxPrice,
+            String accommodationType) {
+        return getRecommendations(userId, limit, city, null, maxPrice, accommodationType, null);
+    }
 }

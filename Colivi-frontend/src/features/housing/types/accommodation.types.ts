@@ -52,6 +52,7 @@ export interface AccommodationResponse {
   amenities: AmenityType[];
   ownerId: string;
   ownerNickname: string;
+  ownerProfilePicUrl?: string;
   images: AccommodationImageResponse[];
 }
 

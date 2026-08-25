@@ -33,14 +33,23 @@ public class RecommendationServiceImpl implements RecommendationService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<AccommodationListingResponse> getRecommendations(UUID userId, Integer limit, String city, BigDecimal maxPrice, String accommodationType) {
+    public List<AccommodationListingResponse> getRecommendations(
+            UUID userId,
+            Integer limit,
+            String city,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            String accommodationType,
+            List<String> amenities) {
         int maxResults = (limit != null && limit > 0) ? limit : 6;
         List<AccommodationListing> recommendedListings = new ArrayList<>();
 
         // 1. Resolve criteria
         String searchCity = city;
+        BigDecimal searchMinPrice = minPrice;
         BigDecimal searchMaxPrice = maxPrice;
         String searchType = accommodationType;
+        List<String> searchAmenities = amenities;
 
         if (userId != null) {
             List<UserSearchHistory> recentSearches = historyRepository.findTop3ByUserIdOrderByCreatedAtDesc(userId);
@@ -54,15 +63,16 @@ public class RecommendationServiceImpl implements RecommendationService {
         }
 
         // 2. Fetch based on criteria if any
-        boolean hasCriteria = searchCity != null || searchMaxPrice != null || searchType != null;
-        
+        boolean hasCriteria = searchCity != null || searchMinPrice != null || searchMaxPrice != null
+                || searchType != null || (searchAmenities != null && !searchAmenities.isEmpty());
+
         Pageable pageRequest = PageRequest.of(0, maxResults, Sort.by(Sort.Direction.DESC, "isPromoted", "createdAt"));
 
         if (hasCriteria) {
             Specification<AccommodationListing> spec = RecommendationSpecification.buildRecommendationSpec(
-                    searchCity, searchMaxPrice, searchType, null
+                    searchCity, searchMinPrice, searchMaxPrice, searchType, searchAmenities, null
             );
-            
+
             Page<AccommodationListing> criteriaResults = listingRepository.findAll(spec, pageRequest);
             recommendedListings.addAll(criteriaResults.getContent());
         }
@@ -75,12 +85,12 @@ public class RecommendationServiceImpl implements RecommendationService {
                     .collect(Collectors.toList());
 
             Specification<AccommodationListing> fallbackSpec = RecommendationSpecification.buildRecommendationSpec(
-                    null, null, null, excludedIds
+                    null, null, null, null, null, excludedIds
             );
-            
+
             Pageable fallbackPageRequest = PageRequest.of(0, remaining, Sort.by(Sort.Direction.DESC, "isPromoted", "createdAt"));
             Page<AccommodationListing> fallbackResults = listingRepository.findAll(fallbackSpec, fallbackPageRequest);
-            
+
             recommendedListings.addAll(fallbackResults.getContent());
         }
 

@@ -3,8 +3,10 @@ import type { AccommodationListingResponse } from '../types/listing.types';
 
 export interface RecommendationsParams {
   city?: string;
+  minPrice?: number;
   maxPrice?: number;
-  accommodationType?: string;
+  rentalType?: string;
+  amenities?: string;
 }
 
 /**

@@ -67,19 +67,21 @@ class RecommendationControllerTest {
                                 null,
                                 null,
                                 null,
+                                null,
                                 true, null);
         }
 
         @Test
         void testGetRecommendations_Anonymous() throws Exception {
-                when(recommendationService.getRecommendations(any(), anyInt(), any(), any(), any()))
+                when(recommendationService.getRecommendations(any(), anyInt(), any(), any(), any(), any(), any()))
                                 .thenReturn(List.of(responseDto));
 
                 mockMvc.perform(get("/api/v1/listings/recommendations")
                                 .param("limit", "6")
                                 .param("city", "Madrid")
+                                .param("minPrice", "200")
                                 .param("maxPrice", "1000")
-                                .param("accommodationType", "ROOM"))
+                                .param("rentalType", "ROOM"))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$").isArray())
                                 .andExpect(jsonPath("$[0].title").value("Title"));
@@ -87,7 +89,7 @@ class RecommendationControllerTest {
 
         @Test
         void testGetRecommendations_Authenticated() throws Exception {
-                when(recommendationService.getRecommendations(any(), anyInt(), any(), any(), any()))
+                when(recommendationService.getRecommendations(any(), anyInt(), any(), any(), any(), any(), any()))
                                 .thenReturn(List.of(responseDto));
 
                 mockMvc.perform(get("/api/v1/listings/recommendations")

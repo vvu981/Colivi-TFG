@@ -3,6 +3,7 @@ import { LoginPage } from "../pages/LoginPage";
 import { RegisterPage } from "../pages/RegisterPage";
 import { HomePage } from "../pages/HomePage";
 import { MapSearchPage } from "../pages/MapSearchPage";
+import { ListingDetailPage } from "../pages/ListingDetailPage";
 import { ProfilePage } from "../pages/ProfilePage";
 import { ForgotPasswordPage } from "../pages/ForgotPasswordPage";
 import { ResetPasswordPage } from "../pages/ResetPasswordPage";
@@ -19,6 +20,7 @@ export const AppRoutes = () => {
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/map" element={<MapSearchPage />} />
+      <Route path="/listings/:id" element={<ListingDetailPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />

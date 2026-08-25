@@ -25,13 +25,21 @@ public class RecommendationController {
     public ResponseEntity<List<AccommodationListingResponse>> getRecommendations(
             @RequestParam(defaultValue = "6") int limit,
             @RequestParam(required = false) String city,
+            @RequestParam(required = false) BigDecimal minPrice,
             @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(required = false) String rentalType,
             @RequestParam(required = false) String accommodationType,
+            @RequestParam(required = false) String amenities,
             @AuthenticationPrincipal com.vvu981.colivibackend.core.security.UserPrincipal userPrincipal) {
 
         UUID currentUserId = userPrincipal != null ? userPrincipal.getId() : null;
+        String resolvedType = (rentalType != null && !rentalType.isBlank()) ? rentalType : accommodationType;
+        List<String> parsedAmenities = (amenities != null && !amenities.isBlank())
+                ? java.util.Arrays.stream(amenities.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList()
+                : null;
+
         List<AccommodationListingResponse> recommendations = recommendationService.getRecommendations(
-                currentUserId, limit, city, maxPrice, accommodationType
+                currentUserId, limit, city, minPrice, maxPrice, resolvedType, parsedAmenities
         );
 
         return ResponseEntity.ok(recommendations);
