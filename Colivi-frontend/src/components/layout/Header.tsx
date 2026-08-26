@@ -46,12 +46,6 @@ export const Header: React.FC = () => {
               Mapa
             </span>
           </NavLink>
-          <Link to="/community" className="text-[#565e74] hover:text-[#9f3c16] transition-colors duration-200 flex flex-col justify-center h-full text-sm">
-            Comunidad
-          </Link>
-          <Link to="/help" className="text-[#565e74] hover:text-[#9f3c16] transition-colors duration-200 flex flex-col justify-center h-full text-sm">
-            Ayuda
-          </Link>
         </div>
 
         {/* Actions */}
@@ -85,4 +79,4 @@ export const Header: React.FC = () => {
     </nav>
   );
 };
-
+
