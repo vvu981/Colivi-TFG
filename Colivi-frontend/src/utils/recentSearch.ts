@@ -1,6 +1,7 @@
 const STORAGE_KEY = 'colivi_recent_search';
 
 export interface RecentSearch {
+  title?: string;
   city?: string;
   minPrice?: number;
   maxPrice?: number;
@@ -15,6 +16,9 @@ export interface RecentSearch {
 export const saveRecentSearch = (search: RecentSearch): void => {
   const sanitized: RecentSearch = {};
 
+  if (search.title && search.title.trim() !== '') {
+    sanitized.title = search.title.trim();
+  }
   if (search.city && search.city.trim() !== '') {
     sanitized.city = search.city.trim();
   }

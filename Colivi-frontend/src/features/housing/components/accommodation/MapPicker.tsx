@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { MapPin, Search, Loader2 } from 'lucide-react';
+import { MAP_THEME } from '../map/mapTheme';
 
 // Fix Leaflet's default marker icon path issue with bundlers
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
@@ -91,11 +92,10 @@ export const MapPicker = ({ addressQuery, value, onChange }: MapPickerProps) => 
       wheelDebounceTime: 40,
     });
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution:
-        '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-      minZoom: 3,
-      maxZoom: 19,
+    L.tileLayer(MAP_THEME.tiles.url, {
+      attribution: MAP_THEME.tiles.attribution,
+      minZoom: MAP_THEME.tiles.minZoom,
+      maxZoom: MAP_THEME.tiles.maxZoom,
       noWrap: true,
       bounds: worldBounds,
       keepBuffer: 6,

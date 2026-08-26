@@ -190,8 +190,11 @@ const EmptyState: React.FC = () => (
 
 // ── Main exported component ───────────────────────────────────────────────────
 
+import { SearchX, Sparkles } from 'lucide-react';
+import type { RecommendationResponse } from '../types/listing.types';
+
 interface RecommendedListingsProps {
-  listings: AccommodationListingResponse[];
+  data: RecommendationResponse | null;
   isLoading: boolean;
   error: string | null;
 }
@@ -199,10 +202,15 @@ interface RecommendedListingsProps {
 const SKELETON_COUNT = 8;
 
 export const RecommendedListings: React.FC<RecommendedListingsProps> = ({
-  listings,
+  data,
   isLoading,
   error,
 }) => {
+  const listings = data?.items ?? [];
+  const isFallback = Boolean(data?.hasCriteria && data?.fallbackApplied && data?.criteriaMatchedCount === 0);
+  const searchedCity = data?.searchCity;
+  const searchedTitle = data?.searchTitle;
+
   const renderContent = () => {
     if (error) return <ErrorState message={error} />;
 
@@ -228,15 +236,64 @@ export const RecommendedListings: React.FC<RecommendedListingsProps> = ({
     );
   };
 
+  const getHeadingTitle = () => {
+    if (isFallback) {
+      return 'Otros alojamientos destacados que podrían interesarte';
+    }
+    if (searchedTitle && (data?.criteriaMatchedCount ?? 0) > 0) {
+      return `Alojamientos que coinciden con "${searchedTitle}"`;
+    }
+    if (searchedCity && (data?.criteriaMatchedCount ?? 0) > 0) {
+      return `Alojamientos disponibles en ${searchedCity}`;
+    }
+    return 'Anuncios que te podrían interesar';
+  };
+
+  const getFallbackAlertTitle = () => {
+    if (searchedTitle && searchedCity) {
+      return `No se encontraron anuncios para "${searchedTitle}" en ${searchedCity}`;
+    }
+    if (searchedTitle) {
+      return `No se encontraron anuncios con el nombre "${searchedTitle}"`;
+    }
+    if (searchedCity) {
+      return `No se encontraron anuncios en "${searchedCity}"`;
+    }
+    return 'No se encontraron anuncios con los filtros seleccionados';
+  };
+
   return (
-    <section aria-labelledby="recommendations-heading" className="w-full">
-      <div className="flex items-center justify-between mb-6">
-        <h2
-          id="recommendations-heading"
-          className="text-headline-md text-[#0b1c30]"
+    <section aria-labelledby="recommendations-heading" className="w-full flex flex-col gap-3">
+      {/* Banner informativo cuando la búsqueda no arrojó resultados y se aplicó fallback */}
+      {!isLoading && !error && isFallback && (
+        <div
+          role="status"
+          className="flex items-start gap-4 p-4 sm:p-5 rounded-2xl bg-[#fff8f6] border border-[#ffdad6] text-[#57423b] shadow-xs animate-in fade-in slide-in-from-top-2 duration-300"
         >
-          Anuncios que te podrían interesar
-        </h2>
+          <div className="p-2.5 rounded-xl bg-[#ffdad6]/60 text-[#9f3c16] flex-shrink-0 mt-0.5">
+            <SearchX size={20} />
+          </div>
+          <div className="flex flex-col gap-1 min-w-0">
+            <h3 className="text-body-lg font-bold text-[#3e2d27]">
+              {getFallbackAlertTitle()}
+            </h3>
+            <p className="text-body-md text-[#57423b] leading-relaxed">
+              Aún no hay publicaciones disponibles que coincidan con estos criterios. A continuación te mostramos algunos de los alojamientos más populares y destacados de la plataforma:
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {isFallback && <Sparkles size={20} className="text-[#9f3c16]" />}
+          <h2
+            id="recommendations-heading"
+            className="text-headline-md text-[#0b1c30]"
+          >
+            {getHeadingTitle()}
+          </h2>
+        </div>
       </div>
 
       {renderContent()}

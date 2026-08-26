@@ -65,12 +65,12 @@ export interface MapThemeConfig {
  */
 export const MAP_THEME: MapThemeConfig = {
   tiles: {
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    url: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
     attribution:
-      '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
-    subdomains: 'abcd',
+      '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Tiles by <a href="https://www.hotosm.org/">HOT</a>',
+    subdomains: 'abc',
     minZoom: 3,
-    maxZoom: 20,
+    maxZoom: 19,
   },
   pin: {
     dropFill: 'fill-primary-container',

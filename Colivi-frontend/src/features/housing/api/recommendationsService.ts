@@ -1,7 +1,8 @@
 import api from '../../../lib/api';
-import type { AccommodationListingResponse } from '../types/listing.types';
+import type { RecommendationResponse } from '../types/listing.types';
 
 export interface RecommendationsParams {
+  title?: string;
   city?: string;
   minPrice?: number;
   maxPrice?: number;
@@ -19,8 +20,8 @@ export interface RecommendationsParams {
  */
 export const fetchRecommendations = async (
   params?: RecommendationsParams,
-): Promise<AccommodationListingResponse[]> => {
-  const response = await api.get<AccommodationListingResponse[]>(
+): Promise<RecommendationResponse> => {
+  const response = await api.get<RecommendationResponse>(
     '/listings/recommendations',
     { params },
   );

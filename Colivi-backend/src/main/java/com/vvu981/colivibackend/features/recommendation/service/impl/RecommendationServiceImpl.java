@@ -4,6 +4,7 @@ import com.vvu981.colivibackend.features.accommodation.domain.AccommodationListi
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingResponse;
 import com.vvu981.colivibackend.features.accommodation.repository.AccommodationListingRepository;
 import com.vvu981.colivibackend.features.recommendation.domain.UserSearchHistory;
+import com.vvu981.colivibackend.features.recommendation.dto.RecommendationResponse;
 import com.vvu981.colivibackend.features.recommendation.repository.RecommendationSpecification;
 import com.vvu981.colivibackend.features.recommendation.repository.UserSearchHistoryRepository;
 import com.vvu981.colivibackend.features.recommendation.service.RecommendationService;
@@ -33,9 +34,10 @@ public class RecommendationServiceImpl implements RecommendationService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<AccommodationListingResponse> getRecommendations(
+    public RecommendationResponse getRecommendations(
             UUID userId,
             Integer limit,
+            String title,
             String city,
             BigDecimal minPrice,
             BigDecimal maxPrice,
@@ -45,6 +47,7 @@ public class RecommendationServiceImpl implements RecommendationService {
         List<AccommodationListing> recommendedListings = new ArrayList<>();
 
         // 1. Resolve criteria
+        String searchTitle = title;
         String searchCity = city;
         BigDecimal searchMinPrice = minPrice;
         BigDecimal searchMaxPrice = maxPrice;
@@ -63,19 +66,28 @@ public class RecommendationServiceImpl implements RecommendationService {
         }
 
         // 2. Fetch based on criteria if any
-        boolean hasCriteria = searchCity != null || searchMinPrice != null || searchMaxPrice != null
-                || searchType != null || (searchAmenities != null && !searchAmenities.isEmpty());
+        boolean hasCriteria = (searchTitle != null && !searchTitle.isBlank())
+                || (searchCity != null && !searchCity.isBlank())
+                || (searchMinPrice != null && searchMinPrice.compareTo(BigDecimal.ZERO) > 0)
+                || (searchMaxPrice != null && searchMaxPrice.compareTo(BigDecimal.ZERO) > 0)
+                || (searchType != null && !searchType.isBlank())
+                || (searchAmenities != null && !searchAmenities.isEmpty());
 
+        int criteriaMatchedCount = 0;
         Pageable pageRequest = PageRequest.of(0, maxResults, Sort.by(Sort.Direction.DESC, "isPromoted", "createdAt"));
 
         if (hasCriteria) {
             Specification<AccommodationListing> spec = RecommendationSpecification.buildRecommendationSpec(
-                    searchCity, searchMinPrice, searchMaxPrice, searchType, searchAmenities, null
+                    searchTitle, searchCity, searchMinPrice, searchMaxPrice, searchType, searchAmenities, null
             );
 
             Page<AccommodationListing> criteriaResults = listingRepository.findAll(spec, pageRequest);
-            recommendedListings.addAll(criteriaResults.getContent());
+            List<AccommodationListing> matches = criteriaResults.getContent();
+            criteriaMatchedCount = matches.size();
+            recommendedListings.addAll(matches);
         }
+
+        boolean fallbackApplied = false;
 
         // 3. Cold Start / Fallback if we don't have enough results
         if (recommendedListings.size() < maxResults) {
@@ -85,17 +97,32 @@ public class RecommendationServiceImpl implements RecommendationService {
                     .collect(Collectors.toList());
 
             Specification<AccommodationListing> fallbackSpec = RecommendationSpecification.buildRecommendationSpec(
-                    null, null, null, null, null, excludedIds
+                    null, null, null, null, null, null, excludedIds
             );
 
             Pageable fallbackPageRequest = PageRequest.of(0, remaining, Sort.by(Sort.Direction.DESC, "isPromoted", "createdAt"));
             Page<AccommodationListing> fallbackResults = listingRepository.findAll(fallbackSpec, fallbackPageRequest);
 
-            recommendedListings.addAll(fallbackResults.getContent());
+            if (!fallbackResults.isEmpty()) {
+                if (hasCriteria) {
+                    fallbackApplied = true;
+                }
+                recommendedListings.addAll(fallbackResults.getContent());
+            }
         }
 
-        return recommendedListings.stream()
+        List<AccommodationListingResponse> responseItems = recommendedListings.stream()
                 .map(AccommodationListingResponse::new)
                 .collect(Collectors.toList());
+
+        return RecommendationResponse.builder()
+                .items(responseItems)
+                .totalCount(responseItems.size())
+                .criteriaMatchedCount(criteriaMatchedCount)
+                .fallbackApplied(fallbackApplied)
+                .hasCriteria(hasCriteria)
+                .searchCity(searchCity)
+                .searchTitle(searchTitle)
+                .build();
     }
 }

@@ -16,6 +16,7 @@ import static org.mockito.Mockito.*;
 class ListingFiltersTest {
 
     private CityFilter cityFilter;
+    private TitleFilter titleFilter;
     private MinPriceFilter minPriceFilter;
     private MaxPriceFilter maxPriceFilter;
     private ListingStatusFilter listingStatusFilter;
@@ -24,10 +25,54 @@ class ListingFiltersTest {
     @BeforeEach
     void setUp() {
         cityFilter = new CityFilter();
+        titleFilter = new TitleFilter();
         minPriceFilter = new MinPriceFilter();
         maxPriceFilter = new MaxPriceFilter();
         listingStatusFilter = new ListingStatusFilter();
         amenitiesFilter = new AmenitiesFilter();
+    }
+
+    @Test
+    @DisplayName("TitleFilter debe ser aplicable si existe el parametro 'title' no vacio")
+    void testTitleFilterApplicability() {
+        assertThat(titleFilter.isApplicable(null)).isFalse();
+
+        Map<String, String> params = new HashMap<>();
+        assertThat(titleFilter.isApplicable(params)).isFalse();
+
+        params.put("title", null);
+        assertThat(titleFilter.isApplicable(params)).isFalse();
+
+        params.put("title", "");
+        assertThat(titleFilter.isApplicable(params)).isFalse();
+
+        params.put("title", "Habitación luminosa");
+        assertThat(titleFilter.isApplicable(params)).isTrue();
+    }
+
+    @Test
+    @DisplayName("TitleFilter apply debe generar la condicion like correcta sobre title")
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    void testTitleFilterApply() {
+        Map<String, String> params = Map.of("title", "Habitación");
+        Specification<AccommodationListing> spec = titleFilter.apply(params);
+
+        Root root = mock(Root.class);
+        CriteriaQuery query = mock(CriteriaQuery.class);
+        CriteriaBuilder cb = mock(CriteriaBuilder.class);
+        Path titlePath = mock(Path.class);
+        Expression lowerTitle = mock(Expression.class);
+        Predicate likePredicate = mock(Predicate.class);
+
+        when(root.get("title")).thenReturn(titlePath);
+        when(cb.lower(any(Expression.class))).thenReturn(lowerTitle);
+        when(cb.like(any(Expression.class), anyString())).thenReturn(likePredicate);
+
+        Predicate result = spec.toPredicate(root, query, cb);
+
+        assertThat(result).isEqualTo(likePredicate);
+        verify(root, times(1)).get("title");
+        verify(cb, times(1)).like(eq(lowerTitle), eq("%habitación%"));
     }
 
     @Test

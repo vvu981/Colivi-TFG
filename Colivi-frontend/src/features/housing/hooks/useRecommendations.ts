@@ -5,10 +5,10 @@ import {
   fetchRecommendations,
   type RecommendationsParams,
 } from '../api/recommendationsService';
-import type { AccommodationListingResponse } from '../types/listing.types';
+import type { RecommendationResponse } from '../types/listing.types';
 
 interface UseRecommendationsResult {
-  data: AccommodationListingResponse[];
+  data: RecommendationResponse | null;
   isLoading: boolean;
   error: string | null;
   /** Call this to force a re-fetch (e.g. after saving a new search). */
@@ -28,7 +28,7 @@ interface UseRecommendationsResult {
  */
 export const useRecommendations = (): UseRecommendationsResult => {
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
-  const [data, setData] = useState<AccommodationListingResponse[]>([]);
+  const [data, setData] = useState<RecommendationResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   // Incrementing this counter triggers a new fetch
@@ -78,3 +78,4 @@ export const useRecommendations = (): UseRecommendationsResult => {
 
   return { data, isLoading, error, refresh };
 };
+

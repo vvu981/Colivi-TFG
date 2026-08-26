@@ -3,9 +3,9 @@ package com.vvu981.colivibackend.features.recommendation.service;
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing;
 import com.vvu981.colivibackend.features.accommodation.domain.ListingStatus;
 import com.vvu981.colivibackend.features.accommodation.domain.RentalType;
-import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingResponse;
 import com.vvu981.colivibackend.features.accommodation.repository.AccommodationListingRepository;
 import com.vvu981.colivibackend.features.recommendation.domain.UserSearchHistory;
+import com.vvu981.colivibackend.features.recommendation.dto.RecommendationResponse;
 import com.vvu981.colivibackend.features.recommendation.repository.UserSearchHistoryRepository;
 import com.vvu981.colivibackend.features.recommendation.service.impl.RecommendationServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -82,12 +84,14 @@ class RecommendationServiceImplTest {
                 .thenReturn(page);
 
         // Act
-        List<AccommodationListingResponse> result = recommendationService.getRecommendations(userId, 1, null, null,
+        RecommendationResponse result = recommendationService.getRecommendations(userId, 1, null, null,
                 null);
 
         // Assert
-        assertEquals(1, result.size());
-        assertEquals(listing1.getId(), result.get(0).id());
+        assertEquals(1, result.getItems().size());
+        assertEquals(1, result.getCriteriaMatchedCount());
+        assertFalse(result.isFallbackApplied());
+        assertEquals(listing1.getId(), result.getItems().get(0).id());
         verify(historyRepository, times(1)).findTop3ByUserIdOrderByCreatedAtDesc(userId);
         // Fallback is not called since limit 1 is reached
         verify(listingRepository, times(1)).findAll(any(Specification.class), any(Pageable.class));
@@ -101,12 +105,15 @@ class RecommendationServiceImplTest {
                 .thenReturn(page);
 
         // Act
-        List<AccommodationListingResponse> result = recommendationService.getRecommendations(null, 6, null, null, null);
+        RecommendationResponse result = recommendationService.getRecommendations(null, 6, null, null, null);
 
         // Assert
-        assertEquals(2, result.size());
+        assertEquals(2, result.getItems().size());
+        assertEquals(0, result.getCriteriaMatchedCount());
+        assertFalse(result.isFallbackApplied());
+        assertFalse(result.isHasCriteria());
         verify(historyRepository, never()).findTop3ByUserIdOrderByCreatedAtDesc(any());
-        // Only fallback query is executed because hasCriteria is false
+        // Only default query is executed because hasCriteria is false
         verify(listingRepository, times(1)).findAll(any(Specification.class), any(Pageable.class));
     }
 
@@ -130,11 +137,13 @@ class RecommendationServiceImplTest {
                 .thenReturn(page2); // Fallback search
 
         // Act
-        List<AccommodationListingResponse> result = recommendationService.getRecommendations(userId, 2, null, null,
+        RecommendationResponse result = recommendationService.getRecommendations(userId, 2, null, null,
                 null);
 
         // Assert
-        assertEquals(2, result.size());
+        assertEquals(2, result.getItems().size());
+        assertEquals(1, result.getCriteriaMatchedCount());
+        assertTrue(result.isFallbackApplied());
         verify(historyRepository, times(1)).findTop3ByUserIdOrderByCreatedAtDesc(userId);
         verify(listingRepository, times(2)).findAll(any(Specification.class), any(Pageable.class));
     }
@@ -147,10 +156,10 @@ class RecommendationServiceImplTest {
                 .thenReturn(page);
 
         // Act
-        List<AccommodationListingResponse> result = recommendationService.getRecommendations(null, null, null, null, null);
+        RecommendationResponse result = recommendationService.getRecommendations(null, null, null, null, null);
 
         // Assert
-        assertEquals(1, result.size());
+        assertEquals(1, result.getItems().size());
     }
 
     @Test
@@ -161,10 +170,10 @@ class RecommendationServiceImplTest {
                 .thenReturn(page);
 
         // Act
-        List<AccommodationListingResponse> result = recommendationService.getRecommendations(null, -5, null, null, null);
+        RecommendationResponse result = recommendationService.getRecommendations(null, -5, null, null, null);
 
         // Assert
-        assertEquals(1, result.size());
+        assertEquals(1, result.getItems().size());
     }
 
     @Test
@@ -181,10 +190,10 @@ class RecommendationServiceImplTest {
                 .thenReturn(page);
 
         // Act
-        List<AccommodationListingResponse> result = recommendationService.getRecommendations(userId, 1, "Paris", new BigDecimal("100"), "FLAT");
+        RecommendationResponse result = recommendationService.getRecommendations(userId, 1, "Paris", new BigDecimal("100"), "FLAT");
 
         // Assert
-        assertEquals(1, result.size());
+        assertEquals(1, result.getItems().size());
     }
 
     @Test
@@ -198,10 +207,10 @@ class RecommendationServiceImplTest {
                 .thenReturn(page);
 
         // Act
-        List<AccommodationListingResponse> result = recommendationService.getRecommendations(userId, 1, "London", null, null);
+        RecommendationResponse result = recommendationService.getRecommendations(userId, 1, "London", null, null);
 
         // Assert
-        assertEquals(1, result.size());
+        assertEquals(1, result.getItems().size());
     }
 
     @Test
@@ -215,10 +224,12 @@ class RecommendationServiceImplTest {
                 .thenReturn(page);
 
         // Act
-        List<AccommodationListingResponse> result = recommendationService.getRecommendations(userId, 1, null, null, null);
+        RecommendationResponse result = recommendationService.getRecommendations(userId, 1, null, null, null);
 
         // Assert
-        assertEquals(1, result.size());
+        assertEquals(1, result.getItems().size());
+        assertFalse(result.isFallbackApplied());
+        assertFalse(result.isHasCriteria());
     }
 
     @Test
@@ -227,10 +238,24 @@ class RecommendationServiceImplTest {
         when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(page);
 
-        List<AccommodationListingResponse> result = recommendationService.getRecommendations(
+        RecommendationResponse result = recommendationService.getRecommendations(
                 null, 1, "Valencia", new BigDecimal("200"), new BigDecimal("800"), "ROOM", List.of("WIFI", "AIR_CONDITIONING")
         );
 
-        assertEquals(1, result.size());
+        assertEquals(1, result.getItems().size());
+    }
+
+    @Test
+    void testGetRecommendations_WithTitleCriteria() {
+        Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
+        when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(page);
+
+        RecommendationResponse result = recommendationService.getRecommendations(
+                null, 1, "Piso compartido", null, null, null, null, null
+        );
+
+        assertEquals(1, result.getItems().size());
+        assertEquals("Piso compartido", result.getSearchTitle());
     }
 }

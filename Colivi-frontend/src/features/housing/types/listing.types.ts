@@ -29,6 +29,7 @@ export interface AccommodationListingUpdateRequest {
 // ── Filter params (query params for GET /api/v1/listings) ──────────
 
 export interface ListingFilterParams {
+  title?: string;
   city?: string;
   country?: string;
   minPrice?: number;
@@ -58,4 +59,14 @@ export interface AccommodationListingResponse {
   hostProfilePicUrl?: string;
   isPromoted: boolean;
   selectedImages: AccommodationImageResponse[];
+}
+
+export interface RecommendationResponse {
+  items: AccommodationListingResponse[];
+  totalCount: number;
+  criteriaMatchedCount: number;
+  fallbackApplied: boolean;
+  hasCriteria?: boolean;
+  searchCity?: string;
+  searchTitle?: string;
 }

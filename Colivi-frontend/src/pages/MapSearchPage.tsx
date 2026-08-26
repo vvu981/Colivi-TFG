@@ -141,6 +141,7 @@ const SidebarCard: React.FC<ListingCardProps> = ({ listing, isHighlighted, onCli
 // ── Filter panel ────────────────────────────────────────────────────────
 
 interface FilterValues {
+  title?: string;
   city: string;
   minPrice?: number;
   maxPrice?: number;
@@ -193,6 +194,19 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
         >
           <X size={16} />
         </button>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-label-sm text-on-surface-variant uppercase tracking-wide font-medium">
+          Nombre del anuncio
+        </label>
+        <input
+          type="text"
+          value={localFilters.title ?? ''}
+          onChange={(e) => handleFieldChange({ ...localFilters, title: e.target.value })}
+          placeholder="Ático céntrico, Estudio..."
+          className={inputClass}
+        />
       </div>
 
       <div className="flex flex-col gap-1">
@@ -352,6 +366,7 @@ export const MapSearchPage: React.FC = () => {
   const [filteredListings, setFilteredListings] = useState<AccommodationListingResponse[] | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filters, setFilters] = useState<FilterValues>({
+    title: '',
     city: '',
     minPrice: undefined,
     maxPrice: undefined,
@@ -728,6 +743,7 @@ export const MapSearchPage: React.FC = () => {
     setFilteredListings(null);   // Reset sidebar filters
     hasFittedBoundsRef.current = false; // Reset to allow fitting bounds on next render
     search({
+      title: f.title?.trim() || undefined,
       city: f.city.trim() || undefined,
       minPrice: f.minPrice,
       maxPrice: f.maxPrice,
@@ -741,7 +757,7 @@ export const MapSearchPage: React.FC = () => {
     setExpandedCoordinate(null); // Collapse any open groups
     setFilteredListings(null);   // Reset sidebar filters
     hasFittedBoundsRef.current = false; // Reset to allow fitting bounds on next render
-    setFilters({ city: '', minPrice: undefined, maxPrice: undefined, rentalType: '', amenities: [] });
+    setFilters({ title: '', city: '', minPrice: undefined, maxPrice: undefined, rentalType: '', amenities: [] });
     search({});
     setFiltersOpen(false);
   };

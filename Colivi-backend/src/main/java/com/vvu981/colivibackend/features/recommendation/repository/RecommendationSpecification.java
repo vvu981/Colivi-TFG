@@ -25,10 +25,21 @@ public class RecommendationSpecification {
             BigDecimal maxPrice,
             String accommodationType,
             List<UUID> excludedIds) {
-        return buildRecommendationSpec(city, null, maxPrice, accommodationType, null, excludedIds);
+        return buildRecommendationSpec(null, city, null, maxPrice, accommodationType, null, excludedIds);
     }
 
     public static Specification<AccommodationListing> buildRecommendationSpec(
+            String city,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            String accommodationType,
+            List<String> amenities,
+            List<UUID> excludedIds) {
+        return buildRecommendationSpec(null, city, minPrice, maxPrice, accommodationType, amenities, excludedIds);
+    }
+
+    public static Specification<AccommodationListing> buildRecommendationSpec(
+            String title,
             String city,
             BigDecimal minPrice,
             BigDecimal maxPrice,
@@ -56,6 +67,10 @@ public class RecommendationSpecification {
             }
 
             // Optional Criteria
+            if (title != null && !title.trim().isEmpty()) {
+                predicates.add(cb.like(cb.lower(root.get("title")), "%" + title.toLowerCase().trim() + "%"));
+            }
+
             if (city != null && !city.trim().isEmpty()) {
                 Join<AccommodationListing, Accommodation> accommodationJoin = root.join("accommodation", JoinType.INNER);
                 predicates.add(cb.equal(cb.lower(accommodationJoin.get("city")), city.toLowerCase()));

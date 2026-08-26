@@ -24,7 +24,7 @@ export const HomePage = () => {
 
         {/* Recommendations section */}
         <RecommendedListings
-          listings={data}
+          data={data}
           isLoading={isLoading}
           error={error}
         />
