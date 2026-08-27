@@ -67,6 +67,7 @@ public class RecommendationSpecification {
                 @SuppressWarnings("unchecked")
                 Join<AccommodationListing, Accommodation> fetchJoin = (Join<AccommodationListing, Accommodation>) (Object) root.fetch("accommodation", JoinType.INNER);
                 accommodationJoin = fetchJoin;
+                fetchJoin.fetch("amenities", JoinType.LEFT);
                 root.fetch("host", JoinType.LEFT);
             } else {
                 accommodationJoin = root.join("accommodation", JoinType.INNER);

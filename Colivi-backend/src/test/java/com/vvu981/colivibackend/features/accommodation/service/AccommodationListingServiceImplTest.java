@@ -817,7 +817,7 @@ class AccommodationListingServiceImplTest {
                         Page<AccommodationListing> page = new PageImpl<>(List.of(listing));
                         when(specificationBuilder.buildAdminSpecification(anyMap()))
                                         .thenReturn(Specification.where(null));
-                        when(listingRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+                        when(listingRepository.findAll(org.mockito.ArgumentMatchers.<Specification<AccommodationListing>>any(), any(Pageable.class))).thenReturn(page);
 
                         Page<AccommodationListingResponse> response = listingServiceImpl
                                         .searchAllListingsForAdmin(Map.of(), 0, 10);

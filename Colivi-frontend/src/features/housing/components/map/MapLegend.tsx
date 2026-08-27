@@ -7,7 +7,7 @@ export const MapLegend: React.FC = () => {
   const { pin: pinTheme, badge: badgeTheme, cluster: clusterTheme } = MAP_THEME;
 
   return (
-    <div className="absolute bottom-4 right-4 z-[1000] flex flex-col items-end">
+    <div className="absolute bottom-4 right-4 z-30 flex flex-col items-end">
       {/* Expanded Legend Card */}
       {isOpen ? (
         <div className="w-72 bg-surface-container-lowest/95 backdrop-blur-md border border-outline-variant rounded-2xl shadow-xl p-3.5 flex flex-col gap-3 text-label-sm animate-in fade-in zoom-in-95 duration-200">

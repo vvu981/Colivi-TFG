@@ -231,6 +231,29 @@ export const PriceRangeFilter: React.FC<PriceRangeFilterProps> = ({
   const rangePercentLeft = Math.max(0, Math.min(100, ((minValue - min) / (max - min || 1)) * 100));
   const rangePercentRight = Math.max(0, Math.min(100, 100 - ((maxValue - min) / (max - min || 1)) * 100));
 
+  const histogramBars = useMemo(() => {
+    return data.map((freq, index) => {
+      const heightPercent = Math.max((freq / maxHistogramFreq) * 100, 8);
+      const active = isBarActive(index, data.length, min, max, minValue, maxValue);
+
+      return (
+        <div
+          key={`bar-${index}`}
+          className="flex-1 flex flex-col justify-end h-full min-w-[2px]"
+        >
+          <div
+            style={{ height: `${heightPercent}%` }}
+            className={`w-full rounded-t-xs transition-colors duration-150 ${
+              active
+                ? 'bg-primary'
+                : 'bg-outline-variant/30 opacity-40'
+            }`}
+          />
+        </div>
+      );
+    });
+  }, [data, maxHistogramFreq, min, max, minValue, maxValue]);
+
   return (
     <section className={`w-full min-w-full select-none ${className}`}>
       {/* ── CAPA 1: CABECERA Y TEXTO ── */}
@@ -252,26 +275,7 @@ export const PriceRangeFilter: React.FC<PriceRangeFilterProps> = ({
           className="flex items-end justify-between w-full h-16 gap-[2px] mb-[-4px] overflow-hidden"
           aria-hidden="true"
         >
-          {data.map((freq, index) => {
-            const heightPercent = Math.max((freq / maxHistogramFreq) * 100, 8);
-            const active = isBarActive(index, data.length, min, max, minValue, maxValue);
-
-            return (
-              <div
-                key={`bar-${index}`}
-                className="flex-1 flex flex-col justify-end h-full min-w-[2px]"
-              >
-                <div
-                  style={{ height: `${heightPercent}%` }}
-                  className={`w-full rounded-t-xs transition-colors duration-150 ${
-                    active
-                      ? 'bg-primary'
-                      : 'bg-outline-variant/30 opacity-40'
-                  }`}
-                />
-              </div>
-            );
-          })}
+          {histogramBars}
         </div>
 
         {/* Dual Slider Superpuesto */}

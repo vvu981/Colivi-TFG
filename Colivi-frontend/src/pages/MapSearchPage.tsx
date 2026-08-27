@@ -7,6 +7,7 @@ import { SlidersHorizontal, X, Loader2, SearchX } from 'lucide-react';
 
 import { useMapListings } from '../features/housing/hooks/useMapListings';
 import { useMapClusters, type MapViewport } from '../features/housing/hooks/useMapClusters';
+import { usePriceHistogram } from '../features/housing/hooks/usePriceHistogram';
 import { ClusterBadge } from '../features/housing/components/map/ClusterBadge';
 import { ClusterFan } from '../features/housing/components/map/ClusterFan';
 import { MarkerPin } from '../features/housing/components/map/MarkerPin';
@@ -100,8 +101,7 @@ export const MapSearchPage: React.FC = () => {
   });
 
   // ── Preservar el precio máximo global y distribución del catálogo sin filtrar ──
-  const [globalMaxPrice, setGlobalMaxPrice] = useState<number>(1000);
-  const [globalHistogramData, setGlobalHistogramData] = useState<number[] | undefined>(undefined);
+  const { globalMaxPrice, globalHistogramData } = usePriceHistogram(listings, filters);
 
   // ── Resizable Sidebar State ──────────────────────────────────────────
   const MIN_SIDEBAR_WIDTH = 320;
@@ -129,10 +129,8 @@ export const MapSearchPage: React.FC = () => {
     setIsResizing(true);
     resizeStartXRef.current = e.clientX;
     resizeStartWidthRef.current = sidebarWidth;
-    try {
-      (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    } catch {
-      // Ignore if pointer capture fails
+    if (e.currentTarget.setPointerCapture) {
+      e.currentTarget.setPointerCapture(e.pointerId);
     }
   };
 
@@ -145,21 +143,18 @@ export const MapSearchPage: React.FC = () => {
       Math.min(maxAllowed, resizeStartWidthRef.current + deltaX)
     );
     setSidebarWidth(newWidth);
-    mapRef.current?.invalidateSize();
   };
 
   const handleResizeEnd = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!isResizing) return;
     setIsResizing(false);
-    try {
-      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-    } catch {
-      // Ignore if pointer capture fails
+    if (e.currentTarget.releasePointerCapture) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
     }
     try {
       localStorage.setItem('colivi_map_sidebar_width', sidebarWidth.toString());
     } catch {
-      // Ignore localStorage errors
+      // Ignore localStorage availability errors
     }
     mapRef.current?.invalidateSize();
   };
@@ -168,40 +163,7 @@ export const MapSearchPage: React.FC = () => {
     mapRef.current?.invalidateSize();
   }, [sidebarWidth]);
 
-  useEffect(() => {
-    if (listings && listings.length > 0) {
-      const prices = listings.map((l) => Number(l.pricePerMonth) || 0).filter((p) => p > 0);
-      if (prices.length > 0) {
-        const currentMax = Math.max(...prices);
-        const roundedMax = Math.ceil(currentMax / 10) * 10;
-        const isPriceFiltered = filters.minPrice !== undefined || filters.maxPrice !== undefined;
 
-        setGlobalMaxPrice((prev) => {
-          if (!isPriceFiltered) {
-            return roundedMax;
-          }
-          return Math.max(prev, roundedMax);
-        });
-
-        if (!isPriceFiltered) {
-          const numBuckets = 20;
-          const maxScale = roundedMax;
-          const step = maxScale / numBuckets;
-          const buckets = new Array(numBuckets).fill(0);
-
-          listings.forEach((l) => {
-            const price = Number(l.pricePerMonth) || 0;
-            const idx = Math.min(Math.floor(price / (step || 1)), numBuckets - 1);
-            if (idx >= 0 && idx < numBuckets) {
-              buckets[idx]++;
-            }
-          });
-
-          setGlobalHistogramData(buckets);
-        }
-      }
-    }
-  }, [listings, filters.minPrice, filters.maxPrice]);
 
   const hasActiveFilters = Boolean(
     filters.city ||
@@ -516,7 +478,7 @@ export const MapSearchPage: React.FC = () => {
           />
 
           {/* Zoom state legend (dev aid, subtle) */}
-          <div className="absolute bottom-4 left-4 z-[1000] px-3 py-1.5 bg-surface-container-lowest/90 backdrop-blur-sm border border-outline-variant rounded-lg text-label-sm text-on-surface-variant shadow">
+          <div className="absolute bottom-4 left-4 z-30 px-3 py-1.5 bg-surface-container-lowest/90 backdrop-blur-sm border border-outline-variant rounded-lg text-label-sm text-on-surface-variant shadow">
             Zoom {viewport.zoom} — {clusterItems.length} marcador{clusterItems.length !== 1 ? 'es' : ''}
           </div>
 
@@ -525,7 +487,7 @@ export const MapSearchPage: React.FC = () => {
 
           {/* Loading overlay */}
           {isLoading && (
-            <div className="absolute inset-0 z-[999] flex items-center justify-center bg-surface/60 backdrop-blur-sm">
+            <div className="absolute inset-0 z-40 flex items-center justify-center bg-surface/60 backdrop-blur-sm">
               <div className="flex flex-col items-center gap-3">
                 <Loader2 size={32} className="text-primary-container animate-spin" />
                 <span className="text-label-md text-on-surface">Cargando anuncios…</span>

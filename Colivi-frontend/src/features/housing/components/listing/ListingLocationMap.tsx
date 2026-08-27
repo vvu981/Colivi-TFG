@@ -118,7 +118,7 @@ export const ListingLocationMap: React.FC<ListingLocationMapProps> = ({
       <div className="relative w-full h-72 md:h-80 rounded-2xl overflow-hidden border border-outline-variant shadow-sm mt-3">
         <div ref={mapContainerRef} className="w-full h-full isolate" />
         
-        <div className="absolute bottom-3 left-3 z-[1000] px-3 py-1.5 rounded-lg bg-surface-container-lowest/90 backdrop-blur-sm border border-outline-variant text-[11px] text-on-surface flex items-center gap-1.5 shadow-sm">
+        <div className="absolute bottom-3 left-3 z-30 px-3 py-1.5 rounded-lg bg-surface-container-lowest/90 backdrop-blur-sm border border-outline-variant text-[11px] text-on-surface flex items-center gap-1.5 shadow-sm">
           <MapPin size={14} className="text-primary flex-shrink-0" />
           <span className="font-medium truncate max-w-xs">{address}, {city}</span>
         </div>

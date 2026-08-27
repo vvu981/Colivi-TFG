@@ -80,6 +80,8 @@ public class RecommendationServiceImpl implements RecommendationService {
                 parsedType = RentalType.valueOf(resolvedTypeStr.toUpperCase());
             } catch (IllegalArgumentException e) {
                 log.warn("Invalid accommodation type: {}", resolvedTypeStr);
+                throw new com.vvu981.colivibackend.core.exception.BusinessRuleValidationException(
+                        "Tipo de alojamiento no válido: " + resolvedTypeStr);
             }
         }
 
@@ -90,6 +92,8 @@ public class RecommendationServiceImpl implements RecommendationService {
                     parsedAmenities.add(AmenityType.valueOf(am.toUpperCase()));
                 } catch (IllegalArgumentException e) {
                     log.warn("Invalid amenity type: {}", am);
+                    throw new com.vvu981.colivibackend.core.exception.BusinessRuleValidationException(
+                            "Amenidad no válida: " + am);
                 }
             }
         }
