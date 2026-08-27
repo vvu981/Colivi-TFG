@@ -230,6 +230,12 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Page<AccommodationListing> findAll(Specification<AccommodationListing> spec, Pageable pageable) {
+        return listingRepository.findAll(spec, pageable);
+    }
+
+    @Override
     @Transactional
     public AccommodationListingResponse recoverAccommodationListing(UUID listingId, UUID currentUserId) {
         AccommodationListing accommodationListing = findAccommodationListingIncludingDeletedById(listingId);

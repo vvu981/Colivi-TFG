@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, Edit3, Send, CheckCircle2, Lock, Sparkles, CalendarDays, Loader2 } from 'lucide-react';
@@ -37,7 +37,7 @@ const DURATION_OPTIONS = [
  */
 function lastDayOfResultingMonth(isoStartDate: string, months: number): string {
   const [y, m] = isoStartDate.split('-').map(Number);
-  const totalMonths  = (y * 12 + (m - 1)) + months;
+  const totalMonths  = (y * 12 + (m - 1)) + months - 1;
   const targetYear   = Math.floor(totalMonths / 12);
   const targetMonth  = totalMonths % 12; // 0-indexed
   // day = 0 of the NEXT month = last day of targetMonth
@@ -114,13 +114,7 @@ export const ListingBookingCard: React.FC<ListingBookingCardProps> = ({
       await bookingRequestService.createBookingRequest(payload);
       
       setMessageSent(true);
-      setTimeout(() => {
-        setMessageSent(false);
-        setIsContactModalOpen(false);
-        setContactMessage('');
-        setStartDate('');
-        setDurationMonths(6);
-      }, 3000);
+
     } catch (err: any) {
       setError(err.response?.data?.message || 'Ocurrió un error al enviar la solicitud.');
     } finally {
@@ -130,6 +124,20 @@ export const ListingBookingCard: React.FC<ListingBookingCardProps> = ({
   
   // First day of current month — the backend rejects past months
   const minDate = firstDayOfCurrentMonth();
+
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    if (messageSent) {
+      timeoutId = setTimeout(() => {
+        setMessageSent(false);
+        setIsContactModalOpen(false);
+        setContactMessage('');
+        setStartDate('');
+        setDurationMonths(6);
+      }, 3000);
+    }
+    return () => clearTimeout(timeoutId);
+  }, [messageSent]);
 
   return (
     <>

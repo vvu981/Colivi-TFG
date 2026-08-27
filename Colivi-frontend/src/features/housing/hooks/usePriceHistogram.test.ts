@@ -87,11 +87,22 @@ describe('usePriceHistogram', () => {
     expect(totalCount).toBe(2);
   });
 
-  it('preserves globalMaxPrice when price filter is active', () => {
-    const { result } = renderHook(() =>
-      usePriceHistogram(mockListings, { minPrice: 200, maxPrice: 500 })
+  it('preserves globalMaxPrice across re-renders when price filter is applied and list shrinks', () => {
+    const { result, rerender } = renderHook(
+      ({ listings, filters }) => usePriceHistogram(listings, filters),
+      {
+        initialProps: { listings: mockListings, filters: { minPrice: undefined as number | undefined, maxPrice: undefined as number | undefined } },
+      }
     );
 
+    expect(result.current.globalMaxPrice).toBe(800);
+
+    // Simulate applying a filter: the input list shrinks to only the cheaper listing
+    const filteredListings = mockListings.filter(l => l.pricePerMonth <= 500);
+    
+    rerender({ listings: filteredListings, filters: { minPrice: 200, maxPrice: 500 } });
+
+    // The maximum should remain 800 (the original max before filtering)
     expect(result.current.globalMaxPrice).toBe(800);
   });
 });

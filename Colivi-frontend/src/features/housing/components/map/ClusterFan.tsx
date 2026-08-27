@@ -88,7 +88,7 @@ export const ClusterFan = ({
         return (
           <div
             key={listing.id}
-            className={`absolute inset-0 ${isExpanded ? 'hover:z-50' : ''}`}
+            className={`absolute inset-0 ${isExpanded ? 'hover:!z-50' : ''}`}
             style={{
               zIndex: isSelected ? 40 : isExpanded ? index + 1 : total - index,
               // When folded, only the top master pin receives pointer events so hover is 100% clean

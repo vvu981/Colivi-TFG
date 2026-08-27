@@ -3,7 +3,7 @@ package com.vvu981.colivibackend.features.recommendation.service;
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing;
 import com.vvu981.colivibackend.features.accommodation.domain.ListingStatus;
 import com.vvu981.colivibackend.features.accommodation.domain.RentalType;
-import com.vvu981.colivibackend.features.accommodation.repository.AccommodationListingRepository;
+import com.vvu981.colivibackend.features.accommodation.service.AccommodationListingService;
 import com.vvu981.colivibackend.features.recommendation.domain.UserSearchHistory;
 import com.vvu981.colivibackend.features.recommendation.dto.RecommendationResponse;
 import com.vvu981.colivibackend.features.recommendation.repository.UserSearchHistoryRepository;
@@ -34,7 +34,7 @@ import static org.mockito.Mockito.*;
 class RecommendationServiceImplTest {
 
     @Mock
-    private AccommodationListingRepository listingRepository;
+    private AccommodationListingService listingService;
 
     @Mock
     private UserSearchHistoryRepository historyRepository;
@@ -81,7 +81,7 @@ class RecommendationServiceImplTest {
                 .thenReturn(java.util.Optional.of(history));
 
         Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
-        when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))
+        when(listingService.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(page);
 
         // Act
@@ -95,14 +95,14 @@ class RecommendationServiceImplTest {
         assertEquals(listing1.getId(), result.getItems().get(0).id());
         verify(historyRepository, times(1)).findFirstByUserIdOrderByCreatedAtDesc(userId);
         // Fallback is not called since limit 1 is reached
-        verify(listingRepository, times(1)).findAll(any(Specification.class), any(Pageable.class));
+        verify(listingService, times(1)).findAll(any(Specification.class), any(Pageable.class));
     }
 
     @Test
     void testGetRecommendations_ColdStart_Anonymous() {
         // Arrange
         Page<AccommodationListing> page = new PageImpl<>(List.of(listing1, listing2));
-        when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))
+        when(listingService.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(page);
 
         // Act
@@ -115,7 +115,7 @@ class RecommendationServiceImplTest {
         assertFalse(result.isHasCriteria());
         verify(historyRepository, never()).findFirstByUserIdOrderByCreatedAtDesc(any());
         // Only default query is executed because hasCriteria is false
-        verify(listingRepository, times(1)).findAll(any(Specification.class), any(Pageable.class));
+        verify(listingService, times(1)).findAll(any(Specification.class), any(Pageable.class));
     }
 
     @Test
@@ -133,7 +133,7 @@ class RecommendationServiceImplTest {
         // Second query (fallback) returns 1 more item
         Page<AccommodationListing> page2 = new PageImpl<>(List.of(listing2));
 
-        when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))
+        when(listingService.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(page1) // Criteria search
                 .thenReturn(page2); // Fallback search
 
@@ -146,14 +146,14 @@ class RecommendationServiceImplTest {
         assertEquals(1, result.getCriteriaMatchedCount());
         assertTrue(result.isFallbackApplied());
         verify(historyRepository, times(1)).findFirstByUserIdOrderByCreatedAtDesc(userId);
-        verify(listingRepository, times(2)).findAll(any(Specification.class), any(Pageable.class));
+        verify(listingService, times(2)).findAll(any(Specification.class), any(Pageable.class));
     }
 
     @Test
     void testGetRecommendations_NullLimit_UsesDefault() {
         // Arrange
         Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
-        when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))
+        when(listingService.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(page);
 
         // Act
@@ -167,7 +167,7 @@ class RecommendationServiceImplTest {
     void testGetRecommendations_NegativeLimit_UsesDefault() {
         // Arrange
         Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
-        when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))
+        when(listingService.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(page);
 
         // Act
@@ -184,7 +184,7 @@ class RecommendationServiceImplTest {
         // history has null city, maxPrice, type
 
         Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
-        when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))
+        when(listingService.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(page);
 
         // Act
@@ -199,7 +199,7 @@ class RecommendationServiceImplTest {
         // Arrange
 
         Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
-        when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))
+        when(listingService.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(page);
 
         // Act
@@ -216,7 +216,7 @@ class RecommendationServiceImplTest {
                 .thenReturn(java.util.Optional.empty());
 
         Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
-        when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))
+        when(listingService.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(page);
 
         // Act
@@ -231,7 +231,7 @@ class RecommendationServiceImplTest {
     @Test
     void testGetRecommendations_WithMinPriceAndAmenities() {
         Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
-        when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))
+        when(listingService.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(page);
 
         RecommendationResponse result = recommendationService.getRecommendations(
@@ -244,7 +244,7 @@ class RecommendationServiceImplTest {
     @Test
     void testGetRecommendations_WithTitleCriteria() {
         Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
-        when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))
+        when(listingService.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(page);
 
         RecommendationResponse result = recommendationService.getRecommendations(
@@ -266,7 +266,7 @@ class RecommendationServiceImplTest {
                 .thenReturn(java.util.Optional.of(history));
 
         Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
-        when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))
+        when(listingService.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(page);
 
         RecommendationResponse result = recommendationService.getRecommendations(userId, 1, null, null, null, null, null, null);
@@ -286,7 +286,7 @@ class RecommendationServiceImplTest {
         Page<AccommodationListing> pageEmpty = new PageImpl<>(List.of());
         Page<AccommodationListing> pageFallback = new PageImpl<>(List.of(listing2));
 
-        when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))
+        when(listingService.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(pageEmpty)
                 .thenReturn(pageFallback);
 
@@ -305,7 +305,7 @@ class RecommendationServiceImplTest {
         // First query returns 1 item
         Page<AccommodationListing> pageEmpty = new PageImpl<>(List.of(listing1));
 
-        when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))
+        when(listingService.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(pageEmpty);
 
         RecommendationResponse result = recommendationService.getRecommendations(userId, 1, null, null, null, null, null, null);

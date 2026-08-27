@@ -49,6 +49,10 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing }) => {
             alt={listing.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             loading="lazy"
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = 'https://placehold.co/600x400/e2e8f0/64748b?text=Imagen+no+disponible';
+            }}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-on-surface-variant">

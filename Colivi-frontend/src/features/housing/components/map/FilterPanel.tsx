@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Home, Bed } from 'lucide-react';
 import { PriceRangeFilter } from '../../../../components/ui/PriceRangeFilter';
 import { Select } from '../../../../components/ui/Select';
@@ -41,9 +41,20 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
     setLocalFilters(initialFilters);
   }, [initialFilters]);
 
+  const timeoutRef = useRef<NodeJS.Timeout>();
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
   const handleFieldChange = (updated: FilterValues) => {
     setLocalFilters(updated);
-    onChange(updated);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      onChange(updated);
+    }, 300);
   };
 
   const inputClass =
@@ -160,7 +171,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
         <button
           type="button"
           onClick={() => onApply(localFilters)}
-          className="flex-1 py-2 rounded-xl bg-primary-container text-white text-label-md font-medium hover:opacity-90 active:scale-95 transition-all cursor-pointer shadow-sm"
+          className="flex-1 py-2 rounded-xl bg-primary-container text-on-primary-container text-label-md font-medium hover:opacity-90 active:scale-95 transition-all cursor-pointer shadow-sm"
         >
           Aplicar
         </button>

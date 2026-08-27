@@ -2,9 +2,10 @@ package com.vvu981.colivibackend.features.recommendation.service.impl;
 
 import com.vvu981.colivibackend.features.accommodation.domain.AmenityType;
 import com.vvu981.colivibackend.features.accommodation.domain.RentalType;
+import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingResponse;
-import com.vvu981.colivibackend.features.accommodation.repository.AccommodationListingRepository;
+import com.vvu981.colivibackend.features.accommodation.service.AccommodationListingService;
 import com.vvu981.colivibackend.features.recommendation.domain.UserSearchHistory;
 import com.vvu981.colivibackend.features.recommendation.dto.RecommendationResponse;
 import com.vvu981.colivibackend.features.recommendation.repository.RecommendationSpecification;
@@ -32,7 +33,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class RecommendationServiceImpl implements RecommendationService {
 
-    private final AccommodationListingRepository listingRepository;
+    private final AccommodationListingService listingService;
     private final UserSearchHistoryRepository historyRepository;
 
     private record SearchContext(
@@ -80,8 +81,10 @@ public class RecommendationServiceImpl implements RecommendationService {
                 parsedType = RentalType.valueOf(resolvedTypeStr.toUpperCase());
             } catch (IllegalArgumentException e) {
                 log.warn("Invalid accommodation type: {}", resolvedTypeStr);
-                throw new com.vvu981.colivibackend.core.exception.BusinessRuleValidationException(
-                        "Tipo de alojamiento no válido: " + resolvedTypeStr);
+                if (accommodationType != null && !accommodationType.isBlank()) {
+                    throw new BusinessRuleValidationException("Tipo de alojamiento no válido: " + resolvedTypeStr);
+                }
+                // Si proviene de history, se ignora silenciosamente y se sigue (parsedType = null)
             }
         }
 
@@ -92,8 +95,7 @@ public class RecommendationServiceImpl implements RecommendationService {
                     parsedAmenities.add(AmenityType.valueOf(am.toUpperCase()));
                 } catch (IllegalArgumentException e) {
                     log.warn("Invalid amenity type: {}", am);
-                    throw new com.vvu981.colivibackend.core.exception.BusinessRuleValidationException(
-                            "Amenidad no válida: " + am);
+                    throw new BusinessRuleValidationException("Amenidad no válida: " + am);
                 }
             }
         }
@@ -125,7 +127,7 @@ public class RecommendationServiceImpl implements RecommendationService {
                     ctx.title(), ctx.city(), ctx.minPrice(), ctx.maxPrice(), ctx.accommodationType(), ctx.amenities(), null
             );
 
-            Page<AccommodationListing> criteriaResults = listingRepository.findAll(spec, pageRequest);
+            Page<AccommodationListing> criteriaResults = listingService.findAll(spec, pageRequest);
             List<AccommodationListing> matches = criteriaResults.getContent();
             criteriaMatchedCount = matches.size();
             recommendedListings.addAll(matches);
@@ -145,7 +147,7 @@ public class RecommendationServiceImpl implements RecommendationService {
             );
 
             Pageable fallbackPageRequest = PageRequest.of(0, remaining, Sort.by(Sort.Direction.DESC, "isPromoted", "createdAt"));
-            Page<AccommodationListing> fallbackResults = listingRepository.findAll(fallbackSpec, fallbackPageRequest);
+            Page<AccommodationListing> fallbackResults = listingService.findAll(fallbackSpec, fallbackPageRequest);
 
             if (!fallbackResults.isEmpty()) {
                 if (ctx.hasCriteria()) {
