@@ -126,7 +126,7 @@ export const ListingBookingCard: React.FC<ListingBookingCardProps> = ({
   const minDate = firstDayOfCurrentMonth();
 
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
+    let timeoutId: ReturnType<typeof setTimeout>;
     if (messageSent) {
       timeoutId = setTimeout(() => {
         setMessageSent(false);
