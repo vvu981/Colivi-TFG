@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { createRoot, type Root } from 'react-dom/client';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { MapPin, SlidersHorizontal, X, Home, Bed, Loader2 } from 'lucide-react';
+import { MapPin, SlidersHorizontal, X, Home, Bed, Loader2, SearchX } from 'lucide-react';
 
 import { useMapListings } from '../features/housing/hooks/useMapListings';
 import { useMapClusters, type MapViewport } from '../features/housing/hooks/useMapClusters';
@@ -63,12 +63,23 @@ const SidebarCard: React.FC<ListingCardProps> = ({ listing, isHighlighted, onCli
       {/* Thumbnail */}
       <div className="relative w-24 h-24 rounded-xl overflow-hidden flex-shrink-0 bg-surface-container border border-outline-variant/40">
         {coverImage ? (
-          <img
-            src={coverImage}
-            alt={listing.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            loading="lazy"
-          />
+          <>
+            <img
+              src={coverImage}
+              alt={listing.title}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              loading="lazy"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                if (e.currentTarget.nextElementSibling) {
+                  (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
+                }
+              }}
+            />
+            <div style={{ display: 'none' }} className="w-full h-full flex items-center justify-center text-on-surface-variant/40 bg-surface-container">
+              <Home size={24} />
+            </div>
+          </>
         ) : (
           <div className="w-full h-full flex items-center justify-center text-on-surface-variant/40">
             <Home size={24} />
@@ -903,10 +914,11 @@ export const MapSearchPage: React.FC = () => {
             )}
 
             {!isLoading && !error && (filteredListings ?? listings).length === 0 && (
-              <div className="flex flex-col items-center justify-center py-12 gap-2 text-center">
-                <MapPin size={32} className="text-outline" />
-                <p className="text-body-md text-on-surface-variant">
-                  No se encontraron anuncios con esos filtros.
+              <div className="flex flex-col items-center justify-center p-8 text-on-surface-variant">
+                <SearchX size={48} className="mb-4 opacity-50" />
+                <h3 className="text-label-lg font-bold">Sin resultados</h3>
+                <p className="text-body-sm text-center">
+                  No hay anuncios que coincidan con estos filtros.
                 </p>
               </div>
             )}

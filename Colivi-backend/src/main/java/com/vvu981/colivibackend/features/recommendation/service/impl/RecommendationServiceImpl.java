@@ -32,6 +32,45 @@ public class RecommendationServiceImpl implements RecommendationService {
     private final AccommodationListingRepository listingRepository;
     private final UserSearchHistoryRepository historyRepository;
 
+    private record SearchContext(
+            String title,
+            String city,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            String accommodationType,
+            List<String> amenities,
+            boolean hasCriteria
+    ) {}
+
+    private SearchContext resolveSearchContext(
+            UUID userId, String title, String city, BigDecimal minPrice,
+            BigDecimal maxPrice, String accommodationType, List<String> amenities) {
+        
+        boolean hasExplicitCriteria = (title != null && !title.isBlank())
+                || (city != null && !city.isBlank())
+                || (minPrice != null && minPrice.compareTo(BigDecimal.ZERO) > 0)
+                || (maxPrice != null && maxPrice.compareTo(BigDecimal.ZERO) > 0)
+                || (accommodationType != null && !accommodationType.isBlank())
+                || (amenities != null && !amenities.isEmpty());
+
+        if (userId != null && !hasExplicitCriteria) {
+            List<UserSearchHistory> recentSearches = historyRepository.findTop3ByUserIdOrderByCreatedAtDesc(userId);
+            if (!recentSearches.isEmpty()) {
+                UserSearchHistory latest = recentSearches.get(0);
+                boolean hasCriteria = (latest.getCity() != null && !latest.getCity().isBlank())
+                        || (latest.getMaxPrice() != null && latest.getMaxPrice().compareTo(BigDecimal.ZERO) > 0)
+                        || (latest.getAccommodationType() != null && !latest.getAccommodationType().isBlank());
+                
+                return new SearchContext(
+                        title, latest.getCity(), minPrice, latest.getMaxPrice(), 
+                        latest.getAccommodationType(), amenities, hasCriteria
+                );
+            }
+        }
+
+        return new SearchContext(title, city, minPrice, maxPrice, accommodationType, amenities, hasExplicitCriteria);
+    }
+
     @Override
     @Transactional(readOnly = true)
     public RecommendationResponse getRecommendations(
@@ -44,46 +83,16 @@ public class RecommendationServiceImpl implements RecommendationService {
             String accommodationType,
             List<String> amenities) {
         int maxResults = (limit != null && limit > 0) ? limit : 6;
+        
+        SearchContext ctx = resolveSearchContext(userId, title, city, minPrice, maxPrice, accommodationType, amenities);
+        
         List<AccommodationListing> recommendedListings = new ArrayList<>();
-
-        // 1. Resolve criteria
-        String searchTitle = title;
-        String searchCity = city;
-        BigDecimal searchMinPrice = minPrice;
-        BigDecimal searchMaxPrice = maxPrice;
-        String searchType = accommodationType;
-        List<String> searchAmenities = amenities;
-
-        // Determine if explicit criteria were provided in the request
-        boolean hasExplicitCriteria = (searchTitle != null && !searchTitle.isBlank())
-                || (searchCity != null && !searchCity.isBlank())
-                || (searchMinPrice != null && searchMinPrice.compareTo(BigDecimal.ZERO) > 0)
-                || (searchMaxPrice != null && searchMaxPrice.compareTo(BigDecimal.ZERO) > 0)
-                || (searchType != null && !searchType.isBlank())
-                || (searchAmenities != null && !searchAmenities.isEmpty());
-
-        if (userId != null && !hasExplicitCriteria) {
-            List<UserSearchHistory> recentSearches = historyRepository.findTop3ByUserIdOrderByCreatedAtDesc(userId);
-            if (!recentSearches.isEmpty()) {
-                // Use the most recent search that has at least some criteria, or just the very first one
-                UserSearchHistory latest = recentSearches.get(0);
-                searchCity = latest.getCity();
-                searchMaxPrice = latest.getMaxPrice();
-                searchType = latest.getAccommodationType();
-            }
-        }
-
-        // Re-evaluate hasCriteria after potentially injecting history
-        boolean hasCriteria = hasExplicitCriteria || (searchCity != null && !searchCity.isBlank())
-                || (searchMaxPrice != null && searchMaxPrice.compareTo(BigDecimal.ZERO) > 0)
-                || (searchType != null && !searchType.isBlank());
-
         int criteriaMatchedCount = 0;
         Pageable pageRequest = PageRequest.of(0, maxResults, Sort.by(Sort.Direction.DESC, "isPromoted", "createdAt"));
 
-        if (hasCriteria) {
+        if (ctx.hasCriteria()) {
             Specification<AccommodationListing> spec = RecommendationSpecification.buildRecommendationSpec(
-                    searchTitle, searchCity, searchMinPrice, searchMaxPrice, searchType, searchAmenities, null
+                    ctx.title(), ctx.city(), ctx.minPrice(), ctx.maxPrice(), ctx.accommodationType(), ctx.amenities(), null
             );
 
             Page<AccommodationListing> criteriaResults = listingRepository.findAll(spec, pageRequest);
@@ -102,14 +111,14 @@ public class RecommendationServiceImpl implements RecommendationService {
                     .collect(Collectors.toList());
 
             Specification<AccommodationListing> fallbackSpec = RecommendationSpecification.buildRecommendationSpec(
-                    null, searchCity, null, null, searchType, null, excludedIds
+                    null, ctx.city(), null, null, ctx.accommodationType(), null, excludedIds
             );
 
             Pageable fallbackPageRequest = PageRequest.of(0, remaining, Sort.by(Sort.Direction.DESC, "isPromoted", "createdAt"));
             Page<AccommodationListing> fallbackResults = listingRepository.findAll(fallbackSpec, fallbackPageRequest);
 
             if (!fallbackResults.isEmpty()) {
-                if (hasCriteria) {
+                if (ctx.hasCriteria()) {
                     fallbackApplied = true;
                 }
                 recommendedListings.addAll(fallbackResults.getContent());
@@ -125,9 +134,9 @@ public class RecommendationServiceImpl implements RecommendationService {
                 .totalCount(responseItems.size())
                 .criteriaMatchedCount(criteriaMatchedCount)
                 .fallbackApplied(fallbackApplied)
-                .hasCriteria(hasCriteria)
-                .searchCity(searchCity)
-                .searchTitle(searchTitle)
+                .hasCriteria(ctx.hasCriteria())
+                .searchCity(ctx.city())
+                .searchTitle(ctx.title())
                 .build();
     }
 }

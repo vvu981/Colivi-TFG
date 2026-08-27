@@ -189,44 +189,49 @@ export const PriceRangeFilter: React.FC<PriceRangeFilterProps> = ({
     return Math.max(...data, 1);
   }, [data]);
 
-  // Actualizador centralizado con notificación al padre
-  const updateRange = useCallback(
+  // Actualizador centralizado: SOLO actualiza el estado local visual del slider (fluidez)
+  const updateVisualRange = useCallback(
     (newMin: number, newMax: number) => {
       const sanitizedMin = clamp(newMin, min, newMax);
       const sanitizedMax = clamp(newMax, sanitizedMin, max);
 
       setMinValue(sanitizedMin);
       setMaxValue(sanitizedMax);
-
-      if (onChange) {
-        onChange({ min: sanitizedMin, max: sanitizedMax });
-      }
     },
-    [min, max, onChange]
+    [min, max]
   );
 
-  // Manejadores para los sliders
+  // Función de compromiso que notifica el cambio final al padre
+  const commitRange = useCallback(() => {
+    if (onChange) {
+      onChange({ min: minValue, max: maxValue });
+    }
+  }, [minValue, maxValue, onChange]);
+
+  // Manejadores para los sliders (sólo actualizan UI visual)
   const handleMinSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = Number(e.target.value);
     const newMin = Math.min(val, maxValue);
-    updateRange(newMin, maxValue);
+    updateVisualRange(newMin, maxValue);
   };
 
   const handleMaxSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = Number(e.target.value);
     const newMax = Math.max(val, minValue);
-    updateRange(minValue, newMax);
+    updateVisualRange(minValue, newMax);
   };
 
-  // Manejadores para inputs numéricos inferiores
+  // Manejadores para inputs numéricos inferiores (disparan commit inmediato tras onBlur/Enter)
   const handleMinInputCommit = (newMin: number) => {
     const validMin = Math.min(newMin, maxValue);
-    updateRange(validMin, maxValue);
+    updateVisualRange(validMin, maxValue);
+    if (onChange) onChange({ min: validMin, max: maxValue });
   };
 
   const handleMaxInputCommit = (newMax: number) => {
     const validMax = Math.max(newMax, minValue);
-    updateRange(minValue, validMax);
+    updateVisualRange(minValue, validMax);
+    if (onChange) onChange({ min: minValue, max: validMax });
   };
 
   const [activeThumb, setActiveThumb] = useState<'min' | 'max' | null>(null);
@@ -304,6 +309,8 @@ export const PriceRangeFilter: React.FC<PriceRangeFilterProps> = ({
             onChange={handleMinSliderChange}
             onPointerDown={() => setActiveThumb('min')}
             onTouchStart={() => setActiveThumb('min')}
+            onPointerUp={commitRange}
+            onTouchEnd={commitRange}
             onFocus={() => setActiveThumb('min')}
             aria-label="Precio mínimo"
             aria-valuemin={min}
@@ -350,6 +357,8 @@ export const PriceRangeFilter: React.FC<PriceRangeFilterProps> = ({
             onChange={handleMaxSliderChange}
             onPointerDown={() => setActiveThumb('max')}
             onTouchStart={() => setActiveThumb('max')}
+            onPointerUp={commitRange}
+            onTouchEnd={commitRange}
             onFocus={() => setActiveThumb('max')}
             aria-label="Precio máximo"
             aria-valuemin={min}
