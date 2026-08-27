@@ -119,7 +119,7 @@ class RecommendationSpecificationTest {
 
     @Test
     void buildRecommendationSpec_ThrowsExceptionForInvalidType() {
-        assertThrows(org.springframework.dao.InvalidDataAccessApiUsageException.class, () -> {
+        assertThrows(IllegalArgumentException.class, () -> {
             Specification<AccommodationListing> spec = RecommendationSpecification.buildRecommendationSpec(null, null,
                     "INVALID", null);
             listingRepository.findAll(spec);
@@ -164,7 +164,7 @@ class RecommendationSpecificationTest {
 
     @Test
     void buildRecommendationSpec_FiltersByAmenitiesAndRentalType() {
-        assertThrows(org.springframework.dao.InvalidDataAccessApiUsageException.class, () -> {
+        assertThrows(IllegalArgumentException.class, () -> {
             Specification<AccommodationListing> spec = RecommendationSpecification.buildRecommendationSpec(
                     null, null, null, "ROOM", List.of("WIFI", "INVALID_AMENITY"), null
             );

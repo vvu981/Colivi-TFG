@@ -187,7 +187,7 @@ class RecommendationServiceImplTest {
                 .thenReturn(page);
 
         // Act
-        RecommendationResponse result = recommendationService.getRecommendations(userId, 1, "Paris", new BigDecimal("100"), "FLAT");
+        RecommendationResponse result = recommendationService.getRecommendations(userId, 1, "Paris", new BigDecimal("100"), "ROOM");
 
         // Assert
         assertEquals(1, result.getItems().size());

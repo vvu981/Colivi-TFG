@@ -102,7 +102,7 @@ public class RecommendationServiceImpl implements RecommendationService {
                     .collect(Collectors.toList());
 
             Specification<AccommodationListing> fallbackSpec = RecommendationSpecification.buildRecommendationSpec(
-                    null, null, null, null, null, null, excludedIds
+                    null, searchCity, null, null, searchType, null, excludedIds
             );
 
             Pageable fallbackPageRequest = PageRequest.of(0, remaining, Sort.by(Sort.Direction.DESC, "isPromoted", "createdAt"));

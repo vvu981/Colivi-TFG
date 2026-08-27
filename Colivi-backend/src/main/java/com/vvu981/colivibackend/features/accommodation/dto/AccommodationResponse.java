@@ -23,7 +23,6 @@ public record AccommodationResponse(
                 String province,
                 Double latitude,
                 Double longitude,
-                LocalDateTime deletedAt,
                 LocalDateTime createdAt,
                 LocalDateTime updatedAt,
                 Set<AmenityType> amenities,
@@ -45,7 +44,6 @@ public record AccommodationResponse(
                                 accommodation != null ? accommodation.getProvince() : null,
                                 accommodation != null ? accommodation.getLatitude() : null,
                                 accommodation != null ? accommodation.getLongitude() : null,
-                                accommodation != null ? accommodation.getDeletedAt() : null,
                                 accommodation != null ? accommodation.getCreatedAt() : null,
                                 accommodation != null ? accommodation.getUpdatedAt() : null,
 

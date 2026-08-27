@@ -46,7 +46,29 @@ public class RecommendationSpecification {
             String accommodationType,
             List<String> amenities,
             List<UUID> excludedIds) {
-        
+            
+        final RentalType parsedType;
+        if (accommodationType != null && !accommodationType.trim().isEmpty()) {
+            try {
+                parsedType = RentalType.valueOf(accommodationType.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("Invalid accommodation type: " + accommodationType);
+            }
+        } else {
+            parsedType = null;
+        }
+
+        final List<com.vvu981.colivibackend.features.accommodation.domain.AmenityType> parsedAmenities = new ArrayList<>();
+        if (amenities != null && !amenities.isEmpty()) {
+            for (String am : amenities) {
+                try {
+                    parsedAmenities.add(com.vvu981.colivibackend.features.accommodation.domain.AmenityType.valueOf(am.toUpperCase()));
+                } catch (IllegalArgumentException e) {
+                    throw new IllegalArgumentException("Amenidad no válida: " + am);
+                }
+            }
+        }
+
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
@@ -88,24 +110,13 @@ public class RecommendationSpecification {
                 predicates.add(cb.lessThanOrEqualTo(root.get("pricePerMonth"), maxPrice));
             }
 
-            if (accommodationType != null && !accommodationType.trim().isEmpty()) {
-                try {
-                    RentalType type = RentalType.valueOf(accommodationType.toUpperCase());
-                    predicates.add(cb.equal(root.get("rentalType"), type));
-                } catch (IllegalArgumentException e) {
-                    throw new IllegalArgumentException("Invalid accommodation type: " + accommodationType);
-                }
+            if (parsedType != null) {
+                predicates.add(cb.equal(root.get("rentalType"), parsedType));
             }
 
-            if (amenities != null && !amenities.isEmpty()) {
-                for (String am : amenities) {
-                    try {
-                        com.vvu981.colivibackend.features.accommodation.domain.AmenityType amenityType =
-                                com.vvu981.colivibackend.features.accommodation.domain.AmenityType.valueOf(am.toUpperCase());
-                        predicates.add(cb.isMember(amenityType, accommodationJoin.get("amenities")));
-                    } catch (IllegalArgumentException ignored) {
-                        throw new IllegalArgumentException("Amenidad no válida: " + am);
-                    }
+            if (!parsedAmenities.isEmpty()) {
+                for (com.vvu981.colivibackend.features.accommodation.domain.AmenityType amenityType : parsedAmenities) {
+                    predicates.add(cb.isMember(amenityType, accommodationJoin.get("amenities")));
                 }
             }
 
