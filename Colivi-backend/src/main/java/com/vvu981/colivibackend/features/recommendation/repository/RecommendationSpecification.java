@@ -61,9 +61,14 @@ public class RecommendationSpecification {
 
             // Eager fetch to avoid N+1 problem ONLY for SELECT queries (never in COUNT queries)
             boolean isCountQuery = Long.class.equals(query.getResultType()) || long.class.equals(query.getResultType());
+            Join<AccommodationListing, Accommodation> accommodationJoin;
             if (!isCountQuery) {
-                root.fetch("accommodation", JoinType.INNER);
+                @SuppressWarnings("unchecked")
+                Join<AccommodationListing, Accommodation> fetchJoin = (Join<AccommodationListing, Accommodation>) (Object) root.fetch("accommodation", JoinType.INNER);
+                accommodationJoin = fetchJoin;
                 root.fetch("host", JoinType.LEFT);
+            } else {
+                accommodationJoin = root.join("accommodation", JoinType.INNER);
             }
 
             // Optional Criteria
@@ -72,7 +77,6 @@ public class RecommendationSpecification {
             }
 
             if (city != null && !city.trim().isEmpty()) {
-                Join<AccommodationListing, Accommodation> accommodationJoin = root.join("accommodation", JoinType.INNER);
                 predicates.add(cb.equal(cb.lower(accommodationJoin.get("city")), city.toLowerCase()));
             }
 
@@ -94,13 +98,13 @@ public class RecommendationSpecification {
             }
 
             if (amenities != null && !amenities.isEmpty()) {
-                Join<AccommodationListing, Accommodation> accommodationJoin = root.join("accommodation", JoinType.INNER);
                 for (String am : amenities) {
                     try {
                         com.vvu981.colivibackend.features.accommodation.domain.AmenityType amenityType =
                                 com.vvu981.colivibackend.features.accommodation.domain.AmenityType.valueOf(am.toUpperCase());
                         predicates.add(cb.isMember(amenityType, accommodationJoin.get("amenities")));
                     } catch (IllegalArgumentException ignored) {
+                        throw new IllegalArgumentException("Amenidad no válida: " + am);
                     }
                 }
             }

@@ -164,11 +164,12 @@ class RecommendationSpecificationTest {
 
     @Test
     void buildRecommendationSpec_FiltersByAmenitiesAndRentalType() {
-        Specification<AccommodationListing> spec = RecommendationSpecification.buildRecommendationSpec(
-                null, null, null, "ROOM", List.of("WIFI", "INVALID_AMENITY"), null
-        );
-        List<AccommodationListing> results = listingRepository.findAll(spec);
-        assertNotNull(results);
+        assertThrows(org.springframework.dao.InvalidDataAccessApiUsageException.class, () -> {
+            Specification<AccommodationListing> spec = RecommendationSpecification.buildRecommendationSpec(
+                    null, null, null, "ROOM", List.of("WIFI", "INVALID_AMENITY"), null
+            );
+            listingRepository.findAll(spec);
+        });
     }
 
     @Test

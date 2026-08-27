@@ -54,24 +54,29 @@ public class RecommendationServiceImpl implements RecommendationService {
         String searchType = accommodationType;
         List<String> searchAmenities = amenities;
 
-        if (userId != null) {
-            List<UserSearchHistory> recentSearches = historyRepository.findTop3ByUserIdOrderByCreatedAtDesc(userId);
-            if (!recentSearches.isEmpty()) {
-                // Use the most recent search that has at least some criteria, or just the very first one
-                UserSearchHistory latest = recentSearches.get(0);
-                searchCity = searchCity != null ? searchCity : latest.getCity();
-                searchMaxPrice = searchMaxPrice != null ? searchMaxPrice : latest.getMaxPrice();
-                searchType = searchType != null ? searchType : latest.getAccommodationType();
-            }
-        }
-
-        // 2. Fetch based on criteria if any
-        boolean hasCriteria = (searchTitle != null && !searchTitle.isBlank())
+        // Determine if explicit criteria were provided in the request
+        boolean hasExplicitCriteria = (searchTitle != null && !searchTitle.isBlank())
                 || (searchCity != null && !searchCity.isBlank())
                 || (searchMinPrice != null && searchMinPrice.compareTo(BigDecimal.ZERO) > 0)
                 || (searchMaxPrice != null && searchMaxPrice.compareTo(BigDecimal.ZERO) > 0)
                 || (searchType != null && !searchType.isBlank())
                 || (searchAmenities != null && !searchAmenities.isEmpty());
+
+        if (userId != null && !hasExplicitCriteria) {
+            List<UserSearchHistory> recentSearches = historyRepository.findTop3ByUserIdOrderByCreatedAtDesc(userId);
+            if (!recentSearches.isEmpty()) {
+                // Use the most recent search that has at least some criteria, or just the very first one
+                UserSearchHistory latest = recentSearches.get(0);
+                searchCity = latest.getCity();
+                searchMaxPrice = latest.getMaxPrice();
+                searchType = latest.getAccommodationType();
+            }
+        }
+
+        // Re-evaluate hasCriteria after potentially injecting history
+        boolean hasCriteria = hasExplicitCriteria || (searchCity != null && !searchCity.isBlank())
+                || (searchMaxPrice != null && searchMaxPrice.compareTo(BigDecimal.ZERO) > 0)
+                || (searchType != null && !searchType.isBlank());
 
         int criteriaMatchedCount = 0;
         Pageable pageRequest = PageRequest.of(0, maxResults, Sort.by(Sort.Direction.DESC, "isPromoted", "createdAt"));

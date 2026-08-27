@@ -33,10 +33,9 @@ public class AmenitiesFilter implements ListingFilter {
                     try {
                         return AmenityType.valueOf(s.toUpperCase());
                     } catch (IllegalArgumentException e) {
-                        return null;
+                        throw new IllegalArgumentException("Amenidad no válida: " + s);
                     }
                 })
-                .filter(Objects::nonNull)
                 .toList();
 
         if (validAmenities.isEmpty()) {

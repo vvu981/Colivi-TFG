@@ -182,9 +182,6 @@ class RecommendationServiceImplTest {
         UserSearchHistory history = new UserSearchHistory();
         // history has null city, maxPrice, type
 
-        when(historyRepository.findTop3ByUserIdOrderByCreatedAtDesc(userId))
-                .thenReturn(List.of(history));
-
         Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
         when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(page);
@@ -199,8 +196,6 @@ class RecommendationServiceImplTest {
     @Test
     void testGetRecommendations_EmptyHistory_UsesMethodArguments() {
         // Arrange
-        when(historyRepository.findTop3ByUserIdOrderByCreatedAtDesc(userId))
-                .thenReturn(List.of());
 
         Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
         when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))

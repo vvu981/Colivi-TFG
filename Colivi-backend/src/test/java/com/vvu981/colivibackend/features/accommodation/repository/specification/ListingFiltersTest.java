@@ -162,20 +162,12 @@ class ListingFiltersTest {
     }
 
     @Test
-    @DisplayName("MinPriceFilter apply con formato invalido retorna conjunction")
-    @SuppressWarnings({ "rawtypes", "unchecked" })
+    @DisplayName("MinPriceFilter apply con formato invalido lanza IllegalArgumentException")
     void testMinPriceFilterApplyInvalidFormat() {
         Map<String, String> params = Map.of("minPrice", "invalid_number");
-        Specification<AccommodationListing> spec = minPriceFilter.apply(params);
-
-        Root root = mock(Root.class);
-        CriteriaQuery query = mock(CriteriaQuery.class);
-        CriteriaBuilder cb = mock(CriteriaBuilder.class);
-        Predicate conjunction = mock(Predicate.class);
-        when(cb.conjunction()).thenReturn(conjunction);
-
-        Predicate result = spec.toPredicate(root, query, cb);
-        assertThat(result).isEqualTo(conjunction);
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> {
+            minPriceFilter.apply(params);
+        });
     }
 
     @Test
@@ -390,21 +382,11 @@ class ListingFiltersTest {
     }
 
     @Test
-    @DisplayName("AmenitiesFilter apply debe devolver conjunction si no hay amenities validas")
-    @SuppressWarnings({ "rawtypes", "unchecked" })
+    @DisplayName("AmenitiesFilter apply lanza IllegalArgumentException si hay amenities validas")
     void testAmenitiesFilterApplyInvalid() {
         Map<String, String> params = Map.of("amenities", "INVALID_AMENITY_1,INVALID_AMENITY_2");
-        Specification<AccommodationListing> spec = amenitiesFilter.apply(params);
-
-        Root root = mock(Root.class);
-        CriteriaQuery query = mock(CriteriaQuery.class);
-        CriteriaBuilder cb = mock(CriteriaBuilder.class);
-        Predicate conjunctionPredicate = mock(Predicate.class);
-
-        when(cb.conjunction()).thenReturn(conjunctionPredicate);
-
-        Predicate result = spec.toPredicate(root, query, cb);
-        assertThat(result).isEqualTo(conjunctionPredicate);
-        verify(cb, times(1)).conjunction();
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> {
+            amenitiesFilter.apply(params);
+        });
     }
 }

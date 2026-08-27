@@ -22,7 +22,7 @@ public class MinPriceFilter implements ListingFilter {
             return (root, query, criteriaBuilder) -> criteriaBuilder.greaterThanOrEqualTo(root.get("pricePerMonth"),
                     minPrice);
         } catch (NumberFormatException e) {
-            return (root, query, criteriaBuilder) -> criteriaBuilder.conjunction();
+            throw new IllegalArgumentException("El formato del precio mínimo no es válido.");
         }
     }
 }
