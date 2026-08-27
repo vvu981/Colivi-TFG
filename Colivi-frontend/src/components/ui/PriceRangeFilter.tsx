@@ -151,10 +151,7 @@ export const PriceRangeFilter: React.FC<PriceRangeFilterProps> = ({
   step = 10,
   initialMin,
   initialMax,
-  data = [
-    5, 12, 28, 45, 60, 85, 110, 140, 125, 95,
-    80, 65, 50, 42, 35, 25, 18, 12, 8, 4
-  ],
+  data = [],
   currencySymbol = '€',
   title = 'Rango de precios',
   subtitle = 'Precio del viaje, incluye todas las comisiones',
@@ -307,9 +304,17 @@ export const PriceRangeFilter: React.FC<PriceRangeFilterProps> = ({
             step={step}
             value={minValue}
             onChange={handleMinSliderChange}
-            onPointerDown={() => setActiveThumb('min')}
-            onTouchStart={() => setActiveThumb('min')}
-            onPointerUp={commitRange}
+            onPointerDown={(e) => {
+              setActiveThumb('min');
+              e.currentTarget.setPointerCapture(e.pointerId);
+            }}
+            onTouchStart={() => {
+              setActiveThumb('min');
+            }}
+            onPointerUp={(e) => {
+              e.currentTarget.releasePointerCapture(e.pointerId);
+              commitRange();
+            }}
             onTouchEnd={commitRange}
             onFocus={() => setActiveThumb('min')}
             aria-label="Precio mínimo"
@@ -322,7 +327,7 @@ export const PriceRangeFilter: React.FC<PriceRangeFilterProps> = ({
               [&::-webkit-slider-thumb]:w-6
               [&::-webkit-slider-thumb]:h-6
               [&::-webkit-slider-thumb]:rounded-full
-              [&::-webkit-slider-thumb]:bg-white
+              [&::-webkit-slider-thumb]:bg-surface-container-lowest
               [&::-webkit-slider-thumb]:border-2
               [&::-webkit-slider-thumb]:border-primary
               [&::-webkit-slider-thumb]:shadow-md
@@ -337,7 +342,7 @@ export const PriceRangeFilter: React.FC<PriceRangeFilterProps> = ({
               [&::-moz-range-thumb]:w-6
               [&::-moz-range-thumb]:h-6
               [&::-moz-range-thumb]:rounded-full
-              [&::-moz-range-thumb]:bg-white
+              [&::-moz-range-thumb]:bg-surface-container-lowest
               [&::-moz-range-thumb]:border-2
               [&::-moz-range-thumb]:border-primary
               [&::-moz-range-thumb]:shadow-md
@@ -355,9 +360,17 @@ export const PriceRangeFilter: React.FC<PriceRangeFilterProps> = ({
             step={step}
             value={maxValue}
             onChange={handleMaxSliderChange}
-            onPointerDown={() => setActiveThumb('max')}
-            onTouchStart={() => setActiveThumb('max')}
-            onPointerUp={commitRange}
+            onPointerDown={(e) => {
+              setActiveThumb('max');
+              e.currentTarget.setPointerCapture(e.pointerId);
+            }}
+            onTouchStart={() => {
+              setActiveThumb('max');
+            }}
+            onPointerUp={(e) => {
+              e.currentTarget.releasePointerCapture(e.pointerId);
+              commitRange();
+            }}
             onTouchEnd={commitRange}
             onFocus={() => setActiveThumb('max')}
             aria-label="Precio máximo"
@@ -370,7 +383,7 @@ export const PriceRangeFilter: React.FC<PriceRangeFilterProps> = ({
               [&::-webkit-slider-thumb]:w-6
               [&::-webkit-slider-thumb]:h-6
               [&::-webkit-slider-thumb]:rounded-full
-              [&::-webkit-slider-thumb]:bg-white
+              [&::-webkit-slider-thumb]:bg-surface-container-lowest
               [&::-webkit-slider-thumb]:border-2
               [&::-webkit-slider-thumb]:border-primary
               [&::-webkit-slider-thumb]:shadow-md
@@ -385,7 +398,7 @@ export const PriceRangeFilter: React.FC<PriceRangeFilterProps> = ({
               [&::-moz-range-thumb]:w-6
               [&::-moz-range-thumb]:h-6
               [&::-moz-range-thumb]:rounded-full
-              [&::-moz-range-thumb]:bg-white
+              [&::-moz-range-thumb]:bg-surface-container-lowest
               [&::-moz-range-thumb]:border-2
               [&::-moz-range-thumb]:border-primary
               [&::-moz-range-thumb]:shadow-md

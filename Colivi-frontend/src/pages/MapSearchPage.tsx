@@ -37,6 +37,8 @@ interface ListingCardProps {
 }
 
 const SidebarCard: React.FC<ListingCardProps> = ({ listing, isHighlighted, onClick }) => {
+  const [imageError, setImageError] = useState(false);
+
   const coverImage =
     listing.selectedImages?.[0]?.imageUrl ??
     listing.accommodation?.images?.[0]?.imageUrl;
@@ -62,26 +64,16 @@ const SidebarCard: React.FC<ListingCardProps> = ({ listing, isHighlighted, onCli
     >
       {/* Thumbnail */}
       <div className="relative w-24 h-24 rounded-xl overflow-hidden flex-shrink-0 bg-surface-container border border-outline-variant/40">
-        {coverImage ? (
-          <>
-            <img
-              src={coverImage}
-              alt={listing.title}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              loading="lazy"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-                if (e.currentTarget.nextElementSibling) {
-                  (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
-                }
-              }}
-            />
-            <div style={{ display: 'none' }} className="w-full h-full flex items-center justify-center text-on-surface-variant/40 bg-surface-container">
-              <Home size={24} />
-            </div>
-          </>
+        {coverImage && !imageError ? (
+          <img
+            src={coverImage}
+            alt={listing.title}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            loading="lazy"
+            onError={() => setImageError(true)}
+          />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-on-surface-variant/40">
+          <div className="w-full h-full flex items-center justify-center text-on-surface-variant/40 bg-surface-container">
             <Home size={24} />
           </div>
         )}
@@ -368,7 +360,7 @@ export const MapSearchPage: React.FC = () => {
   // ── Map refs ───────────────────────────────────────────────────────
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
-  const markersMapRef = useRef<Map<string, { marker: L.Marker; root: Root }>>(new Map());
+  const markersMapRef = useRef<Map<string, { marker: L.Marker; root: Root; lastExpanded?: boolean; lastSelected?: boolean }>>(new Map());
   const sidebarContainerRef = useRef<HTMLDivElement>(null);
 
   // ── UI state ───────────────────────────────────────────────────────
@@ -632,6 +624,8 @@ export const MapSearchPage: React.FC = () => {
 
       let iconAnchor: [number, number] = [20, 48]; // default teardrop tip
       let content: React.ReactNode = null;
+      let isExpanded = false;
+      let isSelected = false;
 
       switch (item.type) {
         case 'cluster':
@@ -646,7 +640,7 @@ export const MapSearchPage: React.FC = () => {
 
         case 'fan': {
           const coordKey = `${item.lat},${item.lng}`;
-          const isExpanded = expandedCoordinate === coordKey;
+          isExpanded = expandedCoordinate === coordKey;
           content = (
             <ClusterFan
               listings={item.listings}
@@ -660,11 +654,12 @@ export const MapSearchPage: React.FC = () => {
         }
 
         case 'leaf':
+          isSelected = highlightedId === item.listing.id;
           content = (
             <MarkerPin
               listing={item.listing}
               angle={0}
-              isSelected={highlightedId === item.listing.id}
+              isSelected={isSelected}
               onClick={handleListingClick}
             />
           );
@@ -676,7 +671,18 @@ export const MapSearchPage: React.FC = () => {
       if (existing) {
         // Reuse existing marker and root (fast VDOM update, no DOM reconstruction)
         existing.marker.setLatLng([item.lat, item.lng]);
-        existing.root.render(content);
+        
+        // DIFFING LOCAL: Sólo renderiza si los estados visuales del pin han cambiado.
+        // Esto reduce O(N) renders pesados a O(2) constantes.
+        const propsChanged = 
+          existing.lastExpanded !== isExpanded || 
+          existing.lastSelected !== isSelected;
+
+        if (propsChanged) {
+          existing.root.render(content);
+          existing.lastExpanded = isExpanded;
+          existing.lastSelected = isSelected;
+        }
       } else {
         // Create new marker and root for new cluster item
         const container = document.createElement('div');
@@ -693,7 +699,7 @@ export const MapSearchPage: React.FC = () => {
         });
 
         const marker = L.marker([item.lat, item.lng], { icon }).addTo(map);
-        markersMap.set(key, { marker, root });
+        markersMap.set(key, { marker, root, lastExpanded: isExpanded, lastSelected: isSelected });
       }
     });
 
