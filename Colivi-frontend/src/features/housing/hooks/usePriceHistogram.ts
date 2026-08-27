@@ -9,8 +9,6 @@ export interface PriceHistogramFilters {
 export interface UsePriceHistogramResult {
   globalMaxPrice: number;
   globalHistogramData: number[];
-  setGlobalMaxPrice: React.Dispatch<React.SetStateAction<number>>;
-  setGlobalHistogramData: React.Dispatch<React.SetStateAction<number[]>>;
 }
 
 const DEFAULT_MAX_PRICE = 2000;
@@ -69,8 +67,6 @@ export const usePriceHistogram = (
   return {
     globalMaxPrice,
     globalHistogramData,
-    setGlobalMaxPrice,
-    setGlobalHistogramData,
   };
 };
 

@@ -180,7 +180,7 @@ export const MonthPicker: React.FC<MonthPickerProps> = ({
             top: dropPos.top,
             left: dropPos.left,
             width: dropPos.width,
-            zIndex: 99999,
+            zIndex: 50,
           }}
           className="rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-xl p-3.5 flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-150 select-none"
         >

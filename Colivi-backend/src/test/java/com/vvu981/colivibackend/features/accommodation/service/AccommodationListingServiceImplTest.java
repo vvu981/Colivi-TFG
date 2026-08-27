@@ -10,7 +10,7 @@ import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingU
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingStatsDTO;
 import com.vvu981.colivibackend.features.accommodation.repository.AccommodationListingRepository;
 import com.vvu981.colivibackend.features.accommodation.repository.specification.ListingSpecificationBuilder;
-import com.vvu981.colivibackend.features.accommodation.service.Impl.AccommodationListingServiceImpl;
+import com.vvu981.colivibackend.features.accommodation.service.impl.AccommodationListingServiceImpl;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;

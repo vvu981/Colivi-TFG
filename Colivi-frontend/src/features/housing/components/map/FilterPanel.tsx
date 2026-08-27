@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Home, Bed } from 'lucide-react';
 import { PriceRangeFilter } from '../../../../components/ui/PriceRangeFilter';
 import { Select } from '../../../../components/ui/Select';

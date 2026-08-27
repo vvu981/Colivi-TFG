@@ -186,7 +186,7 @@ export const useMapClusters = (
             lat,
             lng,
             count,
-            expansionZoom: Math.min(expansionZoom, 18), // Allow expanding to individual leaves
+            expansionZoom: expansionZoom, // Allow expanding to individual leaves
           });
         }
       } else {

@@ -225,7 +225,7 @@ export const ListingBookingCard: React.FC<ListingBookingCardProps> = ({
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 bg-surface-dim/80 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
           onClick={() => !isSubmitting && setIsContactModalOpen(false)}
         >
           <div

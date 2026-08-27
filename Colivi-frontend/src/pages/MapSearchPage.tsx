@@ -456,7 +456,7 @@ export const MapSearchPage: React.FC = () => {
   }, [listings]);
 
   // ── Apply / reset filters ──────────────────────────────────────────
-  const applyFilters = (appliedFilters?: FilterValues) => {
+  const applyFilters = useCallback((appliedFilters?: FilterValues) => {
     const f = appliedFilters ?? filters;
     setExpandedCoordinate(null); // Collapse any open groups
     setFilteredListings(null);   // Reset sidebar filters
@@ -470,16 +470,16 @@ export const MapSearchPage: React.FC = () => {
       amenities: f.amenities.length > 0 ? f.amenities.join(',') : undefined,
     });
     setFiltersOpen(false);
-  };
+  }, [filters, search]);
 
-  const resetFilters = () => {
+  const resetFilters = useCallback(() => {
     setExpandedCoordinate(null); // Collapse any open groups
     setFilteredListings(null);   // Reset sidebar filters
     hasFittedBoundsRef.current = false; // Reset to allow fitting bounds on next render
     setFilters({ title: '', city: '', minPrice: undefined, maxPrice: undefined, rentalType: '', amenities: [] });
     search({});
     setFiltersOpen(false);
-  };
+  }, [search]);
 
   // ── Render ─────────────────────────────────────────────────────────
   return (

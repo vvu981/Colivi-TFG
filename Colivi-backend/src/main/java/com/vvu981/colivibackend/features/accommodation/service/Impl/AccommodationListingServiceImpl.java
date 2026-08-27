@@ -1,4 +1,4 @@
-package com.vvu981.colivibackend.features.accommodation.service.Impl;
+package com.vvu981.colivibackend.features.accommodation.service.impl;
 
 import java.time.LocalDateTime;
 import java.util.List;
