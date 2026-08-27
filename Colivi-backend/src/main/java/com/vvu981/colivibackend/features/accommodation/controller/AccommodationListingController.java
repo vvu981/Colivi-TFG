@@ -43,25 +43,37 @@ public class AccommodationListingController {
             @RequestParam(defaultValue = "10") int size,
             @AuthenticationPrincipal com.vvu981.colivibackend.core.security.UserPrincipal userPrincipal) {
 
-        Page<AccommodationListingResponse> catalog = listingService.searchListings(allParams, page, size);
-
         UUID currentUserId = userPrincipal != null ? userPrincipal.getId() : null;
 
-        // Save search async
-        if (currentUserId != null) {
-            String city = allParams.get("city");
-            String maxPriceStr = allParams.get("maxPrice");
-            java.math.BigDecimal maxPrice = null;
+        // 1. Fail-Fast: Pre-validate parameters before performing database search
+        java.math.BigDecimal maxPrice = null;
+        String maxPriceStr = allParams.get("maxPrice");
+        if (maxPriceStr != null && !maxPriceStr.trim().isEmpty()) {
             try {
-                if (maxPriceStr != null && !maxPriceStr.trim().isEmpty()) {
-                    maxPrice = new java.math.BigDecimal(maxPriceStr);
-                }
+                maxPrice = new java.math.BigDecimal(maxPriceStr.trim());
             } catch (NumberFormatException e) {
                 throw new com.vvu981.colivibackend.core.exception.BusinessRuleValidationException(
                         "Invalid maxPrice value");
             }
-            String type = allParams.get("rentalType"); // Or whatever the frontend sends
+        }
 
+        String minPriceStr = allParams.get("minPrice");
+        if (minPriceStr != null && !minPriceStr.trim().isEmpty()) {
+            try {
+                new java.math.BigDecimal(minPriceStr.trim());
+            } catch (NumberFormatException e) {
+                throw new com.vvu981.colivibackend.core.exception.BusinessRuleValidationException(
+                        "Invalid minPrice value");
+            }
+        }
+
+        // 2. Perform search
+        Page<AccommodationListingResponse> catalog = listingService.searchListings(allParams, page, size);
+
+        // 3. Save search history asynchronously if user is logged in
+        if (currentUserId != null) {
+            String city = allParams.get("city");
+            String type = allParams.get("rentalType");
             searchHistoryService.saveSearchAsync(currentUserId, city, maxPrice, type);
         }
 

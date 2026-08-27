@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 public record ListingFilterParams(
+        String title,
         String city,
         String country,
         BigDecimal minPrice,

@@ -101,6 +101,7 @@ class AccommodationListingControllerTest {
                 null,
                 hostUser.getId(),
                 hostUser.getNickname(),
+                null,
                 false, null);
     }
 
@@ -302,6 +303,7 @@ class AccommodationListingControllerTest {
                     null,
                     hostUser.getId(),
                     hostUser.getNickname(),
+                    null,
                     false, null);
             when(listingService.updateAccommodationListing(eq(listingId), any(AccommodationListingUpdateRequest.class),
                     any(UUID.class)))

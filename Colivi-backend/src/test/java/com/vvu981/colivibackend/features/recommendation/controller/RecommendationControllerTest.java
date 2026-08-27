@@ -2,6 +2,7 @@ package com.vvu981.colivibackend.features.recommendation.controller;
 
 import com.vvu981.colivibackend.features.accommodation.domain.ListingStatus;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingResponse;
+import com.vvu981.colivibackend.features.recommendation.dto.RecommendationResponse;
 import com.vvu981.colivibackend.features.recommendation.service.RecommendationService;
 import com.vvu981.colivibackend.features.user.domain.User;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,6 +48,7 @@ class RecommendationControllerTest {
         private RecommendationService recommendationService;
 
         private AccommodationListingResponse responseDto;
+        private RecommendationResponse recommendationResponse;
         private User testUser;
 
         @BeforeEach
@@ -67,35 +69,62 @@ class RecommendationControllerTest {
                                 null,
                                 null,
                                 null,
+                                null,
                                 true, null);
+
+                recommendationResponse = RecommendationResponse.builder()
+                                .items(List.of(responseDto))
+                                .totalCount(1)
+                                .criteriaMatchedCount(1)
+                                .fallbackApplied(false)
+                                .searchCity("Madrid")
+                                .build();
         }
 
         @Test
         void testGetRecommendations_Anonymous() throws Exception {
-                when(recommendationService.getRecommendations(any(), anyInt(), any(), any(), any()))
-                                .thenReturn(List.of(responseDto));
+                when(recommendationService.getRecommendations(any(), anyInt(), any(), any(), any(), any(), any(), any()))
+                                .thenReturn(recommendationResponse);
 
                 mockMvc.perform(get("/api/v1/listings/recommendations")
                                 .param("limit", "6")
+                                .param("title", "Luminoso")
                                 .param("city", "Madrid")
+                                .param("minPrice", "200")
                                 .param("maxPrice", "1000")
+                                .param("rentalType", "ROOM")
+                                .param("amenities", "WIFI,HEATING"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.items").isArray())
+                                .andExpect(jsonPath("$.items[0].title").value("Title"))
+                                .andExpect(jsonPath("$.totalCount").value(1))
+                                .andExpect(jsonPath("$.criteriaMatchedCount").value(1))
+                                .andExpect(jsonPath("$.fallbackApplied").value(false))
+                                .andExpect(jsonPath("$.searchCity").value("Madrid"));
+        }
+
+        @Test
+        void testGetRecommendations_WithAccommodationTypeFallback() throws Exception {
+                when(recommendationService.getRecommendations(any(), anyInt(), any(), any(), any(), any(), any(), any()))
+                                .thenReturn(recommendationResponse);
+
+                mockMvc.perform(get("/api/v1/listings/recommendations")
                                 .param("accommodationType", "ROOM"))
                                 .andExpect(status().isOk())
-                                .andExpect(jsonPath("$").isArray())
-                                .andExpect(jsonPath("$[0].title").value("Title"));
+                                .andExpect(jsonPath("$.items").isArray());
         }
 
         @Test
         void testGetRecommendations_Authenticated() throws Exception {
-                when(recommendationService.getRecommendations(any(), anyInt(), any(), any(), any()))
-                                .thenReturn(List.of(responseDto));
+                when(recommendationService.getRecommendations(any(), anyInt(), any(), any(), any(), any(), any(), any()))
+                                .thenReturn(recommendationResponse);
 
                 mockMvc.perform(get("/api/v1/listings/recommendations")
                                 .with(authentication(new UsernamePasswordAuthenticationToken(
                                                 UserPrincipal.create(testUser), null,
                                                 java.util.Collections.emptyList()))))
                                 .andExpect(status().isOk())
-                                .andExpect(jsonPath("$").isArray())
-                                .andExpect(jsonPath("$[0].title").value("Title"));
+                                .andExpect(jsonPath("$.items").isArray())
+                                .andExpect(jsonPath("$.items[0].title").value("Title"));
         }
 }

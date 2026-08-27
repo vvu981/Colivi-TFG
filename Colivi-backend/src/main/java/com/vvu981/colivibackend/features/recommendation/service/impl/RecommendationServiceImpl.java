@@ -1,9 +1,13 @@
 package com.vvu981.colivibackend.features.recommendation.service.impl;
 
+import com.vvu981.colivibackend.features.accommodation.domain.AmenityType;
+import com.vvu981.colivibackend.features.accommodation.domain.RentalType;
+import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingResponse;
-import com.vvu981.colivibackend.features.accommodation.repository.AccommodationListingRepository;
+import com.vvu981.colivibackend.features.accommodation.service.AccommodationListingService;
 import com.vvu981.colivibackend.features.recommendation.domain.UserSearchHistory;
+import com.vvu981.colivibackend.features.recommendation.dto.RecommendationResponse;
 import com.vvu981.colivibackend.features.recommendation.repository.RecommendationSpecification;
 import com.vvu981.colivibackend.features.recommendation.repository.UserSearchHistoryRepository;
 import com.vvu981.colivibackend.features.recommendation.service.RecommendationService;
@@ -20,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -28,44 +33,107 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class RecommendationServiceImpl implements RecommendationService {
 
-    private final AccommodationListingRepository listingRepository;
+    private final AccommodationListingService listingService;
     private final UserSearchHistoryRepository historyRepository;
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<AccommodationListingResponse> getRecommendations(UUID userId, Integer limit, String city, BigDecimal maxPrice, String accommodationType) {
-        int maxResults = (limit != null && limit > 0) ? limit : 6;
-        List<AccommodationListing> recommendedListings = new ArrayList<>();
+    private record SearchContext(
+            String title,
+            String city,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            RentalType accommodationType,
+            List<AmenityType> amenities,
+            boolean hasCriteria
+    ) {}
 
-        // 1. Resolve criteria
-        String searchCity = city;
-        BigDecimal searchMaxPrice = maxPrice;
-        String searchType = accommodationType;
+    private SearchContext resolveSearchContext(
+            UUID userId, String title, String city, BigDecimal minPrice,
+            BigDecimal maxPrice, String accommodationType, List<String> amenities) {
+        
+        boolean hasExplicitCriteria = (title != null && !title.isBlank())
+                || (city != null && !city.isBlank())
+                || (minPrice != null && minPrice.compareTo(BigDecimal.ZERO) > 0)
+                || (maxPrice != null && maxPrice.compareTo(BigDecimal.ZERO) > 0)
+                || (accommodationType != null && !accommodationType.isBlank())
+                || (amenities != null && !amenities.isEmpty());
 
-        if (userId != null) {
-            List<UserSearchHistory> recentSearches = historyRepository.findTop3ByUserIdOrderByCreatedAtDesc(userId);
-            if (!recentSearches.isEmpty()) {
-                // Use the most recent search that has at least some criteria, or just the very first one
-                UserSearchHistory latest = recentSearches.get(0);
-                searchCity = latest.getCity() != null ? latest.getCity() : searchCity;
-                searchMaxPrice = latest.getMaxPrice() != null ? latest.getMaxPrice() : searchMaxPrice;
-                searchType = latest.getAccommodationType() != null ? latest.getAccommodationType() : searchType;
+        String resolvedCity = city;
+        BigDecimal resolvedMaxPrice = maxPrice;
+        String resolvedTypeStr = accommodationType;
+
+        if (userId != null && !hasExplicitCriteria) {
+            Optional<UserSearchHistory> latestOpt = historyRepository.findFirstByUserIdOrderByCreatedAtDesc(userId);
+            if (latestOpt.isPresent()) {
+                UserSearchHistory latest = latestOpt.get();
+                hasExplicitCriteria = (latest.getCity() != null && !latest.getCity().isBlank())
+                        || (latest.getMaxPrice() != null && latest.getMaxPrice().compareTo(BigDecimal.ZERO) > 0)
+                        || (latest.getAccommodationType() != null && !latest.getAccommodationType().isBlank());
+                
+                resolvedCity = latest.getCity();
+                resolvedMaxPrice = latest.getMaxPrice();
+                resolvedTypeStr = latest.getAccommodationType();
             }
         }
 
-        // 2. Fetch based on criteria if any
-        boolean hasCriteria = searchCity != null || searchMaxPrice != null || searchType != null;
+        RentalType parsedType = null;
+        if (resolvedTypeStr != null && !resolvedTypeStr.isBlank()) {
+            try {
+                parsedType = RentalType.valueOf(resolvedTypeStr.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                log.warn("Invalid accommodation type: {}", resolvedTypeStr);
+                if (accommodationType != null && !accommodationType.isBlank()) {
+                    throw new BusinessRuleValidationException("Tipo de alojamiento no válido: " + resolvedTypeStr);
+                }
+                // Si proviene de history, se ignora silenciosamente y se sigue (parsedType = null)
+            }
+        }
+
+        List<AmenityType> parsedAmenities = new ArrayList<>();
+        if (amenities != null && !amenities.isEmpty()) {
+            for (String am : amenities) {
+                try {
+                    parsedAmenities.add(AmenityType.valueOf(am.toUpperCase()));
+                } catch (IllegalArgumentException e) {
+                    log.warn("Invalid amenity type: {}", am);
+                    throw new BusinessRuleValidationException("Amenidad no válida: " + am);
+                }
+            }
+        }
+
+        return new SearchContext(title, resolvedCity, minPrice, resolvedMaxPrice, parsedType, parsedAmenities, hasExplicitCriteria);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public RecommendationResponse getRecommendations(
+            UUID userId,
+            Integer limit,
+            String title,
+            String city,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            String accommodationType,
+            List<String> amenities) {
+        int maxResults = (limit != null && limit > 0) ? limit : 6;
         
+        SearchContext ctx = resolveSearchContext(userId, title, city, minPrice, maxPrice, accommodationType, amenities);
+        
+        List<AccommodationListing> recommendedListings = new ArrayList<>();
+        int criteriaMatchedCount = 0;
         Pageable pageRequest = PageRequest.of(0, maxResults, Sort.by(Sort.Direction.DESC, "isPromoted", "createdAt"));
 
-        if (hasCriteria) {
+        if (ctx.hasCriteria()) {
             Specification<AccommodationListing> spec = RecommendationSpecification.buildRecommendationSpec(
-                    searchCity, searchMaxPrice, searchType, null
+                    ctx.title(), ctx.city(), ctx.minPrice(), ctx.maxPrice(), ctx.accommodationType(), ctx.amenities(), null
             );
-            
-            Page<AccommodationListing> criteriaResults = listingRepository.findAll(spec, pageRequest);
-            recommendedListings.addAll(criteriaResults.getContent());
+
+            Page<AccommodationListing> criteriaResults = listingService.findAll(spec, pageRequest);
+            List<AccommodationListing> matches = criteriaResults.getContent();
+            criteriaMatchedCount = matches.size();
+            recommendedListings.addAll(matches);
         }
+
+        boolean fallbackApplied = false;
 
         // 3. Cold Start / Fallback if we don't have enough results
         if (recommendedListings.size() < maxResults) {
@@ -75,17 +143,32 @@ public class RecommendationServiceImpl implements RecommendationService {
                     .collect(Collectors.toList());
 
             Specification<AccommodationListing> fallbackSpec = RecommendationSpecification.buildRecommendationSpec(
-                    null, null, null, excludedIds
+                    null, ctx.city(), null, null, ctx.accommodationType(), null, excludedIds
             );
-            
+
             Pageable fallbackPageRequest = PageRequest.of(0, remaining, Sort.by(Sort.Direction.DESC, "isPromoted", "createdAt"));
-            Page<AccommodationListing> fallbackResults = listingRepository.findAll(fallbackSpec, fallbackPageRequest);
-            
-            recommendedListings.addAll(fallbackResults.getContent());
+            Page<AccommodationListing> fallbackResults = listingService.findAll(fallbackSpec, fallbackPageRequest);
+
+            if (!fallbackResults.isEmpty()) {
+                if (ctx.hasCriteria()) {
+                    fallbackApplied = true;
+                }
+                recommendedListings.addAll(fallbackResults.getContent());
+            }
         }
 
-        return recommendedListings.stream()
+        List<AccommodationListingResponse> responseItems = recommendedListings.stream()
                 .map(AccommodationListingResponse::new)
                 .collect(Collectors.toList());
+
+        return RecommendationResponse.builder()
+                .items(responseItems)
+                .totalCount(responseItems.size())
+                .criteriaMatchedCount(criteriaMatchedCount)
+                .fallbackApplied(fallbackApplied)
+                .hasCriteria(ctx.hasCriteria())
+                .searchCity(ctx.city())
+                .searchTitle(ctx.title())
+                .build();
     }
 }

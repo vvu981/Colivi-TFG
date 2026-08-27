@@ -20,11 +20,10 @@ public record AccommodationListingResponse(
                 AccommodationResponse accommodation, // Reutilizamos tu DTO para enviar la info de la casa limpia
                 UUID hostId,
                 String hostNickname,
+                String hostProfilePicUrl,
                 Boolean isPromoted,
                 List<AccommodationImageResponse> selectedImages) {
 
-        // 🔍 SOLUCIÓN: El constructor que Java estaba buscando desesperadamente para el
-        // método .map()
         public AccommodationListingResponse(AccommodationListing listing) {
                 this(
                                 listing.getId(),
@@ -45,6 +44,7 @@ public record AccommodationListingResponse(
                                 // Datos mínimos y seguros del casero
                                 listing.getHost() != null ? listing.getHost().getId() : null,
                                 listing.getHost() != null ? listing.getHost().getNickname() : null,
+                                listing.getHost() != null ? listing.getHost().getProfilePicUrl() : null,
 
                                 listing.getIsPromoted() != null ? listing.getIsPromoted() : false,
 

@@ -221,6 +221,20 @@ class AdminReportServiceImplTest {
     }
 
     @Test
+    void updateBulkReportStatus_shouldThrowException_whenSomeReportIdsNotFound() {
+        UUID id1 = UUID.randomUUID();
+        UUID id2 = UUID.randomUUID();
+        BulkReportStatusUpdateRequest request = new BulkReportStatusUpdateRequest(
+                List.of(id1, id2), ReportStatus.RESOLVED, "Notes");
+
+        when(reportRepository.findAllById(request.reportIds())).thenReturn(List.of(report));
+
+        assertThatThrownBy(() -> adminReportService.updateBulkReportStatus(request, adminId))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Algunos IDs");
+    }
+
+    @Test
     void getReportById_shouldReturnResponse() {
         when(reportRepository.findById(reportId)).thenReturn(Optional.of(report));
         ReportResponse responseMock = new ReportResponse(reportId, null, null, null, null, null, null, null, null, null, null, null);

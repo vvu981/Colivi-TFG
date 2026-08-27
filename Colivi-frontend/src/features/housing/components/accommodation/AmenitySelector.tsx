@@ -1,22 +1,6 @@
-import { Wifi, Thermometer, Wind, PawPrint, Building2, Sunset } from 'lucide-react';
 import clsx from 'clsx';
 import type { AmenityType } from '../../types/accommodation.types';
-
-// ── Amenity metadata ────────────────────────────────────────────────
-
-const AMENITY_CONFIG: Record<
-  AmenityType,
-  { label: string; icon: React.ReactNode }
-> = {
-  WIFI: { label: 'WiFi', icon: <Wifi size={18} /> },
-  HEATING: { label: 'Calefacción', icon: <Thermometer size={18} /> },
-  AIR_CONDITIONING: { label: 'Aire acond.', icon: <Wind size={18} /> },
-  PETS_ALLOWED: { label: 'Mascotas', icon: <PawPrint size={18} /> },
-  ELEVATOR: { label: 'Ascensor', icon: <Building2 size={18} /> },
-  BALCONY: { label: 'Balcón', icon: <Sunset size={18} /> },
-};
-
-const ALL_AMENITIES = Object.keys(AMENITY_CONFIG) as AmenityType[];
+import { AMENITY_CONFIG, ALL_AMENITIES } from '../../constants/amenityConfig';
 
 // ── Props ───────────────────────────────────────────────────────────
 
@@ -43,7 +27,7 @@ export const AmenitySelector = ({ value, onChange }: AmenitySelectorProps) => {
   return (
     <div className="flex flex-wrap gap-3" id="amenity-selector">
       {ALL_AMENITIES.map((amenity) => {
-        const { label, icon } = AMENITY_CONFIG[amenity];
+        const { label, icon: Icon } = AMENITY_CONFIG[amenity];
         const isSelected = value.includes(amenity);
 
         return (
@@ -60,7 +44,7 @@ export const AmenitySelector = ({ value, onChange }: AmenitySelectorProps) => {
                 : 'bg-surface border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary',
             )}
           >
-            {icon}
+            <Icon size={18} />
             {label}
           </button>
         );

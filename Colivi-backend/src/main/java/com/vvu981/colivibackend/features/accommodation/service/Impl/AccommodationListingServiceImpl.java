@@ -1,4 +1,4 @@
-package com.vvu981.colivibackend.features.accommodation.service.Impl;
+package com.vvu981.colivibackend.features.accommodation.service.impl;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -227,6 +227,12 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
 
         Page<AccommodationListing> listings = listingRepository.findAll(spec, pageable);
         return listings.map(AccommodationListingResponse::new);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<AccommodationListing> findAll(Specification<AccommodationListing> spec, Pageable pageable) {
+        return listingRepository.findAll(spec, pageable);
     }
 
     @Override

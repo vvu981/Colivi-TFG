@@ -278,4 +278,111 @@ class AuthControllerTest {
                     .andExpect(status().isBadRequest());
         }
     }
+
+    // =========================================================================
+    // loginWithGoogle
+    // =========================================================================
+
+    @Nested
+    @DisplayName("POST /api/v1/auth/google")
+    class GoogleLogin {
+
+        @Test
+        @DisplayName("payload válido devuelve 200 con AuthResponse")
+        void givenValidIdToken_whenLoginWithGoogle_thenReturns200WithAuthResponse() throws Exception {
+            com.vvu981.colivibackend.features.user.dto.GoogleLoginRequest request =
+                    new com.vvu981.colivibackend.features.user.dto.GoogleLoginRequest("valid-google-id-token");
+            AuthResponse response = new AuthResponse("google.access", "google.refresh", 3600L);
+
+            when(userService.loginWithGoogle(any(com.vvu981.colivibackend.features.user.dto.GoogleLoginRequest.class)))
+                    .thenReturn(response);
+
+            mockMvc.perform(post("/api/v1/auth/google")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.accessToken").value("google.access"))
+                    .andExpect(jsonPath("$.refreshToken").value("google.refresh"))
+                    .andExpect(jsonPath("$.expiresIn").value(3600L));
+        }
+
+        @Test
+        @DisplayName("payload con idToken en blanco devuelve 400")
+        void givenBlankIdToken_whenLoginWithGoogle_thenReturns400() throws Exception {
+            String invalidBody = "{\"idToken\": \"\"}";
+
+            mockMvc.perform(post("/api/v1/auth/google")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(invalidBody))
+                    .andExpect(status().isBadRequest());
+        }
+    }
+
+    // =========================================================================
+    // forgot-password
+    // =========================================================================
+
+    @Nested
+    @DisplayName("POST /api/v1/auth/forgot-password")
+    class ForgotPassword {
+
+        @Test
+        @DisplayName("email válido devuelve 200 OK")
+        void givenValidEmail_whenForgotPassword_thenReturns200() throws Exception {
+            com.vvu981.colivibackend.features.user.dto.ForgotPasswordRequestDto request =
+                    new com.vvu981.colivibackend.features.user.dto.ForgotPasswordRequestDto("user@colivi.com");
+
+            doNothing().when(userService).forgotPassword("user@colivi.com");
+
+            mockMvc.perform(post("/api/v1/auth/forgot-password")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk());
+        }
+
+        @Test
+        @DisplayName("email inválido devuelve 400")
+        void givenInvalidEmail_whenForgotPassword_thenReturns400() throws Exception {
+            String invalidBody = "{\"email\": \"not-an-email\"}";
+
+            mockMvc.perform(post("/api/v1/auth/forgot-password")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(invalidBody))
+                    .andExpect(status().isBadRequest());
+        }
+    }
+
+    // =========================================================================
+    // reset-password
+    // =========================================================================
+
+    @Nested
+    @DisplayName("POST /api/v1/auth/reset-password")
+    class ResetPassword {
+
+        @Test
+        @DisplayName("token y password válidos devuelve 204 No Content")
+        void givenValidTokenAndPassword_whenResetPassword_thenReturns204() throws Exception {
+            com.vvu981.colivibackend.features.user.dto.ResetPasswordRequestDto request =
+                    new com.vvu981.colivibackend.features.user.dto.ResetPasswordRequestDto("valid-reset-token", "NewPass123!");
+
+            doNothing().when(userService).resetPassword("valid-reset-token", "NewPass123!");
+
+            mockMvc.perform(post("/api/v1/auth/reset-password")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isNoContent());
+        }
+
+        @Test
+        @DisplayName("password débil devuelve 400")
+        void givenWeakPassword_whenResetPassword_thenReturns400() throws Exception {
+            String invalidBody = "{\"token\": \"some-token\", \"newPassword\": \"123\"}";
+
+            mockMvc.perform(post("/api/v1/auth/reset-password")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(invalidBody))
+                    .andExpect(status().isBadRequest());
+        }
+    }
 }

@@ -1,12 +1,12 @@
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Euro, FileText, Tag } from 'lucide-react';
+import { Euro, FileText, Tag, Loader2, Image as ImageIcon } from 'lucide-react';
 import clsx from 'clsx';
 import type { AccommodationListingRequest, RentalType, AccommodationListingResponse } from '../../types/listing.types';
-import type { AccommodationResponse } from '../../types/accommodation.types';
+import type { AccommodationResponse, AccommodationImageResponse } from '../../types/accommodation.types';
 import { useListingsByAccommodation } from '../../hooks/useListingsByAccommodation';
-import { Loader2, Image as ImageIcon } from 'lucide-react';
 import { ListingImageSelector } from './ListingImageSelector';
 
 // ── Validation schema ────────────────────────────────────────────────
@@ -94,6 +94,7 @@ export const ListingForm = ({
   submitText = 'Publicar anuncio',
 }: ListingFormProps) => {
   const { listings: activeListings, isLoading: isLoadingListings } = useListingsByAccommodation(accommodation.id);
+  const [accImages, setAccImages] = useState<AccommodationImageResponse[]>(accommodation.images || []);
   
   const {
     register,
@@ -242,18 +243,14 @@ export const ListingForm = ({
           Fotos del anuncio
         </h2>
         
-        {hasNoImages ? (
-          <p className="rounded-lg bg-error-container text-on-error-container text-label-md font-label-md px-4 py-3">
-            No puedes crear un anuncio si el inmueble no tiene fotos. Añade fotos primero desde la página del inmueble.
-          </p>
-        ) : (
-          <ListingImageSelector
-            accommodationImages={accommodation.images}
-            value={selectedImagesValue}
-            onChange={(val) => setValue('selectedImages', val, { shouldValidate: true })}
-            error={errors.selectedImages?.message}
-          />
-        )}
+        <ListingImageSelector
+          accommodationId={accommodation.id}
+          accommodationImages={accImages}
+          value={selectedImagesValue}
+          onChange={(val) => setValue('selectedImages', val, { shouldValidate: true })}
+          onAccommodationImagesChange={setAccImages}
+          error={errors.selectedImages?.message}
+        />
       </section>
 
       {/* ── Ad details ───────────────────────────────── */}

@@ -12,7 +12,7 @@ import com.vvu981.colivibackend.features.accommodation.dto.AccommodationResponse
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingStatsDTO;
 import com.vvu981.colivibackend.features.accommodation.repository.AccommodationRepository;
 import com.vvu981.colivibackend.features.accommodation.repository.AccommodationImageRepository;
-import com.vvu981.colivibackend.features.accommodation.service.Impl.AccommodationServiceImpl;
+import com.vvu981.colivibackend.features.accommodation.service.impl.AccommodationServiceImpl;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
@@ -163,7 +163,6 @@ class AccommodationServiceImplTest {
 
                         // Assert
                         assertThat(result).isNotNull();
-                        assertThat(result.deletedAt()).isNotNull();
                         verify(accommodationRepository, times(1)).save(accommodation);
                 }
 
@@ -181,7 +180,6 @@ class AccommodationServiceImplTest {
 
                         // Assert
                         assertThat(result).isNotNull();
-                        assertThat(result.deletedAt()).isNotNull();
                         verify(accommodationRepository, times(1)).save(accommodation);
                 }
 

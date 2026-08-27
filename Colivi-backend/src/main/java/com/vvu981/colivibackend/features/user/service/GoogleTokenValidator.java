@@ -15,6 +15,7 @@ public class GoogleTokenValidator {
 
     private final GoogleIdTokenVerifier verifier;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public GoogleTokenValidator(@Value("${app.google.client-id}") String googleClientId) {
         if (googleClientId == null || googleClientId.isBlank()) {
             throw new IllegalStateException("Falta configuración de Google Auth (Client ID) en el servidor.");
@@ -22,6 +23,10 @@ public class GoogleTokenValidator {
         this.verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), GsonFactory.getDefaultInstance())
                 .setAudience(Collections.singletonList(googleClientId))
                 .build();
+    }
+
+    GoogleTokenValidator(GoogleIdTokenVerifier verifier) {
+        this.verifier = verifier;
     }
 
     public GoogleIdToken.Payload validateAndExtractPayload(String tokenString) {

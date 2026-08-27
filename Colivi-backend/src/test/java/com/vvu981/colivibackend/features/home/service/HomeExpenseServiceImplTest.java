@@ -299,6 +299,18 @@ class HomeExpenseServiceImplTest {
             assertThrows(com.vvu981.colivibackend.core.exception.ResourceNotFoundException.class, 
                 () -> service.deleteExpense(homeId, expenseId, payerId));
         }
+
+        @Test
+        void deleteExpense_ExpenseBelongsToDifferentHome_ThrowsException() {
+            Home otherHome = new Home();
+            otherHome.setId(UUID.randomUUID());
+            expense.setHome(otherHome);
+
+            when(expenseRepository.findByIdAndDeletedAtIsNull(expenseId)).thenReturn(Optional.of(expense));
+
+            assertThrows(com.vvu981.colivibackend.core.exception.ResourceNotFoundException.class,
+                () -> service.deleteExpense(homeId, expenseId, payerId));
+        }
     }
 
     @Nested
@@ -315,6 +327,27 @@ class HomeExpenseServiceImplTest {
             List<ExpenseResponseDto> result = service.getHomeExpenses(homeId, payerId);
 
             assertEquals(1, result.size());
+        }
+
+        @Test
+        void getHomeExpenses_AsLeftMember_Success() {
+            HomeMember leftMember = new HomeMember();
+            leftMember.setStatus(HomeMemberStatus.LEFT);
+            when(memberRepository.findByHomeIdAndUserId(homeId, payerId)).thenReturn(Optional.of(leftMember));
+            when(expenseRepository.findByHomeIdAndDeletedAtIsNullOrderByCreatedAtDesc(homeId))
+                    .thenReturn(List.of());
+
+            List<ExpenseResponseDto> result = service.getHomeExpenses(homeId, payerId);
+            assertNotNull(result);
+        }
+
+        @Test
+        void getHomeExpenses_InactiveMember_ThrowsUnauthorized() {
+            HomeMember bannedMember = new HomeMember();
+            bannedMember.setStatus(HomeMemberStatus.ARCHIVED);
+            when(memberRepository.findByHomeIdAndUserId(homeId, payerId)).thenReturn(Optional.of(bannedMember));
+
+            assertThrows(UnauthorizedActionException.class, () -> service.getHomeExpenses(homeId, payerId));
         }
 
         @Test

@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing;
@@ -25,6 +26,8 @@ public interface AccommodationListingService {
                         AccommodationListingUpdateRequest updateAccommodationListing, UUID currentUserId);
 
         Page<AccommodationListingResponse> searchListings(Map<String, String> filters, int page, int size);
+        
+        Page<AccommodationListing> findAll(org.springframework.data.jpa.domain.Specification<AccommodationListing> spec, Pageable pageable);
 
         void banAccommodationListing(UUID accommodationListingId, UUID currentUserId); // solo admin
 

@@ -16,14 +16,63 @@ import static org.mockito.Mockito.*;
 class ListingFiltersTest {
 
     private CityFilter cityFilter;
+    private TitleFilter titleFilter;
+    private MinPriceFilter minPriceFilter;
     private MaxPriceFilter maxPriceFilter;
     private ListingStatusFilter listingStatusFilter;
+    private AmenitiesFilter amenitiesFilter;
 
     @BeforeEach
     void setUp() {
         cityFilter = new CityFilter();
+        titleFilter = new TitleFilter();
+        minPriceFilter = new MinPriceFilter();
         maxPriceFilter = new MaxPriceFilter();
         listingStatusFilter = new ListingStatusFilter();
+        amenitiesFilter = new AmenitiesFilter();
+    }
+
+    @Test
+    @DisplayName("TitleFilter debe ser aplicable si existe el parametro 'title' no vacio")
+    void testTitleFilterApplicability() {
+        assertThat(titleFilter.isApplicable(null)).isFalse();
+
+        Map<String, String> params = new HashMap<>();
+        assertThat(titleFilter.isApplicable(params)).isFalse();
+
+        params.put("title", null);
+        assertThat(titleFilter.isApplicable(params)).isFalse();
+
+        params.put("title", "");
+        assertThat(titleFilter.isApplicable(params)).isFalse();
+
+        params.put("title", "Habitación luminosa");
+        assertThat(titleFilter.isApplicable(params)).isTrue();
+    }
+
+    @Test
+    @DisplayName("TitleFilter apply debe generar la condicion like correcta sobre title")
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    void testTitleFilterApply() {
+        Map<String, String> params = Map.of("title", "Habitación");
+        Specification<AccommodationListing> spec = titleFilter.apply(params);
+
+        Root root = mock(Root.class);
+        CriteriaQuery query = mock(CriteriaQuery.class);
+        CriteriaBuilder cb = mock(CriteriaBuilder.class);
+        Path titlePath = mock(Path.class);
+        Expression lowerTitle = mock(Expression.class);
+        Predicate likePredicate = mock(Predicate.class);
+
+        when(root.get("title")).thenReturn(titlePath);
+        when(cb.lower(any(Expression.class))).thenReturn(lowerTitle);
+        when(cb.like(any(Expression.class), anyString())).thenReturn(likePredicate);
+
+        Predicate result = spec.toPredicate(root, query, cb);
+
+        assertThat(result).isEqualTo(likePredicate);
+        verify(root, times(1)).get("title");
+        verify(cb, times(1)).like(eq(lowerTitle), eq("%habitación%"));
     }
 
     @Test
@@ -69,6 +118,56 @@ class ListingFiltersTest {
         assertThat(result).isEqualTo(likePredicate);
         verify(root, times(1)).join("accommodation");
         verify(cb, times(1)).like(eq(lowerCity), eq("%madrid%"));
+    }
+
+    @Test
+    @DisplayName("MinPriceFilter debe ser aplicable si existe el parametro 'minPrice' no vacio")
+    void testMinPriceFilterApplicability() {
+        assertThat(minPriceFilter.isApplicable(null)).isFalse();
+
+        Map<String, String> params = new HashMap<>();
+        assertThat(minPriceFilter.isApplicable(params)).isFalse();
+
+        params.put("minPrice", null);
+        assertThat(minPriceFilter.isApplicable(params)).isFalse();
+
+        params.put("minPrice", "");
+        assertThat(minPriceFilter.isApplicable(params)).isFalse();
+
+        params.put("minPrice", "300");
+        assertThat(minPriceFilter.isApplicable(params)).isTrue();
+    }
+
+    @Test
+    @DisplayName("MinPriceFilter apply debe generar la condicion greaterThanOrEqualTo correcta")
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    void testMinPriceFilterApply() {
+        Map<String, String> params = Map.of("minPrice", "400");
+        Specification<AccommodationListing> spec = minPriceFilter.apply(params);
+
+        Root root = mock(Root.class);
+        CriteriaQuery query = mock(CriteriaQuery.class);
+        CriteriaBuilder cb = mock(CriteriaBuilder.class);
+        Path pricePath = mock(Path.class);
+        Predicate greaterThanPredicate = mock(Predicate.class);
+
+        when(root.get("pricePerMonth")).thenReturn(pricePath);
+        when(cb.greaterThanOrEqualTo(eq(pricePath), any(BigDecimal.class))).thenReturn(greaterThanPredicate);
+
+        Predicate result = spec.toPredicate(root, query, cb);
+
+        assertThat(result).isEqualTo(greaterThanPredicate);
+        verify(root, times(1)).get("pricePerMonth");
+        verify(cb, times(1)).greaterThanOrEqualTo(eq(pricePath), eq(new BigDecimal("400")));
+    }
+
+    @Test
+    @DisplayName("MinPriceFilter apply con formato invalido lanza IllegalArgumentException")
+    void testMinPriceFilterApplyInvalidFormat() {
+        Map<String, String> params = Map.of("minPrice", "invalid_number");
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> {
+            minPriceFilter.apply(params);
+        });
     }
 
     @Test
@@ -226,5 +325,88 @@ class ListingFiltersTest {
 
         Predicate result = spec.toPredicate(root, query, cb);
         assertThat(result).isEqualTo(conjunctionPredicate);
+    }
+
+    @Test
+    @DisplayName("AmenitiesFilter debe ser aplicable si existe el parametro 'amenities' no vacio")
+    void testAmenitiesFilterApplicability() {
+        assertThat(amenitiesFilter.isApplicable(null)).isFalse();
+
+        Map<String, String> params = new HashMap<>();
+        assertThat(amenitiesFilter.isApplicable(params)).isFalse();
+
+        params.put("amenities", null);
+        assertThat(amenitiesFilter.isApplicable(params)).isFalse();
+
+        params.put("amenities", "");
+        assertThat(amenitiesFilter.isApplicable(params)).isFalse();
+
+        params.put("amenities", "   ");
+        assertThat(amenitiesFilter.isApplicable(params)).isFalse();
+
+        params.put("amenities", "WIFI,BALCONY");
+        assertThat(amenitiesFilter.isApplicable(params)).isTrue();
+    }
+
+    @Test
+    @DisplayName("AmenitiesFilter apply debe generar isMember para cada amenity valida y combinarlas con and")
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    void testAmenitiesFilterApplyValid() {
+        Map<String, String> params = Map.of("amenities", "WIFI,BALCONY");
+        Specification<AccommodationListing> spec = amenitiesFilter.apply(params);
+
+        Root root = mock(Root.class);
+        CriteriaQuery query = mock(CriteriaQuery.class);
+        CriteriaBuilder cb = mock(CriteriaBuilder.class);
+        Join join = mock(Join.class);
+        Path amenitiesPath = mock(Path.class);
+        Predicate wifiPredicate = mock(Predicate.class);
+        Predicate balconyPredicate = mock(Predicate.class);
+        Predicate andPredicate = mock(Predicate.class);
+
+        when(root.join("accommodation")).thenReturn(join);
+        when(join.get("amenities")).thenReturn(amenitiesPath);
+        when(cb.isMember(eq(com.vvu981.colivibackend.features.accommodation.domain.AmenityType.WIFI), eq(amenitiesPath)))
+                .thenReturn(wifiPredicate);
+        when(cb.isMember(eq(com.vvu981.colivibackend.features.accommodation.domain.AmenityType.BALCONY), eq(amenitiesPath)))
+                .thenReturn(balconyPredicate);
+        when(cb.and(any(Predicate[].class))).thenReturn(andPredicate);
+
+        Predicate result = spec.toPredicate(root, query, cb);
+
+        assertThat(result).isEqualTo(andPredicate);
+        verify(root, times(1)).join("accommodation");
+        verify(cb, times(1)).isMember(eq(com.vvu981.colivibackend.features.accommodation.domain.AmenityType.WIFI), eq(amenitiesPath));
+        verify(cb, times(1)).isMember(eq(com.vvu981.colivibackend.features.accommodation.domain.AmenityType.BALCONY), eq(amenitiesPath));
+        verify(cb, times(1)).and(any(Predicate[].class));
+    }
+
+    @Test
+    @DisplayName("AmenitiesFilter apply lanza IllegalArgumentException si hay amenities validas")
+    void testAmenitiesFilterApplyInvalid() {
+        Map<String, String> params = Map.of("amenities", "INVALID_AMENITY_1,INVALID_AMENITY_2");
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> {
+            amenitiesFilter.apply(params);
+        });
+    }
+
+    @Test
+    @DisplayName("AmenitiesFilter apply devuelve conjunction cuando la lista esta vacia despues de split")
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    void testAmenitiesFilterApplyEmptyAfterSplit() {
+        Map<String, String> params = Map.of("amenities", ", , ");
+        Specification<AccommodationListing> spec = amenitiesFilter.apply(params);
+
+        Root root = mock(Root.class);
+        CriteriaQuery query = mock(CriteriaQuery.class);
+        CriteriaBuilder cb = mock(CriteriaBuilder.class);
+        Predicate conjunctionPredicate = mock(Predicate.class);
+
+        when(cb.conjunction()).thenReturn(conjunctionPredicate);
+
+        Predicate result = spec.toPredicate(root, query, cb);
+
+        assertThat(result).isEqualTo(conjunctionPredicate);
+        verify(cb, times(1)).conjunction();
     }
 }

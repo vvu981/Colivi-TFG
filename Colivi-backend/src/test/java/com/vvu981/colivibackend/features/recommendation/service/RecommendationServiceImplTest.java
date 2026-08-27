@@ -3,9 +3,9 @@ package com.vvu981.colivibackend.features.recommendation.service;
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing;
 import com.vvu981.colivibackend.features.accommodation.domain.ListingStatus;
 import com.vvu981.colivibackend.features.accommodation.domain.RentalType;
-import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingResponse;
-import com.vvu981.colivibackend.features.accommodation.repository.AccommodationListingRepository;
+import com.vvu981.colivibackend.features.accommodation.service.AccommodationListingService;
 import com.vvu981.colivibackend.features.recommendation.domain.UserSearchHistory;
+import com.vvu981.colivibackend.features.recommendation.dto.RecommendationResponse;
 import com.vvu981.colivibackend.features.recommendation.repository.UserSearchHistoryRepository;
 import com.vvu981.colivibackend.features.recommendation.service.impl.RecommendationServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,14 +24,17 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+@SuppressWarnings("unchecked")
 @ExtendWith(MockitoExtension.class)
 class RecommendationServiceImplTest {
 
     @Mock
-    private AccommodationListingRepository listingRepository;
+    private AccommodationListingService listingService;
 
     @Mock
     private UserSearchHistoryRepository historyRepository;
@@ -74,40 +77,45 @@ class RecommendationServiceImplTest {
         history.setMaxPrice(new BigDecimal("800"));
         history.setAccommodationType("ROOM");
 
-        when(historyRepository.findTop3ByUserIdOrderByCreatedAtDesc(userId))
-                .thenReturn(List.of(history));
+        when(historyRepository.findFirstByUserIdOrderByCreatedAtDesc(userId))
+                .thenReturn(java.util.Optional.of(history));
 
         Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
-        when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))
+        when(listingService.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(page);
 
         // Act
-        List<AccommodationListingResponse> result = recommendationService.getRecommendations(userId, 1, null, null,
+        RecommendationResponse result = recommendationService.getRecommendations(userId, 1, null, null,
                 null);
 
         // Assert
-        assertEquals(1, result.size());
-        assertEquals(listing1.getId(), result.get(0).id());
-        verify(historyRepository, times(1)).findTop3ByUserIdOrderByCreatedAtDesc(userId);
+        assertEquals(1, result.getItems().size());
+        assertEquals(1, result.getCriteriaMatchedCount());
+        assertFalse(result.isFallbackApplied());
+        assertEquals(listing1.getId(), result.getItems().get(0).id());
+        verify(historyRepository, times(1)).findFirstByUserIdOrderByCreatedAtDesc(userId);
         // Fallback is not called since limit 1 is reached
-        verify(listingRepository, times(1)).findAll(any(Specification.class), any(Pageable.class));
+        verify(listingService, times(1)).findAll(any(Specification.class), any(Pageable.class));
     }
 
     @Test
     void testGetRecommendations_ColdStart_Anonymous() {
         // Arrange
         Page<AccommodationListing> page = new PageImpl<>(List.of(listing1, listing2));
-        when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))
+        when(listingService.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(page);
 
         // Act
-        List<AccommodationListingResponse> result = recommendationService.getRecommendations(null, 6, null, null, null);
+        RecommendationResponse result = recommendationService.getRecommendations(null, 6, null, null, null);
 
         // Assert
-        assertEquals(2, result.size());
-        verify(historyRepository, never()).findTop3ByUserIdOrderByCreatedAtDesc(any());
-        // Only fallback query is executed because hasCriteria is false
-        verify(listingRepository, times(1)).findAll(any(Specification.class), any(Pageable.class));
+        assertEquals(2, result.getItems().size());
+        assertEquals(0, result.getCriteriaMatchedCount());
+        assertFalse(result.isFallbackApplied());
+        assertFalse(result.isHasCriteria());
+        verify(historyRepository, never()).findFirstByUserIdOrderByCreatedAtDesc(any());
+        // Only default query is executed because hasCriteria is false
+        verify(listingService, times(1)).findAll(any(Specification.class), any(Pageable.class));
     }
 
     @Test
@@ -116,8 +124,8 @@ class RecommendationServiceImplTest {
         UserSearchHistory history = new UserSearchHistory();
         history.setCity("Madrid");
 
-        when(historyRepository.findTop3ByUserIdOrderByCreatedAtDesc(userId))
-                .thenReturn(List.of(history));
+        when(historyRepository.findFirstByUserIdOrderByCreatedAtDesc(userId))
+                .thenReturn(java.util.Optional.of(history));
 
         // First query returns 1 item, but limit is 2
         Page<AccommodationListing> page1 = new PageImpl<>(List.of(listing1));
@@ -125,46 +133,48 @@ class RecommendationServiceImplTest {
         // Second query (fallback) returns 1 more item
         Page<AccommodationListing> page2 = new PageImpl<>(List.of(listing2));
 
-        when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))
+        when(listingService.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(page1) // Criteria search
                 .thenReturn(page2); // Fallback search
 
         // Act
-        List<AccommodationListingResponse> result = recommendationService.getRecommendations(userId, 2, null, null,
+        RecommendationResponse result = recommendationService.getRecommendations(userId, 2, null, null,
                 null);
 
         // Assert
-        assertEquals(2, result.size());
-        verify(historyRepository, times(1)).findTop3ByUserIdOrderByCreatedAtDesc(userId);
-        verify(listingRepository, times(2)).findAll(any(Specification.class), any(Pageable.class));
+        assertEquals(2, result.getItems().size());
+        assertEquals(1, result.getCriteriaMatchedCount());
+        assertTrue(result.isFallbackApplied());
+        verify(historyRepository, times(1)).findFirstByUserIdOrderByCreatedAtDesc(userId);
+        verify(listingService, times(2)).findAll(any(Specification.class), any(Pageable.class));
     }
 
     @Test
     void testGetRecommendations_NullLimit_UsesDefault() {
         // Arrange
         Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
-        when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))
+        when(listingService.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(page);
 
         // Act
-        List<AccommodationListingResponse> result = recommendationService.getRecommendations(null, null, null, null, null);
+        RecommendationResponse result = recommendationService.getRecommendations(null, null, null, null, null);
 
         // Assert
-        assertEquals(1, result.size());
+        assertEquals(1, result.getItems().size());
     }
 
     @Test
     void testGetRecommendations_NegativeLimit_UsesDefault() {
         // Arrange
         Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
-        when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))
+        when(listingService.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(page);
 
         // Act
-        List<AccommodationListingResponse> result = recommendationService.getRecommendations(null, -5, null, null, null);
+        RecommendationResponse result = recommendationService.getRecommendations(null, -5, null, null, null);
 
         // Assert
-        assertEquals(1, result.size());
+        assertEquals(1, result.getItems().size());
     }
 
     @Test
@@ -173,51 +183,135 @@ class RecommendationServiceImplTest {
         UserSearchHistory history = new UserSearchHistory();
         // history has null city, maxPrice, type
 
-        when(historyRepository.findTop3ByUserIdOrderByCreatedAtDesc(userId))
-                .thenReturn(List.of(history));
-
         Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
-        when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))
+        when(listingService.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(page);
 
         // Act
-        List<AccommodationListingResponse> result = recommendationService.getRecommendations(userId, 1, "Paris", new BigDecimal("100"), "FLAT");
+        RecommendationResponse result = recommendationService.getRecommendations(userId, 1, "Paris", new BigDecimal("100"), "ROOM");
 
         // Assert
-        assertEquals(1, result.size());
+        assertEquals(1, result.getItems().size());
     }
 
     @Test
     void testGetRecommendations_EmptyHistory_UsesMethodArguments() {
         // Arrange
-        when(historyRepository.findTop3ByUserIdOrderByCreatedAtDesc(userId))
-                .thenReturn(List.of());
 
         Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
-        when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))
+        when(listingService.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(page);
 
         // Act
-        List<AccommodationListingResponse> result = recommendationService.getRecommendations(userId, 1, "London", null, null);
+        RecommendationResponse result = recommendationService.getRecommendations(userId, 1, "London", null, null);
 
         // Assert
-        assertEquals(1, result.size());
+        assertEquals(1, result.getItems().size());
     }
 
     @Test
     void testGetRecommendations_NoHistoryAndNoCriteria_OnlyFallback() {
         // Arrange
-        when(historyRepository.findTop3ByUserIdOrderByCreatedAtDesc(userId))
-                .thenReturn(List.of());
+        when(historyRepository.findFirstByUserIdOrderByCreatedAtDesc(userId))
+                .thenReturn(java.util.Optional.empty());
 
         Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
-        when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))
+        when(listingService.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(page);
 
         // Act
-        List<AccommodationListingResponse> result = recommendationService.getRecommendations(userId, 1, null, null, null);
+        RecommendationResponse result = recommendationService.getRecommendations(userId, 1, null, null, null);
 
         // Assert
-        assertEquals(1, result.size());
+        assertEquals(1, result.getItems().size());
+        assertFalse(result.isFallbackApplied());
+        assertFalse(result.isHasCriteria());
+    }
+
+    @Test
+    void testGetRecommendations_WithMinPriceAndAmenities() {
+        Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
+        when(listingService.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(page);
+
+        RecommendationResponse result = recommendationService.getRecommendations(
+                null, 1, "Valencia", new BigDecimal("200"), new BigDecimal("800"), "ROOM", List.of("WIFI", "AIR_CONDITIONING")
+        );
+
+        assertEquals(1, result.getItems().size());
+    }
+
+    @Test
+    void testGetRecommendations_WithTitleCriteria() {
+        Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
+        when(listingService.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(page);
+
+        RecommendationResponse result = recommendationService.getRecommendations(
+                null, 1, "Piso compartido", null, null, null, null, null
+        );
+
+        assertEquals(1, result.getItems().size());
+        assertEquals("Piso compartido", result.getSearchTitle());
+    }
+
+    @Test
+    void testGetRecommendations_HistoryExistsButNoCriteria() {
+        // history has empty values
+        UserSearchHistory history = new UserSearchHistory();
+        history.setCity("");
+        history.setMaxPrice(BigDecimal.ZERO);
+        history.setAccommodationType("   ");
+        when(historyRepository.findFirstByUserIdOrderByCreatedAtDesc(userId))
+                .thenReturn(java.util.Optional.of(history));
+
+        Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
+        when(listingService.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(page);
+
+        RecommendationResponse result = recommendationService.getRecommendations(userId, 1, null, null, null, null, null, null);
+
+        assertEquals(1, result.getItems().size());
+        assertFalse(result.isHasCriteria());
+    }
+
+    @Test
+    void testGetRecommendations_WithHistory_FallbackAppliedTrue() {
+        UserSearchHistory history = new UserSearchHistory();
+        history.setCity("Madrid");
+        when(historyRepository.findFirstByUserIdOrderByCreatedAtDesc(userId))
+                .thenReturn(java.util.Optional.of(history));
+
+        // Returns empty on criteria, and returns 1 on fallback
+        Page<AccommodationListing> pageEmpty = new PageImpl<>(List.of());
+        Page<AccommodationListing> pageFallback = new PageImpl<>(List.of(listing2));
+
+        when(listingService.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(pageEmpty)
+                .thenReturn(pageFallback);
+
+        RecommendationResponse result = recommendationService.getRecommendations(userId, 1, null, null, null, null, null, null);
+
+        assertEquals(1, result.getItems().size());
+        assertTrue(result.isFallbackApplied());
+        assertTrue(result.isHasCriteria());
+    }
+
+    @Test
+    void testGetRecommendations_NoCriteriaButFallbackFindsItems() {
+        when(historyRepository.findFirstByUserIdOrderByCreatedAtDesc(userId))
+                .thenReturn(java.util.Optional.empty());
+
+        // First query returns 1 item
+        Page<AccommodationListing> pageEmpty = new PageImpl<>(List.of(listing1));
+
+        when(listingService.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(pageEmpty);
+
+        RecommendationResponse result = recommendationService.getRecommendations(userId, 1, null, null, null, null, null, null);
+
+        assertEquals(1, result.getItems().size());
+        assertFalse(result.isFallbackApplied());
+        assertFalse(result.isHasCriteria());
     }
 }

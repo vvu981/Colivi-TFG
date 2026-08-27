@@ -74,4 +74,29 @@ class AdminReportControllerTest {
                 .with(csrf()))
                 .andExpect(status().isOk());
     }
+
+    @Test
+    void getReportById_shouldReturn200() throws Exception {
+        UUID id = UUID.randomUUID();
+        when(adminReportService.getReportById(id)).thenReturn(null);
+
+        mockMvc.perform(get("/api/v1/admin/reports/" + id))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void updateBulkStatus_shouldReturn204() throws Exception {
+        com.vvu981.colivibackend.features.report.dto.BulkReportStatusUpdateRequest request =
+                new com.vvu981.colivibackend.features.report.dto.BulkReportStatusUpdateRequest(
+                        List.of(UUID.randomUUID()),
+                        ReportStatus.RESOLVED,
+                        "Bulk notes"
+                );
+
+        mockMvc.perform(patch("/api/v1/admin/reports/bulk-status")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+                .with(csrf()))
+                .andExpect(status().isNoContent());
+    }
 }

@@ -1,4 +1,4 @@
-package com.vvu981.colivibackend.features.accommodation.service.Impl;
+package com.vvu981.colivibackend.features.accommodation.service.impl;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -136,10 +136,11 @@ public class AccommodationServiceImpl implements AccommodationService {
         accommodationToUpdate.setTotalRooms(dto.totalRooms());
         accommodationToUpdate.setUpdatedAt(LocalDateTime.now());
 
-        accommodationToUpdate.getAmenities().clear();
-
         if (dto.amenities() != null) {
+            accommodationToUpdate.getAmenities().retainAll(dto.amenities());
             accommodationToUpdate.getAmenities().addAll(dto.amenities());
+        } else {
+            accommodationToUpdate.getAmenities().clear();
         }
         Accommodation accommodationUpdated = accommodationRepository.save(accommodationToUpdate);
         return new AccommodationResponse(accommodationUpdated);
@@ -190,7 +191,11 @@ public class AccommodationServiceImpl implements AccommodationService {
             public void afterCompletion(int status) {
                 if (status == STATUS_ROLLED_BACK) {
                     log.warn("Transacción abortada: Purgando imagen {} de Cloudinary...", secureUrl);
-                    imageStorageService.deleteImage(secureUrl);
+                    try {
+                        imageStorageService.deleteImage(secureUrl);
+                    } catch (Exception e) {
+                        log.error("Error al purgar imagen tras rollback: {}", e.getMessage(), e);
+                    }
                 }
             }
         });
@@ -235,7 +240,11 @@ public class AccommodationServiceImpl implements AccommodationService {
             @Override
             public void afterCommit() {
                 log.info("Eliminando objeto remoto tras Commit: {}", urlToPurge);
-                imageStorageService.deleteImage(urlToPurge);
+                try {
+                    imageStorageService.deleteImage(urlToPurge);
+                } catch (Exception e) {
+                    log.error("Alerta de Inconsistencia: Imagen borrada en BD ({}) pero la eliminación remota en Cloud falló: {}", urlToPurge, e.getMessage(), e);
+                }
             }
         });
     }

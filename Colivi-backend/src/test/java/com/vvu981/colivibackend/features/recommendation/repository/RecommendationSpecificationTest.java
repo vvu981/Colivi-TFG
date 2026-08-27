@@ -90,7 +90,7 @@ class RecommendationSpecificationTest {
     @Test
     void buildRecommendationSpec_MatchesCity() {
         Specification<AccommodationListing> spec = RecommendationSpecification.buildRecommendationSpec("Madrid", null,
-                null, null);
+                (RentalType) null, null);
         List<AccommodationListing> results = listingRepository.findAll(spec);
 
         assertEquals(1, results.size());
@@ -100,7 +100,7 @@ class RecommendationSpecificationTest {
     @Test
     void buildRecommendationSpec_MatchesMaxPrice() {
         Specification<AccommodationListing> spec = RecommendationSpecification.buildRecommendationSpec(null,
-                new BigDecimal("600"), null, null);
+                new BigDecimal("600"), (RentalType) null, null);
         List<AccommodationListing> results = listingRepository.findAll(spec);
 
         assertEquals(1, results.size());
@@ -110,7 +110,7 @@ class RecommendationSpecificationTest {
     @Test
     void buildRecommendationSpec_MatchesRentalType() {
         Specification<AccommodationListing> spec = RecommendationSpecification.buildRecommendationSpec(null, null,
-                "ENTIRE_PLACE", null);
+                RentalType.ENTIRE_PLACE, null);
         List<AccommodationListing> results = listingRepository.findAll(spec);
 
         assertEquals(1, results.size());
@@ -118,17 +118,8 @@ class RecommendationSpecificationTest {
     }
 
     @Test
-    void buildRecommendationSpec_ThrowsExceptionForInvalidType() {
-        assertThrows(org.springframework.dao.InvalidDataAccessApiUsageException.class, () -> {
-            Specification<AccommodationListing> spec = RecommendationSpecification.buildRecommendationSpec(null, null,
-                    "INVALID", null);
-            listingRepository.findAll(spec);
-        });
-    }
-
-    @Test
     void buildRecommendationSpec_ExcludesIds() {
-        Specification<AccommodationListing> spec = RecommendationSpecification.buildRecommendationSpec(null, null, null,
+        Specification<AccommodationListing> spec = RecommendationSpecification.buildRecommendationSpec(null, null, (RentalType) null,
                 List.of(listing1.getId()));
         List<AccommodationListing> results = listingRepository.findAll(spec);
 
@@ -138,9 +129,28 @@ class RecommendationSpecificationTest {
 
     @Test
     void buildRecommendationSpec_EmptyParameters() {
-        Specification<AccommodationListing> spec = RecommendationSpecification.buildRecommendationSpec("   ", null, "   ", new java.util.ArrayList<>());
+        Specification<AccommodationListing> spec = RecommendationSpecification.buildRecommendationSpec("   ", null, (RentalType) null, new java.util.ArrayList<>());
         List<AccommodationListing> results = listingRepository.findAll(spec);
         assertEquals(2, results.size());
+    }
+
+    @Test
+    void buildRecommendationSpec_PaginationAndCountQueryWorks() {
+        Specification<AccommodationListing> spec = RecommendationSpecification.buildRecommendationSpec("Madrid", null, (RentalType) null, null);
+        org.springframework.data.domain.Page<AccommodationListing> page = listingRepository.findAll(spec, org.springframework.data.domain.PageRequest.of(0, 10));
+        assertEquals(1, page.getTotalElements());
+        assertEquals(1, page.getContent().size());
+        assertEquals(listing1.getId(), page.getContent().get(0).getId());
+    }
+
+    @Test
+    void buildRecommendationSpec_FiltersByMinPrice() {
+        Specification<AccommodationListing> spec = RecommendationSpecification.buildRecommendationSpec(
+                null, BigDecimal.valueOf(550), null, null, null, null
+        );
+        List<AccommodationListing> results = listingRepository.findAll(spec);
+        assertEquals(1, results.size());
+        assertEquals(listing2.getId(), results.get(0).getId());
     }
 
     @Test
@@ -153,5 +163,40 @@ class RecommendationSpecificationTest {
         } catch (java.lang.reflect.InvocationTargetException e) {
             assertTrue(e.getCause() instanceof UnsupportedOperationException);
         }
+    }
+
+    @Test
+    void buildRecommendationSpec_MatchesTitle() {
+        Specification<AccommodationListing> spec = RecommendationSpecification.buildRecommendationSpec(
+                "Room in Madrid", null, null, null, null, null, null
+        );
+        List<AccommodationListing> results = listingRepository.findAll(spec);
+        assertEquals(1, results.size());
+        assertEquals(listing1.getId(), results.get(0).getId());
+    }
+
+    @Test
+    void buildRecommendationSpec_MatchesAmenitiesSuccess() {
+        // Need to add an amenity to the accommodation first
+        Accommodation acc = listing1.getAccommodation();
+        acc.setAmenities(new java.util.HashSet<>(java.util.Set.of(com.vvu981.colivibackend.features.accommodation.domain.AmenityType.WIFI)));
+        accommodationRepository.save(acc);
+
+        Specification<AccommodationListing> spec = RecommendationSpecification.buildRecommendationSpec(
+                null, null, null, null, RentalType.ROOM, List.of(com.vvu981.colivibackend.features.accommodation.domain.AmenityType.WIFI), null
+        );
+        List<AccommodationListing> results = listingRepository.findAll(spec);
+        assertEquals(1, results.size());
+        assertEquals(listing1.getId(), results.get(0).getId());
+    }
+
+    @Test
+    void buildRecommendationSpec_SixArgsOverload() {
+        Specification<AccommodationListing> spec = RecommendationSpecification.buildRecommendationSpec(
+                "Madrid", BigDecimal.valueOf(100), BigDecimal.valueOf(1000), RentalType.ROOM, null, null
+        );
+        List<AccommodationListing> results = listingRepository.findAll(spec);
+        assertEquals(1, results.size());
+        assertEquals(listing1.getId(), results.get(0).getId());
     }
 }
