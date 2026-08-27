@@ -183,4 +183,48 @@ class RecommendationSpecificationTest {
             assertTrue(e.getCause() instanceof UnsupportedOperationException);
         }
     }
+
+    @Test
+    void buildRecommendationSpec_MatchesTitle() {
+        Specification<AccommodationListing> spec = RecommendationSpecification.buildRecommendationSpec(
+                "Room in Madrid", null, null, null, null, null, null
+        );
+        List<AccommodationListing> results = listingRepository.findAll(spec);
+        assertEquals(1, results.size());
+        assertEquals(listing1.getId(), results.get(0).getId());
+    }
+
+    @Test
+    void buildRecommendationSpec_MatchesAmenitiesSuccess() {
+        // Need to add an amenity to the accommodation first
+        Accommodation acc = listing1.getAccommodation();
+        acc.setAmenities(new java.util.HashSet<>(java.util.Set.of(com.vvu981.colivibackend.features.accommodation.domain.AmenityType.WIFI)));
+        accommodationRepository.save(acc);
+
+        Specification<AccommodationListing> spec = RecommendationSpecification.buildRecommendationSpec(
+                null, null, null, null, "ROOM", List.of("WIFI"), null
+        );
+        List<AccommodationListing> results = listingRepository.findAll(spec);
+        assertEquals(1, results.size());
+        assertEquals(listing1.getId(), results.get(0).getId());
+    }
+
+    @Test
+    void buildRecommendationSpec_SixArgsOverload() {
+        Specification<AccommodationListing> spec = RecommendationSpecification.buildRecommendationSpec(
+                "Madrid", BigDecimal.valueOf(100), BigDecimal.valueOf(1000), "ROOM", null, null
+        );
+        List<AccommodationListing> results = listingRepository.findAll(spec);
+        assertEquals(1, results.size());
+        assertEquals(listing1.getId(), results.get(0).getId());
+    }
+
+    @Test
+    void buildRecommendationSpec_EmptyStringAccommodationType() {
+        Specification<AccommodationListing> spec = RecommendationSpecification.buildRecommendationSpec(
+                null, null, null, "   ", null, null
+        );
+        List<AccommodationListing> results = listingRepository.findAll(spec);
+        assertEquals(2, results.size());
+    }
 }

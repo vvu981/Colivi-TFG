@@ -253,4 +253,64 @@ class RecommendationServiceImplTest {
         assertEquals(1, result.getItems().size());
         assertEquals("Piso compartido", result.getSearchTitle());
     }
+
+    @Test
+    void testGetRecommendations_HistoryExistsButNoCriteria() {
+        // history has empty values
+        UserSearchHistory history = new UserSearchHistory();
+        history.setCity("");
+        history.setMaxPrice(BigDecimal.ZERO);
+        history.setAccommodationType("   ");
+        when(historyRepository.findTop3ByUserIdOrderByCreatedAtDesc(userId))
+                .thenReturn(List.of(history));
+
+        Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
+        when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(page);
+
+        RecommendationResponse result = recommendationService.getRecommendations(userId, 1, null, null, null, null, null, null);
+
+        assertEquals(1, result.getItems().size());
+        assertFalse(result.isHasCriteria());
+    }
+
+    @Test
+    void testGetRecommendations_WithHistory_FallbackAppliedTrue() {
+        UserSearchHistory history = new UserSearchHistory();
+        history.setCity("Madrid");
+        when(historyRepository.findTop3ByUserIdOrderByCreatedAtDesc(userId))
+                .thenReturn(List.of(history));
+
+        // Returns empty on criteria, and returns 1 on fallback
+        Page<AccommodationListing> pageEmpty = new PageImpl<>(List.of());
+        Page<AccommodationListing> pageFallback = new PageImpl<>(List.of(listing2));
+
+        when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(pageEmpty)
+                .thenReturn(pageFallback);
+
+        RecommendationResponse result = recommendationService.getRecommendations(userId, 1, null, null, null, null, null, null);
+
+        assertEquals(1, result.getItems().size());
+        assertTrue(result.isFallbackApplied());
+        assertTrue(result.isHasCriteria());
+    }
+
+    @Test
+    void testGetRecommendations_NoCriteriaButFallbackFindsItems() {
+        when(historyRepository.findTop3ByUserIdOrderByCreatedAtDesc(userId))
+                .thenReturn(List.of());
+
+        // First query returns 1 item
+        Page<AccommodationListing> pageEmpty = new PageImpl<>(List.of(listing1));
+
+        when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(pageEmpty);
+
+        RecommendationResponse result = recommendationService.getRecommendations(userId, 1, null, null, null, null, null, null);
+
+        assertEquals(1, result.getItems().size());
+        assertFalse(result.isFallbackApplied());
+        assertFalse(result.isHasCriteria());
+    }
 }

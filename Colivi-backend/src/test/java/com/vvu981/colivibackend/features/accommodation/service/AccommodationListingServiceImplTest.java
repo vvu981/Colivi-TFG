@@ -249,6 +249,30 @@ class AccommodationListingServiceImplTest {
                 }
 
                 @Test
+                @DisplayName("debe lanzar excepcion si imagen seleccionada no pertenece al alojamiento")
+                void shouldThrowIfSelectedImageDoesNotBelongToAccommodation() {
+                        com.vvu981.colivibackend.features.accommodation.domain.AccommodationImage image1 = new com.vvu981.colivibackend.features.accommodation.domain.AccommodationImage();
+                        image1.setId(UUID.randomUUID());
+                        accommodation.setImages(List.of(image1)); // Solo esta imagen pertenece al alojamiento
+
+                        UUID invalidImageId = UUID.randomUUID(); // No esta en accommodation.images
+
+                        AccommodationListingRequest request = new AccommodationListingRequest(
+                                        accommodation.getId(), "Title", "Desc", BigDecimal.valueOf(500),
+                                        RentalType.ENTIRE_PLACE, BigDecimal.valueOf(100), List.of(invalidImageId));
+
+                        when(accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNullWithPessimisticLock(
+                                        accommodation.getId()))
+                                        .thenReturn(accommodation);
+                        when(listingRepository.getListingStatsForAccommodation(accommodation.getId()))
+                                        .thenReturn(new AccommodationListingStatsDTO(0L, 0L));
+
+                        assertThatThrownBy(() -> listingServiceImpl.createAccommodationListing(request, host.getId()))
+                                        .isInstanceOf(BusinessRuleValidationException.class)
+                                        .hasMessageContaining("no pertenece a este alojamiento");
+                }
+
+                @Test
                 @DisplayName("debe lanzar excepcion si la imagen no pertenece al alojamiento al crear")
                 void shouldThrowIfImageNotBelongsToAccommodationCreate() {
                         AccommodationListingRequest request = new AccommodationListingRequest(
