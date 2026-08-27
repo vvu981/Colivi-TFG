@@ -6,12 +6,12 @@ import type { AccommodationListingResponse } from '../types/listing.types';
 // ── Skeleton card ─────────────────────────────────────────────────────────────
 
 const ListingCardSkeleton: React.FC = () => (
-  <div className="bg-white rounded-2xl overflow-hidden border border-[#dec0b7] animate-pulse">
-    <div className="h-48 bg-[#dce9ff]" />
+  <div className="bg-white rounded-2xl overflow-hidden border border-outline-variant animate-pulse">
+    <div className="h-48 bg-surface-container" />
     <div className="p-4 space-y-3">
-      <div className="h-4 bg-[#dce9ff] rounded-md w-3/4" />
-      <div className="h-3 bg-[#dce9ff] rounded-md w-1/2" />
-      <div className="h-3 bg-[#dce9ff] rounded-md w-1/3" />
+      <div className="h-4 bg-surface-container rounded-md w-3/4" />
+      <div className="h-3 bg-surface-container rounded-md w-1/2" />
+      <div className="h-3 bg-surface-container rounded-md w-1/3" />
     </div>
   </div>
 );
@@ -37,12 +37,12 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing }) => {
         'group bg-white rounded-2xl overflow-hidden flex flex-col transition-all duration-300 block',
         'hover:shadow-[0_8px_32px_rgba(15,23,42,0.12)] hover:-translate-y-1',
         listing.isPromoted
-          ? 'border-2 border-[#9f3c16] shadow-[0_0_0_1px_rgba(159,60,22,0.15)]'
-          : 'border border-[#dec0b7]',
+          ? 'border-2 border-primary ring-1 ring-primary/20'
+          : 'border border-outline-variant',
       ].join(' ')}
     >
       {/* Image */}
-      <div className="relative h-48 bg-[#e5eeff] overflow-hidden flex-shrink-0">
+      <div className="relative h-48 bg-surface-container overflow-hidden flex-shrink-0">
         {coverImage ? (
           <img
             src={coverImage}
@@ -51,7 +51,7 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing }) => {
             loading="lazy"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-[#8a726a]">
+          <div className="w-full h-full flex items-center justify-center text-on-surface-variant">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="w-12 h-12 opacity-40"
@@ -71,21 +71,21 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing }) => {
 
         {/* Promoted badge */}
         {listing.isPromoted && (
-          <span className="absolute top-3 left-3 bg-[#9f3c16] text-white text-xs font-semibold px-2.5 py-1 rounded-full tracking-wide uppercase">
+          <span className="absolute top-3 left-3 bg-primary text-white text-xs font-semibold px-2.5 py-1 rounded-full tracking-wide uppercase">
             Destacado
           </span>
         )}
 
         {/* Accommodation type pill */}
-        <span className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm text-[#0b1c30] text-xs font-semibold px-2.5 py-1 rounded-full border border-[#dec0b7] shadow-xs flex items-center gap-1.5">
+        <span className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm text-on-surface text-xs font-semibold px-2.5 py-1 rounded-full border border-outline-variant shadow-xs flex items-center gap-1.5">
           {listing.rentalType === 'ROOM' ? (
             <>
-              <Bed size={13} className="text-[#9f3c16]" />
+              <Bed size={13} className="text-primary" />
               <span>Habitación</span>
             </>
           ) : (
             <>
-              <Home size={13} className="text-[#9f3c16]" />
+              <Home size={13} className="text-primary" />
               <span>Alojamiento completo</span>
             </>
           )}
@@ -94,14 +94,14 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing }) => {
 
       {/* Content */}
       <div className="p-4 flex flex-col flex-1 gap-2">
-        <h3 className="text-headline-sm text-[#0b1c30] line-clamp-2 leading-snug group-hover:text-[#9f3c16] transition-colors">
+        <h3 className="text-headline-sm text-on-surface line-clamp-2 leading-snug group-hover:text-primary transition-colors">
           {listing.title}
         </h3>
 
-        <p className="text-label-md text-[#565e74] flex items-center gap-1.5">
+        <p className="text-label-md text-on-surface-variant flex items-center gap-1.5">
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="w-4 h-4 text-[#8a726a] flex-shrink-0"
+            className="w-4 h-4 text-on-surface-variant flex-shrink-0"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -125,9 +125,9 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing }) => {
         </p>
 
         {/* Price */}
-        <p className="mt-auto pt-2 text-[#9f3c16] font-semibold text-lg leading-none">
+        <p className="mt-auto pt-2 text-primary font-semibold text-lg leading-none">
           {formattedPrice}
-          <span className="text-sm text-[#565e74] font-normal">/mes</span>
+          <span className="text-sm text-on-surface-variant font-normal">/mes</span>
         </p>
       </div>
     </Link>
@@ -142,10 +142,10 @@ interface ErrorStateProps {
 
 const ErrorState: React.FC<ErrorStateProps> = ({ message }) => (
   <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
-    <div className="w-12 h-12 rounded-full bg-[#ffdad6] flex items-center justify-center">
+    <div className="w-12 h-12 rounded-full bg-error-container flex items-center justify-center">
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        className="w-6 h-6 text-[#ba1a1a]"
+        className="w-6 h-6 text-error"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -158,7 +158,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message }) => (
         />
       </svg>
     </div>
-    <p className="text-body-md text-[#57423b]">{message}</p>
+    <p className="text-body-md text-on-surface-variant">{message}</p>
   </div>
 );
 
@@ -166,10 +166,10 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message }) => (
 
 const EmptyState: React.FC = () => (
   <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
-    <div className="w-12 h-12 rounded-full bg-[#e5eeff] flex items-center justify-center">
+    <div className="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center">
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        className="w-6 h-6 text-[#565e74]"
+        className="w-6 h-6 text-on-surface-variant"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -182,7 +182,7 @@ const EmptyState: React.FC = () => (
         />
       </svg>
     </div>
-    <p className="text-body-md text-[#57423b]">
+    <p className="text-body-md text-on-surface-variant">
       Aún no tenemos recomendaciones para ti. ¡Empieza a explorar!
     </p>
   </div>
@@ -268,16 +268,16 @@ export const RecommendedListings: React.FC<RecommendedListingsProps> = ({
       {!isLoading && !error && isFallback && (
         <div
           role="status"
-          className="flex items-start gap-4 p-4 sm:p-5 rounded-2xl bg-[#fff8f6] border border-[#ffdad6] text-[#57423b] shadow-xs animate-in fade-in slide-in-from-top-2 duration-300"
+          className="flex items-start gap-4 p-4 sm:p-5 rounded-2xl bg-surface-container-lowest border border-error-container text-on-surface-variant shadow-xs animate-in fade-in slide-in-from-top-2 duration-300"
         >
-          <div className="p-2.5 rounded-xl bg-[#ffdad6]/60 text-[#9f3c16] flex-shrink-0 mt-0.5">
+          <div className="p-2.5 rounded-xl bg-error-container/60 text-primary flex-shrink-0 mt-0.5">
             <SearchX size={20} />
           </div>
           <div className="flex flex-col gap-1 min-w-0">
-            <h3 className="text-body-lg font-bold text-[#3e2d27]">
+            <h3 className="text-body-lg font-bold text-on-surface">
               {getFallbackAlertTitle()}
             </h3>
-            <p className="text-body-md text-[#57423b] leading-relaxed">
+            <p className="text-body-md text-on-surface-variant leading-relaxed">
               Aún no hay publicaciones disponibles que coincidan con estos criterios. A continuación te mostramos algunos de los alojamientos más populares y destacados de la plataforma:
             </p>
           </div>
@@ -286,10 +286,10 @@ export const RecommendedListings: React.FC<RecommendedListingsProps> = ({
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          {isFallback && <Sparkles size={20} className="text-[#9f3c16]" />}
+          {isFallback && <Sparkles size={20} className="text-primary" />}
           <h2
             id="recommendations-heading"
-            className="text-headline-md text-[#0b1c30]"
+            className="text-headline-md text-on-surface"
           >
             {getHeadingTitle()}
           </h2>

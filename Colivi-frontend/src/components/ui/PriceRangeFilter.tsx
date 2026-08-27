@@ -87,14 +87,6 @@ const PriceBoundInput: React.FC<PriceBoundInputProps> = React.memo(({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawVal = e.target.value.replace(/[^0-9]/g, '');
     setLocalText(rawVal);
-
-    if (rawVal !== '') {
-      const parsed = parseInt(rawVal, 10);
-      if (!isNaN(parsed)) {
-        const clamped = clamp(parsed, minBound, maxBound);
-        onCommit(clamped);
-      }
-    }
   };
 
   const handleBlur = () => {
