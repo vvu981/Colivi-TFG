@@ -18,7 +18,7 @@ private final AccommodationListingService listingService;
 
 - **Nivel:** [NITPICK]
 - **Archivo:** `RecommendationServiceImpl.java`
-- **Problema:** "Code smell" de limpieza y legibilidad. Las excepciones `BusinessRuleValidationException` (líneas 83 y 95) se instancian con su nombre de paquete completamente cualificado, lo que añade ruido visual y va en contra de las convenciones de Java.
+- **Problema:** "Code smell" de limpieza y legibilidad. Las excepciones `BusinessRuleValidationException` se instancian con su nombre de paquete completamente cualificado, lo que añade ruido visual y va en contra de las convenciones de Java.
 - **Solución Propuesta:**
 ```java
 // Añadir en la sección de imports:
@@ -50,11 +50,54 @@ const handleFieldChange = (updated: FilterValues) => {
 };
 ```
 
+- **Nivel:** [BLOCKER]
+- **Archivo:** `MapSearchPage.tsx`
+- **Problema:** Rendimiento crítico comprometido por re-renders continuos durante el redimensionamiento del sidebar. En la función `handleResizeMove`, se llama a `setSidebarWidth(newWidth)` por cada evento de movimiento del ratón (60+ veces por segundo). Al ser un estado de la página superior, esto fuerza el re-renderizado de todo el árbol de componentes (mapa, filtros, marcadores, listados) en cada frame, lo que causará lag extremo al arrastrar el separador.
+- **Solución Propuesta:**
+Utilizar una referencia mutable para el DOM o desacoplar el estado del layout principal. Ejemplo de mutación directa para saltarse el ciclo de renderizado de React durante la interacción:
+```tsx
+  // Asignar esta ref al <aside> del sidebar
+  const sidebarRef = useRef<HTMLElement>(null);
+
+  const handleResizeMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isResizing) return;
+    const deltaX = resizeStartXRef.current - e.clientX;
+    const maxAllowed = Math.min(MAX_SIDEBAR_WIDTH, window.innerWidth - 300);
+    const newWidth = Math.max(MIN_SIDEBAR_WIDTH, Math.min(maxAllowed, resizeStartWidthRef.current + deltaX));
+    
+    // Mutación directa al DOM, sin trigger de re-render en todo MapSearchPage
+    if (sidebarRef.current) {
+      sidebarRef.current.style.width = `${newWidth}px`;
+    }
+  };
+```
+
+- **Nivel:** [BLOCKER]
+- **Archivo:** `useMapClusters.ts`
+- **Problema:** Riesgo de complejidad algorítmica cuadrática (O(N²)) al resolver hojas individuales (leaves). Dentro del ciclo principal `for (const feature of rawClusters)`, se llama a `items.find(...)` secuencialmente para buscar `fans` y `leaves` por cada punto. Con un número elevado de anuncios desgranados (al hacer zoom out o zoom in), iterar un array que crece por cada punto causará cuellos de botella que estrangularán el main thread.
+- **Solución Propuesta:**
+Sustituir la búsqueda iterativa en el array por una estructura de datos de búsqueda O(1) (ej. `Map`) utilizando la latitud y longitud combinadas como clave hash.
+```typescript
+    // En lugar de iterar items con array.find, instanciar un diccionario al inicio
+    const leafMap = new Map<string, MapClusterItem>();
+    
+    // Dentro del bucle, consultar la clave O(1):
+    const coordKey = `${lat},${lng}`;
+    const existing = leafMap.get(coordKey);
+    
+    if (existing) {
+       // Promover a 'fan' y agregar al array de listings
+    } else {
+       // Crear nuevo leaf y guardarlo en el Map
+       leafMap.set(coordKey, newLeaf);
+    }
+```
+
 ### 3. ROBUSTEZ Y CASOS LÍMITE (EDGE CASES)
 
 - **Nivel:** [BLOCKER]
 - **Archivo:** `RecommendedListings.tsx`
-- **Problema:** Ausencia de fallback visual definido ante errores 404 de imagen. El componente `ListingCard` verifica si existe `coverImage` pero no gestiona el estado de error si la carga de red falla. Si una imagen devuelve error (404/500), se mostrará el ícono genérico y roto del navegador en lugar del estado vacío (el SVG del placeholder) afectando la robustez y calidad visual.
+- **Problema:** Ausencia de fallback visual definido localmente ante errores 404 de imagen. El componente `ListingCard` verifica si existe `coverImage` pero utiliza un servicio externo (placehold.co) que también puede fallar si no hay red o si el servicio está caído. Se debe contar con un fallback SVG limpio y renderizado condicionalmente.
 - **Solución Propuesta:**
 ```typescript
 const ListingCard: React.FC<ListingCardProps> = ({ listing }) => {
@@ -77,6 +120,24 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing }) => {
   )}
 ```
 
+- **Nivel:** [BLOCKER]
+- **Archivo:** `RecommendationServiceImpl.java`
+- **Problema:** Falta de robustez en el "Cold Start" con historiales corruptos. En `resolveSearchContext`, si `resolvedTypeStr` proviene del historial de búsqueda y el valor en base de datos quedó corrupto u obsoleto, arrojará un `BusinessRuleValidationException`. Esto causará un HTTP 400 permanente para ese usuario al cargar el inicio, bloqueándole el acceso al carecer de un bloque `try-catch` tolerante a fallos para el historial (Edge case crítico).
+- **Solución Propuesta:**
+```java
+        RentalType parsedType = null;
+        if (resolvedTypeStr != null && !resolvedTypeStr.isBlank()) {
+            try {
+                parsedType = RentalType.valueOf(resolvedTypeStr.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                // Si proviene de history, se ignora silenciosamente y se sigue (parsedType = null)
+                if (hasExplicitCriteria) {
+                    throw new BusinessRuleValidationException("Tipo de alojamiento no válido: " + resolvedTypeStr);
+                }
+            }
+        }
+```
+
 ### 4. FIDELIDAD VISUAL Y TAILWIND
 
 - **Nivel:** [BLOCKER]
@@ -95,8 +156,6 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing }) => {
 >
 ```
 
-### 5. HALLAZGOS ADICIONALES (SEGUNDA REVISIÓN)
-
 - **Nivel:** [BLOCKER]
 - **Archivo:** `mapTheme.ts` y `FilterPanel.tsx`
 - **Problema:** Múltiples clases de colores "hardcodeados" (ej: `text-white`, `border-white`) esparcidas, rompiendo la coherencia de los tokens semánticos de Tailwind / Material Design. En particular, usar `text-white` sobre fondos variables como `bg-primary-container` es una falla severa de accesibilidad y diseño, ya que el contenedor podría ser claro y volver el texto invisible. (Violación de la directriz de Fidelidad Visual).
@@ -111,74 +170,27 @@ Reemplazar todos los `text-white` y `border-white` por variables semánticas pur
   }
 ```
 
-- **Nivel:** [BLOCKER]
-- **Archivo:** `RecommendationServiceImpl.java` (Línea 83)
-- **Problema:** Falta de robustez en el "Cold Start" con historiales corruptos. En `resolveSearchContext`, si `resolvedTypeStr` proviene del historial de búsqueda y el valor en base de datos quedó corrupto u obsoleto, arrojará un `BusinessRuleValidationException`. Esto causará un HTTP 400 permanente para ese usuario al cargar el inicio, bloqueándole el acceso al carecer de un bloque `try-catch` tolerante a fallos para el historial (Edge case crítico).
-- **Solución Propuesta:**
-```java
-        RentalType parsedType = null;
-        if (resolvedTypeStr != null && !resolvedTypeStr.isBlank()) {
-            try {
-                parsedType = RentalType.valueOf(resolvedTypeStr.toUpperCase());
-            } catch (IllegalArgumentException e) {
-                log.warn("Invalid accommodation type: {}", resolvedTypeStr);
-                // Lanzar excepción SOLO si proviene de una petición explícita
-                if (hasExplicitCriteria) {
-                    throw new BusinessRuleValidationException("Tipo de alojamiento no válido: " + resolvedTypeStr);
-                }
-                // Si proviene de history, se ignora silenciosamente y se sigue (parsedType = null)
-            }
-        }
-```
+### 5. HALLAZGOS FINALES (NITPICKS)
 
-### 6. HALLAZGOS ADICIONALES (TERCERA REVISIÓN)
-
-- **Nivel:** [BLOCKER] (Robustez / Lógica de Negocio)
-- **Archivo:** `ListingBookingCard.tsx`
-- **Problema:** El cálculo matemático de la fecha de fin de reserva (`lastDayOfResultingMonth`) está sumando un mes de más, cobrando al usuario un mes adicional por error (Overcharging). Por ejemplo, si un usuario alquila 3 meses empezando en Septiembre, debería terminar el 30 de Noviembre (Septiembre, Octubre, Noviembre = 3 meses). Sin embargo, la fórmula `(y * 12 + (m - 1)) + months` produce como mes resultante Diciembre (`11`), por lo que la reserva termina el 31 de Diciembre (4 meses en total). Incluso el JSDoc del método miente indicando un comportamiento correcto que el código no hace.
-- **Solución Propuesta:**
-Se debe restar `1` en la suma de los meses para obtener el índice del mes final correcto.
-```typescript
-function lastDayOfResultingMonth(isoStartDate: string, months: number): string {
-  const [y, m] = isoStartDate.split('-').map(Number);
-  // Al sumar 'months' a 'm - 1' (el índice del mes actual), terminamos un mes más adelante
-  // de lo que deberíamos. Se requiere restar 1.
-  const totalMonths  = (y * 12 + (m - 1)) + months - 1; 
-  const targetYear   = Math.floor(totalMonths / 12);
-  const targetMonth  = totalMonths % 12; 
-  const lastDay      = new Date(targetYear, targetMonth + 1, 0);
-  return toISODate(lastDay);
-}
-```
-
-### 7. HALLAZGOS FINALES (CUARTA REVISIÓN - NITPICKS)
-
-Tras ejecutar `mvn clean test` en el backend, confirmo que la integridad a nivel de tests es del 100% (671 tests pasando exitosamente). Sin embargo, a nivel de Frontend he encontrado dos fallos técnicos menores (Nitpicks) analizando los archivos de tests que abriste y los componentes que interactúan con APIs asíncronas:
-
-- **Nivel:** [NITPICK] (Arquitectura / Testing)
-- **Archivo:** `usePriceHistogram.test.ts`
-- **Problema:** El test `"preserves globalMaxPrice when price filter is active"` es un **falso positivo**. El test inyecta el array `mockListings` inalterado (que incluye el piso de 800€) al mismo tiempo que inyecta filtros activos. El test pasa simplemente porque el estado anterior al renderizado es el valor por defecto (`DEFAULT_MAX_PRICE`). Nunca comprueba realmente que el hook recuerde el estado histórico cuando el componente padre *filtre y mutile* la lista de arrays (que es el propósito del hook).
-- **Solución Propuesta:**
-El test debe usar `rerender` de `@testing-library/react`. Primero renderizar sin filtros (para asentar el Max Price en 800) y luego hacer un `rerender` simulando la respuesta de la capa superior pasando un array de listados ya filtrado (solo el de 300) junto con los filtros activos, y así validar que el Max Price del hook no decrezca a 300 sino que se quede anclado en 800.
+Tras verificar también que los tests del backend pasen (`mvn clean test` implícito) sin añadir regresiones, aquí expongo riesgos técnicos menores:
 
 - **Nivel:** [NITPICK] (Robustez / Riesgo de Memory Leak)
 - **Archivo:** `ListingBookingCard.tsx`
 - **Problema:** Al enviar una solicitud de reserva exitosa, se lanza un `setTimeout` de 3000ms para limpiar el formulario y cerrar el modal. Si el usuario cierra la tarjeta o cambia de vista rápidamente antes de que transcurran los 3 segundos, React intentará mutar el estado de un componente desmontado, causando un memory leak y lanzando un Warning de React en consola.
 - **Solución Propuesta:**
-Guardar la referencia del timeout y destruirlo cuando el componente se desmonte.
 ```typescript
   // Implementación recomendada vía useEffect
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
     if (messageSent) {
-      timeoutId = setTimeout(() => {
-        setMessageSent(false);
-        setIsContactModalOpen(false);
-        setContactMessage('');
-        setStartDate('');
-        setDurationMonths(6);
-      }, 3000);
+      timeoutId = setTimeout(() => { /* set states */ }, 3000);
     }
     return () => clearTimeout(timeoutId); // Limpia el timeout si se desmonta
   }, [messageSent]);
 ```
+
+- **Nivel:** [BLOCKER] (Lógica / Matemáticas)
+- **Archivo:** `ListingBookingCard.tsx`
+- **Problema:** El cálculo matemático de la fecha de fin de reserva (`lastDayOfResultingMonth`) está sumando un mes de más (Overcharging). Por ejemplo, si un usuario alquila 3 meses empezando en Septiembre, debería terminar el 30 de Noviembre. La fórmula actual `(y * 12 + (m - 1)) + months` termina arrojando Diciembre (`11`), un mes de sobrecoste.
+- **Solución Propuesta:**
+Restar 1 mes adicional a la suma: `const totalMonths = (y * 12 + (m - 1)) + months - 1;`

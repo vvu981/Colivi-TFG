@@ -23,6 +23,7 @@ interface ListingCardProps {
 }
 
 const ListingCard: React.FC<ListingCardProps> = ({ listing }) => {
+  const [imageError, setImageError] = React.useState(false);
   const coverImage = listing.selectedImages?.[0]?.imageUrl || listing.accommodation?.images?.[0]?.imageUrl;
   const formattedPrice = new Intl.NumberFormat('es-ES', {
     style: 'currency',
@@ -43,16 +44,13 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing }) => {
     >
       {/* Image */}
       <div className="relative h-48 bg-surface-container overflow-hidden flex-shrink-0">
-        {coverImage ? (
+        {coverImage && !imageError ? (
           <img
             src={coverImage}
             alt={listing.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             loading="lazy"
-            onError={(e) => {
-              e.currentTarget.onerror = null;
-              e.currentTarget.src = 'https://placehold.co/600x400/e2e8f0/64748b?text=Imagen+no+disponible';
-            }}
+            onError={() => setImageError(true)}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-on-surface-variant">

@@ -138,6 +138,7 @@ export const useMapClusters = (
     const rawClusters = sc.getClusters(bounds, clampedZoom);
 
     const items: MapClusterItem[] = [];
+    const leafMap = new Map<string, ExactFan | SingleLeaf>();
 
     for (const feature of rawClusters) {
       const [lng, lat] = feature.geometry.coordinates;
@@ -191,39 +192,33 @@ export const useMapClusters = (
       } else {
         // ── Single leaf point ────────────────────────────────────────
         const listing = (props as ListingProperties).listing;
+        const coordKey = `${lat},${lng}`;
 
-        // Look ahead: is there already a fan item at these exact coords?
-        // (This can happen when two separate leaves share the same coordinate
-        //  but supercluster placed them as individual features at high zoom.)
-        const existingFan = items.find(
-          (item): item is ExactFan =>
-            item.type === 'fan' && item.lat === lat && item.lng === lng,
-        );
-
-        if (existingFan) {
-          existingFan.listings.push(listing);
-        } else {
-          // Check if another leaf with the same coords already appeared
-          const existingLeaf = items.find(
-            (item): item is SingleLeaf =>
-              item.type === 'leaf' && item.lat === lat && item.lng === lng,
-          );
-
-          if (existingLeaf) {
-            // Promote to fan
-            const idx = items.indexOf(existingLeaf);
-            items[idx] = {
+        const existing = leafMap.get(coordKey);
+        
+        if (existing) {
+          if (existing.type === 'fan') {
+            existing.listings.push(listing);
+          } else {
+            // Promote leaf to fan
+            const newFan: ExactFan = {
               type: 'fan',
               lat,
               lng,
-              listings: [existingLeaf.listing, listing],
+              listings: [existing.listing, listing]
             };
-          } else {
-            // ESTADO 3: Genuinely isolated leaf
-            items.push({ type: 'leaf', lat, lng, listing });
+            leafMap.set(coordKey, newFan);
           }
+        } else {
+          // ESTADO 3: Genuinely isolated leaf
+          leafMap.set(coordKey, { type: 'leaf', lat, lng, listing });
         }
       }
+    }
+
+    // Add all aggregated leaves/fans from leafMap to items
+    for (const item of leafMap.values()) {
+      items.push(item);
     }
 
     return items;

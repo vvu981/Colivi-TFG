@@ -26,6 +26,9 @@ export interface FilterPanelProps {
   onClose: () => void;
 }
 
+import { useMemo } from 'react';
+import debounce from 'lodash.debounce';
+
 export const FilterPanel: React.FC<FilterPanelProps> = ({
   filters: initialFilters,
   maxPriceLimit,
@@ -41,20 +44,21 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
     setLocalFilters(initialFilters);
   }, [initialFilters]);
 
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const debouncedOnChange = useMemo(
+    () => debounce((updated: FilterValues) => onChange(updated), 300),
+    [onChange]
+  );
 
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      debouncedOnChange.cancel();
     };
-  }, []);
+  }, [debouncedOnChange]);
 
   const handleFieldChange = (updated: FilterValues) => {
     setLocalFilters(updated);
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => {
-      onChange(updated);
-    }, 300);
+    debouncedOnChange(updated);
   };
 
   const inputClass =

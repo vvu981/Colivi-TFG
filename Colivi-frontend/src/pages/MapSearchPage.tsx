@@ -124,6 +124,8 @@ export const MapSearchPage: React.FC = () => {
   const resizeStartXRef = useRef(0);
   const resizeStartWidthRef = useRef(sidebarWidth);
 
+  const sidebarRef = useRef<HTMLElement>(null);
+
   const handleResizeStart = (e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsResizing(true);
@@ -142,7 +144,13 @@ export const MapSearchPage: React.FC = () => {
       MIN_SIDEBAR_WIDTH,
       Math.min(maxAllowed, resizeStartWidthRef.current + deltaX)
     );
-    setSidebarWidth(newWidth);
+    
+    // Direct DOM manipulation to avoid re-rendering the entire map frame by frame
+    if (sidebarRef.current) {
+      sidebarRef.current.style.width = `${newWidth}px`;
+    }
+    // Let Leaflet know the container size is changing during drag
+    mapRef.current?.invalidateSize();
   };
 
   const handleResizeEnd = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -151,8 +159,18 @@ export const MapSearchPage: React.FC = () => {
     if (e.currentTarget.releasePointerCapture) {
       e.currentTarget.releasePointerCapture(e.pointerId);
     }
+    
+    // Calculate final width to persist it
+    const deltaX = resizeStartXRef.current - e.clientX;
+    const maxAllowed = Math.min(MAX_SIDEBAR_WIDTH, window.innerWidth - 300);
+    const newWidth = Math.max(
+      MIN_SIDEBAR_WIDTH,
+      Math.min(maxAllowed, resizeStartWidthRef.current + deltaX)
+    );
+    setSidebarWidth(newWidth);
+
     try {
-      localStorage.setItem('colivi_map_sidebar_width', sidebarWidth.toString());
+      localStorage.setItem('colivi_map_sidebar_width', newWidth.toString());
     } catch {
       // Ignore localStorage availability errors
     }
@@ -522,6 +540,7 @@ export const MapSearchPage: React.FC = () => {
 
         {/* ── Right: Sidebar ─────────────────────────────────────── */}
         <aside
+          ref={sidebarRef}
           style={{ width: `${sidebarWidth}px` }}
           className="flex-shrink-0 flex flex-col border-l border-outline-variant bg-surface-container-lowest overflow-hidden"
         >
@@ -562,17 +581,17 @@ export const MapSearchPage: React.FC = () => {
               aria-label={filtersOpen ? 'Ocultar filtros' : 'Abrir filtros de búsqueda'}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-label-sm font-medium transition-all cursor-pointer shadow-sm active:scale-95 flex-shrink-0 ${
                 filtersOpen || hasActiveFilters
-                  ? 'bg-primary-container text-white border-primary-container'
+                  ? 'bg-primary-container text-on-primary-container border-primary-container'
                   : 'bg-surface-container-low border-outline-variant text-on-surface hover:bg-surface-container hover:border-outline'
               }`}
             >
               <SlidersHorizontal
                 size={14}
-                className={filtersOpen || hasActiveFilters ? 'text-white' : 'text-primary-container'}
+                className={filtersOpen || hasActiveFilters ? 'text-on-primary-container' : 'text-primary-container'}
               />
               <span>Filtros</span>
               {hasActiveFilters && !filtersOpen && (
-                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                <span className="w-1.5 h-1.5 rounded-full bg-on-primary-container animate-pulse" />
               )}
             </button>
           </div>
