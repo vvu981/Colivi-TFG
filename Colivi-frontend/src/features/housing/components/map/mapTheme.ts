@@ -77,7 +77,7 @@ export const MAP_THEME: MapThemeConfig = {
     strokeDefault: 'stroke-white stroke-[2px]',
     strokeSelected: 'stroke-white stroke-[3px]',
     strokeGroupSameAcc: 'stroke-white stroke-[2.5px]',
-    iconColor: '#ffffff',
+    iconColor: 'currentColor',
     shadow: 'drop-shadow-md',
   },
   badge: {

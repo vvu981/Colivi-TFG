@@ -308,6 +308,11 @@ export const PriceRangeFilter: React.FC<PriceRangeFilterProps> = ({
               commitRange();
             }}
             onTouchEnd={commitRange}
+            onKeyUp={(e) => {
+              if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+                commitRange();
+              }
+            }}
             onFocus={() => setActiveThumb('min')}
             aria-label="Precio mínimo"
             aria-valuemin={min}
@@ -364,6 +369,11 @@ export const PriceRangeFilter: React.FC<PriceRangeFilterProps> = ({
               commitRange();
             }}
             onTouchEnd={commitRange}
+            onKeyUp={(e) => {
+              if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+                commitRange();
+              }
+            }}
             onFocus={() => setActiveThumb('max')}
             aria-label="Precio máximo"
             aria-valuemin={min}

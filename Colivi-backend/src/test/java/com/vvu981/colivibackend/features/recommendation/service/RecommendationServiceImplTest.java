@@ -76,8 +76,8 @@ class RecommendationServiceImplTest {
         history.setMaxPrice(new BigDecimal("800"));
         history.setAccommodationType("ROOM");
 
-        when(historyRepository.findTop3ByUserIdOrderByCreatedAtDesc(userId))
-                .thenReturn(List.of(history));
+        when(historyRepository.findFirstByUserIdOrderByCreatedAtDesc(userId))
+                .thenReturn(java.util.Optional.of(history));
 
         Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
         when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))
@@ -92,7 +92,7 @@ class RecommendationServiceImplTest {
         assertEquals(1, result.getCriteriaMatchedCount());
         assertFalse(result.isFallbackApplied());
         assertEquals(listing1.getId(), result.getItems().get(0).id());
-        verify(historyRepository, times(1)).findTop3ByUserIdOrderByCreatedAtDesc(userId);
+        verify(historyRepository, times(1)).findFirstByUserIdOrderByCreatedAtDesc(userId);
         // Fallback is not called since limit 1 is reached
         verify(listingRepository, times(1)).findAll(any(Specification.class), any(Pageable.class));
     }
@@ -112,7 +112,7 @@ class RecommendationServiceImplTest {
         assertEquals(0, result.getCriteriaMatchedCount());
         assertFalse(result.isFallbackApplied());
         assertFalse(result.isHasCriteria());
-        verify(historyRepository, never()).findTop3ByUserIdOrderByCreatedAtDesc(any());
+        verify(historyRepository, never()).findFirstByUserIdOrderByCreatedAtDesc(any());
         // Only default query is executed because hasCriteria is false
         verify(listingRepository, times(1)).findAll(any(Specification.class), any(Pageable.class));
     }
@@ -123,8 +123,8 @@ class RecommendationServiceImplTest {
         UserSearchHistory history = new UserSearchHistory();
         history.setCity("Madrid");
 
-        when(historyRepository.findTop3ByUserIdOrderByCreatedAtDesc(userId))
-                .thenReturn(List.of(history));
+        when(historyRepository.findFirstByUserIdOrderByCreatedAtDesc(userId))
+                .thenReturn(java.util.Optional.of(history));
 
         // First query returns 1 item, but limit is 2
         Page<AccommodationListing> page1 = new PageImpl<>(List.of(listing1));
@@ -144,7 +144,7 @@ class RecommendationServiceImplTest {
         assertEquals(2, result.getItems().size());
         assertEquals(1, result.getCriteriaMatchedCount());
         assertTrue(result.isFallbackApplied());
-        verify(historyRepository, times(1)).findTop3ByUserIdOrderByCreatedAtDesc(userId);
+        verify(historyRepository, times(1)).findFirstByUserIdOrderByCreatedAtDesc(userId);
         verify(listingRepository, times(2)).findAll(any(Specification.class), any(Pageable.class));
     }
 
@@ -211,8 +211,8 @@ class RecommendationServiceImplTest {
     @Test
     void testGetRecommendations_NoHistoryAndNoCriteria_OnlyFallback() {
         // Arrange
-        when(historyRepository.findTop3ByUserIdOrderByCreatedAtDesc(userId))
-                .thenReturn(List.of());
+        when(historyRepository.findFirstByUserIdOrderByCreatedAtDesc(userId))
+                .thenReturn(java.util.Optional.empty());
 
         Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
         when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))
@@ -261,8 +261,8 @@ class RecommendationServiceImplTest {
         history.setCity("");
         history.setMaxPrice(BigDecimal.ZERO);
         history.setAccommodationType("   ");
-        when(historyRepository.findTop3ByUserIdOrderByCreatedAtDesc(userId))
-                .thenReturn(List.of(history));
+        when(historyRepository.findFirstByUserIdOrderByCreatedAtDesc(userId))
+                .thenReturn(java.util.Optional.of(history));
 
         Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
         when(listingRepository.findAll(any(Specification.class), any(Pageable.class)))
@@ -278,8 +278,8 @@ class RecommendationServiceImplTest {
     void testGetRecommendations_WithHistory_FallbackAppliedTrue() {
         UserSearchHistory history = new UserSearchHistory();
         history.setCity("Madrid");
-        when(historyRepository.findTop3ByUserIdOrderByCreatedAtDesc(userId))
-                .thenReturn(List.of(history));
+        when(historyRepository.findFirstByUserIdOrderByCreatedAtDesc(userId))
+                .thenReturn(java.util.Optional.of(history));
 
         // Returns empty on criteria, and returns 1 on fallback
         Page<AccommodationListing> pageEmpty = new PageImpl<>(List.of());
@@ -298,8 +298,8 @@ class RecommendationServiceImplTest {
 
     @Test
     void testGetRecommendations_NoCriteriaButFallbackFindsItems() {
-        when(historyRepository.findTop3ByUserIdOrderByCreatedAtDesc(userId))
-                .thenReturn(List.of());
+        when(historyRepository.findFirstByUserIdOrderByCreatedAtDesc(userId))
+                .thenReturn(java.util.Optional.empty());
 
         // First query returns 1 item
         Page<AccommodationListing> pageEmpty = new PageImpl<>(List.of(listing1));

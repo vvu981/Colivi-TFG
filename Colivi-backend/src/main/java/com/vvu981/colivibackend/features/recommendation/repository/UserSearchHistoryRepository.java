@@ -13,6 +13,7 @@ import java.math.BigDecimal;
 public interface UserSearchHistoryRepository extends JpaRepository<UserSearchHistory, UUID> {
     
     List<UserSearchHistory> findTop3ByUserIdOrderByCreatedAtDesc(UUID userId);
+    java.util.Optional<UserSearchHistory> findFirstByUserIdOrderByCreatedAtDesc(UUID userId);
 
     @Query("""
         SELECT CASE WHEN COUNT(h) > 0 THEN true ELSE false END 

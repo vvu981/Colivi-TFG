@@ -151,16 +151,23 @@ export const useMapClusters = (
         const count = feature.properties.point_count;
         const expansionZoom = sc.getClusterExpansionZoom(clusterId);
 
+        let allSameCoord = false;
+        let leaves: Array<GeoJSON.Feature<GeoJSON.Point, ListingProperties>> = [];
+
         // Check whether ALL leaves share the exact same coordinate →
         // if so, treat this as a fan cluster rather than a macro cluster.
-        const leaves = sc.getLeaves(clusterId, Infinity);
-
-        const firstLeaf = leaves[0];
-        const allSameCoord = leaves.every(
-          (leaf) =>
-            leaf.geometry.coordinates[0] === firstLeaf.geometry.coordinates[0] &&
-            leaf.geometry.coordinates[1] === firstLeaf.geometry.coordinates[1],
-        );
+        // PERF: Only extract leaves if the cluster cannot be expanded anymore (expansionZoom > MAX_ZOOM)
+        if (expansionZoom > SUPERCLUSTER_MAX_ZOOM) {
+          leaves = sc.getLeaves(clusterId, Infinity);
+          if (leaves.length > 0) {
+            const firstLeaf = leaves[0];
+            allSameCoord = leaves.every(
+              (leaf) =>
+                leaf.geometry.coordinates[0] === firstLeaf.geometry.coordinates[0] &&
+                leaf.geometry.coordinates[1] === firstLeaf.geometry.coordinates[1],
+            );
+          }
+        }
 
         if (allSameCoord) {
           // ESTADO 2: All leaves pile up at the exact same point

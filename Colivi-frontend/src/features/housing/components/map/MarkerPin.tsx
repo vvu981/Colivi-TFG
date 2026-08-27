@@ -110,7 +110,7 @@ export const MarkerPin = ({
 
       {/* Icon Container */}
       <div
-        className="pointer-events-none flex items-center justify-center"
+        className="pointer-events-none flex items-center justify-center text-white"
         style={{
           position: 'absolute',
           top: '0px',

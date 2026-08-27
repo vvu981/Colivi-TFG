@@ -1,5 +1,6 @@
 package com.vvu981.colivibackend.features.recommendation.repository;
 
+import com.vvu981.colivibackend.features.accommodation.domain.AmenityType;
 import com.vvu981.colivibackend.features.accommodation.domain.Accommodation;
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing;
 import com.vvu981.colivibackend.features.accommodation.domain.ListingStatus;
@@ -23,7 +24,7 @@ public class RecommendationSpecification {
     public static Specification<AccommodationListing> buildRecommendationSpec(
             String city,
             BigDecimal maxPrice,
-            String accommodationType,
+            RentalType accommodationType,
             List<UUID> excludedIds) {
         return buildRecommendationSpec(null, city, null, maxPrice, accommodationType, null, excludedIds);
     }
@@ -32,8 +33,8 @@ public class RecommendationSpecification {
             String city,
             BigDecimal minPrice,
             BigDecimal maxPrice,
-            String accommodationType,
-            List<String> amenities,
+            RentalType accommodationType,
+            List<AmenityType> amenities,
             List<UUID> excludedIds) {
         return buildRecommendationSpec(null, city, minPrice, maxPrice, accommodationType, amenities, excludedIds);
     }
@@ -43,32 +44,10 @@ public class RecommendationSpecification {
             String city,
             BigDecimal minPrice,
             BigDecimal maxPrice,
-            String accommodationType,
-            List<String> amenities,
+            RentalType accommodationType,
+            List<AmenityType> amenities,
             List<UUID> excludedIds) {
             
-        final RentalType parsedType;
-        if (accommodationType != null && !accommodationType.trim().isEmpty()) {
-            try {
-                parsedType = RentalType.valueOf(accommodationType.toUpperCase());
-            } catch (IllegalArgumentException e) {
-                throw new IllegalArgumentException("Invalid accommodation type: " + accommodationType);
-            }
-        } else {
-            parsedType = null;
-        }
-
-        final List<com.vvu981.colivibackend.features.accommodation.domain.AmenityType> parsedAmenities = new ArrayList<>();
-        if (amenities != null && !amenities.isEmpty()) {
-            for (String am : amenities) {
-                try {
-                    parsedAmenities.add(com.vvu981.colivibackend.features.accommodation.domain.AmenityType.valueOf(am.toUpperCase()));
-                } catch (IllegalArgumentException e) {
-                    throw new IllegalArgumentException("Amenidad no válida: " + am);
-                }
-            }
-        }
-
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
@@ -110,12 +89,12 @@ public class RecommendationSpecification {
                 predicates.add(cb.lessThanOrEqualTo(root.get("pricePerMonth"), maxPrice));
             }
 
-            if (parsedType != null) {
-                predicates.add(cb.equal(root.get("rentalType"), parsedType));
+            if (accommodationType != null) {
+                predicates.add(cb.equal(root.get("rentalType"), accommodationType));
             }
 
-            if (!parsedAmenities.isEmpty()) {
-                for (com.vvu981.colivibackend.features.accommodation.domain.AmenityType amenityType : parsedAmenities) {
+            if (amenities != null && !amenities.isEmpty()) {
+                for (AmenityType amenityType : amenities) {
                     predicates.add(cb.isMember(amenityType, accommodationJoin.get("amenities")));
                 }
             }

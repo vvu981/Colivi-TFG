@@ -1,5 +1,7 @@
 package com.vvu981.colivibackend.features.recommendation.service.impl;
 
+import com.vvu981.colivibackend.features.accommodation.domain.AmenityType;
+import com.vvu981.colivibackend.features.accommodation.domain.RentalType;
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing;
 import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingResponse;
 import com.vvu981.colivibackend.features.accommodation.repository.AccommodationListingRepository;
@@ -21,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -37,8 +40,8 @@ public class RecommendationServiceImpl implements RecommendationService {
             String city,
             BigDecimal minPrice,
             BigDecimal maxPrice,
-            String accommodationType,
-            List<String> amenities,
+            RentalType accommodationType,
+            List<AmenityType> amenities,
             boolean hasCriteria
     ) {}
 
@@ -53,22 +56,45 @@ public class RecommendationServiceImpl implements RecommendationService {
                 || (accommodationType != null && !accommodationType.isBlank())
                 || (amenities != null && !amenities.isEmpty());
 
+        String resolvedCity = city;
+        BigDecimal resolvedMaxPrice = maxPrice;
+        String resolvedTypeStr = accommodationType;
+
         if (userId != null && !hasExplicitCriteria) {
-            List<UserSearchHistory> recentSearches = historyRepository.findTop3ByUserIdOrderByCreatedAtDesc(userId);
-            if (!recentSearches.isEmpty()) {
-                UserSearchHistory latest = recentSearches.get(0);
-                boolean hasCriteria = (latest.getCity() != null && !latest.getCity().isBlank())
+            Optional<UserSearchHistory> latestOpt = historyRepository.findFirstByUserIdOrderByCreatedAtDesc(userId);
+            if (latestOpt.isPresent()) {
+                UserSearchHistory latest = latestOpt.get();
+                hasExplicitCriteria = (latest.getCity() != null && !latest.getCity().isBlank())
                         || (latest.getMaxPrice() != null && latest.getMaxPrice().compareTo(BigDecimal.ZERO) > 0)
                         || (latest.getAccommodationType() != null && !latest.getAccommodationType().isBlank());
                 
-                return new SearchContext(
-                        title, latest.getCity(), minPrice, latest.getMaxPrice(), 
-                        latest.getAccommodationType(), amenities, hasCriteria
-                );
+                resolvedCity = latest.getCity();
+                resolvedMaxPrice = latest.getMaxPrice();
+                resolvedTypeStr = latest.getAccommodationType();
             }
         }
 
-        return new SearchContext(title, city, minPrice, maxPrice, accommodationType, amenities, hasExplicitCriteria);
+        RentalType parsedType = null;
+        if (resolvedTypeStr != null && !resolvedTypeStr.isBlank()) {
+            try {
+                parsedType = RentalType.valueOf(resolvedTypeStr.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                log.warn("Invalid accommodation type: {}", resolvedTypeStr);
+            }
+        }
+
+        List<AmenityType> parsedAmenities = new ArrayList<>();
+        if (amenities != null && !amenities.isEmpty()) {
+            for (String am : amenities) {
+                try {
+                    parsedAmenities.add(AmenityType.valueOf(am.toUpperCase()));
+                } catch (IllegalArgumentException e) {
+                    log.warn("Invalid amenity type: {}", am);
+                }
+            }
+        }
+
+        return new SearchContext(title, resolvedCity, minPrice, resolvedMaxPrice, parsedType, parsedAmenities, hasExplicitCriteria);
     }
 
     @Override

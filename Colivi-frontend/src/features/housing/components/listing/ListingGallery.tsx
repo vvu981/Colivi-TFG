@@ -18,6 +18,11 @@ export const ListingGallery: React.FC<ListingGalleryProps> = ({ images, title })
   const [activeHeroIndex, setActiveHeroIndex] = useState<number>(0);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    e.currentTarget.src = 'data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%2394a3b8%22 stroke-width=%221.5%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cline x1=%222%22 x2=%2222%22 y1=%222%22 y2=%2222%22/%3E%3Cpath d=%22M10.41 10.41a2 2 0 1 1-2.83-2.83%22/%3E%3Cline x1=%2213.5%22 x2=%226%22 y1=%2213.5%22 y2=%2221%22/%3E%3Cline x1=%2218%22 x2=%2221%22 y1=%2212%22 y2=%2215%22/%3E%3Cpath d=%22M3.59 3.59A1.99 1.99 0 0 0 3 5v14a2 2 0 0 0 2 2h14c.55 0 1.05-.22 1.41-.59%22/%3E%3Cpath d=%22M21 15V5a2 2 0 0 0-2-2H9%22/%3E%3C/svg%3E';
+    e.currentTarget.className = 'w-full h-full object-none opacity-50 bg-surface-container-low';
+  };
+
   const sortedImages = [...images].sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
   const total = sortedImages.length;
   const hasImages = total > 0;
@@ -81,6 +86,7 @@ export const ListingGallery: React.FC<ListingGalleryProps> = ({ images, title })
           <img
             src={sortedImages[0].imageUrl}
             alt={title}
+            onError={handleImageError}
             className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-500"
           />
           <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -128,6 +134,7 @@ export const ListingGallery: React.FC<ListingGalleryProps> = ({ images, title })
                 <img
                   src={sortedImages[activeHeroIndex].imageUrl}
                   alt={`${title} - Foto ${activeHeroIndex + 1}`}
+                  onError={handleImageError}
                   className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-500"
                 />
                 <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -170,6 +177,7 @@ export const ListingGallery: React.FC<ListingGalleryProps> = ({ images, title })
                       <img
                         src={img.imageUrl}
                         alt={`${title} - Foto ${actualIndex + 1}`}
+                        onError={handleImageError}
                         className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-500"
                       />
                       <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -185,6 +193,7 @@ export const ListingGallery: React.FC<ListingGalleryProps> = ({ images, title })
                 src={sortedImages[activeHeroIndex].imageUrl}
                 alt={`${title} - Foto ${activeHeroIndex + 1}`}
                 onClick={() => openLightbox(activeHeroIndex)}
+                onError={handleImageError}
                 className="w-full h-full object-cover cursor-pointer group-hover:scale-102 transition-transform duration-500"
               />
               <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
@@ -244,6 +253,7 @@ export const ListingGallery: React.FC<ListingGalleryProps> = ({ images, title })
                 <img
                   src={img.imageUrl}
                   alt={`Miniatura ${idx + 1}`}
+                  onError={handleImageError}
                   className="w-full h-full object-cover"
                 />
               </button>
@@ -330,6 +340,10 @@ const LightboxModal: React.FC<LightboxModalProps> = ({
         <img
           src={images[currentIndex].imageUrl}
           alt={`${title} - Foto ${currentIndex + 1}`}
+          onError={(e) => {
+            e.currentTarget.src = 'data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%2394a3b8%22 stroke-width=%221.5%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cline x1=%222%22 x2=%2222%22 y1=%222%22 y2=%2222%22/%3E%3Cpath d=%22M10.41 10.41a2 2 0 1 1-2.83-2.83%22/%3E%3Cline x1=%2213.5%22 x2=%226%22 y1=%2213.5%22 y2=%2221%22/%3E%3Cline x1=%2218%22 x2=%2221%22 y1=%2212%22 y2=%2215%22/%3E%3Cpath d=%22M3.59 3.59A1.99 1.99 0 0 0 3 5v14a2 2 0 0 0 2 2h14c.55 0 1.05-.22 1.41-.59%22/%3E%3Cpath d=%22M21 15V5a2 2 0 0 0-2-2H9%22/%3E%3C/svg%3E';
+            e.currentTarget.className = 'max-h-[75vh] w-full max-w-full object-none rounded-2xl shadow-2xl opacity-50 bg-black/50 select-none';
+          }}
           className="max-h-[75vh] max-w-full object-contain rounded-2xl shadow-2xl select-none"
           onClick={(e) => e.stopPropagation()}
         />
@@ -366,7 +380,10 @@ const LightboxModal: React.FC<LightboxModalProps> = ({
                   : 'border-white/20 opacity-40 hover:opacity-100 hover:border-white/60'
               }`}
             >
-              <img src={img.imageUrl} alt="" className="w-full h-full object-cover" />
+              <img src={img.imageUrl} alt="" onError={(e) => {
+                e.currentTarget.src = 'data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%2394a3b8%22 stroke-width=%221.5%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cline x1=%222%22 x2=%2222%22 y1=%222%22 y2=%2222%22/%3E%3Cpath d=%22M10.41 10.41a2 2 0 1 1-2.83-2.83%22/%3E%3Cline x1=%2213.5%22 x2=%226%22 y1=%2213.5%22 y2=%2221%22/%3E%3Cline x1=%2218%22 x2=%2221%22 y1=%2212%22 y2=%2215%22/%3E%3Cpath d=%22M3.59 3.59A1.99 1.99 0 0 0 3 5v14a2 2 0 0 0 2 2h14c.55 0 1.05-.22 1.41-.59%22/%3E%3Cpath d=%22M21 15V5a2 2 0 0 0-2-2H9%22/%3E%3C/svg%3E';
+                e.currentTarget.className = 'w-full h-full object-none opacity-50 bg-black/50';
+              }} className="w-full h-full object-cover" />
             </button>
           ))}
         </div>
