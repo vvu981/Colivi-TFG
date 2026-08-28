@@ -92,7 +92,7 @@ class EmailServiceImplTest {
         String toEmail = "tenant@test.com";
         String listingTitle = "Piso soleado en el centro";
 
-        emailService.sendBookingStatusEmail(toEmail, listingTitle, true);
+        emailService.sendBookingStatusEmail(toEmail, listingTitle, true, java.time.LocalDateTime.now().plusHours(72));
 
         ArgumentCaptor<SimpleMailMessage> messageCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
         verify(mailSender).send(messageCaptor.capture());
@@ -111,7 +111,7 @@ class EmailServiceImplTest {
         String toEmail = "tenant2@test.com";
         String listingTitle = "Habitación pequeña";
 
-        emailService.sendBookingStatusEmail(toEmail, listingTitle, false);
+        emailService.sendBookingStatusEmail(toEmail, listingTitle, false, null);
 
         ArgumentCaptor<SimpleMailMessage> messageCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
         verify(mailSender).send(messageCaptor.capture());
@@ -140,5 +140,29 @@ class EmailServiceImplTest {
         assertThat(capturedMessage.getSubject()).isEqualTo("Restablece tu contraseña en Colivi");
         assertThat(capturedMessage.getText()).contains("http://localhost:3000/reset-password?token=reset-token-xyz");
         assertThat(capturedMessage.getText()).contains("24 horas");
+    }
+
+    @Test
+    @DisplayName("debe enviar correo de nueva solicitud de reserva al anfitrión con formato correcto")
+    void shouldSendNewBookingRequestEmailToHost() {
+        String toEmail = "host@test.com";
+        String tenantName = "Juan Pérez";
+        String listingTitle = "Habitación luminosa";
+        java.time.LocalDate start = java.time.LocalDate.of(2026, 9, 1);
+        java.time.LocalDate end = java.time.LocalDate.of(2027, 6, 30);
+        String msg = "Soy estudiante de máster.";
+
+        emailService.sendNewBookingRequestToHost(toEmail, tenantName, listingTitle, start, end, msg);
+
+        ArgumentCaptor<SimpleMailMessage> messageCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(mailSender).send(messageCaptor.capture());
+
+        SimpleMailMessage capturedMessage = messageCaptor.getValue();
+        assertThat(capturedMessage.getTo()).containsExactly("host@test.com");
+        assertThat(capturedMessage.getSubject()).contains("Habitación luminosa");
+        assertThat(capturedMessage.getText()).contains("Juan Pérez");
+        assertThat(capturedMessage.getText()).contains("01/09/2026");
+        assertThat(capturedMessage.getText()).contains("30/06/2027");
+        assertThat(capturedMessage.getText()).contains("Soy estudiante de máster.");
     }
 }

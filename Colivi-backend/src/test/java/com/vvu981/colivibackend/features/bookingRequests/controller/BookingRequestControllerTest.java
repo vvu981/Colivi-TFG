@@ -65,7 +65,7 @@ public class BookingRequestControllerTest {
         requestId = UUID.randomUUID();
         requestDto = new BookingRequestDto(UUID.randomUUID(), LocalDate.now().plusDays(5), LocalDate.now().plusMonths(3), "Hello");
         responseDto = new BookingRequestResponseDto(requestId, currentUserId, UUID.randomUUID(),
-                LocalDate.now(), LocalDate.now().plusMonths(3), "Hello", RequestStatus.PENDING, LocalDateTime.now(), null);
+                LocalDate.now(), LocalDate.now().plusMonths(3), "Hello", RequestStatus.PENDING, LocalDateTime.now(), null, null);
     }
 
     @Test
@@ -179,5 +179,14 @@ public class BookingRequestControllerTest {
             // Si GlobalExceptionHandler no está cargado, Spring tira ServletException envolviendo a UnauthorizedActionException
             org.junit.jupiter.api.Assertions.assertTrue(e.getCause() instanceof com.vvu981.colivibackend.core.exception.UnauthorizedActionException);
         }
+    }
+
+    @Test
+    void getPendingRequestsCountSuccess() throws Exception {
+        when(requestService.countPendingRequestsForLandlord(any())).thenReturn(5L);
+
+        mockMvc.perform(get("/api/v1/booking-requests/landlord/pending-count"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.count").value(5));
     }
 }

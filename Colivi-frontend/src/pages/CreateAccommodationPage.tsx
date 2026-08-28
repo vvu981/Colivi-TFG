@@ -110,10 +110,10 @@ export const CreateAccommodationPage = () => {
   // ── Render ────────────────────────────────────────────────────────
   return (
     <MainLayout>
-      <div className="w-full px-margin-mobile md:px-margin-desktop py-xl max-w-3xl mx-auto">
+      <div className="w-full px-margin-mobile md:px-margin-desktop py-10 max-w-3xl mx-auto">
         {/* Header */}
-        <div className="mb-2xl">
-          <h1 className="text-display-lg-mobile md:text-headline-md font-headline-md text-on-surface mb-sm">
+        <div className="mb-16">
+          <h1 className="text-display-lg-mobile md:text-headline-md font-headline-md text-on-surface mb-2">
             Registra tu alojamiento
           </h1>
           <p className="text-body-md font-body-md text-on-surface-variant">
@@ -122,7 +122,7 @@ export const CreateAccommodationPage = () => {
         </div>
 
         {/* Step indicator */}
-        <div className="mb-2xl flex justify-center">
+        <div className="mb-16 flex justify-center">
           <StepIndicator currentStep={currentStep} />
         </div>
 
@@ -139,7 +139,7 @@ export const CreateAccommodationPage = () => {
         {currentStep === 2 && accommodation && (
           <div className="flex flex-col gap-8">
             <div>
-              <h2 className="text-headline-sm font-headline-sm text-on-surface mb-sm">
+              <h2 className="text-headline-sm font-headline-sm text-on-surface mb-2">
                 Añade fotos de tu alojamiento
               </h2>
               <p className="text-body-md font-body-md text-on-surface-variant">

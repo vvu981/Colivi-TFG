@@ -805,6 +805,19 @@ class AccommodationListingServiceImplTest {
                                         .isInstanceOf(ResourceNotFoundException.class)
                                         .hasMessageContaining("no se encuentra el anuncio");
                 }
+
+                @Test
+                @DisplayName("debe obtener el anuncio por ID incluso si su estado es UNAVAILABLE")
+                void shouldGetListingByIdWhenUnavailable() {
+                        listing.setStatus(ListingStatus.UNAVAILABLE);
+                        when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
+
+                        AccommodationListingResponse response = listingServiceImpl
+                                        .getAccommodationListing(listing.getId(), null);
+
+                        assertThat(response).isNotNull();
+                        assertThat(response.id()).isEqualTo(listing.getId());
+                }
         }
 
         @Nested

@@ -51,12 +51,6 @@
 
   --spacing-margin-mobile: 16px;
   --spacing-margin-desktop: 48px;
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
-  --spacing-xl: 40px;
-  --spacing-2xl: 64px;
   --spacing-gutter: 24px;
   --spacing-max-width: 1280px;
 }

@@ -72,17 +72,36 @@ public class BookingRequestServiceImpl implements BookingRequestService {
             throw new BusinessRuleValidationException("Error: no puedes solicitar una reserva en tu propio anuncio.");
         }
 
+        if (requestRepository.existsActiveRequestByUserAndListing(currUser.getId(), listing.getId())) {
+            throw new BusinessRuleValidationException(
+                    "Error: ya tienes una solicitud en curso o aceptada para este anuncio.");
+        }
+
         bookingRequestValidator.validateBookingDates(requestDto.startDate(), requestDto.endDate(), listing);
 
         BookingRequest requestToCreate = new BookingRequest(requestDto, currUser, listing);
 
-        requestRepository.save(requestToCreate);
+        BookingRequest savedRequest = requestRepository.save(requestToCreate);
 
-        return new BookingRequestResponseDto(requestToCreate);
+        String tenantFullName = currUser.getFirstName() != null
+                ? currUser.getFirstName() + (currUser.getLastName1() != null ? " " + currUser.getLastName1() : "")
+                : currUser.getNickname();
+
+        eventPublisher.publishEvent(new com.vvu981.colivibackend.features.bookingRequests.domain.BookingRequestCreatedEvent(
+                listing.getHost().getEmail(),
+                tenantFullName,
+                listing.getTitle(),
+                savedRequest.getStartDate(),
+                savedRequest.getEndDate(),
+                savedRequest.getMessage()
+        ));
+
+        return new BookingRequestResponseDto(savedRequest);
     }
 
     @Override
-    @Transactional // Aseguramos que todo ocurra dentro de una transacción para que el bloqueo de base de datos sea efectivo
+    @Transactional // Aseguramos que todo ocurra dentro de una transacción para que el bloqueo de
+                   // base de datos sea efectivo
     public BookingRequestResponseDto setStatusBookingRequest(RequestStatus requestStatus, UUID requestId,
             UUID currentUser) {
         User currUser = findUser(currentUser);
@@ -90,9 +109,11 @@ public class BookingRequestServiceImpl implements BookingRequestService {
         RequestStatus oldStatus = request.getStatus();
 
         // CONTROL DE EXCESO DE RESERVAS EN LA ACEPTACIÓN MANUAL
-        // Si el estado de destino es ACCEPTED, obligamos al sistema a comprobar de nuevo
+        // Si el estado de destino es ACCEPTED, obligamos al sistema a comprobar de
+        // nuevo
         // si quedan habitaciones libres para este rango de meses.
-        // Esto evita el overbooking si el casero acepta dos solicitudes pendientes consecutivas.
+        // Esto evita el overbooking si el casero acepta dos solicitudes pendientes
+        // consecutivas.
         if (requestStatus == RequestStatus.ACCEPTED) {
             listingRepository.findByIdWithPessimisticLock(request.getAccommodationListing().getId())
                     .orElseThrow(() -> new ResourceNotFoundException("Error: no se encuentra el anuncio"));
@@ -116,8 +137,8 @@ public class BookingRequestServiceImpl implements BookingRequestService {
                     request.getRequester().getEmail(),
                     request.getAccommodationListing().getTitle(),
                     request.getStatus(),
-                    request.getStatus() == RequestStatus.ACCEPTED
-            );
+                    request.getStatus() == RequestStatus.ACCEPTED,
+                    request.getExpiresAt());
             eventPublisher.publishEvent(event);
         }
 
@@ -152,6 +173,14 @@ public class BookingRequestServiceImpl implements BookingRequestService {
 
     private void handleHostStatusChange(BookingRequest request, RequestStatus newStatus) {
         if (newStatus == RequestStatus.ACCEPTED) {
+            long overlapping = requestRepository.countOverlappingAcceptedBookings(
+                    request.getAccommodationListing().getId(),
+                    request.getStartDate(),
+                    request.getEndDate());
+            if (overlapping > 0) {
+                throw new BusinessRuleValidationException(
+                        "No puedes aceptar esta solicitud porque ya tienes otra solicitud aceptada que solapa en fechas.");
+            }
             request.accept();
         } else if (newStatus == RequestStatus.REJECTED) {
             request.reject();
@@ -180,13 +209,15 @@ public class BookingRequestServiceImpl implements BookingRequestService {
     }
 
     @Override
-    public BookingRequestResponseDto confirmBookingPayment(UUID requestId, PaymentConfirmationDto paymentDto, UUID currentUserId) {
-        
+    public BookingRequestResponseDto confirmBookingPayment(UUID requestId, PaymentConfirmationDto paymentDto,
+            UUID currentUserId) {
+
         java.math.BigDecimal totalToPay = transactionTemplate.execute(status -> {
             BookingRequest request = findById(requestId);
-            
+
             if (!request.getRequester().getId().equals(currentUserId)) {
-                throw new UnauthorizedActionException("Error: solo el inquilino que creó la solicitud puede confirmar el pago.");
+                throw new UnauthorizedActionException(
+                        "Error: solo el inquilino que creó la solicitud puede confirmar el pago.");
             }
 
             if (request.getStatus() != RequestStatus.ACCEPTED) {
@@ -211,36 +242,40 @@ public class BookingRequestServiceImpl implements BookingRequestService {
         try {
             return transactionTemplate.execute(status -> {
                 BookingRequest request = findById(requestId);
-                AccommodationListing listing = listingRepository.findByIdWithPessimisticLock(request.getAccommodationListing().getId())
+                AccommodationListing listing = listingRepository
+                        .findByIdWithPessimisticLock(request.getAccommodationListing().getId())
                         .orElseThrow(() -> new ResourceNotFoundException("Error: no se encuentra el anuncio."));
 
                 if (listing.getStatus() != ListingStatus.AVAILABLE) {
                     throw new BusinessRuleValidationException("El alojamiento ya no está disponible.");
                 }
-                
+
                 try {
                     request.confirm(transactionId, paymentDto.paymentMethod());
                 } catch (IllegalStateException e) {
                     throw new BusinessRuleValidationException(e.getMessage());
                 }
-                
+
                 listing.setStatus(ListingStatus.UNAVAILABLE);
                 listingRepository.save(listing);
-                
+
                 BookingRequest savedRequest = requestRepository.save(request);
 
                 eventPublisher.publishEvent(new BookingConfirmedEvent(
-                        listing.getId(), 
+                        listing.getId(),
                         savedRequest.getId(),
                         savedRequest.getStartDate(),
-                        savedRequest.getEndDate()
-                ));
+                        savedRequest.getEndDate(),
+                        savedRequest.getRequester().getEmail(),
+                        listing.getHost().getEmail(),
+                        listing.getTitle()));
 
                 return new BookingRequestResponseDto(savedRequest);
             });
         } catch (Exception ex) {
             paymentService.refund(transactionId);
-            throw new BusinessRuleValidationException("La reserva no pudo completarse debido a un cambio de disponibilidad. Tu pago ha sido reembolsado.");
+            throw new BusinessRuleValidationException(
+                    "La reserva no pudo completarse debido a un cambio de disponibilidad. Tu pago ha sido reembolsado.");
         }
     }
 
@@ -267,7 +302,7 @@ public class BookingRequestServiceImpl implements BookingRequestService {
     @Override
     public Page<BookingRequestResponseDto> getTenantBookingRequests(int page, int size, UUID tenantId) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        return requestRepository.findByRequesterId(tenantId, pageable)
+        return requestRepository.findByRequesterIdAndStatusNot(tenantId, RequestStatus.CANCELLED, pageable)
                 .map(BookingRequestResponseDto::new);
     }
 
@@ -285,7 +320,8 @@ public class BookingRequestServiceImpl implements BookingRequestService {
                 null // startDate
         );
 
-        Specification<BookingRequest> finalSpec = Specification.where(null);
+        Specification<BookingRequest> finalSpec = Specification
+                .where((root, query, cb) -> cb.notEqual(root.get("status"), RequestStatus.CANCELLED));
 
         for (BookingRequestFilter filter : bookingFilters) {
             if (filter.isApplicable(temporalFilterDto)) {
@@ -315,6 +351,12 @@ public class BookingRequestServiceImpl implements BookingRequestService {
 
         return requestRepository.findAll(finalSpec, pageable)
                 .map(BookingRequestResponseDto::new);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long countPendingRequestsForLandlord(UUID landlordId) {
+        return requestRepository.countPendingRequestsByHostId(landlordId);
     }
 
 }

@@ -27,7 +27,8 @@ public class BookingNotificationListenerTest {
                 "tenant@example.com",
                 "Beautiful Room",
                 RequestStatus.ACCEPTED,
-                true
+                true,
+                java.time.LocalDateTime.now()
         );
 
         listener.handleBookingStatusChanged(event);
@@ -35,7 +36,51 @@ public class BookingNotificationListenerTest {
         verify(emailService).sendBookingStatusEmail(
                 "tenant@example.com",
                 "Beautiful Room",
-                true
+                true,
+                event.expiresAt()
+        );
+    }
+
+    @Test
+    void handleBookingConfirmed_shouldCallEmailService() {
+        com.vvu981.colivibackend.features.bookingRequests.domain.BookingConfirmedEvent event =
+                new com.vvu981.colivibackend.features.bookingRequests.domain.BookingConfirmedEvent(
+                        java.util.UUID.randomUUID(),
+                        java.util.UUID.randomUUID(),
+                        java.time.LocalDate.now(),
+                        java.time.LocalDate.now().plusMonths(1),
+                        "tenant@example.com",
+                        "host@example.com",
+                        "Beautiful Room"
+                );
+
+        listener.handleBookingConfirmed(event);
+
+        verify(emailService).sendPaymentConfirmationToTenant("tenant@example.com", "Beautiful Room");
+        verify(emailService).sendPaymentNotificationToLandlord("host@example.com", "Beautiful Room");
+    }
+
+    @Test
+    void handleBookingRequestCreated_shouldCallEmailService() {
+        com.vvu981.colivibackend.features.bookingRequests.domain.BookingRequestCreatedEvent event =
+                new com.vvu981.colivibackend.features.bookingRequests.domain.BookingRequestCreatedEvent(
+                        "host@example.com",
+                        "John Doe",
+                        "Cozy Flat",
+                        java.time.LocalDate.of(2026, 9, 1),
+                        java.time.LocalDate.of(2027, 6, 30),
+                        "Hola, me interesa la habitación."
+                );
+
+        listener.handleBookingRequestCreated(event);
+
+        verify(emailService).sendNewBookingRequestToHost(
+                "host@example.com",
+                "John Doe",
+                "Cozy Flat",
+                java.time.LocalDate.of(2026, 9, 1),
+                java.time.LocalDate.of(2027, 6, 30),
+                "Hola, me interesa la habitación."
         );
     }
 }

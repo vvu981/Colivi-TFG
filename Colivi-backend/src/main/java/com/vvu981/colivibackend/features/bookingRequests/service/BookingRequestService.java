@@ -29,4 +29,5 @@ public interface BookingRequestService {
     Page<BookingRequestResponseDto> getAllBookingRequestsForAdmin(BookingRequestAdminFilterDto filter, int page,
             int size);
 
+    long countPendingRequestsForLandlord(UUID landlordId);
 }

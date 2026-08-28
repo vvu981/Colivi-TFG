@@ -8,10 +8,10 @@ export const MyAccommodationsPage = () => {
 
   return (
     <MainLayout>
-      <div className="w-full px-margin-mobile md:px-margin-desktop py-xl max-w-5xl mx-auto">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-xl">
+      <div className="w-full px-margin-mobile md:px-margin-desktop py-10 max-w-5xl mx-auto">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
           <div>
-            <h1 className="text-display-lg-mobile md:text-headline-md font-headline-md text-on-surface mb-xs">
+            <h1 className="text-display-lg-mobile md:text-headline-md font-headline-md text-on-surface mb-1">
               Mis alojamientos
             </h1>
             <p className="text-body-md font-body-md text-on-surface-variant">

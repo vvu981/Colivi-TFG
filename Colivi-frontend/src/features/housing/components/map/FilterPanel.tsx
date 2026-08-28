@@ -26,8 +26,7 @@ export interface FilterPanelProps {
   onClose: () => void;
 }
 
-import { useMemo } from 'react';
-import debounce from 'lodash.debounce';
+import { useMemo, useRef } from 'react';
 
 export const FilterPanel: React.FC<FilterPanelProps> = ({
   filters: initialFilters,
@@ -39,15 +38,22 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   onClose,
 }) => {
   const [localFilters, setLocalFilters] = useState<FilterValues>(initialFilters);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setLocalFilters(initialFilters);
   }, [initialFilters]);
 
-  const debouncedOnChange = useMemo(
-    () => debounce((updated: FilterValues) => onChange(updated), 300),
-    [onChange]
-  );
+  const debouncedOnChange = useMemo(() => {
+    const fn = (updated: FilterValues) => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => onChange(updated), 300);
+    };
+    fn.cancel = () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+    return fn;
+  }, [onChange]);
 
   // Cleanup on unmount
   useEffect(() => {

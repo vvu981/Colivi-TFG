@@ -78,7 +78,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Cambiar Contraseña">
-      <form onSubmit={handleSubmit} className="p-xl flex flex-col gap-lg">
+      <form onSubmit={handleSubmit} className="p-8 flex flex-col gap-6">
           {success && (
             <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm font-medium">
               ¡Contraseña actualizada correctamente!
@@ -123,18 +123,18 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
             placeholder="Confirmar contraseña"
           />
 
-          <div className="mt-md flex justify-end gap-md">
+          <div className="mt-4 flex justify-end gap-4">
             <button
               type="button"
               onClick={handleClose}
-              className="px-xl py-2 rounded-lg font-label-md text-label-md bg-surface-variant text-on-surface-variant hover:bg-surface-dim transition-colors"
+              className="px-6 py-2 rounded-lg font-label-md text-label-md bg-surface-variant text-on-surface-variant hover:bg-surface-dim transition-colors"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={isLoading || success}
-              className="px-xl py-2 rounded-lg font-label-md text-label-md bg-primary text-on-primary hover:bg-on-primary-fixed-variant transition-colors flex items-center gap-sm disabled:opacity-50"
+              className="px-6 py-2 rounded-lg font-label-md text-label-md bg-primary text-on-primary hover:bg-on-primary-fixed-variant transition-colors flex items-center gap-2 disabled:opacity-50"
             >
               {isLoading ? <Spinner /> : "Guardar Cambios"}
             </button>

@@ -13,6 +13,8 @@ import { MyAccommodationsPage } from "../pages/MyAccommodationsPage";
 import { MyListingsPage } from "../pages/MyListingsPage";
 import { EditAccommodationPage } from "../pages/EditAccommodationPage";
 import { EditListingPage } from "../pages/EditListingPage";
+import { MyRequestsPage } from "../pages/MyRequestsPage";
+import { ReceivedRequestsPage } from "../pages/ReceivedRequestsPage";
 import { ProtectedRoute } from "./ProtectedRoute";
 
 export const AppRoutes = () => {
@@ -56,6 +58,22 @@ export const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <MyListingsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/my-requests"
+        element={
+          <ProtectedRoute>
+            <MyRequestsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/received-requests"
+        element={
+          <ProtectedRoute>
+            <ReceivedRequestsPage />
           </ProtectedRoute>
         }
       />

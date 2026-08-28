@@ -9,10 +9,10 @@ export const MyListingsPage = () => {
 
   return (
     <MainLayout>
-      <div className="w-full px-margin-mobile md:px-margin-desktop py-xl max-w-5xl mx-auto">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-xl">
+      <div className="w-full px-margin-mobile md:px-margin-desktop py-10 max-w-5xl mx-auto">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
           <div>
-            <h1 className="text-display-lg-mobile md:text-headline-md font-headline-md text-on-surface mb-xs">
+            <h1 className="text-display-lg-mobile md:text-headline-md font-headline-md text-on-surface mb-1">
               Mis anuncios
             </h1>
             <p className="text-body-md font-body-md text-on-surface-variant">
@@ -37,23 +37,19 @@ export const MyListingsPage = () => {
             {error}
           </div>
         ) : listings.length === 0 ? (
-          <div className="rounded-2xl border-2 border-dashed border-outline-variant p-12 flex flex-col items-center text-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center">
-              <FileText size={32} className="text-on-surface-variant" />
+          <div className="flex flex-col justify-center py-24 px-6 border-2 border-dashed border-outline-variant/50 rounded-3xl bg-surface-container-lowest/50 backdrop-blur-sm w-full max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 text-center">
+            <div className="bg-gradient-to-br from-primary-container to-surface-variant p-6 rounded-full mb-6 shadow-sm ring-8 ring-primary/5 mx-auto w-fit">
+              <FileText className="h-12 w-12 text-primary" />
             </div>
-            <div>
-              <h3 className="text-title-lg font-title-lg text-on-surface mb-2">
-                No tienes anuncios publicados
-              </h3>
-              <p className="text-body-md font-body-md text-on-surface-variant max-w-md">
-                Publica un anuncio sobre alguno de tus alojamientos registrados para empezar a encontrar inquilinos.
-              </p>
-            </div>
+            <h3 className="text-headline-md md:text-display-sm text-on-surface mb-3 font-bold mx-auto">No tienes anuncios publicados</h3>
+            <p className="text-body-lg text-on-surface-variant mx-auto max-w-lg mb-8">
+              Publica un anuncio sobre alguno de tus alojamientos registrados para empezar a encontrar inquilinos.
+            </p>
             <Link
               to="/create-listing"
-              className="px-6 py-3 rounded-xl bg-primary text-on-primary text-label-md font-label-md mt-4 shadow-sm hover:opacity-90"
+              className="bg-primary text-on-primary px-8 py-3 rounded-full font-label-md text-lg hover:shadow-md transition-all hover:-translate-y-1 active:translate-y-0 flex items-center gap-2 mx-auto w-fit"
             >
-              Publicar anuncio
+              <PlusCircle size={18} /> Publicar anuncio
             </Link>
           </div>
         ) : (

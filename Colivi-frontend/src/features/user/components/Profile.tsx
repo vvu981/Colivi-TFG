@@ -128,7 +128,7 @@ export const Profile = () => {
       />
 
       {error && (
-        <div className="w-full max-w-3xl mt-md">
+        <div className="w-full max-w-3xl mt-4">
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm font-medium">
             {error}
           </div>
@@ -136,14 +136,14 @@ export const Profile = () => {
       )}
 
       {/* Actions Section */}
-      <section className="w-full max-w-3xl flex flex-col md:flex-row items-center justify-between gap-md mt-lg">
-        <div className="flex flex-col md:flex-row gap-md w-full md:w-auto">
+      <section className="w-full max-w-3xl flex flex-col md:flex-row items-center justify-between gap-4 mt-6">
+        <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
           {isEditing ? (
             <>
               <button
                 onClick={handleSave}
                 disabled={isSaving}
-                className="bg-primary text-on-primary font-label-md text-label-md px-xl py-md rounded-lg transition-colors duration-200 hover:bg-on-primary-fixed-variant flex items-center justify-center gap-sm w-full md:w-auto disabled:opacity-50"
+                className="bg-primary text-on-primary font-label-md text-label-md px-10 py-4 rounded-lg transition-colors duration-200 hover:bg-on-primary-fixed-variant flex items-center justify-center gap-2 w-full md:w-auto disabled:opacity-50"
               >
                 <span className="material-symbols-outlined text-[20px]">save</span>
                 {isSaving ? "Guardando..." : "Guardar Cambios"}
@@ -151,7 +151,7 @@ export const Profile = () => {
               <button
                 onClick={handleCancelClick}
                 disabled={isSaving}
-                className="bg-surface-variant text-on-surface-variant font-label-md text-label-md px-xl py-md rounded-lg transition-colors duration-200 hover:bg-surface-dim flex items-center justify-center gap-sm w-full md:w-auto"
+                className="bg-surface-variant text-on-surface-variant font-label-md text-label-md px-10 py-4 rounded-lg transition-colors duration-200 hover:bg-surface-dim flex items-center justify-center gap-2 w-full md:w-auto"
               >
                 <span className="material-symbols-outlined text-[20px]">cancel</span>
                 Cancelar
@@ -161,14 +161,14 @@ export const Profile = () => {
             <>
               <button
                 onClick={handleEditClick}
-                className="bg-primary text-on-primary font-label-md text-label-md px-xl py-md rounded-lg transition-colors duration-200 hover:bg-on-primary-fixed-variant flex items-center justify-center gap-sm w-full md:w-auto"
+                className="bg-primary text-on-primary font-label-md text-label-md px-10 py-4 rounded-lg transition-colors duration-200 hover:bg-on-primary-fixed-variant flex items-center justify-center gap-2 w-full md:w-auto"
               >
                 <span className="material-symbols-outlined text-[20px]">edit</span>
                 Editar Información
               </button>
               <button 
                 onClick={() => setIsChangePasswordModalOpen(true)}
-                className="bg-surface text-on-surface font-label-md text-label-md px-xl py-md rounded-lg border border-outline-variant transition-colors duration-200 hover:bg-surface-container-low flex items-center justify-center gap-sm w-full md:w-auto"
+                className="bg-surface text-on-surface font-label-md text-label-md px-10 py-4 rounded-lg border border-outline-variant transition-colors duration-200 hover:bg-surface-container-low flex items-center justify-center gap-2 w-full md:w-auto"
               >
                 <span className="material-symbols-outlined text-[20px]">lock_reset</span>
                 Cambiar Contraseña
@@ -179,7 +179,7 @@ export const Profile = () => {
         {!isEditing && (
           <button
             onClick={logout}
-            className="text-error font-label-md text-label-md px-lg py-md rounded-lg hover:bg-error-container transition-colors duration-200 flex items-center justify-center gap-sm w-full md:w-auto mt-md md:mt-0"
+            className="text-error font-label-md text-label-md px-6 py-4 rounded-lg hover:bg-error-container transition-colors duration-200 flex items-center justify-center gap-2 w-full md:w-auto mt-4 md:mt-0"
           >
             <span className="material-symbols-outlined text-[20px]">logout</span>
             Cerrar sesión

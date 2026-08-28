@@ -137,6 +137,7 @@ public class BookingRequestServiceImplTest {
                         assertEquals(requestDto.message(), result.message());
                         assertEquals(RequestStatus.PENDING, result.status());
                         verify(requestRepository).save(any(BookingRequest.class));
+                        verify(eventPublisher).publishEvent(any(com.vvu981.colivibackend.features.bookingRequests.domain.BookingRequestCreatedEvent.class));
                 }
 
                 @Test
@@ -445,7 +446,7 @@ public class BookingRequestServiceImplTest {
         class GetLists {
                 @Test
                 void getTenantRequests() {
-                        when(requestRepository.findByRequesterId(eq(requester.getId()), any(PageRequest.class)))
+                        when(requestRepository.findByRequesterIdAndStatusNot(eq(requester.getId()), eq(RequestStatus.CANCELLED), any(PageRequest.class)))
                                         .thenReturn(new PageImpl<>(List.of(bookingRequest)));
 
                         Page<BookingRequestResponseDto> res = bookingRequestService.getTenantBookingRequests(0, 10,
@@ -652,6 +653,20 @@ public class BookingRequestServiceImplTest {
                                         () -> bookingRequestService.confirmBookingPayment(mockRequest.getId(),
                                                         paymentDto, requester.getId()));
                         verify(paymentService).refund("TXN-123");
+                }
+        }
+
+        @Nested
+        class CountPendingRequestsForLandlord {
+                @Test
+                void returnsCountFromRepository() {
+                        UUID landlordId = UUID.randomUUID();
+                        when(requestRepository.countPendingRequestsByHostId(landlordId)).thenReturn(3L);
+
+                        long count = bookingRequestService.countPendingRequestsForLandlord(landlordId);
+
+                        assertEquals(3L, count);
+                        verify(requestRepository).countPendingRequestsByHostId(landlordId);
                 }
         }
 }

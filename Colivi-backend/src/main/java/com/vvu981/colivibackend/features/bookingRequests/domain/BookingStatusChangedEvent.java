@@ -4,5 +4,6 @@ public record BookingStatusChangedEvent(
     String tenantEmail,
     String listingTitle,
     RequestStatus status,
-    boolean isAccepted
+    boolean isAccepted,
+    java.time.LocalDateTime expiresAt
 ) {}

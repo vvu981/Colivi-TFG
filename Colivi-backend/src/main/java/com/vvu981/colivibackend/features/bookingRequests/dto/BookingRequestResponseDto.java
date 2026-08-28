@@ -16,7 +16,8 @@ public record BookingRequestResponseDto(
         String message,
         RequestStatus status,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+        LocalDateTime expiresAt
 ) {
     /**
      * Constructor secundario para mapear la entidad de dominio directamente al DTO.
@@ -32,7 +33,8 @@ public record BookingRequestResponseDto(
                 request.getMessage(),
                 request.getStatus(),
                 request.getCreatedAt(),
-                request.getUpdatedAt()
+                request.getUpdatedAt(),
+                request.getExpiresAt()
         );
     }
 }

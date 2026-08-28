@@ -33,8 +33,8 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, isUploadingP
       : "Admin";
 
   return (
-    <section className="flex flex-col items-center mb-2xl w-full max-w-2xl text-center">
-      <div className="relative mb-lg group">
+    <section className="flex flex-col items-center mb-16 w-full max-w-2xl text-center">
+      <div className="relative mb-6 group">
         <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-surface shadow-sm relative bg-surface-variant">
           {isUploadingPhoto ? (
             <div className="flex justify-center items-center h-full w-full bg-surface-variant">
@@ -51,7 +51,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, isUploadingP
         <button
           onClick={() => photoInputRef.current?.click()}
           disabled={isUploadingPhoto}
-          className="absolute bottom-0 right-0 bg-surface text-on-surface p-sm rounded-full border border-outline-variant shadow-sm hover:bg-surface-container-low transition-colors duration-200 group-hover:scale-110 flex items-center justify-center disabled:opacity-50"
+          className="absolute bottom-0 right-0 bg-surface text-on-surface p-2 rounded-full border border-outline-variant shadow-sm hover:bg-surface-container-low transition-colors duration-200 group-hover:scale-110 flex items-center justify-center disabled:opacity-50"
         >
           <span className="material-symbols-outlined text-[20px]">photo_camera</span>
         </button>
@@ -63,13 +63,13 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, isUploadingP
           onChange={onPhotoChange}
         />
       </div>
-      <h2 className="font-headline-md text-headline-md mb-xs text-on-surface">
+      <h2 className="font-headline-md text-headline-md mb-1 text-on-surface">
         {user.nickname}
       </h2>
       
       {user.role === "ADMIN" && (
-        <div className="flex items-center justify-center gap-sm mb-sm">
-          <span className="bg-error-container text-on-error-container font-label-sm text-label-sm px-md py-xs rounded-full inline-flex items-center gap-xs border border-error">
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <span className="bg-error-container text-on-error-container font-label-sm text-label-sm px-4 py-1 rounded-full inline-flex items-center gap-1 border border-error">
             {roleLabel}
           </span>
         </div>

@@ -1,12 +1,29 @@
-import { useRef, useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useRef, useState, useEffect, useCallback } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../features/auth/context/AuthContext';
+import { bookingRequestService } from '../../features/housing/api/bookingRequestService';
 
 export const UserMenu = () => {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
+  const [pendingCount, setPendingCount] = useState<number>(0);
   const navigate = useNavigate();
+  const location = useLocation();
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const fetchPendingCount = useCallback(async () => {
+    if (!user) return;
+    try {
+      const count = await bookingRequestService.getPendingRequestsCount();
+      setPendingCount(count);
+    } catch {
+      // Ignoramos silenciosamente si el usuario no tiene permisos o hay fallo puntual
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchPendingCount();
+  }, [fetchPendingCount, location.pathname]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -28,22 +45,32 @@ export const UserMenu = () => {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2.5 focus:outline-none group"
+        className="flex items-center gap-2.5 focus:outline-none group relative"
         aria-haspopup="true"
         aria-expanded={open}
       >
         {/* Avatar */}
-        {user?.profilePicUrl ? (
-          <img
-            src={user.profilePicUrl}
-            alt={user.nickname}
-            className="w-9 h-9 rounded-full object-cover border-2 border-[#dec0b7] group-hover:border-[#9f3c16] transition-colors"
-          />
-        ) : (
-          <div className="w-9 h-9 rounded-full bg-[#9f3c16] flex items-center justify-center text-white text-sm font-bold border-2 border-[#dec0b7] group-hover:border-[#9f3c16] transition-colors">
-            {user?.nickname?.charAt(0).toUpperCase() ?? '?'}
-          </div>
-        )}
+        <div className="relative">
+          {user?.profilePicUrl ? (
+            <img
+              src={user.profilePicUrl}
+              alt={user.nickname}
+              className="w-9 h-9 rounded-full object-cover border-2 border-[#dec0b7] group-hover:border-[#9f3c16] transition-colors"
+            />
+          ) : (
+            <div className="w-9 h-9 rounded-full bg-[#9f3c16] flex items-center justify-center text-white text-sm font-bold border-2 border-[#dec0b7] group-hover:border-[#9f3c16] transition-colors">
+              {user?.nickname?.charAt(0).toUpperCase() ?? '?'}
+            </div>
+          )}
+          {pendingCount > 0 && (
+            <span
+              className="absolute -top-1 -right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white shadow-sm ring-2 ring-white animate-pulse"
+              title={`${pendingCount} solicitudes pendientes`}
+            >
+              {pendingCount > 99 ? '99+' : pendingCount}
+            </span>
+          )}
+        </div>
         {/* Nickname */}
         <span className="hidden md:block text-sm font-medium text-[#0b1c30] group-hover:text-[#9f3c16] transition-colors">
           {user?.nickname}
@@ -91,6 +118,33 @@ export const UserMenu = () => {
 
             {/* BLOQUE GESTIÓN */}
             <div className="py-1">
+              <Link
+                to="/my-requests"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#0b1c30] hover:bg-slate-50 transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-[#565e74]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Mis solicitudes
+              </Link>
+              <Link
+                to="/received-requests"
+                onClick={() => setOpen(false)}
+                className="flex items-center justify-between px-4 py-2.5 text-sm text-[#0b1c30] hover:bg-slate-50 transition-colors"
+              >
+                <div className="flex items-center gap-2.5">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-[#565e74]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                  </svg>
+                  <span>Solicitudes recibidas</span>
+                </div>
+                {pendingCount > 0 && (
+                  <span className="flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-red-600 rounded-full min-w-5 h-5">
+                    {pendingCount > 99 ? '99+' : pendingCount}
+                  </span>
+                )}
+              </Link>
               <Link
                 to="/my-accommodations"
                 onClick={() => setOpen(false)}

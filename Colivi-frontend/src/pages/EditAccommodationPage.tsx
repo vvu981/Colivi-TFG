@@ -33,7 +33,7 @@ export const EditAccommodationPage = () => {
 
   return (
     <MainLayout>
-      <div className="w-full px-margin-mobile md:px-margin-desktop py-xl max-w-3xl mx-auto flex flex-col gap-6">
+      <div className="w-full px-margin-mobile md:px-margin-desktop py-10 max-w-3xl mx-auto flex flex-col gap-6">
         <div>
           <button
             type="button"

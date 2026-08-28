@@ -33,16 +33,16 @@ export const ProfilePersonalInfoForm: React.FC<ProfilePersonalInfoFormProps> = (
   onPhoneChange,
 }) => {
   return (
-    <section className="w-full max-w-3xl mb-xl">
-      <div className="bg-surface rounded-xl border border-outline-variant p-lg md:p-xl ambient-shadow transition-all-200 hover-ambient-shadow">
-        <h3 className="font-headline-sm text-headline-sm mb-lg text-on-surface border-b border-surface-container pb-md">
+    <section className="w-full max-w-3xl mb-10">
+      <div className="bg-surface rounded-xl border border-outline-variant p-6 md:p-10 ambient-shadow transition-all-200 hover-ambient-shadow">
+        <h3 className="font-headline-sm text-headline-sm mb-6 text-on-surface border-b border-surface-container pb-4">
           Información Personal
         </h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-lg">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Nickname */}
           <div className="flex flex-col">
-            <span className="font-label-sm text-label-sm text-outline mb-xs">Nickname</span>
+            <span className="font-label-sm text-label-sm text-outline mb-1">Nickname</span>
             {isEditing ? (
               <input
                 type="text"
@@ -60,7 +60,7 @@ export const ProfilePersonalInfoForm: React.FC<ProfilePersonalInfoFormProps> = (
 
           {/* Nombre */}
           <div className="flex flex-col">
-            <span className="font-label-sm text-label-sm text-outline mb-xs">Nombre</span>
+            <span className="font-label-sm text-label-sm text-outline mb-1">Nombre</span>
             {isEditing ? (
               <input
                 type="text"
@@ -78,7 +78,7 @@ export const ProfilePersonalInfoForm: React.FC<ProfilePersonalInfoFormProps> = (
 
           {/* Primer Apellido */}
           <div className="flex flex-col">
-            <span className="font-label-sm text-label-sm text-outline mb-xs">Primer Apellido</span>
+            <span className="font-label-sm text-label-sm text-outline mb-1">Primer Apellido</span>
             {isEditing ? (
               <input
                 type="text"
@@ -96,7 +96,7 @@ export const ProfilePersonalInfoForm: React.FC<ProfilePersonalInfoFormProps> = (
 
           {/* Segundo Apellido */}
           <div className="flex flex-col">
-            <span className="font-label-sm text-label-sm text-outline mb-xs">Segundo Apellido</span>
+            <span className="font-label-sm text-label-sm text-outline mb-1">Segundo Apellido</span>
             {isEditing ? (
               <input
                 type="text"
@@ -114,7 +114,7 @@ export const ProfilePersonalInfoForm: React.FC<ProfilePersonalInfoFormProps> = (
 
           {/* Email (Read-only) */}
           <div className="flex flex-col">
-            <span className="font-label-sm text-label-sm text-outline mb-xs">Email</span>
+            <span className="font-label-sm text-label-sm text-outline mb-1">Email</span>
             <span className="font-body-md text-body-md text-on-surface">
               {user.email}
             </span>
@@ -122,7 +122,7 @@ export const ProfilePersonalInfoForm: React.FC<ProfilePersonalInfoFormProps> = (
 
           {/* Teléfono */}
           <div className="flex flex-col">
-            <span className="font-label-sm text-label-sm text-outline mb-xs">Teléfono</span>
+            <span className="font-label-sm text-label-sm text-outline mb-1">Teléfono</span>
             {isEditing ? (
               <ColiviPhoneInput
                 id="phone"

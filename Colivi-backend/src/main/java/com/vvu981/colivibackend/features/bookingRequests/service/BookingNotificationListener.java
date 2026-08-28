@@ -20,7 +20,26 @@ public class BookingNotificationListener {
         emailService.sendBookingStatusEmail(
             event.tenantEmail(),
             event.listingTitle(),
-            event.isAccepted()
+            event.isAccepted(),
+            event.expiresAt()
+        );
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handleBookingConfirmed(com.vvu981.colivibackend.features.bookingRequests.domain.BookingConfirmedEvent event) {
+        emailService.sendPaymentConfirmationToTenant(event.tenantEmail(), event.listingTitle());
+        emailService.sendPaymentNotificationToLandlord(event.landlordEmail(), event.listingTitle());
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handleBookingRequestCreated(com.vvu981.colivibackend.features.bookingRequests.domain.BookingRequestCreatedEvent event) {
+        emailService.sendNewBookingRequestToHost(
+            event.hostEmail(),
+            event.tenantName(),
+            event.listingTitle(),
+            event.startDate(),
+            event.endDate(),
+            event.message()
         );
     }
 }
