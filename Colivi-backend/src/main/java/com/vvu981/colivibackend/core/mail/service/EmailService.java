@@ -58,12 +58,14 @@ public interface EmailService {
     /**
      * Envía un correo electrónico al propietario notificándole que ha recibido una nueva solicitud de reserva.
      *
+     * @param requestId    identificador único de la solicitud de reserva.
      * @param toEmail      correo electrónico del propietario/anfitrión.
      * @param tenantName   nombre completo del inquilino que solicita la reserva.
+     * @param tenantEmail  correo electrónico de contacto del inquilino.
      * @param listingTitle título del alojamiento solicitado.
      * @param startDate    fecha de inicio de la estancia.
      * @param endDate      fecha de fin de la estancia.
      * @param message      mensaje personalizado del inquilino (puede ser nulo o vacío).
      */
-    void sendNewBookingRequestToHost(String toEmail, String tenantName, String listingTitle, java.time.LocalDate startDate, java.time.LocalDate endDate, String message);
+    void sendNewBookingRequestToHost(java.util.UUID requestId, String toEmail, String tenantName, String tenantEmail, String listingTitle, java.time.LocalDate startDate, java.time.LocalDate endDate, String message);
 }

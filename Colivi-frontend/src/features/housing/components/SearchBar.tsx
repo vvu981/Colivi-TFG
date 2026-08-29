@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Home, Bed, Search, RotateCcw, MapPin, Tag } from 'lucide-react';
-import { saveRecentSearch, type RecentSearch } from '../../../utils/recentSearch';
+import type { RecommendationsParams } from '../api/recommendationsService';
+import { listingService } from '../api/listingService';
+import { usePriceHistogram } from '../hooks/usePriceHistogram';
+import type { AccommodationListingResponse } from '../types/listing.types';
 import { Select } from '../../../components/ui/Select';
 import { MultiSelect } from '../../../components/ui/MultiSelect';
 import { PriceRangeDropdown } from '../../../components/ui/PriceRangeDropdown';
@@ -9,24 +12,46 @@ import { AMENITY_CONFIG, ALL_AMENITIES } from '../constants/amenityConfig';
 // ── Props ──────────────────────────────────────────────────────────────────────
 
 interface SearchBarProps {
-  /** Called after saving the search to localStorage so the parent can trigger a re-fetch. */
-  onSearch: (params: RecentSearch) => void;
+  /** Called when the user submits an active search. */
+  onSearch: (params: RecommendationsParams | undefined) => void;
+  /** Optional callback when the user resets all search fields. */
+  onReset?: () => void;
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
-export const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
+export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, onReset }) => {
   const [title, setTitle] = useState('');
   const [city, setCity] = useState('');
   const [minPrice, setMinPrice] = useState<number | undefined>(undefined);
   const [maxPrice, setMaxPrice] = useState<number | undefined>(undefined);
   const [rentalType, setRentalType] = useState('');
   const [amenities, setAmenities] = useState<string[]>([]);
+  const [catalogListings, setCatalogListings] = useState<AccommodationListingResponse[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    listingService.search({ size: 100, page: 0 })
+      .then((page) => {
+        if (!cancelled && page.content) {
+          setCatalogListings(page.content);
+        }
+      })
+      .catch(() => {
+        // Silently fallback if network fails
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const { globalMaxPrice, globalHistogramData } = usePriceHistogram(catalogListings, { minPrice, maxPrice });
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    const params: RecentSearch = {
+    const params: RecommendationsParams = {
       title: title.trim() || undefined,
       city: city.trim() || undefined,
       minPrice: minPrice,
@@ -35,10 +60,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
       amenities: amenities.length > 0 ? amenities.join(',') : undefined,
     };
 
-    // Persist for future anonymous recommendation fetches
-    saveRecentSearch(params);
-
-    // Notify parent to trigger a new recommendations fetch
     onSearch(params);
   };
 
@@ -49,9 +70,12 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
     setMaxPrice(undefined);
     setRentalType('');
     setAmenities([]);
-    const empty: RecentSearch = {};
-    saveRecentSearch(empty);
-    onSearch(empty);
+
+    if (onReset) {
+      onReset();
+    } else {
+      onSearch(undefined);
+    }
   };
 
   const hasActiveFilters = Boolean(
@@ -145,7 +169,8 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
           </label>
           <PriceRangeDropdown
             min={0}
-            max={2500}
+            max={globalMaxPrice || 2500}
+            data={globalHistogramData}
             minPrice={minPrice}
             maxPrice={maxPrice}
             onChange={({ min, max }) => {

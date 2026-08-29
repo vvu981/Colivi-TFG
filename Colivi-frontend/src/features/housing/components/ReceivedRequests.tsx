@@ -1,17 +1,25 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
-import { Inbox, AlertCircle, Loader2, Calendar, Clock, Euro, ArrowRight, User, CheckCircle, XCircle } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { Inbox, AlertCircle, Loader2, Calendar, Clock, Euro, ArrowRight, User, CheckCircle, XCircle, Eye } from 'lucide-react';
 import type { BookingRequest } from '../types/booking.types';
 import { bookingRequestService } from '../api/bookingRequestService';
 import { StatusBadge } from './StatusBadge';
 import { Button } from '../../../components/ui/Button';
 import { Modal } from '../../../components/ui/Modal';
+import { BookingRequestDetailModal } from './BookingRequestDetailModal';
 
 export const ReceivedRequests: React.FC = () => {
   const [requests, setRequests] = useState<BookingRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
+  // Search params for direct URL deep-linking (?requestId=UUID)
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestIdParam = searchParams.get('requestId');
+
+  // Detail Modal state
+  const [detailRequest, setDetailRequest] = useState<BookingRequest | null>(null);
+
   // Actions state
   const [actionRequest, setActionRequest] = useState<{ request: BookingRequest, action: 'ACCEPTED' | 'REJECTED' } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -19,6 +27,37 @@ export const ReceivedRequests: React.FC = () => {
   useEffect(() => {
     fetchRequests();
   }, []);
+
+  // Deep linking: when URL contains ?requestId=..., open detail modal automatically
+  useEffect(() => {
+    if (!requestIdParam) {
+      setDetailRequest(null);
+      return;
+    }
+
+    const found = requests.find((r) => r.id === requestIdParam);
+    if (found) {
+      setDetailRequest(found);
+    } else {
+      bookingRequestService.getById(requestIdParam)
+        .then((req) => {
+          setDetailRequest(req);
+        })
+        .catch((err) => {
+          console.error('Failed to load request from direct link', err);
+        });
+    }
+  }, [requestIdParam, requests]);
+
+  const handleOpenDetail = (request: BookingRequest) => {
+    setDetailRequest(request);
+    setSearchParams({ requestId: request.id });
+  };
+
+  const handleCloseDetail = () => {
+    setDetailRequest(null);
+    setSearchParams({});
+  };
 
   const fetchRequests = async () => {
     try {
@@ -46,6 +85,9 @@ export const ReceivedRequests: React.FC = () => {
       setRequests((prev) => 
         prev.map((req) => req.id === updated.id ? { ...req, status: updated.status } : req)
       );
+
+      // Update detail modal state if currently viewed
+      setDetailRequest((prev) => (prev && prev.id === updated.id ? { ...prev, status: updated.status } : prev));
       setActionRequest(null);
     } catch (err) {
       alert(`Error al ${actionRequest.action === 'ACCEPTED' ? 'aceptar' : 'rechazar'} la solicitud.`);
@@ -213,16 +255,26 @@ export const ReceivedRequests: React.FC = () => {
                       </div>
                       
                       {request.message && (
-                        <div className="mb-6">
+                        <div className="mb-4">
                           <p className="text-label-sm text-on-surface-variant uppercase tracking-wider mb-2">Mensaje del inquilino</p>
-                          <p className="text-body-md text-on-surface italic bg-surface-container-highest/20 p-4 rounded-2xl border border-outline-variant/30 leading-relaxed">
+                          <p className="text-body-md text-on-surface italic bg-surface-container-highest/20 p-4 rounded-2xl border border-outline-variant/30 leading-relaxed line-clamp-3">
                             "{request.message}"
                           </p>
                         </div>
                       )}
 
+                      {/* View full request button */}
+                      <button
+                        type="button"
+                        onClick={() => handleOpenDetail(request)}
+                        className="w-full mb-4 py-2 px-3 rounded-xl bg-primary/5 hover:bg-primary/10 text-primary text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <Eye size={14} />
+                        <span>Ver solicitud completa</span>
+                      </button>
+
                       {/* Footer: Price & Actions */}
-                      <div className="mt-auto pt-6 flex items-center justify-between border-t border-outline-variant/50">
+                      <div className="mt-auto pt-4 flex items-center justify-between border-t border-outline-variant/50">
                         <div className="flex flex-col">
                           <span className="text-label-sm text-on-surface-variant uppercase tracking-wider">A recibir</span>
                           <div className="flex items-center text-primary mt-0.5">
@@ -262,6 +314,7 @@ export const ReceivedRequests: React.FC = () => {
         </div>
       </div>
 
+      {/* Confirmation Modal for Accept/Reject */}
       <Modal
         isOpen={!!actionRequest}
         onClose={() => !isProcessing && setActionRequest(null)}
@@ -325,6 +378,16 @@ export const ReceivedRequests: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Full Request Detail Modal (Accessible via direct link or click) */}
+      <BookingRequestDetailModal
+        isOpen={!!detailRequest}
+        request={detailRequest}
+        onClose={handleCloseDetail}
+        onAccept={(req) => setActionRequest({ request: req, action: 'ACCEPTED' })}
+        onReject={(req) => setActionRequest({ request: req, action: 'REJECTED' })}
+        isProcessing={isProcessing}
+      />
     </>
   );
 };

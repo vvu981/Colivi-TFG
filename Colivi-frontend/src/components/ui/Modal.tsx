@@ -5,13 +5,14 @@ interface ModalProps {
   onClose?: () => void;
   title: string;
   children: React.ReactNode;
+  zIndex?: string;
 }
 
-export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
+export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, zIndex = "z-[60]" }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+    <div className={`fixed inset-0 ${zIndex} flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150`}>
       <div className="bg-surface w-full max-w-[450px] min-w-[300px] rounded-2xl shadow-xl overflow-hidden">
         <div className="p-6 border-b border-surface-container flex items-center justify-between">
           <h2 className="font-headline-sm text-headline-sm text-on-surface">{title}</h2>

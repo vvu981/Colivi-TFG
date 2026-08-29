@@ -88,8 +88,10 @@ public class BookingRequestServiceImpl implements BookingRequestService {
                 : currUser.getNickname();
 
         eventPublisher.publishEvent(new com.vvu981.colivibackend.features.bookingRequests.domain.BookingRequestCreatedEvent(
+                savedRequest.getId(),
                 listing.getHost().getEmail(),
                 tenantFullName,
+                currUser.getEmail(),
                 listing.getTitle(),
                 savedRequest.getStartDate(),
                 savedRequest.getEndDate(),

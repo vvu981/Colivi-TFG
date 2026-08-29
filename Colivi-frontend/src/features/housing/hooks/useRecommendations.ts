@@ -1,45 +1,54 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../../auth/context/AuthContext';
-import { getRecentSearch, type RecentSearch } from '../../../utils/recentSearch';
 import {
   fetchRecommendations,
   type RecommendationsParams,
 } from '../api/recommendationsService';
 import type { RecommendationResponse } from '../types/listing.types';
 
-interface UseRecommendationsResult {
+export interface UseRecommendationsResult {
   data: RecommendationResponse | null;
   isLoading: boolean;
   error: string | null;
-  /** Call this to force a re-fetch (e.g. after saving a new search). */
+  /** Executes an active search for the current session. */
+  search: (params?: RecommendationsParams) => void;
+  /** Resets the active search and re-fetches clean recommendations. */
+  reset: () => void;
+  /** Refreshes using current search params. */
   refresh: () => void;
 }
 
 /**
  * Custom hook that retrieves listing recommendations.
  *
- * - SRP: only manages fetch state (data / isLoading / error).
- * - If the user is NOT authenticated, it reads the last anonymous search
- *   from localStorage and passes it as query params.
- * - If the user IS authenticated, the bearer token added by the axios
- *   interceptor is enough; no params are needed.
- * - Exposes a `refresh` callback so consumers (e.g. SearchBar) can trigger
- *   a re-fetch without unmounting/remounting.
+ * - SRP: manages recommendation fetch state.
+ * - Initial load is completely clean (no stale localStorage filters injected).
+ * - Active searches in the current session are explicitly triggered via `search(params)`.
+ * - Calling `reset()` clears the active search and restores default recommendations.
  */
 export const useRecommendations = (): UseRecommendationsResult => {
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const [data, setData] = useState<RecommendationResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // Incrementing this counter triggers a new fetch
+  const [activeParams, setActiveParams] = useState<RecommendationsParams | undefined>(undefined);
   const [fetchTick, setFetchTick] = useState(0);
+
+  const search = useCallback((params?: RecommendationsParams) => {
+    setActiveParams(params);
+    setFetchTick((prev) => prev + 1);
+  }, []);
+
+  const reset = useCallback(() => {
+    setActiveParams(undefined);
+    setFetchTick((prev) => prev + 1);
+  }, []);
 
   const refresh = useCallback(() => {
     setFetchTick((prev) => prev + 1);
   }, []);
 
   useEffect(() => {
-    // Wait until the auth context has resolved before fetching
     if (isAuthLoading) return;
 
     let cancelled = false;
@@ -49,19 +58,15 @@ export const useRecommendations = (): UseRecommendationsResult => {
       setError(null);
 
       try {
-        const recentSearch: RecentSearch | null = getRecentSearch();
-
-        const params: RecommendationsParams | undefined =
-          recentSearch ?? undefined;
-
-        const result = await fetchRecommendations(params);
+        const result = await fetchRecommendations(activeParams);
 
         if (!cancelled) setData(result);
       } catch {
-        if (!cancelled)
+        if (!cancelled) {
           setError(
             'No se pudieron cargar las recomendaciones. Inténtalo de nuevo más tarde.',
           );
+        }
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -72,10 +77,8 @@ export const useRecommendations = (): UseRecommendationsResult => {
     return () => {
       cancelled = true;
     };
-    // fetchTick is the manual refresh trigger
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, isAuthLoading, fetchTick]);
+  }, [isAuthenticated, isAuthLoading, fetchTick, activeParams]);
 
-  return { data, isLoading, error, refresh };
+  return { data, isLoading, error, search, reset, refresh };
 };
 

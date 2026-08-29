@@ -441,13 +441,11 @@ class ListingFiltersTest {
         Root root = mock(Root.class);
         CriteriaQuery query = mock(CriteriaQuery.class);
         CriteriaBuilder cb = mock(CriteriaBuilder.class);
-        Path accommodationPath = mock(Path.class);
         Path hostPath = mock(Path.class);
         Path idPath = mock(Path.class);
         Predicate equalPredicate = mock(Predicate.class);
 
-        when(root.get("accommodation")).thenReturn(accommodationPath);
-        when(accommodationPath.get("host")).thenReturn(hostPath);
+        when(root.get("host")).thenReturn(hostPath);
         when(hostPath.get("id")).thenReturn(idPath);
         when(cb.equal(idPath, hostId)).thenReturn(equalPredicate);
 

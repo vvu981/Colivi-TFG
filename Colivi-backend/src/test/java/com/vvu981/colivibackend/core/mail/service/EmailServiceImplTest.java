@@ -35,6 +35,7 @@ class EmailServiceImplTest {
         ReflectionTestUtils.setField(emailService, "bookingRejectedSubject", "Actualización sobre tu solicitud de reserva");
         ReflectionTestUtils.setField(emailService, "passwordResetSubject", "Restablece tu contraseña en Colivi");
         ReflectionTestUtils.setField(emailService, "passwordResetUrlBase", "http://localhost:3000/reset-password?token=");
+        ReflectionTestUtils.setField(emailService, "receivedRequestsUrlBase", "http://localhost:3000/received-requests?requestId=");
     }
 
     @Test
@@ -143,65 +144,78 @@ class EmailServiceImplTest {
     }
 
     @Test
-    @DisplayName("debe enviar correo de nueva solicitud de reserva al anfitrión con formato correcto")
-    void shouldSendNewBookingRequestEmailToHost() {
+    @DisplayName("debe enviar correo de nueva solicitud al anfitrión con todos los datos, replyTo y enlace de solicitud")
+    void shouldSendNewBookingRequestEmailToHost_WithAllData() {
+        java.util.UUID requestId = java.util.UUID.randomUUID();
         String toEmail = "host@test.com";
         String tenantName = "Juan Pérez";
+        String tenantEmail = "juan.perez@test.com";
         String listingTitle = "Habitación luminosa";
         java.time.LocalDate start = java.time.LocalDate.of(2026, 9, 1);
         java.time.LocalDate end = java.time.LocalDate.of(2027, 6, 30);
         String msg = "Soy estudiante de máster.";
 
-        emailService.sendNewBookingRequestToHost(toEmail, tenantName, listingTitle, start, end, msg);
+        emailService.sendNewBookingRequestToHost(requestId, toEmail, tenantName, tenantEmail, listingTitle, start, end, msg);
 
         ArgumentCaptor<SimpleMailMessage> messageCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
         verify(mailSender).send(messageCaptor.capture());
 
         SimpleMailMessage capturedMessage = messageCaptor.getValue();
         assertThat(capturedMessage.getTo()).containsExactly("host@test.com");
+        assertThat(capturedMessage.getReplyTo()).isEqualTo("juan.perez@test.com");
         assertThat(capturedMessage.getSubject()).contains("Habitación luminosa");
         assertThat(capturedMessage.getText()).contains("Juan Pérez");
+        assertThat(capturedMessage.getText()).contains("juan.perez@test.com");
         assertThat(capturedMessage.getText()).contains("01/09/2026");
         assertThat(capturedMessage.getText()).contains("30/06/2027");
         assertThat(capturedMessage.getText()).contains("Soy estudiante de máster.");
+        assertThat(capturedMessage.getText()).contains(requestId.toString());
     }
 
     @Test
     @DisplayName("debe enviar correo de nueva solicitud al anfitrión cuando el mensaje es nulo o vacío")
     void shouldSendNewBookingRequestEmailToHost_WithoutMessage() {
+        java.util.UUID requestId = java.util.UUID.randomUUID();
         String toEmail = "host@test.com";
         String tenantName = "Juan Pérez";
+        String tenantEmail = "juan.perez@test.com";
         String listingTitle = "Habitación luminosa";
         java.time.LocalDate start = java.time.LocalDate.of(2026, 9, 1);
         java.time.LocalDate end = java.time.LocalDate.of(2027, 6, 30);
 
-        emailService.sendNewBookingRequestToHost(toEmail, tenantName, listingTitle, start, end, null);
+        emailService.sendNewBookingRequestToHost(requestId, toEmail, tenantName, tenantEmail, listingTitle, start, end, null);
 
         ArgumentCaptor<SimpleMailMessage> messageCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
         verify(mailSender).send(messageCaptor.capture());
 
         SimpleMailMessage capturedMessage = messageCaptor.getValue();
         assertThat(capturedMessage.getTo()).containsExactly("host@test.com");
+        assertThat(capturedMessage.getReplyTo()).isEqualTo("juan.perez@test.com");
         assertThat(capturedMessage.getText()).doesNotContain("Mensaje del inquilino:");
+        assertThat(capturedMessage.getText()).contains(requestId.toString());
     }
 
     @Test
-    @DisplayName("debe enviar correo de nueva solicitud al anfitrión cuando el mensaje es solo espacios en blanco")
-    void shouldSendNewBookingRequestEmailToHost_WithBlankMessage() {
+    @DisplayName("debe enviar correo de nueva solicitud al anfitrión cuando el mensaje es solo espacios en blanco y tenantEmail es nulo")
+    void shouldSendNewBookingRequestEmailToHost_WithBlankMessageAndNullEmail() {
+        java.util.UUID requestId = java.util.UUID.randomUUID();
         String toEmail = "host@test.com";
         String tenantName = "Juan Pérez";
         String listingTitle = "Habitación luminosa";
         java.time.LocalDate start = java.time.LocalDate.of(2026, 9, 1);
         java.time.LocalDate end = java.time.LocalDate.of(2027, 6, 30);
 
-        emailService.sendNewBookingRequestToHost(toEmail, tenantName, listingTitle, start, end, "    ");
+        emailService.sendNewBookingRequestToHost(requestId, toEmail, tenantName, null, listingTitle, start, end, "    ");
 
         ArgumentCaptor<SimpleMailMessage> messageCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
         verify(mailSender).send(messageCaptor.capture());
 
         SimpleMailMessage capturedMessage = messageCaptor.getValue();
         assertThat(capturedMessage.getTo()).containsExactly("host@test.com");
+        assertThat(capturedMessage.getReplyTo()).isNull();
         assertThat(capturedMessage.getText()).doesNotContain("Mensaje del inquilino:");
+        assertThat(capturedMessage.getText()).doesNotContain("Correo de contacto:");
+        assertThat(capturedMessage.getText()).contains(requestId.toString());
     }
 
     @Test

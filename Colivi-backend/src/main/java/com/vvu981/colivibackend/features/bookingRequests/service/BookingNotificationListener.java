@@ -34,8 +34,10 @@ public class BookingNotificationListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleBookingRequestCreated(com.vvu981.colivibackend.features.bookingRequests.domain.BookingRequestCreatedEvent event) {
         emailService.sendNewBookingRequestToHost(
+            event.requestId(),
             event.hostEmail(),
             event.tenantName(),
+            event.tenantEmail(),
             event.listingTitle(),
             event.startDate(),
             event.endDate(),

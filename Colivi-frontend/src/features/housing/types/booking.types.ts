@@ -25,6 +25,7 @@ export interface TenantInfo {
   firstName: string;
   lastName: string;
   profilePictureUrl?: string;
+  email?: string;
 }
 
 export interface ListingInfo {

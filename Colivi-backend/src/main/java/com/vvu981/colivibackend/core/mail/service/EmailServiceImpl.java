@@ -72,6 +72,9 @@ public class EmailServiceImpl implements EmailService {
     @Value("${app.mail.password-reset-url}")
     private String passwordResetUrlBase;
 
+    @Value("${app.mail.received-requests-url}")
+    private String receivedRequestsUrlBase;
+
     // ─── Implementación de la interfaz ────────────────────────────────────────
 
     /**
@@ -143,8 +146,8 @@ public class EmailServiceImpl implements EmailService {
     }
 
     @Override
-    public void sendNewBookingRequestToHost(String toEmail, String tenantName, String listingTitle, java.time.LocalDate startDate, java.time.LocalDate endDate, String message) {
-        SimpleMailMessage mailMessage = buildNewBookingRequestMessage(toEmail, tenantName, listingTitle, startDate, endDate, message);
+    public void sendNewBookingRequestToHost(java.util.UUID requestId, String toEmail, String tenantName, String tenantEmail, String listingTitle, java.time.LocalDate startDate, java.time.LocalDate endDate, String message) {
+        SimpleMailMessage mailMessage = buildNewBookingRequestMessage(requestId, toEmail, tenantName, tenantEmail, listingTitle, startDate, endDate, message);
         mailSender.send(mailMessage);
     }
 
@@ -261,14 +264,25 @@ public class EmailServiceImpl implements EmailService {
                 """.formatted(passwordResetUrlBase, token);
     }
 
-    private SimpleMailMessage buildNewBookingRequestMessage(String toEmail, String tenantName, String listingTitle, java.time.LocalDate startDate, java.time.LocalDate endDate, String userMessage) {
+    private SimpleMailMessage buildNewBookingRequestMessage(java.util.UUID requestId, String toEmail, String tenantName, String tenantEmail, String listingTitle, java.time.LocalDate startDate, java.time.LocalDate endDate, String userMessage) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(fromAddress);
         message.setTo(toEmail);
+        if (tenantEmail != null && !tenantEmail.isBlank()) {
+            message.setReplyTo(tenantEmail);
+        }
         message.setSubject("¡Nueva solicitud de reserva recibida para " + listingTitle + "!");
 
         String messagePart = (userMessage != null && !userMessage.isBlank())
                 ? "\nMensaje del inquilino: \"" + userMessage + "\"\n"
+                : "";
+
+        String tenantEmailLine = (tenantEmail != null && !tenantEmail.isBlank())
+                ? "• Correo de contacto: " + tenantEmail + "\n"
+                : "";
+
+        String requestUrl = (requestId != null && receivedRequestsUrlBase != null)
+                ? receivedRequestsUrlBase + requestId
                 : "";
 
         message.setText("""
@@ -278,18 +292,21 @@ public class EmailServiceImpl implements EmailService {
 
                 Detalles de la solicitud:
                 • Inquilino: %s
-                • Fechas: del %s al %s%s
-                Accede a tu panel de "Solicitudes recibidas" en Colivi para revisar los detalles del perfil y aceptar o rechazar la solicitud.
+                %s• Fechas: del %s al %s%s
+                Puedes ver los detalles completos de la solicitud y responder a ella aquí:
+                %s
 
                 ─────────────────────────────────────────────
-                Este correo ha sido generado automáticamente. Por favor, no respondas a él.
+                Este correo ha sido generado automáticamente. Puedes responder directamente a este correo para contactar con el solicitante.
                 © Colivi — Plataforma de alojamiento universitario
                 """.formatted(
                 listingTitle,
                 tenantName,
+                tenantEmailLine,
                 startDate.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")),
                 endDate.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")),
-                messagePart
+                messagePart,
+                requestUrl
         ));
 
         return message;

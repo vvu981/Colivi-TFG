@@ -62,10 +62,13 @@ public class BookingNotificationListenerTest {
 
     @Test
     void handleBookingRequestCreated_shouldCallEmailService() {
+        java.util.UUID requestId = java.util.UUID.randomUUID();
         com.vvu981.colivibackend.features.bookingRequests.domain.BookingRequestCreatedEvent event =
                 new com.vvu981.colivibackend.features.bookingRequests.domain.BookingRequestCreatedEvent(
+                        requestId,
                         "host@example.com",
                         "John Doe",
+                        "tenant@example.com",
                         "Cozy Flat",
                         java.time.LocalDate.of(2026, 9, 1),
                         java.time.LocalDate.of(2027, 6, 30),
@@ -75,8 +78,10 @@ public class BookingNotificationListenerTest {
         listener.handleBookingRequestCreated(event);
 
         verify(emailService).sendNewBookingRequestToHost(
+                requestId,
                 "host@example.com",
                 "John Doe",
+                "tenant@example.com",
                 "Cozy Flat",
                 java.time.LocalDate.of(2026, 9, 1),
                 java.time.LocalDate.of(2027, 6, 30),

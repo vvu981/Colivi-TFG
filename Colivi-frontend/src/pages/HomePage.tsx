@@ -4,7 +4,7 @@ import { SearchBar } from "../features/housing/components/SearchBar";
 import { useRecommendations } from "../features/housing/hooks/useRecommendations";
 
 export const HomePage = () => {
-  const { data, isLoading, error, refresh } = useRecommendations();
+  const { data, isLoading, error, search, reset } = useRecommendations();
 
   return (
     <MainLayout>
@@ -19,8 +19,8 @@ export const HomePage = () => {
           </p>
         </div>
 
-        {/* Search bar — saves to localStorage and triggers re-fetch */}
-        <SearchBar onSearch={refresh} />
+        {/* Search bar — triggers active search or reset for the current session */}
+        <SearchBar onSearch={search} onReset={reset} />
 
         {/* Recommendations section */}
         <RecommendedListings

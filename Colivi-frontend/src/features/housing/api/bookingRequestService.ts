@@ -89,7 +89,8 @@ export const bookingRequestService = {
             id: user.id,
             firstName: user.firstName,
             lastName: user.lastName1 || '',
-            profilePictureUrl: user.profilePicUrl || undefined
+            profilePictureUrl: user.profilePicUrl || undefined,
+            email: user.email,
           }
         };
       } catch (err) {
@@ -116,5 +117,45 @@ export const bookingRequestService = {
   getPendingRequestsCount: async (): Promise<number> => {
     const { data } = await api.get<{ count: number }>('/booking-requests/landlord/pending-count');
     return data.count;
+  },
+
+  getById: async (id: string): Promise<BookingRequest> => {
+    const { data } = await api.get<BookingRequestResponse>(`/booking-requests/${id}`);
+    
+    let reqPrice = 0;
+    let reqListing = undefined;
+    try {
+      const listing = await listingService.getById(data.accommodationListingId);
+      reqPrice = listing.pricePerMonth;
+      reqListing = {
+        id: listing.id,
+        title: listing.title,
+        address: listing.accommodation?.address || 'Ubicación no especificada',
+        coverImageUrl: listing.selectedImages?.[0]?.imageUrl || listing.accommodation?.images?.[0]?.imageUrl
+      };
+    } catch (e) {
+      console.error(`Error fetching listing for request ${id}`, e);
+    }
+
+    let reqTenant = undefined;
+    try {
+      const user = await userService.getById(data.requesterId);
+      reqTenant = {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName1 || '',
+        profilePictureUrl: user.profilePicUrl || undefined,
+        email: user.email,
+      };
+    } catch (e) {
+      console.error(`Error fetching tenant user for request ${id}`, e);
+    }
+
+    return {
+      ...data,
+      totalPrice: reqPrice,
+      listing: reqListing,
+      tenant: reqTenant
+    };
   }
 };

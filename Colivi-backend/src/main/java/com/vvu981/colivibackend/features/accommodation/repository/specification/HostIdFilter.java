@@ -21,7 +21,7 @@ public class HostIdFilter implements ListingFilter {
         return (root, query, cb) -> {
             try {
                 UUID hostId = UUID.fromString(params.get("hostId").trim());
-                return cb.equal(root.get("accommodation").get("host").get("id"), hostId);
+                return cb.equal(root.get("host").get("id"), hostId);
             } catch (IllegalArgumentException e) {
                 // Si el hostId no es un UUID válido, devolvemos una condición que no se cumpla nunca
                 return cb.disjunction();
