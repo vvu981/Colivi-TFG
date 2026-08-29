@@ -5,8 +5,7 @@ import com.vvu981.colivibackend.core.security.JwtTokenProvider;
 import com.vvu981.colivibackend.core.security.SecurityConfig;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
-import com.vvu981.colivibackend.features.user.dto.UpdateNonSensible;
-import com.vvu981.colivibackend.features.user.dto.UpdateSensible;
+import com.vvu981.colivibackend.features.user.dto.*;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
 import com.vvu981.colivibackend.features.user.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +17,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -31,28 +31,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
- * Tests de capa web para UserController usando @WebMvcTest con Security activa.
- *
- * PATRÓN CLAVE: NO se mockea el JwtAuthenticationFilter sino sus dependencias
- * (JwtTokenProvider y UserRepository). Esto permite que el filtro REAL se
- * ejecute
- * en la cadena de seguridad, preservando los controles de acceso
- * de @PreAuthorize
- * y la inyección de @AuthenticationPrincipal.
- *
- * - Sin cabecera Authorization → filtro no autentica → Spring Security rechaza
- * con 401/403
- * - @WithMockUser → inyecta autenticación directamente en el SecurityContext
- * (bypasa el filtro)
- * - authentication(buildAuth(user)) → inyecta el User entidad como principal
- * vía MockMvc,
- * replicando exactamente lo que hace
- * JwtAuthenticationFilter.setSecurityContext()
+ * Tests de capa web exhaustivos para UserController usando @WebMvcTest con Security activa.
  */
 @WebMvcTest(UserController.class)
 @Import(SecurityConfig.class)
@@ -70,7 +53,6 @@ class UserControllerTest {
     private UserService userService;
 
     // --- Dependencias del JwtAuthenticationFilter (filtro REAL, no mockeado) ---
-    // Sin estas, el contexto no puede instanciar JwtAuthenticationFilter.
     @MockBean
     private JwtTokenProvider jwtTokenProvider;
     @MockBean
@@ -91,13 +73,6 @@ class UserControllerTest {
         authenticatedUser.setTokenVersion(1);
     }
 
-    /**
-     * Construye un UsernamePasswordAuthenticationToken con el User entidad como
-     * principal,
-     * replicando exactamente lo que hace
-     * JwtAuthenticationFilter.setSecurityContext().
-     * Necesario porque User no implementa UserDetails.
-     */
     private UsernamePasswordAuthenticationToken buildAuth(User user) {
         SimpleGrantedAuthority authority = new SimpleGrantedAuthority(user.getRole().name());
         return new UsernamePasswordAuthenticationToken(
@@ -116,11 +91,9 @@ class UserControllerTest {
         @DisplayName("usuario con rol ADMIN recibe 204 No Content")
         @WithMockUser(authorities = "ADMIN")
         void givenAdminUser_whenSetAdmin_thenReturns204() throws Exception {
-            // Arrange
             UUID targetId = UUID.randomUUID();
             doNothing().when(userService).setAdmin(any(UUID.class));
 
-            // Act & Assert
             mockMvc.perform(patch("/api/v1/users/{userId}/admin", targetId))
                     .andExpect(status().isNoContent());
 
@@ -131,7 +104,6 @@ class UserControllerTest {
         @DisplayName("usuario con rol USER recibe 403 Forbidden")
         @WithMockUser(authorities = "USER")
         void givenRegularUser_whenSetAdmin_thenReturns403() throws Exception {
-            // Act & Assert — @PreAuthorize("hasAuthority('ADMIN')") bloquea al USER
             mockMvc.perform(patch("/api/v1/users/{userId}/admin", UUID.randomUUID()))
                     .andExpect(status().isForbidden());
 
@@ -139,12 +111,166 @@ class UserControllerTest {
         }
 
         @Test
-        @DisplayName("petición sin autenticación recibe 403 (Spring Security 6: AccessDeniedHandler activa primero)")
+        @DisplayName("petición sin autenticación recibe 403")
         void givenUnauthenticated_whenSetAdmin_thenReturns403() throws Exception {
-            // Act & Assert
-            // Spring Security 6 sin AuthenticationEntryPoint explícito devuelve 403
-            // para usuarios anónimos que llegan a endpoints protegidos.
             mockMvc.perform(patch("/api/v1/users/{userId}/admin", UUID.randomUUID()))
+                    .andExpect(status().isForbidden());
+
+            verifyNoInteractions(userService);
+        }
+    }
+
+    // =========================================================================
+    // GET /api/v1/users/me
+    // =========================================================================
+
+    @Nested
+    @DisplayName("GET /me — getMyProfile")
+    class GetMyProfileEndpoint {
+
+        @Test
+        @DisplayName("usuario autenticado obtiene su perfil y recibe 200 OK con MyProfileResponse")
+        void givenAuthenticatedUser_whenGetMyProfile_thenReturns200WithDto() throws Exception {
+            MyProfileResponse responseDto = new MyProfileResponse(
+                    authenticatedUser.getId(),
+                    "victor@colivi.com",
+                    "+34612345678",
+                    UserRole.USER,
+                    "vvu981",
+                    "Víctor",
+                    "Vallejo",
+                    "García",
+                    "https://cloudinary.com/avatar.jpg",
+                    LocalDateTime.now()
+            );
+
+            when(userService.getMyProfile(authenticatedUser.getId())).thenReturn(responseDto);
+
+            mockMvc.perform(get("/api/v1/users/me")
+                    .with(authentication(buildAuth(authenticatedUser))))
+                    .andExpect(status().isOk())
+                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(jsonPath("$.id").value(authenticatedUser.getId().toString()))
+                    .andExpect(jsonPath("$.email").value("victor@colivi.com"))
+                    .andExpect(jsonPath("$.nickname").value("vvu981"))
+                    .andExpect(jsonPath("$.firstName").value("Víctor"))
+                    .andExpect(jsonPath("$.role").value("USER"));
+
+            verify(userService).getMyProfile(authenticatedUser.getId());
+        }
+
+        @Test
+        @DisplayName("petición sin autenticación recibe 403 Forbidden")
+        void givenUnauthenticated_whenGetMyProfile_thenReturns403() throws Exception {
+            mockMvc.perform(get("/api/v1/users/me"))
+                    .andExpect(status().isForbidden());
+
+            verifyNoInteractions(userService);
+        }
+    }
+
+    // =========================================================================
+    // GET /api/v1/users/{userId}
+    // =========================================================================
+
+    @Nested
+    @DisplayName("GET /{userId} — getUserProfile")
+    class GetUserProfileEndpoint {
+
+        @Test
+        @DisplayName("obtiene el perfil público de un usuario y recibe 200 OK con UserProfileResponse")
+        void givenAuthenticatedUser_whenGetUserProfile_thenReturns200WithDto() throws Exception {
+            UUID targetId = UUID.randomUUID();
+            UserProfileResponse responseDto = new UserProfileResponse(
+                    targetId,
+                    "targetNick",
+                    "Juan",
+                    "Pérez",
+                    "López",
+                    "https://cloudinary.com/pic.jpg",
+                    LocalDateTime.now()
+            );
+
+            when(userService.getUserProfile(targetId)).thenReturn(responseDto);
+
+            mockMvc.perform(get("/api/v1/users/{userId}", targetId)
+                    .with(authentication(buildAuth(authenticatedUser))))
+                    .andExpect(status().isOk())
+                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(jsonPath("$.id").value(targetId.toString()))
+                    .andExpect(jsonPath("$.nickname").value("targetNick"))
+                    .andExpect(jsonPath("$.firstName").value("Juan"))
+                    .andExpect(jsonPath("$.lastName1").value("Pérez"));
+
+            verify(userService).getUserProfile(targetId);
+        }
+
+        @Test
+        @DisplayName("petición sin autenticación recibe 403 Forbidden")
+        void givenUnauthenticated_whenGetUserProfile_thenReturns403() throws Exception {
+            mockMvc.perform(get("/api/v1/users/{userId}", UUID.randomUUID()))
+                    .andExpect(status().isForbidden());
+
+            verifyNoInteractions(userService);
+        }
+    }
+
+    // =========================================================================
+    // GET /api/v1/users/admin/{userId}
+    // =========================================================================
+
+    @Nested
+    @DisplayName("GET /admin/{userId} — getAdminUserProfile")
+    class GetAdminUserProfileEndpoint {
+
+        @Test
+        @DisplayName("usuario ADMIN obtiene perfil administrativo completo y recibe 200 OK")
+        @WithMockUser(authorities = "ADMIN")
+        void givenAdminUser_whenGetAdminUserProfile_thenReturns200WithDto() throws Exception {
+            UUID targetId = UUID.randomUUID();
+            AdminUserProfileResponse responseDto = new AdminUserProfileResponse(
+                    targetId,
+                    "admin-view@colivi.com",
+                    "+34611111111",
+                    UserRole.USER,
+                    "targetNick",
+                    "Juan",
+                    "Pérez",
+                    "López",
+                    "https://cloudinary.com/pic.jpg",
+                    LocalDateTime.now(),
+                    null,
+                    null,
+                    null,
+                    null
+            );
+
+            when(userService.getAdminUserProfile(targetId)).thenReturn(responseDto);
+
+            mockMvc.perform(get("/api/v1/users/admin/{userId}", targetId))
+                    .andExpect(status().isOk())
+                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(jsonPath("$.id").value(targetId.toString()))
+                    .andExpect(jsonPath("$.email").value("admin-view@colivi.com"))
+                    .andExpect(jsonPath("$.role").value("USER"));
+
+            verify(userService).getAdminUserProfile(targetId);
+        }
+
+        @Test
+        @DisplayName("usuario con rol USER recibe 403 Forbidden")
+        @WithMockUser(authorities = "USER")
+        void givenRegularUser_whenGetAdminUserProfile_thenReturns403() throws Exception {
+            mockMvc.perform(get("/api/v1/users/admin/{userId}", UUID.randomUUID()))
+                    .andExpect(status().isForbidden());
+
+            verifyNoInteractions(userService);
+        }
+
+        @Test
+        @DisplayName("petición sin autenticación recibe 403 Forbidden")
+        void givenUnauthenticated_whenGetAdminUserProfile_thenReturns403() throws Exception {
+            mockMvc.perform(get("/api/v1/users/admin/{userId}", UUID.randomUUID()))
                     .andExpect(status().isForbidden());
 
             verifyNoInteractions(userService);
@@ -162,7 +288,6 @@ class UserControllerTest {
         @Test
         @DisplayName("usuario autenticado recibe 200 con DTO actualizado")
         void givenAuthenticatedUser_whenUpdateProfile_thenReturns200WithDto() throws Exception {
-            // Arrange
             UpdateNonSensible requestDto = new UpdateNonSensible(
                     "nuevo_nick", "NuevoNombre", "NuevoApellido", null, "+34600000000", null);
             UpdateNonSensible responseDto = new UpdateNonSensible(
@@ -170,8 +295,6 @@ class UserControllerTest {
             when(userService.updateNonSensibleData(any(UUID.class), any(UpdateNonSensible.class)))
                     .thenReturn(responseDto);
 
-            // Act & Assert — authentication() inyecta el User entidad como
-            // @AuthenticationPrincipal
             mockMvc.perform(patch("/api/v1/users/me/profile")
                     .with(authentication(buildAuth(authenticatedUser)))
                     .contentType(MediaType.APPLICATION_JSON)
@@ -180,10 +303,12 @@ class UserControllerTest {
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                     .andExpect(jsonPath("$.nickname").value("nuevo_nick"))
                     .andExpect(jsonPath("$.firstName").value("NuevoNombre"));
+
+            verify(userService).updateNonSensibleData(eq(authenticatedUser.getId()), any(UpdateNonSensible.class));
         }
 
         @Test
-        @DisplayName("petición sin autenticación recibe 403 (Spring Security 6: AccessDeniedHandler activa primero)")
+        @DisplayName("petición sin autenticación recibe 403 Forbidden")
         void givenUnauthenticated_whenUpdateProfile_thenReturns403() throws Exception {
             UpdateNonSensible requestDto = new UpdateNonSensible(
                     "nick", "Name", "Last", null, null, null);
@@ -194,28 +319,6 @@ class UserControllerTest {
                     .andExpect(status().isForbidden());
 
             verifyNoInteractions(userService);
-        }
-
-        @Test
-        @DisplayName("@AuthenticationPrincipal pasa el User correcto al servicio (mismo email que el token)")
-        void givenAuthenticatedUser_whenUpdateProfile_thenPrincipalEmailMatchesServiceCall() throws Exception {
-            // Arrange
-            UpdateNonSensible requestDto = new UpdateNonSensible(null, "Nuevo", "Ap", null, null, null);
-            UpdateNonSensible responseDto = new UpdateNonSensible("vvu981", "Nuevo", "Ap", null, null, null);
-            when(userService.updateNonSensibleData(any(UUID.class), any(UpdateNonSensible.class)))
-                    .thenReturn(responseDto);
-
-            // Act
-            mockMvc.perform(patch("/api/v1/users/me/profile")
-                    .with(authentication(buildAuth(authenticatedUser)))
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(requestDto)))
-                    .andExpect(status().isOk());
-
-            // Assert — el User inyectado tiene el email correcto (anti-IDOR check)
-            verify(userService).updateNonSensibleData(
-                    argThat(u -> authenticatedUser.getId().equals(u)),
-                    any(UpdateNonSensible.class));
         }
     }
 
@@ -230,11 +333,9 @@ class UserControllerTest {
         @Test
         @DisplayName("usuario autenticado actualiza credenciales y recibe 204 No Content")
         void givenAuthenticatedUser_whenUpdateCredentials_thenReturns204() throws Exception {
-            // Arrange
             UpdateSensible requestDto = new UpdateSensible("currentPass", "new@email.com", null);
             doNothing().when(userService).updateSensibleData(any(UUID.class), any(UpdateSensible.class));
 
-            // Act & Assert
             mockMvc.perform(patch("/api/v1/users/me/credentials")
                     .with(authentication(buildAuth(authenticatedUser)))
                     .contentType(MediaType.APPLICATION_JSON)
@@ -242,12 +343,26 @@ class UserControllerTest {
                     .andExpect(status().isNoContent());
 
             verify(userService).updateSensibleData(
-                    argThat(u -> authenticatedUser.getId().equals(u)),
+                    eq(authenticatedUser.getId()),
                     any(UpdateSensible.class));
         }
 
         @Test
-        @DisplayName("petición sin autenticación recibe 403 (Spring Security 6: AccessDeniedHandler activa primero)")
+        @DisplayName("petición con currentPassword en blanco devuelve 400 Bad Request por @Valid")
+        void givenBlankCurrentPassword_whenUpdateCredentials_thenReturns400() throws Exception {
+            UpdateSensible requestDto = new UpdateSensible("", "new@email.com", "newPass");
+
+            mockMvc.perform(patch("/api/v1/users/me/credentials")
+                    .with(authentication(buildAuth(authenticatedUser)))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(requestDto)))
+                    .andExpect(status().isBadRequest());
+
+            verifyNoInteractions(userService);
+        }
+
+        @Test
+        @DisplayName("petición sin autenticación recibe 403 Forbidden")
         void givenUnauthenticated_whenUpdateCredentials_thenReturns403() throws Exception {
             UpdateSensible requestDto = new UpdateSensible("currentPass", null, "newPass");
 
@@ -260,19 +375,12 @@ class UserControllerTest {
         }
 
         @Test
-        @DisplayName("RuntimeException del servicio se re-lanza en MockMvc (sin @ControllerAdvice, excepción sube hasta perform())")
+        @DisplayName("RuntimeException del servicio se propaga correctamente")
         void givenServiceThrows_whenUpdateCredentials_thenExceptionPropagates() {
-            // Arrange
             UpdateSensible requestDto = new UpdateSensible("wrongPass", null, null);
             doThrow(new RuntimeException("Error: la contraseña es incorrecta"))
                     .when(userService).updateSensibleData(any(UUID.class), any(UpdateSensible.class));
 
-            // Act & Assert
-            // Sin @ControllerAdvice, @WebMvcTest re-lanza la excepción en
-            // mockMvc.perform().
-            // assertThatThrownBy captura la cadena de excepción: NestedServletException →
-            // RuntimeException.
-            // En producción con un GlobalExceptionHandler, esto devolvería 500.
             assertThatThrownBy(() -> mockMvc.perform(patch("/api/v1/users/me/credentials")
                     .with(authentication(buildAuth(authenticatedUser)))
                     .contentType(MediaType.APPLICATION_JSON)
@@ -285,11 +393,13 @@ class UserControllerTest {
     // =========================================================================
     // PATCH /api/v1/users/me/logout
     // =========================================================================
+
     @Nested
     @DisplayName("PATCH /me/logout")
     class LogoutEndpoint {
+
         @Test
-        @DisplayName("Returns 204 No Content")
+        @DisplayName("Returns 204 No Content para usuario autenticado")
         void givenAuthenticatedUser_whenLogout_thenReturns204() throws Exception {
             doNothing().when(userService).logout(any(UUID.class));
 
@@ -297,18 +407,29 @@ class UserControllerTest {
                     .with(authentication(buildAuth(authenticatedUser))))
                     .andExpect(status().isNoContent());
 
-            verify(userService).logout(argThat(u -> authenticatedUser.getId().equals(u)));
+            verify(userService).logout(authenticatedUser.getId());
+        }
+
+        @Test
+        @DisplayName("petición sin autenticación recibe 403 Forbidden")
+        void givenUnauthenticated_whenLogout_thenReturns403() throws Exception {
+            mockMvc.perform(patch("/api/v1/users/me/logout"))
+                    .andExpect(status().isForbidden());
+
+            verifyNoInteractions(userService);
         }
     }
 
     // =========================================================================
     // PATCH /api/v1/users/me/delete/soft
     // =========================================================================
+
     @Nested
     @DisplayName("PATCH /me/delete/soft")
     class DeleteSoftEndpoint {
+
         @Test
-        @DisplayName("Returns 204 No Content")
+        @DisplayName("Returns 204 No Content para usuario autenticado")
         void givenAuthenticatedUser_whenDeleteSoft_thenReturns204() throws Exception {
             doNothing().when(userService).deleteUserSoft(any(UUID.class));
 
@@ -318,14 +439,25 @@ class UserControllerTest {
 
             verify(userService).deleteUserSoft(authenticatedUser.getId());
         }
+
+        @Test
+        @DisplayName("petición sin autenticación recibe 403 Forbidden")
+        void givenUnauthenticated_whenDeleteSoft_thenReturns403() throws Exception {
+            mockMvc.perform(patch("/api/v1/users/me/delete/soft"))
+                    .andExpect(status().isForbidden());
+
+            verifyNoInteractions(userService);
+        }
     }
 
     // =========================================================================
     // DELETE /api/v1/users/hard/{userId}
     // =========================================================================
+
     @Nested
     @DisplayName("DELETE /hard/{userId}")
     class DeleteHardEndpoint {
+
         @Test
         @DisplayName("Returns 204 No Content for ADMIN")
         @WithMockUser(authorities = "ADMIN")
@@ -338,23 +470,43 @@ class UserControllerTest {
 
             verify(userService).deleteUserHard(targetId);
         }
+
+        @Test
+        @DisplayName("usuario con rol USER recibe 403 Forbidden")
+        @WithMockUser(authorities = "USER")
+        void givenRegularUser_whenDeleteHard_thenReturns403() throws Exception {
+            mockMvc.perform(delete("/api/v1/users/hard/{userId}", UUID.randomUUID()))
+                    .andExpect(status().isForbidden());
+
+            verifyNoInteractions(userService);
+        }
+
+        @Test
+        @DisplayName("petición sin autenticación recibe 403 Forbidden")
+        void givenUnauthenticated_whenDeleteHard_thenReturns403() throws Exception {
+            mockMvc.perform(delete("/api/v1/users/hard/{userId}", UUID.randomUUID()))
+                    .andExpect(status().isForbidden());
+
+            verifyNoInteractions(userService);
+        }
     }
 
     // =========================================================================
     // PATCH /api/v1/users/{userId}/ban
     // =========================================================================
+
     @Nested
     @DisplayName("PATCH /{userId}/ban")
     class BanUserEndpoint {
+
         @Test
-        @DisplayName("Returns 200 OK for ADMIN")
+        @DisplayName("Returns 204 No Content for ADMIN")
         @WithMockUser(authorities = "ADMIN")
         void givenAdminUser_whenBanUser_thenReturns204() throws Exception {
             UUID targetId = UUID.randomUUID();
             doNothing().when(userService).banUser(any(UUID.class), anyString(), any(LocalDateTime.class));
 
-            com.vvu981.colivibackend.features.user.dto.BanRequest req = new com.vvu981.colivibackend.features.user.dto.BanRequest(
-                    "bad behavior", LocalDateTime.now().plusDays(5));
+            BanRequest req = new BanRequest("bad behavior", LocalDateTime.now().plusDays(5));
 
             mockMvc.perform(patch("/api/v1/users/{userId}/ban", targetId)
                     .contentType(MediaType.APPLICATION_JSON)
@@ -363,14 +515,43 @@ class UserControllerTest {
 
             verify(userService).banUser(eq(targetId), eq("bad behavior"), any(LocalDateTime.class));
         }
+
+        @Test
+        @DisplayName("usuario con rol USER recibe 403 Forbidden")
+        @WithMockUser(authorities = "USER")
+        void givenRegularUser_whenBanUser_thenReturns403() throws Exception {
+            BanRequest req = new BanRequest("bad behavior", LocalDateTime.now().plusDays(5));
+
+            mockMvc.perform(patch("/api/v1/users/{userId}/ban", UUID.randomUUID())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(req)))
+                    .andExpect(status().isForbidden());
+
+            verifyNoInteractions(userService);
+        }
+
+        @Test
+        @DisplayName("petición sin autenticación recibe 403 Forbidden")
+        void givenUnauthenticated_whenBanUser_thenReturns403() throws Exception {
+            BanRequest req = new BanRequest("bad behavior", LocalDateTime.now().plusDays(5));
+
+            mockMvc.perform(patch("/api/v1/users/{userId}/ban", UUID.randomUUID())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(req)))
+                    .andExpect(status().isForbidden());
+
+            verifyNoInteractions(userService);
+        }
     }
 
     // =========================================================================
     // PATCH /api/v1/users/{userId}/unban
     // =========================================================================
+
     @Nested
     @DisplayName("PATCH /{userId}/unban")
     class UnbanUserEndpoint {
+
         @Test
         @DisplayName("Returns 204 No Content for ADMIN")
         @WithMockUser(authorities = "ADMIN")
@@ -383,24 +564,43 @@ class UserControllerTest {
 
             verify(userService).unbanUser(targetId);
         }
+
+        @Test
+        @DisplayName("usuario con rol USER recibe 403 Forbidden")
+        @WithMockUser(authorities = "USER")
+        void givenRegularUser_whenUnbanUser_thenReturns403() throws Exception {
+            mockMvc.perform(patch("/api/v1/users/{userId}/unban", UUID.randomUUID()))
+                    .andExpect(status().isForbidden());
+
+            verifyNoInteractions(userService);
+        }
+
+        @Test
+        @DisplayName("petición sin autenticación recibe 403 Forbidden")
+        void givenUnauthenticated_whenUnbanUser_thenReturns403() throws Exception {
+            mockMvc.perform(patch("/api/v1/users/{userId}/unban", UUID.randomUUID()))
+                    .andExpect(status().isForbidden());
+
+            verifyNoInteractions(userService);
+        }
     }
 
     // =========================================================================
     // PATCH /api/v1/users/me/profile-picture
     // =========================================================================
+
     @Nested
     @DisplayName("PATCH /me/profile-picture")
     class UploadProfilePictureEndpoint {
+
         @Test
         @DisplayName("usuario autenticado sube foto de perfil y recibe 200 con la URL")
         void givenAuthenticatedUser_whenUploadProfilePicture_thenReturns200WithUrl() throws Exception {
-            // Arrange
-            org.springframework.mock.web.MockMultipartFile file = new org.springframework.mock.web.MockMultipartFile(
+            MockMultipartFile file = new MockMultipartFile(
                     "file", "avatar.jpg", MediaType.IMAGE_JPEG_VALUE, "image-content".getBytes());
             when(userService.uploadProfilePicture(any(UUID.class), any())).thenReturn("https://cloudinary.com/avatar.jpg");
 
-            // Act & Assert
-            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/api/v1/users/me/profile-picture")
+            mockMvc.perform(multipart("/api/v1/users/me/profile-picture")
                     .file(file)
                     .with(request -> { request.setMethod("PATCH"); return request; })
                     .with(authentication(buildAuth(authenticatedUser))))
@@ -408,6 +608,20 @@ class UserControllerTest {
                     .andExpect(jsonPath("$.profilePicUrl").value("https://cloudinary.com/avatar.jpg"));
 
             verify(userService).uploadProfilePicture(eq(authenticatedUser.getId()), any());
+        }
+
+        @Test
+        @DisplayName("petición sin autenticación recibe 403 Forbidden")
+        void givenUnauthenticated_whenUploadProfilePicture_thenReturns403() throws Exception {
+            MockMultipartFile file = new MockMultipartFile(
+                    "file", "avatar.jpg", MediaType.IMAGE_JPEG_VALUE, "image-content".getBytes());
+
+            mockMvc.perform(multipart("/api/v1/users/me/profile-picture")
+                    .file(file)
+                    .with(request -> { request.setMethod("PATCH"); return request; }))
+                    .andExpect(status().isForbidden());
+
+            verifyNoInteractions(userService);
         }
     }
 }

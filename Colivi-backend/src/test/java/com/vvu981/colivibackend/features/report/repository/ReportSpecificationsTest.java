@@ -145,4 +145,56 @@ class ReportSpecificationsTest {
         Predicate result = spec.toPredicate(root, query, builder);
         assertThat(result).isNull();
     }
+
+    @Test
+    void hasTargetId_ShouldReturnEqualPredicate_WhenTargetIdIsNotNull() {
+        java.util.UUID targetId = java.util.UUID.randomUUID();
+        Path<Object> path = mock(Path.class);
+        Predicate predicate = mock(Predicate.class);
+
+        when(root.get("targetId")).thenReturn(path);
+        when(builder.equal(path, targetId)).thenReturn(predicate);
+
+        Specification<Report> spec = ReportSpecifications.hasTargetId(targetId);
+        Predicate result = spec.toPredicate(root, query, builder);
+
+        assertThat(result).isEqualTo(predicate);
+    }
+
+    @Test
+    void hasTargetId_ShouldReturnNull_WhenTargetIdIsNull() {
+        Specification<Report> spec = ReportSpecifications.hasTargetId(null);
+        Predicate result = spec.toPredicate(root, query, builder);
+        assertThat(result).isNull();
+    }
+
+    @Test
+    void hasReporterId_ShouldReturnEqualPredicate_WhenReporterIdIsNotNull() {
+        java.util.UUID reporterId = java.util.UUID.randomUUID();
+        Path<Object> path = mock(Path.class);
+        Predicate predicate = mock(Predicate.class);
+
+        when(root.get("reporterId")).thenReturn(path);
+        when(builder.equal(path, reporterId)).thenReturn(predicate);
+
+        Specification<Report> spec = ReportSpecifications.hasReporterId(reporterId);
+        Predicate result = spec.toPredicate(root, query, builder);
+
+        assertThat(result).isEqualTo(predicate);
+    }
+
+    @Test
+    void hasReporterId_ShouldReturnNull_WhenReporterIdIsNull() {
+        Specification<Report> spec = ReportSpecifications.hasReporterId(null);
+        Predicate result = spec.toPredicate(root, query, builder);
+        assertThat(result).isNull();
+    }
+
+    @Test
+    void testPrivateConstructor() throws Exception {
+        java.lang.reflect.Constructor<ReportSpecifications> constructor = ReportSpecifications.class.getDeclaredConstructor();
+        constructor.setAccessible(true);
+        ReportSpecifications instance = constructor.newInstance();
+        assertThat(instance).isNotNull();
+    }
 }

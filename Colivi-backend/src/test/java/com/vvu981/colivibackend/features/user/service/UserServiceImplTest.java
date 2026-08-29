@@ -325,6 +325,117 @@ class UserServiceImplTest {
                                         .isInstanceOf(UnauthorizedActionException.class)
                                         .hasMessageContaining("eliminada");
                 }
+
+                @Test
+                @DisplayName("debe lanzar excepcion si el email de google es solo espacios en blanco")
+                void givenTokenWithBlankEmail_whenLoginWithGoogle_thenThrowsIllegalArgumentException() {
+                        GoogleLoginRequest request = new GoogleLoginRequest("mock_token");
+                        com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload payload = new com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload();
+                        payload.setEmail("   ");
+
+                        when(googleTokenValidator.validateAndExtractPayload("mock_token")).thenReturn(payload);
+
+                        assertThatThrownBy(() -> userService.loginWithGoogle(request))
+                                        .isInstanceOf(IllegalArgumentException.class)
+                                        .hasMessageContaining("El token de Google no contiene un correo válido");
+                }
+
+                @Test
+                @DisplayName("nuevo usuario sin given_name ni family_name usa fallbacks correctamente")
+                void givenNewUserWithoutGivenNameAndFamilyName_whenLoginWithGoogle_thenUsesDefaults() {
+                        GoogleLoginRequest request = new GoogleLoginRequest("mock_token");
+                        com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload payload = new com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload();
+                        payload.setEmail("anon@colivi.com");
+
+                        when(googleTokenValidator.validateAndExtractPayload("mock_token")).thenReturn(payload);
+                        when(userRepository.findByEmailIgnoreCase("anon@colivi.com")).thenReturn(Optional.empty());
+                        when(passwordEncoder.encode(anyString())).thenReturn("hashed_pass");
+
+                        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+                        User savedUser = new User();
+                        savedUser.setEmail("anon@colivi.com");
+                        savedUser.setFirstName("Usuario Google");
+                        savedUser.setLastName1("");
+                        savedUser.setRole(UserRole.USER);
+
+                        when(userRepository.save(userCaptor.capture())).thenReturn(savedUser);
+                        when(jwtTokenProvider.generateAccessToken(savedUser)).thenReturn("access.token");
+                        when(jwtTokenProvider.generateRefreshToken(savedUser)).thenReturn("refresh.token");
+
+                        AuthResponse response = userService.loginWithGoogle(request);
+
+                        assertThat(response.accessToken()).isEqualTo("access.token");
+                        User captured = userCaptor.getValue();
+                        assertThat(captured.getFirstName()).isEqualTo("Usuario Google");
+                        assertThat(captured.getLastName1()).isEqualTo("");
+                }
+
+                @Test
+                @DisplayName("sincroniza foto de perfil de google si la actual es nula o de ejemplo")
+                void givenExistingUserWithNullOrExamplePic_whenLoginWithGoogle_thenUpdatesPic() {
+                        GoogleLoginRequest request = new GoogleLoginRequest("mock_token");
+                        com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload payload = new com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload();
+                        payload.setEmail("victor@colivi.com");
+                        payload.set("picture", "https://google.com/new_pic.jpg");
+
+                        persistedUser.setProfilePicUrl("http://example.com/old_pic.jpg");
+
+                        when(googleTokenValidator.validateAndExtractPayload("mock_token")).thenReturn(payload);
+                        when(userRepository.findByEmailIgnoreCase("victor@colivi.com")).thenReturn(Optional.of(persistedUser));
+                        when(userRepository.save(persistedUser)).thenReturn(persistedUser);
+                        when(jwtTokenProvider.generateAccessToken(persistedUser)).thenReturn("access.token");
+                        when(jwtTokenProvider.generateRefreshToken(persistedUser)).thenReturn("refresh.token");
+
+                        AuthResponse response = userService.loginWithGoogle(request);
+
+                        assertThat(response.accessToken()).isEqualTo("access.token");
+                        assertThat(persistedUser.getProfilePicUrl()).isEqualTo("https://google.com/new_pic.jpg");
+                        verify(userRepository).save(persistedUser);
+                }
+
+                @Test
+                @DisplayName("sincroniza foto de perfil de google si la actual es una cadena en blanco")
+                void givenExistingUserWithBlankPic_whenLoginWithGoogle_thenUpdatesPic() {
+                        GoogleLoginRequest request = new GoogleLoginRequest("mock_token");
+                        com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload payload = new com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload();
+                        payload.setEmail("victor@colivi.com");
+                        payload.set("picture", "https://google.com/new_pic.jpg");
+
+                        persistedUser.setProfilePicUrl("   ");
+
+                        when(googleTokenValidator.validateAndExtractPayload("mock_token")).thenReturn(payload);
+                        when(userRepository.findByEmailIgnoreCase("victor@colivi.com")).thenReturn(Optional.of(persistedUser));
+                        when(userRepository.save(persistedUser)).thenReturn(persistedUser);
+                        when(jwtTokenProvider.generateAccessToken(persistedUser)).thenReturn("access.token");
+                        when(jwtTokenProvider.generateRefreshToken(persistedUser)).thenReturn("refresh.token");
+
+                        AuthResponse response = userService.loginWithGoogle(request);
+
+                        assertThat(response.accessToken()).isEqualTo("access.token");
+                        assertThat(persistedUser.getProfilePicUrl()).isEqualTo("https://google.com/new_pic.jpg");
+                        verify(userRepository).save(persistedUser);
+                }
+
+                @Test
+                @DisplayName("no sincroniza foto si la foto de google viene en blanco")
+                void givenGoogleTokenWithBlankPic_whenLoginWithGoogle_thenDoesNotUpdatePic() {
+                        GoogleLoginRequest request = new GoogleLoginRequest("mock_token");
+                        com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload payload = new com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload();
+                        payload.setEmail("victor@colivi.com");
+                        payload.set("picture", "   ");
+
+                        persistedUser.setProfilePicUrl(null);
+
+                        when(googleTokenValidator.validateAndExtractPayload("mock_token")).thenReturn(payload);
+                        when(userRepository.findByEmailIgnoreCase("victor@colivi.com")).thenReturn(Optional.of(persistedUser));
+                        when(jwtTokenProvider.generateAccessToken(persistedUser)).thenReturn("access.token");
+                        when(jwtTokenProvider.generateRefreshToken(persistedUser)).thenReturn("refresh.token");
+
+                        AuthResponse response = userService.loginWithGoogle(request);
+
+                        assertThat(response.accessToken()).isEqualTo("access.token");
+                        verify(userRepository, never()).save(any());
+                }
         }
 
         // =========================================================================
@@ -1269,6 +1380,24 @@ class UserServiceImplTest {
                         verifyNoInteractions(imageStorageService);
                         verify(userRepository, never()).save(any());
                 }
+
+                @Test
+                @DisplayName("captura excepción si falla el borrado de la foto anterior y continua exitosamente")
+                void givenOldPicFailsDeletion_whenUploadProfilePicture_thenLogsAndDoesNotThrow() {
+                        UUID userId = persistedUser.getId();
+                        persistedUser.setProfilePicUrl("https://cloudinary.com/old.jpg");
+                        MultipartFile mockFile = mock(MultipartFile.class);
+
+                        when(userRepository.findActiveById(userId)).thenReturn(Optional.of(persistedUser));
+                        when(imageStorageService.uploadImage(mockFile)).thenReturn("https://cloudinary.com/new.jpg");
+                        doThrow(new RuntimeException("Cloudinary timeout")).when(imageStorageService).deleteImage("https://cloudinary.com/old.jpg");
+                        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+                        String result = userService.uploadProfilePicture(userId, mockFile);
+
+                        assertThat(result).isEqualTo("https://cloudinary.com/new.jpg");
+                        verify(userRepository).save(persistedUser);
+                }
         }
 
         // =========================================================================
@@ -1314,6 +1443,19 @@ class UserServiceImplTest {
                                         .thenReturn(Optional.empty());
 
                         userService.forgotPassword("unknown@colivi.com");
+
+                        verify(userRepository, never()).save(any());
+                        verifyNoInteractions(eventPublisher);
+                }
+
+                @Test
+                @DisplayName("silent return si el usuario esta eliminado")
+                void shouldSilentReturnIfDeleted() {
+                        persistedUser.setDeletedAt(LocalDateTime.now());
+                        when(userRepository.findByEmailIgnoreCase("victor@colivi.com"))
+                                        .thenReturn(Optional.of(persistedUser));
+
+                        userService.forgotPassword("victor@colivi.com");
 
                         verify(userRepository, never()).save(any());
                         verifyNoInteractions(eventPublisher);
@@ -1364,6 +1506,45 @@ class UserServiceImplTest {
 
                         assertThatThrownBy(() -> userService.resetPassword("valid-token", "pass"))
                                         .isInstanceOf(InvalidTokenException.class);
+                }
+
+                @Test
+                @DisplayName("lanza excepcion si la fecha de expiracion del token es nula")
+                void shouldThrowIfTokenExpiresAtIsNull() {
+                        persistedUser.setPasswordResetToken("valid-token");
+                        persistedUser.setPasswordResetTokenExpiresAt(null);
+
+                        when(userRepository.findByPasswordResetToken("valid-token"))
+                                        .thenReturn(Optional.of(persistedUser));
+
+                        assertThatThrownBy(() -> userService.resetPassword("valid-token", "pass"))
+                                        .isInstanceOf(InvalidTokenException.class);
+                }
+        }
+
+        @Nested
+        @DisplayName("getAdminUserProfile")
+        class GetAdminUserProfile {
+                @Test
+                @DisplayName("retorna el perfil de admin cuando el usuario existe")
+                void shouldReturnAdminUserProfile() {
+                        AdminUserProfileResponse dto = mock(AdminUserProfileResponse.class);
+                        when(userRepository.findById(persistedUser.getId())).thenReturn(Optional.of(persistedUser));
+                        when(userMapper.toAdminUserProfileDto(persistedUser)).thenReturn(dto);
+
+                        AdminUserProfileResponse result = userService.getAdminUserProfile(persistedUser.getId());
+
+                        assertThat(result).isEqualTo(dto);
+                }
+
+                @Test
+                @DisplayName("lanza excepcion si el usuario no existe")
+                void shouldThrowIfUserNotFound() {
+                        UUID randomId = UUID.randomUUID();
+                        when(userRepository.findById(randomId)).thenReturn(Optional.empty());
+
+                        assertThatThrownBy(() -> userService.getAdminUserProfile(randomId))
+                                        .isInstanceOf(UserNotFoundException.class);
                 }
         }
 }

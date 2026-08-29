@@ -211,10 +211,17 @@ class AccommodationListingTest {
         assertThatThrownBy(() -> new AccommodationListing(requestNegative, acc))
                 .isInstanceOf(BusinessRuleValidationException.class)
                 .hasMessageContaining("El precio mensual debe ser mayor a 0.");
+
+        AccommodationListingRequest requestNullPrice = new AccommodationListingRequest(
+                UUID.randomUUID(), "Title", "Desc", null, RentalType.ENTIRE_PLACE, BigDecimal.valueOf(1000), null);
+
+        assertThatThrownBy(() -> new AccommodationListing(requestNullPrice, acc))
+                .isInstanceOf(BusinessRuleValidationException.class)
+                .hasMessageContaining("El precio mensual debe ser mayor a 0.");
     }
 
     @Test
-    @DisplayName("debe lanzar excepcion al crear si el deposito es negativo")
+    @DisplayName("debe lanzar excepcion al crear si el deposito es negativo o nulo")
     void shouldThrowIfDepositIsNegativeOnCreate() {
         User host = new User();
         Accommodation acc = new Accommodation();
@@ -224,6 +231,13 @@ class AccommodationListingTest {
                 UUID.randomUUID(), "Title", "Desc", BigDecimal.valueOf(500), RentalType.ENTIRE_PLACE, BigDecimal.valueOf(-100), null);
 
         assertThatThrownBy(() -> new AccommodationListing(requestNegative, acc))
+                .isInstanceOf(BusinessRuleValidationException.class)
+                .hasMessageContaining("El depósito de seguridad no puede ser negativo.");
+
+        AccommodationListingRequest requestNullDeposit = new AccommodationListingRequest(
+                UUID.randomUUID(), "Title", "Desc", BigDecimal.valueOf(500), RentalType.ENTIRE_PLACE, null, null);
+
+        assertThatThrownBy(() -> new AccommodationListing(requestNullDeposit, acc))
                 .isInstanceOf(BusinessRuleValidationException.class)
                 .hasMessageContaining("El depósito de seguridad no puede ser negativo.");
     }

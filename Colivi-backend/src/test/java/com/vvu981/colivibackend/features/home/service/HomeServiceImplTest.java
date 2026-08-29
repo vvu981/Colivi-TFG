@@ -638,6 +638,38 @@ class HomeServiceImplTest {
                 }
 
                 @Test
+                void shouldForceExpelAndSettleDebtWhenUserIsCreditor() {
+                        UUID homeId = UUID.randomUUID();
+                        Home home = buildHome(homeId);
+                        User targetUser = new User();
+                        targetUser.setId(UUID.randomUUID());
+
+                        HomeMember adminMember = buildMember(home, testUser, HomeRole.ADMIN, HomeMemberStatus.ACTIVE);
+                        HomeMember targetMember = buildMember(home, targetUser, HomeRole.MEMBER,
+                                        HomeMemberStatus.ACTIVE);
+
+                        when(homeMemberRepository.findByHomeIdAndUserId(homeId, testUserId))
+                                        .thenReturn(Optional.of(adminMember));
+                        when(homeMemberRepository.findByHomeIdAndUserId(homeId, targetUser.getId()))
+                                        .thenReturn(Optional.of(targetMember));
+                        when(homeRepository.findByIdForUpdate(homeId))
+                                        .thenReturn(Optional.of(home));
+
+                        when(homeExpenseService.getUserBalance(homeId, targetUser.getId()))
+                                        .thenReturn(new java.math.BigDecimal("50.00"));
+
+                        homeService.forceExpelWithDebtSettlement(homeId, testUserId, targetUser.getId(), "Acreedor");
+
+                        verify(homeExpenseService).createExpense(eq(homeId),
+                                        argThat(req -> req.payerId().equals(testUserId)
+                                                        && req.participantIds().contains(targetUser.getId())
+                                                        && req.totalAmount().compareTo(new java.math.BigDecimal("50.00")) == 0),
+                                        eq(testUserId));
+
+                        assertEquals(HomeMemberStatus.LEFT, targetMember.getStatus());
+                }
+
+                @Test
                 void shouldThrowWhenNotEnoughActiveMembers() {
                         UUID homeId = UUID.randomUUID();
                         Home home = buildHome(homeId);
@@ -687,6 +719,57 @@ class HomeServiceImplTest {
                         assertThrows(UnauthorizedActionException.class,
                                         () -> homeService.forceExpelWithDebtSettlement(homeId, testUserId,
                                                         targetUser.getId(), "Motivo"));
+                }
+
+                @Test
+                void shouldThrowIfExpellingSelf() {
+                        UUID homeId = UUID.randomUUID();
+                        assertThrows(BusinessRuleValidationException.class,
+                                        () -> homeService.forceExpelWithDebtSettlement(homeId, testUserId, testUserId, "Self"));
+                }
+
+                @Test
+                void shouldThrowIfTargetMemberNotFound() {
+                        UUID homeId = UUID.randomUUID();
+                        UUID targetUserId = UUID.randomUUID();
+                        Home home = buildHome(homeId);
+                        HomeMember adminMember = buildMember(home, testUser, HomeRole.ADMIN, HomeMemberStatus.ACTIVE);
+
+                        when(homeMemberRepository.findByHomeIdAndUserId(homeId, testUserId))
+                                        .thenReturn(Optional.of(adminMember));
+                        when(homeMemberRepository.findByHomeIdAndUserId(homeId, targetUserId))
+                                        .thenReturn(Optional.empty());
+
+                        assertThrows(ResourceNotFoundException.class,
+                                        () -> homeService.forceExpelWithDebtSettlement(homeId, testUserId, targetUserId, "Reason"));
+                }
+
+                @Test
+                void shouldThrowIfTargetMemberNotActive() {
+                        UUID homeId = UUID.randomUUID();
+                        User targetUser = new User();
+                        targetUser.setId(UUID.randomUUID());
+                        Home home = buildHome(homeId);
+                        HomeMember adminMember = buildMember(home, testUser, HomeRole.ADMIN, HomeMemberStatus.ACTIVE);
+                        HomeMember targetMember = buildMember(home, targetUser, HomeRole.MEMBER, HomeMemberStatus.LEFT);
+
+                        when(homeMemberRepository.findByHomeIdAndUserId(homeId, testUserId))
+                                        .thenReturn(Optional.of(adminMember));
+                        when(homeMemberRepository.findByHomeIdAndUserId(homeId, targetUser.getId()))
+                                        .thenReturn(Optional.of(targetMember));
+
+                        assertThrows(BusinessRuleValidationException.class,
+                                        () -> homeService.forceExpelWithDebtSettlement(homeId, testUserId, targetUser.getId(), "Reason"));
+                }
+
+                @Test
+                void shouldThrowIfCallerNotMemberInRequireAdminRole() {
+                        UUID homeId = UUID.randomUUID();
+                        when(homeMemberRepository.findByHomeIdAndUserId(homeId, testUserId))
+                                        .thenReturn(Optional.empty());
+
+                        assertThrows(UnauthorizedActionException.class,
+                                        () -> homeService.forceExpelWithDebtSettlement(homeId, testUserId, UUID.randomUUID(), "Reason"));
                 }
         }
 
@@ -1024,6 +1107,57 @@ class HomeServiceImplTest {
                         assertThrows(UnauthorizedActionException.class,
                                         () -> homeService.hardDeleteHome(homeId, testUserId));
                         verify(homeRepository, never()).delete(any(Home.class));
+                }
+
+                @Test
+                void shouldThrowIfHomeNotFoundOnHardDelete() {
+                        UUID homeId = UUID.randomUUID();
+                        testUser.setRole(UserRole.ADMIN);
+
+                        when(userRepository.findActiveById(testUserId)).thenReturn(Optional.of(testUser));
+                        when(homeRepository.findById(homeId)).thenReturn(Optional.empty());
+
+                        assertThrows(ResourceNotFoundException.class,
+                                        () -> homeService.hardDeleteHome(homeId, testUserId));
+                }
+        }
+
+        // =========================================================================
+        // regenerateInvitationCode & softDelete as System Admin
+        // =========================================================================
+
+        @Nested
+        class RegenerateInvitationCodeAndAdminSoftDelete {
+                @Test
+                void shouldRegenerateInvitationCodeSuccessfully() {
+                        UUID homeId = UUID.randomUUID();
+                        Home home = buildHome(homeId);
+                        HomeMember adminMember = buildMember(home, testUser, HomeRole.ADMIN, HomeMemberStatus.ACTIVE);
+                        home.addMember(adminMember);
+
+                        when(homeMemberRepository.findByHomeIdAndUserId(homeId, testUserId))
+                                        .thenReturn(Optional.of(adminMember));
+                        when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
+                        when(invitationCodeGenerator.generate()).thenReturn("NEWCODE123");
+
+                        homeService.regenerateInvitationCode(homeId, testUserId);
+
+                        assertEquals("NEWCODE123", home.getInvitationCode());
+                        verify(homeRepository).save(home);
+                }
+
+                @Test
+                void shouldSoftDeleteHomeIfSystemAdmin() {
+                        UUID homeId = UUID.randomUUID();
+                        Home home = buildHome(homeId);
+                        testUser.setRole(UserRole.ADMIN);
+
+                        when(userRepository.findActiveById(testUserId)).thenReturn(Optional.of(testUser));
+                        when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
+
+                        homeService.softDeleteHome(homeId, testUserId);
+
+                        verify(homeRepository).save(home);
                 }
         }
 }

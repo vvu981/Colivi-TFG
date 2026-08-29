@@ -199,4 +199,27 @@ class RecommendationSpecificationTest {
         assertEquals(1, results.size());
         assertEquals(listing1.getId(), results.get(0).getId());
     }
+
+    @Test
+    void buildRecommendationSpec_NegativePricesAndBlankStrings() {
+        Specification<AccommodationListing> spec = RecommendationSpecification.buildRecommendationSpec(
+                "   ", "   ", BigDecimal.valueOf(-100), BigDecimal.valueOf(0), null, new java.util.ArrayList<>(), null
+        );
+        List<AccommodationListing> results = listingRepository.findAll(spec);
+        assertEquals(2, results.size());
+    }
+
+    @Test
+    void buildRecommendationSpec_CountAndPaginatedQueries() {
+        Specification<AccommodationListing> spec = RecommendationSpecification.buildRecommendationSpec(
+                "Madrid", BigDecimal.valueOf(100), BigDecimal.valueOf(1000), RentalType.ROOM, null, null
+        );
+        long count = listingRepository.count(spec);
+        assertEquals(1, count);
+
+        org.springframework.data.domain.Page<AccommodationListing> page = listingRepository.findAll(
+                spec, org.springframework.data.domain.PageRequest.of(0, 10)
+        );
+        assertEquals(1, page.getTotalElements());
+    }
 }

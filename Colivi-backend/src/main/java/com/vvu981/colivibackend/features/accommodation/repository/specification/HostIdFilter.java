@@ -13,7 +13,7 @@ public class HostIdFilter implements ListingFilter {
 
     @Override
     public boolean isApplicable(Map<String, String> params) {
-        return params.containsKey("hostId") && params.get("hostId") != null && !params.get("hostId").isBlank();
+        return params != null && params.containsKey("hostId") && params.get("hostId") != null && !params.get("hostId").isBlank();
     }
 
     @Override

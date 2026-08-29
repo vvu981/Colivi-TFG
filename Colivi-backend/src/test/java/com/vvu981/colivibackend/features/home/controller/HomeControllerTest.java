@@ -230,6 +230,23 @@ class HomeControllerTest {
         }
 
         @Test
+        void regenerateInvitationCode() throws Exception {
+                HomeDetailResponseDto response = new HomeDetailResponseDto(
+                                homeId, "My Home", "NEWCODE1", HomeRole.ADMIN, HomeMemberStatus.ACTIVE, 1,
+                                LocalDateTime.now(), List.of());
+
+                when(homeService.regenerateInvitationCode(eq(homeId), any())).thenReturn(response);
+
+                mockMvc.perform(patch("/api/v1/homes/{id}/invitation-code/regenerate", homeId)
+                                .with(user(principal))
+                                .with(csrf()))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.invitationCode").value("NEWCODE1"));
+
+                verify(homeService).regenerateInvitationCode(eq(homeId), any());
+        }
+
+        @Test
         void hardDeleteHome() throws Exception {
                 mockMvc.perform(delete("/api/v1/homes/{id}/hard", homeId)
                                 .with(user(adminPrincipal))

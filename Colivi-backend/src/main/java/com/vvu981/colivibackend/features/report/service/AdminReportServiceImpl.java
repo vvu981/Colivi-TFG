@@ -59,7 +59,6 @@ public class AdminReportServiceImpl implements AdminReportService {
         Report report = reportRepository.findById(reportId)
                 .orElseThrow(() -> new ResourceNotFoundException("Denuncia no encontrada."));
 
-        ReportStatus currentStatus = report.getStatus();
         ReportStatus newStatus = request.status();
 
         if (newStatus == ReportStatus.PENDING || newStatus == ReportStatus.CANCELLED) {
@@ -71,14 +70,14 @@ public class AdminReportServiceImpl implements AdminReportService {
             report.investigate(adminId);
         } else if (newStatus == ReportStatus.RESOLVED) {
             report.resolve(request.adminNotes(), adminId);
-        } else if (newStatus == ReportStatus.DISMISSED) {
+        } else {
             report.dismiss(request.adminNotes(), adminId);
         }
 
         Report savedReport = reportRepository.save(report);
 
         // Si se resuelve de forma crítica, publicamos evento de moderación de dominio
-        if (newStatus == ReportStatus.RESOLVED && currentStatus != ReportStatus.RESOLVED) {
+        if (newStatus == ReportStatus.RESOLVED) {
             eventPublisher.publishEvent(new ReportResolvedEvent(
                     savedReport.getId(),
                     savedReport.getTargetType(),
@@ -107,18 +106,17 @@ public class AdminReportServiceImpl implements AdminReportService {
         }
 
         for (Report report : reports) {
-            ReportStatus currentStatus = report.getStatus();
             ReportStatus newStatus = request.status();
 
             if (newStatus == ReportStatus.INVESTIGATING) {
                 report.investigate(adminId);
             } else if (newStatus == ReportStatus.RESOLVED) {
                 report.resolve(request.adminNotes(), adminId);
-            } else if (newStatus == ReportStatus.DISMISSED) {
+            } else {
                 report.dismiss(request.adminNotes(), adminId);
             }
 
-            if (newStatus == ReportStatus.RESOLVED && currentStatus != ReportStatus.RESOLVED) {
+            if (newStatus == ReportStatus.RESOLVED) {
                 eventPublisher.publishEvent(new ReportResolvedEvent(
                         report.getId(),
                         report.getTargetType(),
