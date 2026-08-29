@@ -62,6 +62,10 @@ public class BookingRequest {
     @Column(name = "expires_at")
     private LocalDateTime expiresAt;
 
+    @Version
+    private Integer version;
+
+
     // ─── Payment Information ─────────────────────────────────────────────────────
 
     @Column(name = "transaction_id", length = 100)

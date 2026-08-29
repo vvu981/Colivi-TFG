@@ -30,7 +30,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
-import com.vvu981.colivibackend.features.accommodation.repository.AccommodationRepository;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -43,10 +42,10 @@ public class BookingRequestServiceImpl implements BookingRequestService {
     private final BookingRequestRepository requestRepository;
     private final AccommodationListingRepository listingRepository;
     private final UserRepository userRepository;
-    private final AccommodationRepository accommodationRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final PaymentService paymentService;
     private final org.springframework.transaction.support.TransactionTemplate transactionTemplate;
+
 
     private final BookingRequestValidator bookingRequestValidator;
 

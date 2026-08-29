@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   X,
@@ -35,7 +35,21 @@ export const BookingRequestDetailModal: React.FC<BookingRequestDetailModalProps>
   onReject,
   isProcessing = false,
 }) => {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isProcessing) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [isOpen, isProcessing, onClose]);
+
   if (!isOpen || !request) return null;
+
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '—';
