@@ -6,7 +6,14 @@ export type AmenityType =
   | 'AIR_CONDITIONING'
   | 'PETS_ALLOWED'
   | 'ELEVATOR'
-  | 'BALCONY';
+  | 'BALCONY'
+  | 'PARKING'
+  | 'WASHING_MACHINE'
+  | 'DISHWASHER'
+  | 'TERRACE'
+  | 'SWIMMING_POOL'
+  | 'WORK_ZONE'
+  | 'SMOKING_ALLOWED';
 
 export type AccommodationVisibility = 'AVAILABLE' | 'DELETED' | 'ALL';
 
