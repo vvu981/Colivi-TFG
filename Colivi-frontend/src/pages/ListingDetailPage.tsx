@@ -71,7 +71,7 @@ export const ListingDetailPage: React.FC = () => {
     );
   }
 
-  const { title, description, rentalType, selectedImages, accommodation, createdAt, hostNickname, hostProfilePicUrl } = listing;
+  const { title, description, rentalType, selectedImages, accommodation, createdAt, hostId, hostNickname, hostProfilePicUrl } = listing;
 
   // Use selectedImages from listing first, fallback to accommodation images
   const images =
@@ -97,7 +97,7 @@ export const ListingDetailPage: React.FC = () => {
           {/* Left Column: Details & Specs (8 cols) */}
           <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-6">
             {/* Host Card */}
-            <ListingHostCard hostNickname={hostNickname} hostProfilePicUrl={hostProfilePicUrl} createdAt={createdAt} />
+            <ListingHostCard hostId={hostId} hostNickname={hostNickname} hostProfilePicUrl={hostProfilePicUrl} createdAt={createdAt} />
 
             {/* Key Specs Bar (Rooms, Bathrooms, SQM, Mode) */}
             <ListingSpecs accommodation={accommodation} rentalType={rentalType} />

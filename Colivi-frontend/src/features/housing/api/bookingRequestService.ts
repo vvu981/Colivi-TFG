@@ -88,9 +88,8 @@ export const bookingRequestService = {
           tenant: {
             id: user.id,
             firstName: user.firstName,
-            lastName: user.lastName1 || '',
+            lastName: [user.lastName1, user.lastName2].filter(Boolean).join(' ') || user.nickname || '',
             profilePictureUrl: user.profilePicUrl || undefined,
-            email: user.email,
           }
         };
       } catch (err) {
@@ -143,9 +142,8 @@ export const bookingRequestService = {
       reqTenant = {
         id: user.id,
         firstName: user.firstName,
-        lastName: user.lastName1 || '',
+        lastName: [user.lastName1, user.lastName2].filter(Boolean).join(' ') || user.nickname || '',
         profilePictureUrl: user.profilePicUrl || undefined,
-        email: user.email,
       };
     } catch (e) {
       console.error(`Error fetching tenant user for request ${id}`, e);

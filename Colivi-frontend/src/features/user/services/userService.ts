@@ -1,31 +1,17 @@
 import api from '../../../lib/api';
+import type {
+  PublicUserProfile,
+  UserProfile,
+  UpdateProfileData,
+  UpdateSensibleData,
+} from '../types/user.types';
 
-export interface UpdateProfileData {
-  nickname?: string;
-  firstName?: string;
-  lastName1?: string;
-  lastName2?: string;
-  phone?: string;
-}
-
-export interface UpdateSensibleData {
-  currentPassword?: string;
-  newEmail?: string;
-  newPassword?: string;
-}
-
-export interface UserProfile {
-  id: string;
-  email: string;
-  phone: string | null;
-  role: 'TENANT' | 'OWNER' | 'ADMIN';
-  nickname: string;
-  firstName: string;
-  lastName1: string | null;
-  lastName2: string | null;
-  profilePicUrl: string | null;
-  createdAt: string;
-}
+export type {
+  PublicUserProfile,
+  UserProfile,
+  UpdateProfileData,
+  UpdateSensibleData,
+};
 
 export const userService = {
   getMe: async (): Promise<UserProfile> => {
@@ -33,8 +19,8 @@ export const userService = {
     return response.data;
   },
 
-  getById: async (id: string): Promise<UserProfile> => {
-    const response = await api.get<UserProfile>(`/users/${id}`);
+  getById: async (id: string): Promise<PublicUserProfile> => {
+    const response = await api.get<PublicUserProfile>(`/users/${id}`);
     return response.data;
   },
 

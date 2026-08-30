@@ -85,3 +85,32 @@ export const LISTING_REPORT_REASONS: ReportReasonOption[] = [
     description: 'Cualquier otra infracción de las normas de convivencia o de la plataforma.',
   },
 ];
+
+export const USER_REPORT_REASONS: ReportReasonOption[] = [
+  {
+    reason: 'HARASSMENT',
+    label: 'Acoso o comportamiento hostil',
+    description: 'Mensajes amenazantes, insultos, intimidación o conducta inapropiada hacia otros usuarios.',
+  },
+  {
+    reason: 'FRAUD',
+    label: 'Fraude, estafa o suplantación de identidad',
+    description: 'Uso de identidad falsa, solicitud de transferencias sospechosas o intento de engaño.',
+  },
+  {
+    reason: 'SPAM',
+    label: 'Spam o publicidad no autorizada',
+    description: 'Envío reiterado de enlaces comerciales externos o mensajes automáticos no deseados.',
+  },
+  {
+    reason: 'INAPPROPRIATE_CONTENT',
+    label: 'Contenido o foto de perfil inapropiada',
+    description: 'Fotos o textos discriminatorios, ofensivos o que infringen las normas comunitarias.',
+  },
+  {
+    reason: 'OTHER',
+    label: 'Otro motivo',
+    description: 'Cualquier otra infracción grave de las normas de convivencia o de la plataforma.',
+  },
+];
+

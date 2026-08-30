@@ -142,25 +142,30 @@ export const BookingRequestDetailModal: React.FC<BookingRequestDetailModalProps>
 
           {/* Tenant Information Card */}
           <div className="p-4 rounded-2xl bg-surface-container-lowest border border-outline-variant/50 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-            <div className="flex items-center gap-3.5">
+            <Link
+              to={`/users/${request.tenant?.id || request.requesterId}`}
+              className="flex items-center gap-3.5 group"
+              title="Ver perfil del inquilino"
+            >
               {request.tenant?.profilePictureUrl ? (
                 <img
                   src={request.tenant.profilePictureUrl}
                   alt="Inquilino"
-                  className="w-13 h-13 rounded-full object-cover border-2 border-surface shadow-sm"
+                  className="w-13 h-13 rounded-full object-cover border-2 border-surface shadow-sm group-hover:ring-2 group-hover:ring-primary transition-all"
                 />
               ) : (
-                <div className="w-13 h-13 rounded-full bg-primary/15 text-primary flex items-center justify-center font-bold text-lg border-2 border-surface shadow-sm">
+                <div className="w-13 h-13 rounded-full bg-primary/15 text-primary flex items-center justify-center font-bold text-lg border-2 border-surface shadow-sm group-hover:bg-primary/25 transition-colors">
                   <User size={26} />
                 </div>
               )}
               <div>
-                <p className="text-title-md font-bold text-on-surface leading-snug">
-                  {request.tenant?.firstName} {request.tenant?.lastName}
+                <p className="text-title-md font-bold text-on-surface leading-snug group-hover:text-primary transition-colors flex items-center gap-1.5">
+                  <span>{request.tenant?.firstName} {request.tenant?.lastName}</span>
+                  <ExternalLink size={14} className="text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
                 </p>
-                <p className="text-xs text-on-surface-variant">Inquilino solicitante</p>
+                <p className="text-xs text-on-surface-variant">Inquilino solicitante · <span className="text-primary font-medium hover:underline">Ver perfil</span></p>
               </div>
-            </div>
+            </Link>
 
             {/* Direct Email Contact Link */}
             {request.tenant?.email && (

@@ -1289,6 +1289,30 @@ class UserServiceImplTest {
                         verify(userRepository).findActiveById(userId);
                         verify(userMapper).toUserProfileDto(persistedUser);
                 }
+
+                @Test
+                @DisplayName("debe lanzar UserNotFoundException si el usuario no existe")
+                void givenNonExistingUserId_whenGetUserProfile_thenThrowsUserNotFoundException() {
+                        UUID userId = UUID.randomUUID();
+                        when(userRepository.findActiveById(userId)).thenReturn(Optional.empty());
+
+                        org.junit.jupiter.api.Assertions.assertThrows(
+                                        com.vvu981.colivibackend.features.user.exception.UserNotFoundException.class,
+                                        () -> userService.getUserProfile(userId));
+                }
+
+                @Test
+                @DisplayName("debe lanzar UserNotFoundException si el usuario está baneado")
+                void givenBannedUserId_whenGetUserProfile_thenThrowsUserNotFoundException() {
+                        UUID userId = persistedUser.getId();
+                        persistedUser.setBannedAt(java.time.LocalDateTime.now());
+                        persistedUser.setBannedUntil(java.time.LocalDateTime.now().plusDays(10));
+                        when(userRepository.findActiveById(userId)).thenReturn(Optional.of(persistedUser));
+
+                        org.junit.jupiter.api.Assertions.assertThrows(
+                                        com.vvu981.colivibackend.features.user.exception.UserNotFoundException.class,
+                                        () -> userService.getUserProfile(userId));
+                }
         }
 
         @Nested

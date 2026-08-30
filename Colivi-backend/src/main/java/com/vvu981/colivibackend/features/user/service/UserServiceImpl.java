@@ -313,6 +313,10 @@ public class UserServiceImpl implements UserService {
     public UserProfileResponse getUserProfile(UUID userId) {
         User user = getActiveUserById(userId);
 
+        if (user.isBanned()) {
+            throw new UserNotFoundException("Error: Usuario no encontrado");
+        }
+
         return userMapper.toUserProfileDto(user);
     }
 

@@ -5,6 +5,7 @@ import { HomePage } from "../pages/HomePage";
 import { MapSearchPage } from "../pages/MapSearchPage";
 import { ListingDetailPage } from "../pages/ListingDetailPage";
 import { ProfilePage } from "../pages/ProfilePage";
+import { PublicProfilePage } from "../pages/PublicProfilePage";
 import { ForgotPasswordPage } from "../pages/ForgotPasswordPage";
 import { ResetPasswordPage } from "../pages/ResetPasswordPage";
 import { CreateAccommodationPage } from "../pages/CreateAccommodationPage";
@@ -24,6 +25,8 @@ export const AppRoutes = () => {
       <Route path="/" element={<HomePage />} />
       <Route path="/map" element={<MapSearchPage />} />
       <Route path="/listings/:id" element={<ListingDetailPage />} />
+      <Route path="/users/:id" element={<PublicProfilePage />} />
+      <Route path="/profile/:id" element={<PublicProfilePage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
