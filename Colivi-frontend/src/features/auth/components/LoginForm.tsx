@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
@@ -13,22 +13,25 @@ export const LoginForm = () => {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleGoogleResponse = async (response: any) => {
-    setError("");
-    setIsLoading(true);
-    try {
-      await loginWithGoogle(response.credential);
-      navigate("/");
-    } catch (err: any) {
-      console.error("Google login failed", err);
-      setError(
-        err.response?.data?.message ||
-          "Error al iniciar sesión con Google. Inténtalo de nuevo."
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const handleGoogleResponse = useCallback(
+    async (response: any) => {
+      setError("");
+      setIsLoading(true);
+      try {
+        await loginWithGoogle(response.credential);
+        navigate("/");
+      } catch (err: any) {
+        console.error("Google login failed", err);
+        setError(
+          err.response?.data?.message ||
+            "Error al iniciar sesión con Google. Inténtalo de nuevo."
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [loginWithGoogle, navigate]
+  );
 
   useEffect(() => {
     const existingScript = document.getElementById("google-gsi-script");
@@ -64,7 +67,7 @@ export const LoginForm = () => {
         }
       }
     }
-  }, []);
+  }, [handleGoogleResponse]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

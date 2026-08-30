@@ -42,6 +42,7 @@ export const PublicProfileHeader: React.FC<PublicProfileHeaderProps> = ({
             <img
               src={profilePicUrl}
               alt={fullName || nickname}
+              referrerPolicy="no-referrer"
               className="w-28 h-28 md:w-32 md:h-32 rounded-full object-cover shadow-md border-4 border-surface"
             />
           ) : (

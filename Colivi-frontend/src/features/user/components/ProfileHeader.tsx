@@ -15,10 +15,6 @@ interface ProfileHeaderProps {
 export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, isUploadingPhoto, onPhotoChange }) => {
   const photoInputRef = useRef<HTMLInputElement>(null);
 
-  const avatarUrl =
-    user.profilePicUrl ||
-    "https://img.magnific.com/vector-premium/ilustracion-plana-vectorial-escala-grises-icono-perfil-usuario-avatar-persona-imagen-perfil-silueta-genero-neutral-apto-perfiles-redes-sociales-iconos-protectores-pantalla-como-plantillax9xa_719432-2191.jpg?semt=ais_test_b&w=740&q=80";
-
   const memberSince = new Date(user.createdAt).toLocaleDateString("es-ES", {
     month: "long",
     year: "numeric",
@@ -35,17 +31,22 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, isUploadingP
   return (
     <section className="flex flex-col items-center mb-16 w-full max-w-2xl text-center">
       <div className="relative mb-6 group">
-        <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-surface shadow-sm relative bg-surface-variant">
+        <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-surface shadow-sm relative bg-surface-variant flex items-center justify-center">
           {isUploadingPhoto ? (
             <div className="flex justify-center items-center h-full w-full bg-surface-variant">
               <Spinner />
             </div>
-          ) : (
+          ) : user.profilePicUrl ? (
             <img
               alt="Avatar"
               className="w-full h-full object-cover"
-              src={avatarUrl}
+              referrerPolicy="no-referrer"
+              src={user.profilePicUrl}
             />
+          ) : (
+            <div className="w-full h-full bg-primary/10 text-primary flex items-center justify-center text-4xl font-extrabold font-display">
+              {user.nickname?.charAt(0).toUpperCase() ?? '?'}
+            </div>
           )}
         </div>
         <button

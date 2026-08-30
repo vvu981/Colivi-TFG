@@ -53,6 +53,7 @@ public class SecurityConfig {
                         .requestMatchers(new AntPathRequestMatcher("/v3/api-docs/**"), new AntPathRequestMatcher("/swagger-ui/**"), new AntPathRequestMatcher("/swagger-ui.html")).permitAll() // Rutas públicas (Swagger)
                         .requestMatchers(new AntPathRequestMatcher("/error")).permitAll() // Permitir la ruta de errores por defecto de Spring Boot
                         .requestMatchers(new AntPathRequestMatcher("/api/v1/listings/**", "GET")).permitAll() // Catálogo público de alojamientos
+                        .requestMatchers(new AntPathRequestMatcher("/api/v1/accommodations/reviews", "GET")).permitAll() // Reseñas públicas para búsqueda semántica / MCP
                         .anyRequest().authenticated() // Todo lo demás requiere estar logueado
                 )
 

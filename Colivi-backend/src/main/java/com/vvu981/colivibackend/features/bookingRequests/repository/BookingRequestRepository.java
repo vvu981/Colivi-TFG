@@ -61,4 +61,8 @@ public interface BookingRequestRepository
                   AND b.status = 'PENDING'
             """)
     long countPendingRequestsByHostId(@org.springframework.data.repository.query.Param("hostId") UUID hostId);
+
+    java.util.Optional<BookingRequest> findFirstByRequesterIdAndAccommodationListingIdAndStatusOrderByCreatedAtDesc(
+            UUID requesterId, UUID listingId, RequestStatus status);
 }
+
