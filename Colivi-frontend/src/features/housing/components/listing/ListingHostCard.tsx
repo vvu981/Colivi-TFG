@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom';
 import { Award, ExternalLink } from 'lucide-react';
 
 export interface ListingHostCardProps {
-  hostId?: string;
+  hostId?: string | undefined;
   hostNickname: string;
-  hostProfilePicUrl?: string;
+  hostProfilePicUrl?: string | undefined;
   createdAt: string;
 }
 

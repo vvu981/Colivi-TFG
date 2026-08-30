@@ -1,17 +1,17 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
-import { ListingHostCard } from './ListingHostCard';
+import { ListingHostCard, type ListingHostCardProps } from './ListingHostCard';
 
 describe('ListingHostCard', () => {
-  const defaultProps = {
+  const defaultProps: ListingHostCardProps = {
     hostId: 'host-123',
     hostNickname: 'ElenaHost',
     hostProfilePicUrl: 'https://example.com/elena.jpg',
     createdAt: '2024-05-15T12:00:00Z',
   };
 
-  const renderComponent = (props = defaultProps) => {
+  const renderComponent = (props: ListingHostCardProps = defaultProps) => {
     return render(
       <BrowserRouter>
         <ListingHostCard {...props} />
@@ -35,20 +35,16 @@ describe('ListingHostCard', () => {
   });
 
   it('renderiza la inicial como fallback si no hay foto de perfil', () => {
-    renderComponent({
-      ...defaultProps,
-      hostProfilePicUrl: undefined,
-    });
+    const { hostProfilePicUrl: _pic, ...propsWithoutPic } = defaultProps;
+    renderComponent(propsWithoutPic);
 
     expect(screen.getByText('E')).toBeInTheDocument();
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
   });
 
   it('no muestra el enlace si hostId no está presente', () => {
-    renderComponent({
-      ...defaultProps,
-      hostId: undefined,
-    });
+    const { hostId: _id, ...propsWithoutHostId } = defaultProps;
+    renderComponent(propsWithoutHostId);
 
     expect(screen.queryByRole('link', { name: /ver perfil/i })).not.toBeInTheDocument();
   });
