@@ -221,21 +221,25 @@ export const ReceivedRequests: React.FC = () => {
                         </span>
                       </div>
                       
-                      <div className="flex items-center gap-4 mt-2">
+                      <Link
+                        to={`/users/${request.tenant?.id || request.requesterId}`}
+                        className="flex items-center gap-4 mt-2 group"
+                        title="Ver perfil del inquilino"
+                      >
                         {request.tenant?.profilePictureUrl ? (
-                          <img src={request.tenant.profilePictureUrl} alt="Inquilino" className="w-12 h-12 rounded-full object-cover border-2 border-surface shadow-sm" />
+                          <img src={request.tenant.profilePictureUrl} alt="Inquilino" className="w-12 h-12 rounded-full object-cover border-2 border-surface shadow-sm group-hover:ring-2 group-hover:ring-primary transition-all" />
                         ) : (
-                          <div className="w-12 h-12 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-lg border-2 border-surface shadow-sm">
+                          <div className="w-12 h-12 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-lg border-2 border-surface shadow-sm group-hover:bg-primary/30 transition-colors">
                             <User size={24} />
                           </div>
                         )}
                         <div>
-                          <p className="text-headline-sm font-bold text-on-surface leading-tight">
+                          <p className="text-headline-sm font-bold text-on-surface leading-tight group-hover:text-primary transition-colors">
                             {request.tenant?.firstName} {request.tenant?.lastName}
                           </p>
-                          <p className="text-body-sm text-on-surface-variant">Inquilino interesado</p>
+                          <p className="text-body-sm text-on-surface-variant">Inquilino interesado · <span className="text-primary font-medium hover:underline">Ver perfil</span></p>
                         </div>
-                      </div>
+                      </Link>
                     </div>
 
                     {/* Body: Dates & Details */}
