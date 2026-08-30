@@ -1,20 +1,34 @@
 import React, { useState } from 'react';
-import { MapPin, Share2, Sparkles, Home, Bed, Check } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { MapPin, Share2, Sparkles, Home, Bed, Check, Flag } from 'lucide-react';
 import type { AccommodationListingResponse } from '../../types/listing.types';
 
 export interface ListingHeaderProps {
   listing: AccommodationListingResponse;
+  currentUserId?: string | null;
+  onReportClick?: () => void;
 }
 
 /**
- * Header section containing breadcrumbs, title, badges, location and share button.
+ * Header section containing breadcrumbs, title, badges, location, share button, and report button.
  * Single Responsibility: Title and metadata presentation.
  */
-export const ListingHeader: React.FC<ListingHeaderProps> = ({ listing }) => {
+export const ListingHeader: React.FC<ListingHeaderProps> = ({
+  listing,
+  currentUserId,
+  onReportClick,
+}) => {
   const [copied, setCopied] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  const { title, rentalType, isPromoted, accommodation } = listing;
+  const { title, rentalType, isPromoted, accommodation, hostId } = listing;
   const { city, province, country } = accommodation;
+
+  const isOwner = Boolean(
+    (currentUserId && hostId && currentUserId === hostId) ||
+    (currentUserId && accommodation?.ownerId && currentUserId === accommodation.ownerId)
+  );
 
   const handleShare = async () => {
     try {
@@ -25,6 +39,16 @@ export const ListingHeader: React.FC<ListingHeaderProps> = ({ listing }) => {
       }
     } catch {
       // Fallback
+    }
+  };
+
+  const handleReport = () => {
+    if (!currentUserId) {
+      navigate('/login', { state: { from: location.pathname } });
+      return;
+    }
+    if (onReportClick) {
+      onReportClick();
     }
   };
 
@@ -48,15 +72,30 @@ export const ListingHeader: React.FC<ListingHeaderProps> = ({ listing }) => {
           </div>
         </div>
 
-        {/* Share button */}
-        <button
-          type="button"
-          onClick={handleShare}
-          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all text-xs font-medium cursor-pointer shadow-xs flex-shrink-0"
-        >
-          {copied ? <Check size={14} className="text-primary" /> : <Share2 size={14} />}
-          <span>{copied ? '¡Enlace copiado!' : 'Compartir'}</span>
-        </button>
+        {/* Action buttons (Share & Report) */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            type="button"
+            onClick={handleShare}
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all text-xs font-medium cursor-pointer shadow-xs"
+          >
+            {copied ? <Check size={14} className="text-primary" /> : <Share2 size={14} />}
+            <span>{copied ? '¡Enlace copiado!' : 'Compartir'}</span>
+          </button>
+
+          {!isOwner && (
+            <button
+              type="button"
+              onClick={handleReport}
+              title="Denunciar este anuncio"
+              aria-label="Denunciar anuncio"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:text-red-600 hover:border-red-200 hover:bg-red-50/50 transition-all text-xs font-medium cursor-pointer shadow-xs"
+            >
+              <Flag size={14} />
+              <span className="hidden sm:inline">Denunciar</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Subtitle with Rental Type & Location */}

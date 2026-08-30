@@ -2,6 +2,7 @@ package com.vvu981.colivibackend.features.report.service;
 
 import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
 import com.vvu981.colivibackend.core.exception.ResourceNotFoundException;
+import com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing;
 import com.vvu981.colivibackend.features.accommodation.repository.AccommodationListingRepository;
 import com.vvu981.colivibackend.features.home.repository.HomeExpenseRepository;
 import com.vvu981.colivibackend.features.home.repository.HomeRepository;
@@ -46,16 +47,24 @@ public class ReportServiceImpl implements ReportService {
             throw new BusinessRuleValidationException("No puedes denunciarte a ti mismo.");
         }
 
-        // 2. Verificar existencia del objetivo
-        boolean targetExists = switch (request.targetType()) {
-            case USER -> userRepository.existsById(request.targetId());
-            case LISTING -> listingRepository.existsById(request.targetId());
-            case HOME -> homeRepository.existsById(request.targetId());
-            case EXPENSE -> expenseRepository.existsById(request.targetId());
-        };
+        // 2. Verificar existencia del objetivo y prevenir auto-denuncia sobre recursos propios
+        if (request.targetType() == ReportTargetType.LISTING) {
+            AccommodationListing listing = listingRepository.findById(request.targetId())
+                    .orElseThrow(() -> new BusinessRuleValidationException("El elemento denunciado no existe."));
+            if (listing.getHost() != null && listing.getHost().getId().equals(reporterId)) {
+                throw new BusinessRuleValidationException("No puedes denunciar tu propio anuncio.");
+            }
+        } else {
+            boolean targetExists = switch (request.targetType()) {
+                case USER -> userRepository.existsById(request.targetId());
+                case HOME -> homeRepository.existsById(request.targetId());
+                case EXPENSE -> expenseRepository.existsById(request.targetId());
+                case LISTING -> true;
+            };
 
-        if (!targetExists) {
-            throw new BusinessRuleValidationException("El elemento denunciado no existe.");
+            if (!targetExists) {
+                throw new BusinessRuleValidationException("El elemento denunciado no existe.");
+            }
         }
 
         // 3. Verificar denuncia duplicada activa

@@ -1,6 +1,7 @@
 package com.vvu981.colivibackend.features.report.service;
 
 import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
+import com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing;
 import com.vvu981.colivibackend.features.accommodation.repository.AccommodationListingRepository;
 import com.vvu981.colivibackend.features.home.repository.HomeExpenseRepository;
 import com.vvu981.colivibackend.features.home.repository.HomeRepository;
@@ -12,6 +13,7 @@ import com.vvu981.colivibackend.features.report.dto.CreateReportRequest;
 import com.vvu981.colivibackend.features.report.dto.ReportResponse;
 import com.vvu981.colivibackend.features.report.mapper.ReportMapper;
 import com.vvu981.colivibackend.features.report.repository.ReportRepository;
+import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -76,6 +78,23 @@ class ReportServiceImplTest {
     }
 
     @Test
+    void createReport_shouldThrowException_whenHostReportsOwnListing() {
+        CreateReportRequest request = new CreateReportRequest(ReportTargetType.LISTING, targetId, ReportReason.SPAM,
+                "Test");
+        User host = new User();
+        host.setId(reporterId);
+        AccommodationListing listing = new AccommodationListing();
+        listing.setId(targetId);
+        listing.setHost(host);
+
+        when(listingRepository.findById(targetId)).thenReturn(Optional.of(listing));
+
+        assertThatThrownBy(() -> reportService.createReport(reporterId, request))
+                .isInstanceOf(BusinessRuleValidationException.class)
+                .hasMessageContaining("No puedes denunciar tu propio anuncio.");
+    }
+
+    @Test
     void createReport_shouldThrowException_whenTargetDoesNotExist() {
         CreateReportRequest request = new CreateReportRequest(ReportTargetType.USER, targetId, ReportReason.SPAM,
                 "Test");
@@ -87,10 +106,27 @@ class ReportServiceImplTest {
     }
 
     @Test
+    void createReport_shouldThrowException_whenListingTargetDoesNotExist() {
+        CreateReportRequest request = new CreateReportRequest(ReportTargetType.LISTING, targetId, ReportReason.SPAM,
+                "Test");
+        when(listingRepository.findById(targetId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> reportService.createReport(reporterId, request))
+                .isInstanceOf(BusinessRuleValidationException.class)
+                .hasMessageContaining("El elemento denunciado no existe.");
+    }
+
+    @Test
     void createReport_shouldThrowException_whenActiveReportExists() {
         CreateReportRequest request = new CreateReportRequest(ReportTargetType.LISTING, targetId, ReportReason.SPAM,
                 "Test");
-        when(listingRepository.existsById(targetId)).thenReturn(true);
+        User otherHost = new User();
+        otherHost.setId(UUID.randomUUID());
+        AccommodationListing listing = new AccommodationListing();
+        listing.setId(targetId);
+        listing.setHost(otherHost);
+
+        when(listingRepository.findById(targetId)).thenReturn(Optional.of(listing));
         when(reportRepository.existsByReporterIdAndTargetTypeAndTargetIdAndStatusIn(eq(reporterId),
                 eq(ReportTargetType.LISTING), eq(targetId), any()))
                 .thenReturn(true);
@@ -128,6 +164,42 @@ class ReportServiceImplTest {
         ReportCreatedEvent event = eventCaptor.getValue();
         assertThat(event.reportId()).isEqualTo(report.getId());
         assertThat(event.targetType()).isEqualTo(ReportTargetType.HOME);
+    }
+
+    @Test
+    void createReport_shouldSaveAndPublishEvent_whenListingReportIsValid() {
+        CreateReportRequest request = new CreateReportRequest(ReportTargetType.LISTING, targetId, ReportReason.FRAUD,
+                "Anuncio engañoso");
+        User otherHost = new User();
+        otherHost.setId(UUID.randomUUID());
+        AccommodationListing listing = new AccommodationListing();
+        listing.setId(targetId);
+        listing.setHost(otherHost);
+
+        Report report = new Report();
+        report.setId(UUID.randomUUID());
+        report.setTargetType(ReportTargetType.LISTING);
+        report.setTargetId(targetId);
+
+        when(listingRepository.findById(targetId)).thenReturn(Optional.of(listing));
+        when(reportRepository.existsByReporterIdAndTargetTypeAndTargetIdAndStatusIn(any(), any(), any(), any()))
+                .thenReturn(false);
+        when(reportMapper.toEntity(request)).thenReturn(report);
+        when(reportRepository.save(report)).thenReturn(report);
+        when(reportMapper.toResponse(report)).thenReturn(new ReportResponse(report.getId(), reporterId,
+                ReportTargetType.LISTING, targetId, ReportReason.FRAUD, "Anuncio engañoso", null, null, null, null, null, null));
+
+        ReportResponse response = reportService.createReport(reporterId, request);
+
+        assertThat(response).isNotNull();
+        verify(reportRepository).save(report);
+
+        ArgumentCaptor<ReportCreatedEvent> eventCaptor = ArgumentCaptor.forClass(ReportCreatedEvent.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+
+        ReportCreatedEvent event = eventCaptor.getValue();
+        assertThat(event.reportId()).isEqualTo(report.getId());
+        assertThat(event.targetType()).isEqualTo(ReportTargetType.LISTING);
     }
 
     @Test

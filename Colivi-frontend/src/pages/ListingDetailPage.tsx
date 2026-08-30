@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, AlertCircle, RefreshCw } from 'lucide-react';
 import { MainLayout } from '../layouts/MainLayout';
@@ -12,6 +12,7 @@ import { ListingAmenitiesView } from '../features/housing/components/listing/Lis
 import { ListingLocationMap } from '../features/housing/components/listing/ListingLocationMap';
 import { ListingBookingCard } from '../features/housing/components/listing/ListingBookingCard';
 import { SiblingRoomsSection } from '../features/housing/components/listing/SiblingRoomsSection';
+import { ReportListingModal } from '../features/report/components/ReportListingModal';
 import { Spinner } from '../components/feedback/Spinner';
 
 /**
@@ -22,6 +23,7 @@ export const ListingDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { listing, isLoading, error, refetch } = useGetListing(id);
   const { user } = useAuth();
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -80,8 +82,12 @@ export const ListingDetailPage: React.FC = () => {
   return (
     <MainLayout>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 flex flex-col gap-8">
-        {/* Header (Breadcrumbs, title, location, share) */}
-        <ListingHeader listing={listing} />
+        {/* Header (Breadcrumbs, title, location, share, report) */}
+        <ListingHeader
+          listing={listing}
+          currentUserId={user?.id}
+          onReportClick={() => setIsReportModalOpen(true)}
+        />
 
         {/* Photo Gallery with Bento Grid & Lightbox */}
         <ListingGallery images={images} title={title} />
@@ -133,6 +139,14 @@ export const ListingDetailPage: React.FC = () => {
             currentListingId={listing.id}
           />
         )}
+
+        {/* Report Listing Modal */}
+        <ReportListingModal
+          isOpen={isReportModalOpen}
+          onClose={() => setIsReportModalOpen(false)}
+          listingId={listing.id}
+          listingTitle={title}
+        />
       </div>
     </MainLayout>
   );
