@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import { LoginPage } from "../pages/LoginPage";
 import { RegisterPage } from "../pages/RegisterPage";
 import { HomePage } from "../pages/HomePage";
@@ -15,6 +15,7 @@ import { EditAccommodationPage } from "../pages/EditAccommodationPage";
 import { EditListingPage } from "../pages/EditListingPage";
 import { MyRequestsPage } from "../pages/MyRequestsPage";
 import { ReceivedRequestsPage } from "../pages/ReceivedRequestsPage";
+import { NotFoundPage } from "../pages/NotFoundPage";
 import { ProtectedRoute } from "./ProtectedRoute";
 
 export const AppRoutes = () => {
@@ -27,8 +28,15 @@ export const AppRoutes = () => {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
-      <Route path="/profile" element={<ProfilePage />} />
       {/* Protected: requires authentication */}
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <ProfilePage />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/create-accommodation"
         element={
@@ -94,7 +102,7 @@ export const AppRoutes = () => {
         }
       />
       {/* Fallback route */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 };
