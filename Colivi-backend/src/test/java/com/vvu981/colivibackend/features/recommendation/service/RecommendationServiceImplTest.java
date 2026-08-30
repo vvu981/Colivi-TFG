@@ -298,20 +298,142 @@ class RecommendationServiceImplTest {
     }
 
     @Test
-    void testGetRecommendations_NoCriteriaButFallbackFindsItems() {
+    void testGetRecommendations_InvalidAccommodationType_ThrowsException() {
+        org.junit.jupiter.api.Assertions.assertThrows(
+                com.vvu981.colivibackend.core.exception.BusinessRuleValidationException.class,
+                () -> recommendationService.getRecommendations(null, 5, null, null, null, null, "INVALID_TYPE", null)
+        );
+    }
+
+    @Test
+    void testGetRecommendations_InvalidAmenity_ThrowsException() {
+        org.junit.jupiter.api.Assertions.assertThrows(
+                com.vvu981.colivibackend.core.exception.BusinessRuleValidationException.class,
+                () -> recommendationService.getRecommendations(null, 5, null, null, null, null, null, List.of("INVALID_AMENITY"))
+        );
+    }
+
+    @Test
+    void testGetRecommendations_HistoryWithInvalidAccommodationType_DoesNotThrow() {
+        UserSearchHistory history = new UserSearchHistory();
+        history.setCity("Sevilla");
+        history.setAccommodationType("INVALID_HISTORY_TYPE");
         when(historyRepository.findFirstByUserIdOrderByCreatedAtDesc(userId))
-                .thenReturn(java.util.Optional.empty());
+                .thenReturn(java.util.Optional.of(history));
 
-        // First query returns 1 item
-        Page<AccommodationListing> pageEmpty = new PageImpl<>(List.of(listing1));
-
-        when(listingService.findAll(any(Specification.class), any(Pageable.class)))
-                .thenReturn(pageEmpty);
+        Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
+        when(listingService.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
 
         RecommendationResponse result = recommendationService.getRecommendations(userId, 1, null, null, null, null, null, null);
 
         assertEquals(1, result.getItems().size());
-        assertFalse(result.isFallbackApplied());
+    }
+
+    @Test
+    void testGetRecommendations_WithNegativeLimit_UsesDefault() {
+        Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
+        when(listingService.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+
+        RecommendationResponse result = recommendationService.getRecommendations(null, -5, null, null, null, null, null, null);
+
+        assertEquals(1, result.getItems().size());
+    }
+
+    @Test
+    void testGetRecommendations_OnlyMaxPriceCriteria() {
+        Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
+        when(listingService.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+
+        RecommendationResponse result = recommendationService.getRecommendations(null, 1, null, null, null, BigDecimal.valueOf(600), null, null);
+
+        assertEquals(1, result.getItems().size());
+        assertTrue(result.isHasCriteria());
+    }
+
+    @Test
+    void testGetRecommendations_OnlyMinPriceCriteria() {
+        Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
+        when(listingService.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+
+        RecommendationResponse result = recommendationService.getRecommendations(null, 1, null, null, BigDecimal.valueOf(300), null, null, null);
+
+        assertEquals(1, result.getItems().size());
+        assertTrue(result.isHasCriteria());
+    }
+
+    @Test
+    void testGetRecommendations_OnlyTypeCriteria() {
+        Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
+        when(listingService.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+
+        RecommendationResponse result = recommendationService.getRecommendations(null, 1, null, null, null, null, "ROOM", null);
+
+        assertEquals(1, result.getItems().size());
+        assertTrue(result.isHasCriteria());
+    }
+
+    @Test
+    void testGetRecommendations_OnlyAmenitiesCriteria() {
+        Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
+        when(listingService.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+
+        RecommendationResponse result = recommendationService.getRecommendations(null, 1, null, null, null, null, null, List.of("WIFI"));
+
+        assertEquals(1, result.getItems().size());
+        assertTrue(result.isHasCriteria());
+    }
+
+    @Test
+    void testGetRecommendations_HistoryOnlyMaxPrice() {
+        UserSearchHistory history = new UserSearchHistory();
+        history.setMaxPrice(BigDecimal.valueOf(700));
+        when(historyRepository.findFirstByUserIdOrderByCreatedAtDesc(userId)).thenReturn(java.util.Optional.of(history));
+
+        Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
+        when(listingService.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+
+        RecommendationResponse result = recommendationService.getRecommendations(userId, 1, null, null, null, null, null, null);
+
+        assertEquals(1, result.getItems().size());
+        assertTrue(result.isHasCriteria());
+    }
+
+    @Test
+    void testGetRecommendations_HistoryOnlyType() {
+        UserSearchHistory history = new UserSearchHistory();
+        history.setAccommodationType("ROOM");
+        when(historyRepository.findFirstByUserIdOrderByCreatedAtDesc(userId)).thenReturn(java.util.Optional.of(history));
+
+        Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
+        when(listingService.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+
+        RecommendationResponse result = recommendationService.getRecommendations(userId, 1, null, null, null, null, null, null);
+
+        assertEquals(1, result.getItems().size());
+        assertTrue(result.isHasCriteria());
+    }
+
+    @Test
+    void testGetRecommendations_AllCriteriaPresentButBlankOrZero() {
+        Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
+        when(listingService.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+
+        RecommendationResponse result = recommendationService.getRecommendations(
+                null, 1, "   ", "   ", BigDecimal.ZERO, BigDecimal.ZERO, "   ", java.util.Collections.emptyList()
+        );
+
+        assertEquals(1, result.getItems().size());
         assertFalse(result.isHasCriteria());
+    }
+
+    @Test
+    void testGetRecommendations_OnlyTitleAndLimitPassed() {
+        Page<AccommodationListing> page = new PageImpl<>(List.of(listing1));
+        when(listingService.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+
+        RecommendationResponse result = recommendationService.getRecommendations(null, 1, "Piso", null, null, null, null, null);
+
+        assertEquals(1, result.getItems().size());
+        assertTrue(result.isHasCriteria());
     }
 }

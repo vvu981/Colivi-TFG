@@ -135,6 +135,10 @@ const PriceBoundInput: React.FC<PriceBoundInputProps> = React.memo(({
 
 PriceBoundInput.displayName = 'PriceBoundInput';
 
+const DEFAULT_HISTOGRAM_DATA: number[] = [
+  4, 10, 22, 40, 65, 95, 130, 165, 180, 160, 135, 110, 80, 60, 42, 28, 18, 10, 6, 3
+];
+
 // ── Componente Principal: PriceRangeFilter ────────────────────────────────────
 
 export const PriceRangeFilter: React.FC<PriceRangeFilterProps> = ({
@@ -143,7 +147,7 @@ export const PriceRangeFilter: React.FC<PriceRangeFilterProps> = ({
   step = 10,
   initialMin,
   initialMax,
-  data = [],
+  data,
   currencySymbol = '€',
   title = 'Rango de precios',
   subtitle = 'Precio del viaje, incluye todas las comisiones',
@@ -152,6 +156,10 @@ export const PriceRangeFilter: React.FC<PriceRangeFilterProps> = ({
 }) => {
   const minInputId = useId();
   const maxInputId = useId();
+
+  const effectiveData = useMemo(() => {
+    return data && data.length > 0 ? data : DEFAULT_HISTOGRAM_DATA;
+  }, [data]);
 
   // Estado local
   const [minValue, setMinValue] = useState<number>(() => initialMin ?? min);
@@ -174,9 +182,8 @@ export const PriceRangeFilter: React.FC<PriceRangeFilterProps> = ({
 
   // Determinar altura máxima del histograma para escalar proporcionalmente
   const maxHistogramFreq = useMemo(() => {
-    if (!data || data.length === 0) return 1;
-    return Math.max(...data, 1);
-  }, [data]);
+    return Math.max(...effectiveData, 1);
+  }, [effectiveData]);
 
   // Actualizador centralizado: SOLO actualiza el estado local visual del slider (fluidez)
   const updateVisualRange = useCallback(
@@ -232,9 +239,9 @@ export const PriceRangeFilter: React.FC<PriceRangeFilterProps> = ({
   const rangePercentRight = Math.max(0, Math.min(100, 100 - ((maxValue - min) / (max - min || 1)) * 100));
 
   const histogramBars = useMemo(() => {
-    return data.map((freq, index) => {
+    return effectiveData.map((freq, index) => {
       const heightPercent = Math.max((freq / maxHistogramFreq) * 100, 8);
-      const active = isBarActive(index, data.length, min, max, minValue, maxValue);
+      const active = isBarActive(index, effectiveData.length, min, max, minValue, maxValue);
 
       return (
         <div
@@ -252,7 +259,7 @@ export const PriceRangeFilter: React.FC<PriceRangeFilterProps> = ({
         </div>
       );
     });
-  }, [data, maxHistogramFreq, min, max, minValue, maxValue]);
+  }, [effectiveData, maxHistogramFreq, min, max, minValue, maxValue]);
 
   return (
     <section className={`w-full min-w-full select-none ${className}`}>

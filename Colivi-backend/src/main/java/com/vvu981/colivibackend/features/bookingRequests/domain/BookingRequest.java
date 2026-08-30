@@ -59,6 +59,13 @@ public class BookingRequest {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Column(name = "expires_at")
+    private LocalDateTime expiresAt;
+
+    @Version
+    private Integer version;
+
+
     // ─── Payment Information ─────────────────────────────────────────────────────
 
     @Column(name = "transaction_id", length = 100)
@@ -90,6 +97,7 @@ public class BookingRequest {
             throw new IllegalStateException("Solo se pueden aceptar solicitudes pendientes.");
         }
         this.status = RequestStatus.ACCEPTED;
+        this.expiresAt = LocalDateTime.now().plusHours(72);
     }
 
     public void reject() {
@@ -113,5 +121,12 @@ public class BookingRequest {
         this.status = RequestStatus.CONFIRMED;
         this.transactionId = transactionId;
         this.paymentMethod = paymentMethod;
+    }
+
+    public void expire() {
+        if (this.status != RequestStatus.ACCEPTED) {
+            throw new IllegalStateException("Solo se pueden caducar solicitudes que estén en estado ACCEPTED.");
+        }
+        this.status = RequestStatus.EXPIRED;
     }
 }

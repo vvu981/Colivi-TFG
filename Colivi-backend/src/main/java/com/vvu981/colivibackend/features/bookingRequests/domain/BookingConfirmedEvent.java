@@ -7,6 +7,9 @@ public record BookingConfirmedEvent(
         UUID accommodationListingId,
         UUID confirmedRequestId,
         LocalDate startDate,
-        LocalDate endDate
+        LocalDate endDate,
+        String tenantEmail,
+        String landlordEmail,
+        String listingTitle
 ) {
 }

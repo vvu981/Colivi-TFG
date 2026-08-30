@@ -37,10 +37,10 @@ export const CreateListingPage = () => {
 
   return (
     <MainLayout>
-      <div className="w-full px-margin-mobile md:px-margin-desktop py-xl max-w-3xl mx-auto">
+      <div className="w-full px-margin-mobile md:px-margin-desktop py-10 max-w-3xl mx-auto">
         {/* Header */}
-        <div className="mb-xl">
-          <h1 className="text-display-lg-mobile md:text-headline-md font-headline-md text-on-surface mb-sm">
+        <div className="mb-10">
+          <h1 className="text-display-lg-mobile md:text-headline-md font-headline-md text-on-surface mb-2">
             Publicar un anuncio
           </h1>
           <p className="text-body-md font-body-md text-on-surface-variant">

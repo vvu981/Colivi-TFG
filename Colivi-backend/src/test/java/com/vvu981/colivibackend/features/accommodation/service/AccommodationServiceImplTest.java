@@ -492,8 +492,6 @@ class AccommodationServiceImplTest {
 
                         // Assert
                         assertThat(result).isNotNull();
-                        // verify(imageStorageService, times(1)).uploadImage(mockFile); // Sync handles
-                        // this
                         verify(accommodationRepository, times(1)).save(accommodation);
 
                         // Trigger TransactionSynchronization rollback hook manually
@@ -501,8 +499,31 @@ class AccommodationServiceImplTest {
                                         .getSynchronizations();
                         assertThat(syncs).isNotEmpty();
                         syncs.get(0).afterCompletion(
+                                        org.springframework.transaction.support.TransactionSynchronization.STATUS_COMMITTED);
+                        syncs.get(0).afterCompletion(
                                         org.springframework.transaction.support.TransactionSynchronization.STATUS_ROLLED_BACK);
                         verify(imageStorageService, times(1)).deleteImage("http://example.com/image.jpg");
+                }
+
+                @Test
+                @DisplayName("debe capturar excepción si la eliminación en rollback falla")
+                void shouldHandleExceptionInRollbackHook() {
+                        MultipartFile mockFile = mock(MultipartFile.class);
+                        accommodation.setImages(new ArrayList<>());
+                        when(accommodationRepository.findByIdAndDeletedAtIsNull(accommodation.getId()))
+                                        .thenReturn(Optional.of(accommodation));
+                        when(imageStorageService.uploadImage(mockFile)).thenReturn("http://example.com/image.jpg");
+                        when(accommodationRepository.save(any(Accommodation.class))).thenReturn(accommodation);
+                        doThrow(new RuntimeException("Cloudinary error")).when(imageStorageService).deleteImage("http://example.com/image.jpg");
+
+                        accommodationService.addImageToAccommodation(accommodation.getId(), mockFile, owner.getId());
+
+                        List<org.springframework.transaction.support.TransactionSynchronization> syncs = TransactionSynchronizationManager
+                                        .getSynchronizations();
+                        assertThat(syncs).isNotEmpty();
+                        syncs.get(0).afterCompletion(
+                                        org.springframework.transaction.support.TransactionSynchronization.STATUS_ROLLED_BACK);
+                        verify(imageStorageService).deleteImage("http://example.com/image.jpg");
                 }
 
                 @Test
@@ -565,8 +586,6 @@ class AccommodationServiceImplTest {
 
                         // Assert
                         assertThat(accommodation.getImages()).doesNotContain(image);
-                        // verify(imageStorageService,
-                        // times(1)).deleteImage("http://secure-url.com/img.png"); // Sync handles this
                         verify(accommodationRepository, times(1)).save(accommodation);
 
                         // Trigger TransactionSynchronization commit hook manually
@@ -575,6 +594,31 @@ class AccommodationServiceImplTest {
                         assertThat(syncs).isNotEmpty();
                         syncs.get(0).afterCommit();
                         verify(imageStorageService, times(1)).deleteImage("http://secure-url.com/img.png");
+                }
+
+                @Test
+                @DisplayName("debe capturar excepción si la eliminación remota tras commit falla")
+                void shouldHandleExceptionInAfterCommitHook() {
+                        AccommodationImage image = new AccommodationImage();
+                        image.setId(UUID.randomUUID());
+                        image.setImageUrl("http://secure-url.com/img.png");
+                        image.setAccommodation(accommodation);
+                        accommodation.getImages().add(image);
+
+                        when(accommodationRepository.findByIdAndDeletedAtIsNull(accommodation.getId()))
+                                        .thenReturn(Optional.of(accommodation));
+                        when(accommodationImageRepository.findById(image.getId()))
+                                        .thenReturn(Optional.of(image));
+                        doThrow(new RuntimeException("Cloud error")).when(imageStorageService).deleteImage("http://secure-url.com/img.png");
+
+                        accommodationService.removeImageFromAccommodation(accommodation.getId(), image.getId(),
+                                        owner.getId());
+
+                        List<org.springframework.transaction.support.TransactionSynchronization> syncs = TransactionSynchronizationManager
+                                        .getSynchronizations();
+                        assertThat(syncs).isNotEmpty();
+                        syncs.get(0).afterCommit();
+                        verify(imageStorageService).deleteImage("http://secure-url.com/img.png");
                 }
 
                 @Test

@@ -72,6 +72,9 @@ public class EmailServiceImpl implements EmailService {
     @Value("${app.mail.password-reset-url}")
     private String passwordResetUrlBase;
 
+    @Value("${app.mail.received-requests-url}")
+    private String receivedRequestsUrlBase;
+
     // ─── Implementación de la interfaz ────────────────────────────────────────
 
     /**
@@ -91,8 +94,48 @@ public class EmailServiceImpl implements EmailService {
     }
 
     @Override
-    public void sendBookingStatusEmail(String toEmail, String listingTitle, boolean isAccepted) {
-        SimpleMailMessage message = buildBookingStatusMessage(toEmail, listingTitle, isAccepted);
+    public void sendBookingStatusEmail(String toEmail, String listingTitle, boolean isAccepted, java.time.LocalDateTime expiresAt) {
+        SimpleMailMessage message = buildBookingStatusMessage(toEmail, listingTitle, isAccepted, expiresAt);
+        mailSender.send(message);
+    }
+
+    @Override
+    public void sendPaymentConfirmationToTenant(String toEmail, String listingTitle) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromAddress);
+        message.setTo(toEmail);
+        message.setSubject("¡Pago confirmado! Reserva completada en " + listingTitle);
+        message.setText("""
+                Hola,
+
+                ¡Buenas noticias! Hemos recibido correctamente el pago de la fianza para tu reserva en "%s".
+                
+                Tu reserva ha pasado al estado CONFIRMADA de forma definitiva. Puedes ponerte en contacto con el anfitrión para organizar tu llegada.
+
+                ─────────────────────────────────────────────
+                Este correo ha sido generado automáticamente. Por favor, no respondas a él.
+                © Colivi — Plataforma de alojamiento universitario
+                """.formatted(listingTitle));
+        mailSender.send(message);
+    }
+
+    @Override
+    public void sendPaymentNotificationToLandlord(String toEmail, String listingTitle) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromAddress);
+        message.setTo(toEmail);
+        message.setSubject("¡Fianza pagada! Nueva reserva confirmada para " + listingTitle);
+        message.setText("""
+                Hola,
+
+                Te informamos de que el inquilino ha realizado el pago de la fianza para tu alojamiento "%s".
+                
+                La reserva ha pasado al estado CONFIRMADA de forma definitiva. Todas las demás solicitudes pendientes que solapen con estas fechas se han cancelado automáticamente.
+
+                ─────────────────────────────────────────────
+                Este correo ha sido generado automáticamente. Por favor, no respondas a él.
+                © Colivi — Plataforma de alojamiento universitario
+                """.formatted(listingTitle));
         mailSender.send(message);
     }
 
@@ -100,6 +143,12 @@ public class EmailServiceImpl implements EmailService {
     public void sendPasswordResetEmail(String toEmail, String token) {
         SimpleMailMessage message = buildPasswordResetMessage(toEmail, token);
         mailSender.send(message);
+    }
+
+    @Override
+    public void sendNewBookingRequestToHost(java.util.UUID requestId, String toEmail, String tenantName, String tenantEmail, String listingTitle, java.time.LocalDate startDate, java.time.LocalDate endDate, String message) {
+        SimpleMailMessage mailMessage = buildNewBookingRequestMessage(requestId, toEmail, tenantName, tenantEmail, listingTitle, startDate, endDate, message);
+        mailSender.send(mailMessage);
     }
 
     // ─── Métodos privados de apoyo ────────────────────────────────────────────
@@ -153,21 +202,21 @@ public class EmailServiceImpl implements EmailService {
                 """.formatted(reactivationUrlBase, token);
     }
 
-    private SimpleMailMessage buildBookingStatusMessage(String toEmail, String listingTitle, boolean isAccepted) {
+    private SimpleMailMessage buildBookingStatusMessage(String toEmail, String listingTitle, boolean isAccepted, java.time.LocalDateTime expiresAt) {
         SimpleMailMessage message = new SimpleMailMessage();
 
         message.setFrom(fromAddress);
         message.setTo(toEmail);
         message.setSubject(isAccepted ? bookingAcceptedSubject : bookingRejectedSubject);
-        message.setText(buildBookingStatusBody(listingTitle, isAccepted));
+        message.setText(buildBookingStatusBody(listingTitle, isAccepted, expiresAt));
 
         return message;
     }
 
-    private String buildBookingStatusBody(String listingTitle, boolean isAccepted) {
+    private String buildBookingStatusBody(String listingTitle, boolean isAccepted, java.time.LocalDateTime expiresAt) {
         String statusText = isAccepted ? "ACEPTADA" : "RECHAZADA";
         String extraMessage = isAccepted 
-            ? "El anfitrión ha aprobado tu solicitud. ¡Prepárate para tu próxima estancia!" 
+            ? "El anfitrión ha aprobado tu solicitud. ¡Prepárate para tu próxima estancia!\n\nTienes hasta el " + expiresAt.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) + " para pagar la fianza."
             : "Lamentablemente, el anfitrión no ha podido aprobar tu solicitud en esta ocasión.";
 
         return """
@@ -213,5 +262,53 @@ public class EmailServiceImpl implements EmailService {
                 Este correo ha sido generado automáticamente. Por favor, no respondas a él.
                 © Colivi — Plataforma de alojamiento universitario
                 """.formatted(passwordResetUrlBase, token);
+    }
+
+    private SimpleMailMessage buildNewBookingRequestMessage(java.util.UUID requestId, String toEmail, String tenantName, String tenantEmail, String listingTitle, java.time.LocalDate startDate, java.time.LocalDate endDate, String userMessage) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromAddress);
+        message.setTo(toEmail);
+        if (tenantEmail != null && !tenantEmail.isBlank()) {
+            message.setReplyTo(tenantEmail);
+        }
+        message.setSubject("¡Nueva solicitud de reserva recibida para " + listingTitle + "!");
+
+        String messagePart = (userMessage != null && !userMessage.isBlank())
+                ? "\nMensaje del inquilino: \"" + userMessage + "\"\n"
+                : "";
+
+        String tenantEmailLine = (tenantEmail != null && !tenantEmail.isBlank())
+                ? "• Correo de contacto: " + tenantEmail + "\n"
+                : "";
+
+        String requestUrl = (requestId != null && receivedRequestsUrlBase != null)
+                ? receivedRequestsUrlBase + requestId
+                : "";
+
+        message.setText("""
+                Hola,
+
+                ¡Buenas noticias! Has recibido una nueva solicitud de reserva para tu alojamiento "%s".
+
+                Detalles de la solicitud:
+                • Inquilino: %s
+                %s• Fechas: del %s al %s%s
+                Puedes ver los detalles completos de la solicitud y responder a ella aquí:
+                %s
+
+                ─────────────────────────────────────────────
+                Este correo ha sido generado automáticamente. Puedes responder directamente a este correo para contactar con el solicitante.
+                © Colivi — Plataforma de alojamiento universitario
+                """.formatted(
+                listingTitle,
+                tenantName,
+                tenantEmailLine,
+                startDate.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+                endDate.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+                messagePart,
+                requestUrl
+        ));
+
+        return message;
     }
 }

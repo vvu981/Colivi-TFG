@@ -34,6 +34,9 @@ public class BookingRequestE2EIntegrationTest extends BaseIntegrationTest {
     
     private UUID tenantId;
 
+    private String tenant2Token;
+    private UUID tenant2Id;
+
     private String accommodationId;
     private String listingId;
     private String bookingRequestId;
@@ -52,6 +55,11 @@ public class BookingRequestE2EIntegrationTest extends BaseIntegrationTest {
         registerAndPromote("tenant_booking", "tenant_booking@example.com", "Tenant123!", UserRole.USER);
         tenantToken = login("tenant_booking@example.com", "Tenant123!");
         tenantId = userRepository.findByEmailIgnoreCase("tenant_booking@example.com").orElseThrow().getId();
+
+        // 4. Setup Tenant 2 (for step 7)
+        registerAndPromote("tenant2", "tenant2@example.com", "Tenant123!", UserRole.USER);
+        tenant2Token = login("tenant2@example.com", "Tenant123!");
+        tenant2Id = userRepository.findByEmailIgnoreCase("tenant2@example.com").orElseThrow().getId();
     }
 
     private void registerAndPromote(String nickname, String email, String password, UserRole role) throws Exception {
@@ -236,7 +244,7 @@ public class BookingRequestE2EIntegrationTest extends BaseIntegrationTest {
                 "message", "Created by admin."
         );
 
-        mockMvc.perform(post("/api/v1/booking-requests/admin/" + tenantId)
+        mockMvc.perform(post("/api/v1/booking-requests/admin/" + tenant2Id)
                 .header("Authorization", "Bearer " + adminToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(payload)))

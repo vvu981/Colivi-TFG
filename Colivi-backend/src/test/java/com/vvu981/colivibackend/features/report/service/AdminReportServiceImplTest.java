@@ -76,6 +76,22 @@ class AdminReportServiceImplTest {
     }
 
     @Test
+    void listReports_withAllFiltersPopulated_shouldReturnPage() {
+        ReportFilterCriteriaDto filter = new ReportFilterCriteriaDto(
+                ReportStatus.PENDING, ReportTargetType.USER, UUID.randomUUID(), UUID.randomUUID(),
+                com.vvu981.colivibackend.features.report.domain.ReportReason.SPAM,
+                java.time.LocalDate.now().minusDays(2), java.time.LocalDate.now());
+        PageRequest pageRequest = PageRequest.of(0, 10);
+        Page<Report> page = new PageImpl<>(List.of(report));
+
+        when(reportRepository.findAll(any(Specification.class), eq(pageRequest))).thenReturn(page);
+
+        Page<ReportResponse> result = adminReportService.listReports(filter, pageRequest);
+
+        assertThat(result.getContent()).hasSize(1);
+    }
+
+    @Test
     void getMostReportedTargets_shouldReturnPage() {
         PageRequest pageRequest = PageRequest.of(0, 10);
         Page<ReportTargetCountDTO> page = new PageImpl<>(List.of());
@@ -213,10 +229,48 @@ class AdminReportServiceImplTest {
 
     @Test
     void updateReportStatus_shouldThrowException_whenStatusIsInvalid() {
-        ReportStatusUpdateRequest request = new ReportStatusUpdateRequest(ReportStatus.PENDING, null);
+        ReportStatusUpdateRequest request1 = new ReportStatusUpdateRequest(ReportStatus.PENDING, null);
         when(reportRepository.findById(reportId)).thenReturn(Optional.of(report));
         
-        assertThatThrownBy(() -> adminReportService.updateReportStatus(reportId, request, adminId))
+        assertThatThrownBy(() -> adminReportService.updateReportStatus(reportId, request1, adminId))
+                .isInstanceOf(BusinessRuleValidationException.class);
+
+        ReportStatusUpdateRequest request2 = new ReportStatusUpdateRequest(ReportStatus.CANCELLED, null);
+        assertThatThrownBy(() -> adminReportService.updateReportStatus(reportId, request2, adminId))
+                .isInstanceOf(BusinessRuleValidationException.class);
+    }
+
+    @Test
+    void updateReportStatus_shouldInvestigateSuccessfully() {
+        ReportStatusUpdateRequest request = new ReportStatusUpdateRequest(ReportStatus.INVESTIGATING, null);
+        when(reportRepository.findById(reportId)).thenReturn(Optional.of(report));
+        when(reportRepository.save(any(Report.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        adminReportService.updateReportStatus(reportId, request, adminId);
+
+        assertThat(report.getStatus()).isEqualTo(ReportStatus.INVESTIGATING);
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    void updateReportStatus_shouldDismissSuccessfully() {
+        ReportStatusUpdateRequest request = new ReportStatusUpdateRequest(ReportStatus.DISMISSED, "Dismiss reason");
+        when(reportRepository.findById(reportId)).thenReturn(Optional.of(report));
+        when(reportRepository.save(any(Report.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        adminReportService.updateReportStatus(reportId, request, adminId);
+
+        assertThat(report.getStatus()).isEqualTo(ReportStatus.DISMISSED);
+        assertThat(report.getAdminNotes()).isEqualTo("Dismiss reason");
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    void updateBulkReportStatus_shouldThrowException_whenStatusIsCancelled() {
+        BulkReportStatusUpdateRequest request = new BulkReportStatusUpdateRequest(List.of(reportId),
+                ReportStatus.CANCELLED, null);
+
+        assertThatThrownBy(() -> adminReportService.updateBulkReportStatus(request, adminId))
                 .isInstanceOf(BusinessRuleValidationException.class);
     }
 

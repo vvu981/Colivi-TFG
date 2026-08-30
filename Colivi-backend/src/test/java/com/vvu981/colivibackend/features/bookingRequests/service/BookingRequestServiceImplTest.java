@@ -35,14 +35,14 @@ import com.vvu981.colivibackend.features.bookingRequests.dto.BookingRequestRespo
 import com.vvu981.colivibackend.features.bookingRequests.dto.PaymentConfirmationDto;
 import com.vvu981.colivibackend.features.bookingRequests.repository.BookingRequestRepository;
 import com.vvu981.colivibackend.features.bookingRequests.repository.filters.BookingRequestFilter;
-import org.springframework.context.ApplicationEventPublisher;
-import com.vvu981.colivibackend.features.bookingRequests.domain.BookingStatusChangedEvent;
-import com.vvu981.colivibackend.features.accommodation.repository.AccommodationRepository;
 import com.vvu981.colivibackend.features.accommodation.domain.Accommodation;
+import com.vvu981.colivibackend.features.bookingRequests.domain.BookingStatusChangedEvent;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
 import com.vvu981.colivibackend.core.payment.service.PaymentService;
+import org.springframework.context.ApplicationEventPublisher;
+
 
 @ExtendWith(MockitoExtension.class)
 public class BookingRequestServiceImplTest {
@@ -52,11 +52,10 @@ public class BookingRequestServiceImplTest {
         @Mock
         private AccommodationListingRepository listingRepository;
         @Mock
-        private AccommodationRepository accommodationRepository;
-        @Mock
         private UserRepository userRepository;
         @Mock
         private ApplicationEventPublisher eventPublisher;
+
         @Mock
         private BookingRequestFilter mockFilter;
         @Mock
@@ -66,9 +65,8 @@ public class BookingRequestServiceImplTest {
         @Mock
         private org.springframework.transaction.support.TransactionTemplate transactionTemplate;
 
-        private List<BookingRequestFilter> bookingFilters;
-
         private BookingRequestServiceImpl bookingRequestService;
+        private List<BookingRequestFilter> bookingFilters;
 
         private User requester;
         private User host;
@@ -81,8 +79,7 @@ public class BookingRequestServiceImplTest {
         void setUp() {
                 bookingFilters = List.of(mockFilter);
                 bookingRequestService = new BookingRequestServiceImpl(requestRepository, listingRepository,
-                                userRepository,
-                                accommodationRepository, eventPublisher, paymentService, transactionTemplate, bookingRequestValidator,
+                                userRepository, eventPublisher, paymentService, transactionTemplate, bookingRequestValidator,
                                 bookingFilters);
 
                 requester = new User();
@@ -137,6 +134,7 @@ public class BookingRequestServiceImplTest {
                         assertEquals(requestDto.message(), result.message());
                         assertEquals(RequestStatus.PENDING, result.status());
                         verify(requestRepository).save(any(BookingRequest.class));
+                        verify(eventPublisher).publishEvent(any(com.vvu981.colivibackend.features.bookingRequests.domain.BookingRequestCreatedEvent.class));
                 }
 
                 @Test
@@ -445,7 +443,7 @@ public class BookingRequestServiceImplTest {
         class GetLists {
                 @Test
                 void getTenantRequests() {
-                        when(requestRepository.findByRequesterId(eq(requester.getId()), any(PageRequest.class)))
+                        when(requestRepository.findByRequesterIdAndStatusNot(eq(requester.getId()), eq(RequestStatus.CANCELLED), any(PageRequest.class)))
                                         .thenReturn(new PageImpl<>(List.of(bookingRequest)));
 
                         Page<BookingRequestResponseDto> res = bookingRequestService.getTenantBookingRequests(0, 10,
@@ -652,6 +650,20 @@ public class BookingRequestServiceImplTest {
                                         () -> bookingRequestService.confirmBookingPayment(mockRequest.getId(),
                                                         paymentDto, requester.getId()));
                         verify(paymentService).refund("TXN-123");
+                }
+        }
+
+        @Nested
+        class CountPendingRequestsForLandlord {
+                @Test
+                void returnsCountFromRepository() {
+                        UUID landlordId = UUID.randomUUID();
+                        when(requestRepository.countPendingRequestsByHostId(landlordId)).thenReturn(3L);
+
+                        long count = bookingRequestService.countPendingRequestsForLandlord(landlordId);
+
+                        assertEquals(3L, count);
+                        verify(requestRepository).countPendingRequestsByHostId(landlordId);
                 }
         }
 }

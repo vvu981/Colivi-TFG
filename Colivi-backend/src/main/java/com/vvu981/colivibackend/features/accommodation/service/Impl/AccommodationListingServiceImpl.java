@@ -273,7 +273,7 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
     public AccommodationListingResponse getAccommodationListing(UUID listingId, UUID currentUserId) {
         AccommodationListing listing = findAccommodationListingById(listingId);
         
-        if (listing.getStatus() != ListingStatus.AVAILABLE) {
+        if (listing.getStatus() == ListingStatus.BANNED) {
             if (currentUserId == null) {
                 throw new ResourceNotFoundException("Error: no se encuentra el anuncio con id: " + listingId + ".");
             }

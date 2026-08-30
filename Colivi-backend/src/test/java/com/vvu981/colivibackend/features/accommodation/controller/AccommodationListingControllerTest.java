@@ -153,6 +153,42 @@ class AccommodationListingControllerTest {
         }
 
         @Test
+        @DisplayName("debe retornar 400 cuando minPrice tiene formato invalido")
+        void shouldReturn400WhenMinPriceIsInvalid() throws Exception {
+            mockMvc.perform(get("/api/v1/listings")
+                    .with(authentication(buildAuth(hostUser)))
+                    .param("minPrice", "invalid_min_price"))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("debe retornar 200 cuando maxPrice y minPrice son cadenas en blanco")
+        void shouldReturn200WhenPricesAreBlankStrings() throws Exception {
+            Page<AccommodationListingResponse> page = new PageImpl<>(List.of(listingResponse));
+            when(listingService.searchListings(any(), anyInt(), anyInt())).thenReturn(page);
+
+            mockMvc.perform(get("/api/v1/listings")
+                    .with(authentication(buildAuth(hostUser)))
+                    .param("maxPrice", "   ")
+                    .param("minPrice", "   "))
+                    .andExpect(status().isOk());
+        }
+
+        @Test
+        @DisplayName("debe aceptar minPrice valido")
+        void shouldAcceptValidMinPrice() throws Exception {
+            Page<AccommodationListingResponse> page = new PageImpl<>(List.of(listingResponse));
+            when(listingService.searchListings(any(), anyInt(), anyInt())).thenReturn(page);
+
+            mockMvc.perform(get("/api/v1/listings")
+                    .with(authentication(buildAuth(hostUser)))
+                    .param("minPrice", "250.00")
+                    .param("page", "0")
+                    .param("size", "10"))
+                    .andExpect(status().isOk());
+        }
+
+        @Test
         @DisplayName("debe llamar a saveSearchAsync cuando el usuario esta autenticado y maxPrice es valido o vacio")
         void shouldCallSaveSearchAsyncWhenAuthenticated() throws Exception {
             Page<AccommodationListingResponse> page = new PageImpl<>(List.of(listingResponse));
@@ -510,6 +546,16 @@ class AccommodationListingControllerTest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("{}"))
                     .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("debe retornar 403 Forbidden si la petición no está autenticada")
+        void shouldReturn403WhenUnauthenticated() throws Exception {
+            mockMvc.perform(patch("/api/v1/listings/status/{id}", listingId)
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"status\": \"UNAVAILABLE\"}"))
+                    .andExpect(status().isForbidden());
         }
     }
 }

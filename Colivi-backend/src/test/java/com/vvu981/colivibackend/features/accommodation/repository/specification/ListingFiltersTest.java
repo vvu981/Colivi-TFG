@@ -409,4 +409,70 @@ class ListingFiltersTest {
         assertThat(result).isEqualTo(conjunctionPredicate);
         verify(cb, times(1)).conjunction();
     }
+
+    @Test
+    @DisplayName("HostIdFilter debe ser aplicable si existe el parametro 'hostId' no vacio")
+    void testHostIdFilterApplicability() {
+        HostIdFilter hostIdFilter = new HostIdFilter();
+        assertThat(hostIdFilter.isApplicable(null)).isFalse();
+
+        Map<String, String> params = new HashMap<>();
+        assertThat(hostIdFilter.isApplicable(params)).isFalse();
+
+        params.put("hostId", null);
+        assertThat(hostIdFilter.isApplicable(params)).isFalse();
+
+        params.put("hostId", "   ");
+        assertThat(hostIdFilter.isApplicable(params)).isFalse();
+
+        params.put("hostId", java.util.UUID.randomUUID().toString());
+        assertThat(hostIdFilter.isApplicable(params)).isTrue();
+    }
+
+    @Test
+    @DisplayName("HostIdFilter apply debe generar la condicion equal correcta para UUID valido")
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    void testHostIdFilterApplyValid() {
+        HostIdFilter hostIdFilter = new HostIdFilter();
+        java.util.UUID hostId = java.util.UUID.randomUUID();
+        Map<String, String> params = Map.of("hostId", hostId.toString());
+        Specification<AccommodationListing> spec = hostIdFilter.apply(params);
+
+        Root root = mock(Root.class);
+        CriteriaQuery query = mock(CriteriaQuery.class);
+        CriteriaBuilder cb = mock(CriteriaBuilder.class);
+        Path hostPath = mock(Path.class);
+        Path idPath = mock(Path.class);
+        Predicate equalPredicate = mock(Predicate.class);
+
+        when(root.get("host")).thenReturn(hostPath);
+        when(hostPath.get("id")).thenReturn(idPath);
+        when(cb.equal(idPath, hostId)).thenReturn(equalPredicate);
+
+        Predicate result = spec.toPredicate(root, query, cb);
+
+        assertThat(result).isEqualTo(equalPredicate);
+        verify(cb, times(1)).equal(idPath, hostId);
+    }
+
+    @Test
+    @DisplayName("HostIdFilter apply debe devolver disjunction si UUID es invalido")
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    void testHostIdFilterApplyInvalidUuid() {
+        HostIdFilter hostIdFilter = new HostIdFilter();
+        Map<String, String> params = Map.of("hostId", "not-a-valid-uuid");
+        Specification<AccommodationListing> spec = hostIdFilter.apply(params);
+
+        Root root = mock(Root.class);
+        CriteriaQuery query = mock(CriteriaQuery.class);
+        CriteriaBuilder cb = mock(CriteriaBuilder.class);
+        Predicate disjunctionPredicate = mock(Predicate.class);
+
+        when(cb.disjunction()).thenReturn(disjunctionPredicate);
+
+        Predicate result = spec.toPredicate(root, query, cb);
+
+        assertThat(result).isEqualTo(disjunctionPredicate);
+        verify(cb, times(1)).disjunction();
+    }
 }

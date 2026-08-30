@@ -33,7 +33,10 @@ class BookingConfirmedEventListenerTest {
                 UUID.randomUUID(),
                 UUID.randomUUID(),
                 LocalDate.now(),
-                LocalDate.now().plusMonths(3)
+                LocalDate.now().plusMonths(3),
+                "tenant@example.com",
+                "landlord@example.com",
+                "Test Listing"
         );
     }
 

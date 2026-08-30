@@ -5,14 +5,41 @@ export interface BookingRequestPayload {
   message?: string;
 }
 
+export type BookingRequestStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'CONFIRMED' | 'CANCELLED' | 'EXPIRED';
+
 export interface BookingRequestResponse {
   id: string;
-  listingId: string;
-  tenantId: string;
+  accommodationListingId: string;
+  requesterId: string;
   startDate: string;
   endDate: string;
-  totalPrice: number;
-  status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'CANCELLED' | 'PAYMENT_PENDING' | 'CONFIRMED';
+  message?: string;
+  status: BookingRequestStatus;
   createdAt: string;
   updatedAt: string;
+  expiresAt?: string;
+}
+
+export interface TenantInfo {
+  id: string;
+  firstName: string;
+  lastName: string;
+  profilePictureUrl?: string;
+  email?: string;
+}
+
+export interface ListingInfo {
+  id: string;
+  title: string;
+  address?: string;
+  coverImageUrl?: string;
+  pricePerMonth?: number;
+  securityDeposit?: number;
+}
+
+// Extendido con relaciones para la UI
+export interface BookingRequest extends BookingRequestResponse {
+  tenant?: TenantInfo;
+  listing?: ListingInfo;
+  totalPrice: number;
 }

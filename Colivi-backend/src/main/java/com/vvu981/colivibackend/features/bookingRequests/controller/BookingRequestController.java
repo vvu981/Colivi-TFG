@@ -101,6 +101,13 @@ public class BookingRequestController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/landlord/pending-count")
+    public ResponseEntity<com.vvu981.colivibackend.features.bookingRequests.dto.PendingBookingRequestsCountDto> getPendingRequestsCount(
+            @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
+        long count = requestService.countPendingRequestsForLandlord(currentUserId);
+        return ResponseEntity.ok(new com.vvu981.colivibackend.features.bookingRequests.dto.PendingBookingRequestsCountDto(count));
+    }
+
     @GetMapping("/admin")
     @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<Page<BookingRequestResponseDto>> getAllRequestsForAdmin(

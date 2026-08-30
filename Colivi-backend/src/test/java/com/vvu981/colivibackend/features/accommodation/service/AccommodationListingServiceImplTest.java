@@ -805,6 +805,19 @@ class AccommodationListingServiceImplTest {
                                         .isInstanceOf(ResourceNotFoundException.class)
                                         .hasMessageContaining("no se encuentra el anuncio");
                 }
+
+                @Test
+                @DisplayName("debe obtener el anuncio por ID incluso si su estado es UNAVAILABLE")
+                void shouldGetListingByIdWhenUnavailable() {
+                        listing.setStatus(ListingStatus.UNAVAILABLE);
+                        when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
+
+                        AccommodationListingResponse response = listingServiceImpl
+                                        .getAccommodationListing(listing.getId(), null);
+
+                        assertThat(response).isNotNull();
+                        assertThat(response.id()).isEqualTo(listing.getId());
+                }
         }
 
         @Nested
@@ -955,6 +968,173 @@ class AccommodationListingServiceImplTest {
 
                         assertThat(results).hasSize(1);
                         assertThat(results.get(0).getId()).isEqualTo(listing.getId());
+                }
+        }
+
+        @Nested
+        @DisplayName("AdditionalCoverage")
+        class AdditionalCoverage {
+
+                @Test
+                @DisplayName("getListingStatsForAccommodation debe delegar al repositorio")
+                void shouldGetListingStats() {
+                        AccommodationListingStatsDTO stats = new AccommodationListingStatsDTO(1L, 2L);
+                        when(listingRepository.getListingStatsForAccommodation(accommodation.getId())).thenReturn(stats);
+
+                        AccommodationListingStatsDTO result = listingServiceImpl.getListingStatsForAccommodation(accommodation.getId());
+
+                        assertThat(result).isEqualTo(stats);
+                }
+
+                @Test
+                @DisplayName("softDeleteAllByAccommodationId debe delegar al repositorio")
+                void shouldSoftDeleteAllByAccommodationId() {
+                        doNothing().when(listingRepository).softDeleteAllByAccommodationId(eq(accommodation.getId()), any(LocalDateTime.class));
+
+                        listingServiceImpl.softDeleteAllByAccommodationId(accommodation.getId());
+
+                        verify(listingRepository).softDeleteAllByAccommodationId(eq(accommodation.getId()), any(LocalDateTime.class));
+                }
+
+                @Test
+                @DisplayName("searchAllListingsForAdmin debe retornar pagina mapeada")
+                void shouldSearchAllListingsForAdmin() {
+                        Map<String, String> filters = Map.of("city", "Madrid");
+                        Specification<AccommodationListing> spec = mock(Specification.class);
+                        when(specificationBuilder.buildAdminSpecification(filters)).thenReturn(spec);
+                        Page<AccommodationListing> page = new PageImpl<>(List.of(listing));
+                        when(listingRepository.findAll(eq(spec), any(Pageable.class))).thenReturn(page);
+
+                        Page<AccommodationListingResponse> result = listingServiceImpl.searchAllListingsForAdmin(filters, 0, 10);
+
+                        assertThat(result).isNotNull();
+                        assertThat(result.getContent()).hasSize(1);
+                }
+
+                @Test
+                @DisplayName("findAll debe delegar al repositorio")
+                void shouldFindAllWithSpecAndPageable() {
+                        Specification<AccommodationListing> spec = mock(Specification.class);
+                        Pageable pageable = PageRequest.of(0, 10);
+                        Page<AccommodationListing> page = new PageImpl<>(List.of(listing));
+                        when(listingRepository.findAll(spec, pageable)).thenReturn(page);
+
+                        Page<AccommodationListing> result = listingServiceImpl.findAll(spec, pageable);
+
+                        assertThat(result).isEqualTo(page);
+                }
+
+                @Test
+                @DisplayName("changeStatusListing debe lanzar excepcion si se intenta poner BANNED directamente")
+                void shouldThrowWhenSettingBannedStatusDirectly() {
+                        assertThatThrownBy(() -> listingServiceImpl.changeStatusListing(listing.getId(), ListingStatus.BANNED, host.getId()))
+                                        .isInstanceOf(UnauthorizedActionException.class)
+                                        .hasMessageContaining("El estado BANNED no puede establecerse");
+                }
+
+                @Test
+                @DisplayName("changeStatusListing debe lanzar excepcion si el anuncio ya está baneado")
+                void shouldThrowWhenModifyingBannedListingStatus() {
+                        listing.setStatus(ListingStatus.BANNED);
+                        when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
+
+                        assertThatThrownBy(() -> listingServiceImpl.changeStatusListing(listing.getId(), ListingStatus.AVAILABLE, host.getId()))
+                                        .isInstanceOf(UnauthorizedActionException.class)
+                                        .hasMessageContaining("No puedes modificar el estado de un anuncio baneado");
+                }
+
+                @Test
+                @DisplayName("changeStatusListing debe lanzar excepcion si el alojamiento fue eliminado al activar")
+                void shouldThrowWhenActivatingListingWithDeletedAccommodation() {
+                        listing.setStatus(ListingStatus.UNAVAILABLE);
+                        accommodation.setDeletedAt(LocalDateTime.now());
+                        when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
+
+                        assertThatThrownBy(() -> listingServiceImpl.changeStatusListing(listing.getId(), ListingStatus.AVAILABLE, host.getId()))
+                                        .isInstanceOf(BusinessRuleValidationException.class)
+                                        .hasMessageContaining("alojamiento ha sido eliminado");
+                }
+
+                @Test
+                @DisplayName("updateAccommodationListing con lista de imagenes vacia debe vaciar imagenes")
+                void shouldClearImagesWhenEmptyListProvidedInUpdate() {
+                        when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
+                        when(listingRepository.save(any(AccommodationListing.class))).thenReturn(listing);
+
+                        AccommodationListingUpdateRequest dto = new AccommodationListingUpdateRequest(
+                                        "New Title", "New Desc", BigDecimal.valueOf(500), BigDecimal.valueOf(500), List.of());
+
+                        AccommodationListingResponse result = listingServiceImpl.updateAccommodationListing(listing.getId(), dto, host.getId());
+
+                        assertThat(result).isNotNull();
+                        assertThat(listing.getImages()).isEmpty();
+                }
+
+                @Test
+                @DisplayName("findAvailableListingsByAccommodationId retorna lista de disponibles")
+                void shouldFindAvailableListingsByAccommodationId() {
+                        listing.setStatus(ListingStatus.AVAILABLE);
+                        when(listingRepository.findByAccommodationIdAndStatusAndDeletedAtIsNull(accommodation.getId(), ListingStatus.AVAILABLE))
+                                        .thenReturn(List.of(listing));
+
+                        List<AccommodationListingResponse> responses = listingServiceImpl.findAvailableListingsByAccommodationId(accommodation.getId());
+
+                        assertThat(responses).hasSize(1);
+                        assertThat(responses.get(0).title()).isEqualTo(listing.getTitle());
+                }
+
+                @Test
+                @DisplayName("getAccommodationListing cuando el anuncio esta BANNED y el usuario es anonimo lanza ResourceNotFoundException")
+                void shouldThrowWhenGettingBannedListingAsAnonymous() {
+                        listing.setStatus(ListingStatus.BANNED);
+                        when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
+
+                        assertThatThrownBy(() -> listingServiceImpl.getAccommodationListing(listing.getId(), null))
+                                        .isInstanceOf(ResourceNotFoundException.class);
+                }
+
+                @Test
+                @DisplayName("getAccommodationListing cuando el anuncio esta BANNED y el usuario no puede editar lanza ResourceNotFoundException")
+                void shouldThrowWhenGettingBannedListingAsUnrelatedUser() {
+                        listing.setStatus(ListingStatus.BANNED);
+                        when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
+
+                        UUID otherUserId = UUID.randomUUID();
+                        User otherUser = new User();
+                        otherUser.setId(otherUserId);
+                        otherUser.setRole(UserRole.USER);
+                        when(userRepository.findActiveById(otherUserId)).thenReturn(Optional.of(otherUser));
+
+                        assertThatThrownBy(() -> listingServiceImpl.getAccommodationListing(listing.getId(), otherUserId))
+                                        .isInstanceOf(ResourceNotFoundException.class);
+                }
+
+                @Test
+                @DisplayName("getAccommodationListing cuando el anuncio esta BANNED y el usuario es el host retorna el DTO")
+                void shouldReturnBannedListingIfHost() {
+                        listing.setStatus(ListingStatus.BANNED);
+                        when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
+
+                        AccommodationListingResponse response = listingServiceImpl.getAccommodationListing(listing.getId(), host.getId());
+
+                        assertThat(response).isNotNull();
+                        assertThat(response.id()).isEqualTo(listing.getId());
+                }
+
+                @Test
+                @DisplayName("unBanAccommodationListing cuando previousStatus no era AVAILABLE no valida capacidad")
+                void shouldUnbanListingWithoutCapacityValidationIfPreviousStatusNotAvailable() {
+                        listing.setStatus(ListingStatus.BANNED);
+                        listing.setPreviousStatus(ListingStatus.UNAVAILABLE);
+                        when(listingRepository.findById(listing.getId())).thenReturn(Optional.of(listing));
+                        when(accommodationService.findAccommodationWithImagesByIdAndDeletedAtIsNullWithPessimisticLock(
+                                        accommodation.getId()))
+                                        .thenReturn(accommodation);
+
+                        listingServiceImpl.unBanAccommodationListing(listing.getId(), admin.getId());
+
+                        assertThat(listing.getStatus()).isEqualTo(ListingStatus.UNAVAILABLE);
+                        verify(listingRepository).save(listing);
                 }
         }
 }

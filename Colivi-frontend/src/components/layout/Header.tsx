@@ -13,12 +13,13 @@ export const Header: React.FC = () => {
     <nav className="bg-white font-body-md text-body-md border-b border-[#dec0b7] z-50 sticky top-0 shadow-[0_1px_4px_rgba(15,23,42,0.06)]">
       <div className="flex justify-between items-center w-full px-margin-desktop h-20">
         {/* Brand */}
-        <Link to="/" className="text-xl font-bold tracking-tight text-[#9f3c16] flex-shrink-0">
-          Colivi
+        <Link to="/" className="flex items-center gap-2.5 text-xl font-bold tracking-tight text-[#9f3c16] flex-shrink-0">
+          <img src="/favicon.png" alt="Colivi" className="h-8 w-8 object-contain" />
+          <span>Colivi</span>
         </Link>
 
         {/* Navigation Links (Desktop) */}
-        <div className="hidden md:flex space-x-lg items-center h-full flex-grow justify-center">
+        <div className="hidden md:flex space-x-6 items-center h-full flex-grow justify-center">
           <NavLink
             to="/"
             end

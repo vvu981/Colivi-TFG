@@ -33,6 +33,11 @@ export const userService = {
     return response.data;
   },
 
+  getById: async (id: string): Promise<UserProfile> => {
+    const response = await api.get<UserProfile>(`/users/${id}`);
+    return response.data;
+  },
+
   updateProfile: async (data: UpdateProfileData): Promise<UpdateProfileData> => {
     const response = await api.patch<UpdateProfileData>('/users/me/profile', data);
     return response.data;
