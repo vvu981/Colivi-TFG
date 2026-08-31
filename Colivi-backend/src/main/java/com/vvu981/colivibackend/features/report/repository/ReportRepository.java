@@ -20,7 +20,7 @@ public interface ReportRepository extends JpaRepository<Report, UUID>, JpaSpecif
             UUID reporterId, ReportTargetType targetType, UUID targetId,
             List<ReportStatus> statuses);
 
-    Page<Report> findByReporterId(UUID reporterId, Pageable pageable);
+    List<Report> findByReporterIdAndStatusAndReporterNotifiedFalse(UUID reporterId, ReportStatus status);
 
     @Query("SELECT new com.vvu981.colivibackend.features.report.dto.ReportTargetCountDTO(r.targetId, r.targetType, COUNT(r)) "
             +

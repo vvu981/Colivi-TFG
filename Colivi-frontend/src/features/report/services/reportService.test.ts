@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import api from '../../../lib/api';
 import { reportService } from './reportService';
-import type { CreateReportRequest, ReportResponse } from '../types/report.types';
+import type { CreateReportRequest, ReportFeedbackResponse, ReportResponse } from '../types/report.types';
 
 vi.mock('../../../lib/api', () => ({
   default: {
@@ -43,30 +43,29 @@ describe('reportService', () => {
     expect(result).toEqual(mockResponse);
   });
 
-  it('getMyReports sends GET request with pagination parameters', async () => {
-    const mockPageResponse = {
-      content: [],
-      totalElements: 0,
-      totalPages: 0,
-      size: 10,
-      number: 0,
-    };
+  it('getPendingFeedback sends GET request to pending-feedback endpoint', async () => {
+    const mockFeedbackList: ReportFeedbackResponse[] = [
+      {
+        id: 'report-uuid-1',
+        targetType: 'LISTING',
+        reason: 'FRAUD',
+        resolvedAt: '2026-08-30T15:00:00Z',
+      },
+    ];
 
-    vi.mocked(api.get).mockResolvedValueOnce({ data: mockPageResponse });
+    vi.mocked(api.get).mockResolvedValueOnce({ data: mockFeedbackList });
 
-    const result = await reportService.getMyReports(1, 20);
+    const result = await reportService.getPendingFeedback();
 
-    expect(api.get).toHaveBeenCalledWith('/reports/me', {
-      params: { page: 1, size: 20 },
-    });
-    expect(result).toEqual(mockPageResponse);
+    expect(api.get).toHaveBeenCalledWith('/reports/pending-feedback');
+    expect(result).toEqual(mockFeedbackList);
   });
 
-  it('cancelReport sends PATCH request to cancel report endpoint', async () => {
+  it('acknowledgeFeedback sends PATCH request to acknowledge-feedback endpoint', async () => {
     vi.mocked(api.patch).mockResolvedValueOnce({ data: {} });
 
-    await reportService.cancelReport('report-uuid-1');
+    await reportService.acknowledgeFeedback('report-uuid-1');
 
-    expect(api.patch).toHaveBeenCalledWith('/reports/report-uuid-1/cancel');
+    expect(api.patch).toHaveBeenCalledWith('/reports/report-uuid-1/acknowledge-feedback');
   });
 });

@@ -2,12 +2,12 @@ import api from '../../../lib/api';
 import type {
   CreateReportRequest,
   ReportResponse,
-  PageResponse,
+  ReportFeedbackResponse,
 } from '../types/report.types';
 
 export const reportService = {
   /**
-   * Submits a new report for an entity (listing, user, home, expense).
+   * Submits a new report for an entity (listing, user).
    */
   createReport: async (payload: CreateReportRequest): Promise<ReportResponse> => {
     const { data } = await api.post<ReportResponse>('/reports', payload);
@@ -15,19 +15,18 @@ export const reportService = {
   },
 
   /**
-   * Retrieves the paginated reports submitted by the currently authenticated user.
+   * Retrieves pending resolution feedback/acknowledgments for the current user's submitted reports.
    */
-  getMyReports: async (page = 0, size = 10): Promise<PageResponse<ReportResponse>> => {
-    const { data } = await api.get<PageResponse<ReportResponse>>('/reports/me', {
-      params: { page, size },
-    });
+  getPendingFeedback: async (): Promise<ReportFeedbackResponse[]> => {
+    const { data } = await api.get<ReportFeedbackResponse[]>('/reports/pending-feedback');
     return data;
   },
 
   /**
-   * Cancels a pending report created by the authenticated user.
+   * Marks a report feedback notification as acknowledged/seen by the reporter.
    */
-  cancelReport: async (reportId: string): Promise<void> => {
-    await api.patch(`/reports/${reportId}/cancel`);
+  acknowledgeFeedback: async (reportId: string): Promise<void> => {
+    await api.patch(`/reports/${reportId}/acknowledge-feedback`);
   },
 };
+

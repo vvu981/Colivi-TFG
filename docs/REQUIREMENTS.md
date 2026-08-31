@@ -63,16 +63,14 @@
 | RF-59 | Consultar Reservas Enviadas (Inquilino) | Permite a un inquilino ver el histórico y estado de todas las solicitudes de reserva que ha emitido. |
 | RF-60 | Consultar Reservas Recibidas (Propietario) | Permite a un propietario listar las reservas entrantes hacia sus anuncios, filtrables por inmueble. |
 | RF-61 | Listar Todas las Reservas (Admin) | Permite a la administración ver, filtrar y auditar absolutamente todas las transacciones y reservas del sistema. |
-| RF-62 | Crear Denuncia (Reporte) | Permite a cualquier usuario enviar una alerta de moderación hacia un objetivo (Usuario, Anuncio, Hogar, Gasto) indicando motivo y justificación. |
-| RF-63 | Consultar Mis Denuncias | Permite a un usuario listar las denuncias que ha emitido y ver su estado actual de resolución. |
-| RF-64 | Cancelar Denuncia Propia | Permite a un usuario anular (CANCELLED) voluntariamente una denuncia que hizo, siempre que su estado siga como pendiente. |
-| RF-65 | Filtrar Denuncias (Admin) | Permite a la administración buscar quejas usando especificaciones complejas (por objetivo, creador, tipo, fechas, estado). |
-| RF-66 | Gestionar Estado de Denuncia | Permite a un Administrador avanzar el ciclo de vida de un reporte (Investigar, Resolver o Desestimar) añadiendo notas privadas. |
-| RF-67 | Moderación Masiva (Bulk Update) | Permite a la administración resolver, desestimar o investigar múltiples denuncias de forma atómica y agrupada. |
-| RF-68 | Consultar Estadísticas de Denuncias | Retorna a la administración un ranking con los elementos que acumulan más quejas (Top Most Reported) para detectar infractores reincidentes. |
-| RF-69 | Absorción Automática de Deuda | El Sistema genera automáticamente un gasto interno (CONDONACIÓN_EXPULSIÓN) para redistribuir la deuda impagada de un miembro cuando este es expulsado forzosamente. |
-| RF-70 | Promoción Automática de Administrador | El Sistema otorga automáticamente (HomeMemberOrphanListener) el rol de Administrador al miembro activo más antiguo si el actual Admin elimina su cuenta. |
-| RF-71 | Cierre Automático de Hogar Vacío | El Sistema archiva o marca automáticamente un hogar como inactivo/borrado cuando se detecta que su único y último miembro activo sale del mismo o elimina su cuenta. |
-| RF-72 | Flujo de Recuperación de Contraseña Olvidada | Permite a un usuario no logueado solicitar (Forgot Password) y consumir (Reset Password) un token de recuperación para cambiar su contraseña. |
-| RF-73 | Consultar Expediente de Denuncia (Admin) | Permite a un Administrador obtener la información detallada de una denuncia específica mediante su ID. |
-| RF-74 | Recomendación de Anuncios Promocionados | El Sistema selecciona y muestra anuncios destacados/promocionados alineados dinámicamente con los criterios de la última búsqueda realizada por el usuario (ubicación, rango de precio, tipo).
+| RF-62 | Crear Denuncia (Reporte) | Permite a cualquier usuario enviar una alerta de moderación hacia un objetivo (Usuario o Anuncio) indicando motivo y justificación. |
+| RF-63 | Filtrar Denuncias (Admin) | Permite a la administración buscar quejas usando especificaciones complejas (por objetivo, creador, tipo, fechas, estado). |
+| RF-64 | Gestionar Estado de Denuncia | Permite a un Administrador avanzar el ciclo de vida de un reporte (Investigar, Resolver o Desestimar) añadiendo notas privadas. |
+| RF-65 | Moderación Masiva (Bulk Update) | Permite a la administración resolver, desestimar o investigar múltiples denuncias de forma atómica y agrupada. |
+| RF-66 | Consultar Estadísticas de Denuncias | Retorna a la administración un ranking con los elementos que acumulan más quejas (Top Most Reported) para detectar infractores reincidentes. |
+| RF-67 | Absorción Automática de Deuda | El Sistema genera automáticamente un gasto interno (CONDONACIÓN_EXPULSIÓN) para redistribuir la deuda impagada de un miembro cuando este es expulsado forzosamente. |
+| RF-68 | Promoción Automática de Administrador | El Sistema otorga automáticamente (HomeMemberOrphanListener) el rol de Administrador al miembro activo más antiguo si el actual Admin elimina su cuenta. |
+| RF-69 | Cierre Automático de Hogar Vacío | El Sistema archiva o marca automáticamente un hogar como inactivo/borrado cuando se detecta que su único y último miembro activo sale del mismo o elimina su cuenta. |
+| RF-70 | Flujo de Recuperación de Contraseña Olvidada | Permite a un usuario no logueado solicitar (Forgot Password) y consumir (Reset Password) un token de recuperación para cambiar su contraseña. |
+| RF-71 | Consultar Expediente de Denuncia (Admin) | Permite a un Administrador obtener la información detallada de una denuncia específica mediante su ID. |
+| RF-72 | Recomendación de Anuncios Promocionados | El Sistema selecciona y muestra anuncios destacados/promocionados alineados dinámicamente con los criterios de la última búsqueda realizada por el usuario (ubicación, rango de precio, tipo). |

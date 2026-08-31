@@ -1,6 +1,14 @@
 // ── Report Enums and Types ─────────────────────────────────────────────
 
-export type ReportTargetType = 'LISTING' | 'USER' | 'HOME' | 'EXPENSE';
+export type ReportTargetType = 'LISTING' | 'USER';
+
+export interface ReportFeedbackResponse {
+  id: string;
+  targetType: ReportTargetType;
+  reason: ReportReason;
+  resolvedAt: string;
+}
+
 
 export type ReportReason =
   | 'SPAM'

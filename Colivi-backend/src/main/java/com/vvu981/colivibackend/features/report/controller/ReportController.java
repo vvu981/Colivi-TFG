@@ -1,19 +1,17 @@
 package com.vvu981.colivibackend.features.report.controller;
 
 import com.vvu981.colivibackend.features.report.dto.CreateReportRequest;
+import com.vvu981.colivibackend.features.report.dto.ReportFeedbackResponse;
 import com.vvu981.colivibackend.features.report.dto.ReportResponse;
 import com.vvu981.colivibackend.features.report.service.ReportService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -31,19 +29,19 @@ public class ReportController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @GetMapping("/me")
-    public ResponseEntity<Page<ReportResponse>> getMyReports(
-            @AuthenticationPrincipal(expression = "id") UUID reporterId,
-            @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<ReportResponse> response = reportService.getUserReports(reporterId, pageable);
-        return ResponseEntity.ok(response);
+    @GetMapping("/pending-feedback")
+    public ResponseEntity<List<ReportFeedbackResponse>> getPendingFeedback(
+            @AuthenticationPrincipal(expression = "id") UUID reporterId) {
+        List<ReportFeedbackResponse> feedback = reportService.getPendingFeedback(reporterId);
+        return ResponseEntity.ok(feedback);
     }
 
-    @PatchMapping("/{id}/cancel")
-    public ResponseEntity<Void> cancelReport(
+    @PatchMapping("/{id}/acknowledge-feedback")
+    public ResponseEntity<Void> acknowledgeFeedback(
             @AuthenticationPrincipal(expression = "id") UUID reporterId,
             @PathVariable UUID id) {
-        reportService.cancelReport(reporterId, id);
+        reportService.acknowledgeFeedback(reporterId, id);
         return ResponseEntity.noContent().build();
     }
 }
+
