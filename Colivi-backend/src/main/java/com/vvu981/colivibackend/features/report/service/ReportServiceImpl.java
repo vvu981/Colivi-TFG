@@ -4,21 +4,18 @@ import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
 import com.vvu981.colivibackend.core.exception.ResourceNotFoundException;
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing;
 import com.vvu981.colivibackend.features.accommodation.repository.AccommodationListingRepository;
-import com.vvu981.colivibackend.features.home.repository.HomeExpenseRepository;
-import com.vvu981.colivibackend.features.home.repository.HomeRepository;
 import com.vvu981.colivibackend.features.report.domain.Report;
 import com.vvu981.colivibackend.features.report.domain.ReportStatus;
 import com.vvu981.colivibackend.features.report.domain.ReportTargetType;
 import com.vvu981.colivibackend.features.report.domain.event.ReportCreatedEvent;
 import com.vvu981.colivibackend.features.report.dto.CreateReportRequest;
+import com.vvu981.colivibackend.features.report.dto.ReportFeedbackResponse;
 import com.vvu981.colivibackend.features.report.dto.ReportResponse;
 import com.vvu981.colivibackend.features.report.mapper.ReportMapper;
 import com.vvu981.colivibackend.features.report.repository.ReportRepository;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,8 +32,6 @@ public class ReportServiceImpl implements ReportService {
 
     private final UserRepository userRepository;
     private final AccommodationListingRepository listingRepository;
-    private final HomeRepository homeRepository;
-    private final HomeExpenseRepository expenseRepository;
 
     @Override
     @Transactional
@@ -54,15 +49,9 @@ public class ReportServiceImpl implements ReportService {
             if (listing.getHost() != null && listing.getHost().getId().equals(reporterId)) {
                 throw new BusinessRuleValidationException("No puedes denunciar tu propio anuncio.");
             }
-        } else {
-            boolean targetExists = switch (request.targetType()) {
-                case USER -> userRepository.existsById(request.targetId());
-                case HOME -> homeRepository.existsById(request.targetId());
-                case EXPENSE -> expenseRepository.existsById(request.targetId());
-                case LISTING -> true;
-            };
-
-            if (!targetExists) {
+        } else if (request.targetType() == ReportTargetType.USER) {
+            boolean userExists = userRepository.existsById(request.targetId());
+            if (!userExists) {
                 throw new BusinessRuleValidationException("El elemento denunciado no existe.");
             }
         }
@@ -89,24 +78,34 @@ public class ReportServiceImpl implements ReportService {
                 savedReport.getId(),
                 savedReport.getReporterId(),
                 savedReport.getTargetType(),
-                savedReport.getTargetId()));
+                savedReport.getTargetId(),
+                savedReport.getReason()));
+
 
         return reportMapper.toResponse(savedReport);
     }
 
     @Override
-    public Page<ReportResponse> getUserReports(UUID reporterId, Pageable pageable) {
-        return reportRepository.findByReporterId(reporterId, pageable)
-                .map(reportMapper::toResponse);
+    @Transactional(readOnly = true)
+    public List<ReportFeedbackResponse> getPendingFeedback(UUID reporterId) {
+        return reportRepository.findByReporterIdAndStatusAndReporterNotifiedFalse(reporterId, ReportStatus.RESOLVED)
+                .stream()
+                .map(reportMapper::toFeedbackResponse)
+                .toList();
     }
 
     @Override
     @Transactional
-    public void cancelReport(UUID reporterId, UUID reportId) {
+    public void acknowledgeFeedback(UUID reporterId, UUID reportId) {
         Report report = reportRepository.findById(reportId)
                 .orElseThrow(() -> new ResourceNotFoundException("Denuncia no encontrada."));
 
-        report.cancel(reporterId);
+        if (!reporterId.equals(report.getReporterId())) {
+            throw new BusinessRuleValidationException("No tienes permiso para actualizar este reporte.");
+        }
+
+        report.markFeedbackAcknowledged();
         reportRepository.save(report);
     }
 }
+

@@ -106,6 +106,7 @@ postgres-data/
 *.ps1
 
 # ==========================================
-# Scripts
+# Scripts y Datos de Prueba
 # ==========================================
 scripts/*
+imgs_prueba/

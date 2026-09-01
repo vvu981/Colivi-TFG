@@ -1,17 +1,18 @@
 package com.vvu981.colivibackend.features.report.service;
 
 import com.vvu981.colivibackend.features.report.dto.CreateReportRequest;
+import com.vvu981.colivibackend.features.report.dto.ReportFeedbackResponse;
 import com.vvu981.colivibackend.features.report.dto.ReportResponse;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface ReportService {
 
     ReportResponse createReport(UUID reporterId, CreateReportRequest request);
 
-    Page<ReportResponse> getUserReports(UUID reporterId, Pageable pageable);
+    List<ReportFeedbackResponse> getPendingFeedback(UUID reporterId);
 
-    void cancelReport(UUID reporterId, UUID reportId);
+    void acknowledgeFeedback(UUID reporterId, UUID reportId);
 }
+

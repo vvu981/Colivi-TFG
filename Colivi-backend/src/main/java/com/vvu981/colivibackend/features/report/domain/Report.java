@@ -59,8 +59,16 @@ public class Report {
     @Column(name = "resolved_at")
     private LocalDateTime resolvedAt;
 
+    @Column(name = "reporter_notified", nullable = false)
+    private boolean reporterNotified = false;
+
+
     // Métodos de dominio (Tell, Don't Ask)
     
+    public void markFeedbackAcknowledged() {
+        this.reporterNotified = true;
+    }
+
     public void investigate(UUID adminId) {
         if (this.status == ReportStatus.RESOLVED || this.status == ReportStatus.DISMISSED) {
             throw new IllegalStateException("No se puede investigar una denuncia cerrada.");
@@ -88,15 +96,5 @@ public class Report {
         this.resolverId = resolverId;
         this.resolvedAt = LocalDateTime.now();
     }
-
-    public void cancel(UUID requesterId) {
-        if (!this.reporterId.equals(requesterId)) {
-            throw new IllegalStateException("No tienes permiso para cancelar esta denuncia.");
-        }
-        if (this.status != ReportStatus.PENDING) {
-            throw new IllegalStateException("Solo puedes cancelar denuncias en estado PENDING.");
-        }
-        this.status = ReportStatus.CANCELLED;
-        this.resolvedAt = LocalDateTime.now();
-    }
 }
+

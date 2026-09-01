@@ -20,6 +20,13 @@ class ReportTest {
     }
 
     @Test
+    void markFeedbackAcknowledged_shouldSetReporterNotifiedToTrue() {
+        assertThat(report.isReporterNotified()).isFalse();
+        report.markFeedbackAcknowledged();
+        assertThat(report.isReporterNotified()).isTrue();
+    }
+
+    @Test
     void investigate_shouldChangeStatus() {
         report.investigate(adminId);
         
@@ -93,38 +100,5 @@ class ReportTest {
 
         assertThatThrownBy(() -> report.investigate(adminId))
                 .isInstanceOf(IllegalStateException.class);
-    }
-
-    @Test
-    void cancel_shouldChangeStatusToCancelled_whenReporterCancelsPending() {
-        UUID reporterId = UUID.randomUUID();
-        report.setReporterId(reporterId);
-        report.setStatus(ReportStatus.PENDING);
-
-        report.cancel(reporterId);
-
-        assertThat(report.getStatus()).isEqualTo(ReportStatus.CANCELLED);
-        assertThat(report.getResolvedAt()).isNotNull();
-    }
-
-    @Test
-    void cancel_shouldThrowException_whenRequesterNotReporter() {
-        UUID reporterId = UUID.randomUUID();
-        report.setReporterId(reporterId);
-
-        assertThatThrownBy(() -> report.cancel(UUID.randomUUID()))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("No tienes permiso");
-    }
-
-    @Test
-    void cancel_shouldThrowException_whenStatusNotPending() {
-        UUID reporterId = UUID.randomUUID();
-        report.setReporterId(reporterId);
-        report.setStatus(ReportStatus.INVESTIGATING);
-
-        assertThatThrownBy(() -> report.cancel(reporterId))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("PENDING");
     }
 }

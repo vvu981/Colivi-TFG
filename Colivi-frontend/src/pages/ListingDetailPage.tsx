@@ -10,6 +10,7 @@ import { ListingSpecs } from '../features/housing/components/listing/ListingSpec
 import { ListingHostCard } from '../features/housing/components/listing/ListingHostCard';
 import { ListingAmenitiesView } from '../features/housing/components/listing/ListingAmenitiesView';
 import { ListingLocationMap } from '../features/housing/components/listing/ListingLocationMap';
+import { ListingReviewsSection } from '../features/housing/components/listing/ListingReviewsSection';
 import { ListingBookingCard } from '../features/housing/components/listing/ListingBookingCard';
 import { SiblingRoomsSection } from '../features/housing/components/listing/SiblingRoomsSection';
 import { ReportListingModal } from '../features/report/components/ReportListingModal';
@@ -123,6 +124,12 @@ export const ListingDetailPage: React.FC = () => {
               city={accommodation.city}
               province={accommodation.province}
               country={accommodation.country}
+            />
+
+            {/* Verified Reviews Section */}
+            <ListingReviewsSection
+              listingId={listing.id}
+              listingTitle={title}
             />
           </div>
 

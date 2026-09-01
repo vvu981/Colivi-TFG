@@ -1,8 +1,9 @@
+/* oxlint-disable react/only-export-components */
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { authService, type LoginData, type RegisterData } from '../services/authService';
 import { userService, type UserProfile } from '../../user/services/userService';
 
-interface AuthContextType {
+export interface AuthContextType {
   user: UserProfile | null;
   token: string | null;
   isAuthenticated: boolean;
@@ -14,7 +15,7 @@ interface AuthContextType {
   logout: () => void;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<UserProfile | null>(null);

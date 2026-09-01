@@ -34,6 +34,7 @@ export const ListingHostCard: React.FC<ListingHostCardProps> = ({
             <img
               src={hostProfilePicUrl}
               alt={hostNickname || 'Foto de perfil del anfitrión'}
+              referrerPolicy="no-referrer"
               className="w-14 h-14 rounded-full object-cover shadow-sm border border-outline-variant flex-shrink-0"
             />
           ) : (

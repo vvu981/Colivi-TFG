@@ -55,6 +55,7 @@ export const UserMenu = () => {
             <img
               src={user.profilePicUrl}
               alt={user.nickname}
+              referrerPolicy="no-referrer"
               className="w-9 h-9 rounded-full object-cover border-2 border-[#dec0b7] group-hover:border-[#9f3c16] transition-colors"
             />
           ) : (

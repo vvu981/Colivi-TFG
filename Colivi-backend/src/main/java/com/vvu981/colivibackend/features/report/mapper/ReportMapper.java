@@ -12,4 +12,7 @@ public interface ReportMapper {
     Report toEntity(CreateReportRequest request);
 
     ReportResponse toResponse(Report entity);
+
+    com.vvu981.colivibackend.features.report.dto.ReportFeedbackResponse toFeedbackResponse(Report entity);
 }
+
