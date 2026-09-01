@@ -166,6 +166,28 @@ class AccommodationReviewServiceImplTest {
         }
 
         @Test
+        @DisplayName("Should throw BusinessRuleValidationException when booking starts in the future")
+        void createReview_futureBooking() {
+            CreateReviewRequest request = new CreateReviewRequest(5, "Comentario");
+            BookingRequest futureBooking = BookingRequest.builder()
+                    .id(bookingId)
+                    .requester(author)
+                    .accommodationListing(listing)
+                    .startDate(LocalDate.now().plusMonths(1))
+                    .endDate(LocalDate.now().plusMonths(3))
+                    .status(RequestStatus.CONFIRMED)
+                    .build();
+
+            when(listingRepository.findById(listingId)).thenReturn(Optional.of(listing));
+            when(bookingRequestRepository.findFirstByRequesterIdAndAccommodationListingIdAndStatusOrderByCreatedAtDesc(
+                    userId, listingId, RequestStatus.CONFIRMED)).thenReturn(Optional.of(futureBooking));
+
+            assertThatThrownBy(() -> reviewService.createReview(listingId, request, userId))
+                    .isInstanceOf(BusinessRuleValidationException.class)
+                    .hasMessageContaining("No puedes valorar un alojamiento antes del inicio de tu estancia.");
+        }
+
+        @Test
         @DisplayName("Should throw BusinessRuleValidationException when review already exists for booking")
         void createReview_alreadyReviewedBooking() {
             CreateReviewRequest request = new CreateReviewRequest(5, "Comentario");
@@ -264,6 +286,31 @@ class AccommodationReviewServiceImplTest {
             assertThat(response.eligible()).isTrue();
             assertThat(response.eligibleBookingRequestId()).isEqualTo(bookingId);
             assertThat(response.alreadyReviewed()).isFalse();
+        }
+
+        @Test
+        @DisplayName("Should return eligible false when confirmed booking is in the future")
+        void checkEligibility_futureBooking() {
+            BookingRequest futureBooking = BookingRequest.builder()
+                    .id(bookingId)
+                    .requester(author)
+                    .accommodationListing(listing)
+                    .startDate(LocalDate.now().plusMonths(1))
+                    .endDate(LocalDate.now().plusMonths(3))
+                    .status(RequestStatus.CONFIRMED)
+                    .build();
+
+            when(listingRepository.existsById(listingId)).thenReturn(true);
+            when(reviewRepository.existsByAuthorIdAndListingId(userId, listingId)).thenReturn(false);
+            when(bookingRequestRepository.findFirstByRequesterIdAndAccommodationListingIdAndStatusOrderByCreatedAtDesc(
+                    userId, listingId, RequestStatus.CONFIRMED)).thenReturn(Optional.of(futureBooking));
+
+            ReviewEligibilityResponse response = reviewService.checkEligibility(listingId, userId);
+
+            assertThat(response.eligible()).isFalse();
+            assertThat(response.eligibleBookingRequestId()).isEqualTo(bookingId);
+            assertThat(response.alreadyReviewed()).isFalse();
+            assertThat(response.reason()).contains("comenzado tu estancia");
         }
 
         @Test

@@ -21,6 +21,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.*;
 
 @Service
@@ -47,6 +48,12 @@ public class AccommodationReviewServiceImpl implements AccommodationReviewServic
                         currentUserId, listingId, RequestStatus.CONFIRMED)
                 .orElseThrow(() -> new BusinessRuleValidationException(
                         "Solo los inquilinos con una reserva confirmada pueden emitir una valoración sobre este alojamiento."));
+
+        // 1.1 Validar que la estancia haya iniciado
+        if (confirmedBooking.getStartDate() != null && confirmedBooking.getStartDate().isAfter(LocalDate.now())) {
+            throw new BusinessRuleValidationException(
+                    "No puedes valorar un alojamiento antes del inicio de tu estancia.");
+        }
 
         // 2. Validar que no exista ya una reseña para esta reserva o por este usuario para este anuncio
         if (reviewRepository.existsByBookingRequestId(confirmedBooking.getId())) {
@@ -128,6 +135,10 @@ public class AccommodationReviewServiceImpl implements AccommodationReviewServic
 
         if (confirmedBooking.isEmpty()) {
             return new ReviewEligibilityResponse(false, null, false, "Se requiere una reserva confirmada para poder dejar una valoración.");
+        }
+
+        if (confirmedBooking.get().getStartDate() != null && confirmedBooking.get().getStartDate().isAfter(LocalDate.now())) {
+            return new ReviewEligibilityResponse(false, confirmedBooking.get().getId(), false, "Solo puedes valorar el alojamiento una vez haya comenzado tu estancia.");
         }
 
         if (reviewRepository.existsByBookingRequestId(confirmedBooking.get().getId())) {
