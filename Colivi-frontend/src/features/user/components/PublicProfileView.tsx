@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, AlertCircle, RefreshCw, Eye } from 'lucide-react';
 import { usePublicProfile } from '../hooks/usePublicProfile';
+import { useAuth } from '../../auth/context/AuthContext';
 import { PublicProfileHeader } from './PublicProfileHeader';
 import { PublicProfileStats } from './PublicProfileStats';
 import { PublicProfileListings } from './PublicProfileListings';
@@ -19,7 +20,10 @@ export interface PublicProfileViewProps {
 export const PublicProfileView: React.FC<PublicProfileViewProps> = ({ userId }) => {
   const navigate = useNavigate();
   const { user, listings, isLoading, error, isSelf, refetch } = usePublicProfile(userId);
+  const { user: authUser } = useAuth();
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+
+  const isAdmin = authUser?.role === 'ADMIN';
 
   // Loading State
   if (isLoading) {
@@ -109,6 +113,7 @@ export const PublicProfileView: React.FC<PublicProfileViewProps> = ({ userId }) 
         user={user}
         isSelf={isSelf}
         isHost={listings.length > 0}
+        isAdmin={isAdmin}
         onReportClick={() => setIsReportModalOpen(true)}
       />
 

@@ -1,12 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, Flag, Edit3, UserCheck, Home } from 'lucide-react';
+import { Calendar, Flag, Edit3, UserCheck, Home, Shield } from 'lucide-react';
 import type { PublicUserProfile } from '../types/user.types';
+import { CopyIdButton } from '../../admin/components/common/CopyIdButton';
 
 export interface PublicProfileHeaderProps {
   user: PublicUserProfile;
   isSelf: boolean;
   isHost?: boolean;
+  isAdmin?: boolean;
   onReportClick: () => void;
 }
 
@@ -19,6 +21,7 @@ export const PublicProfileHeader: React.FC<PublicProfileHeaderProps> = ({
   user,
   isSelf,
   isHost = false,
+  isAdmin = false,
   onReportClick,
 }) => {
   const { firstName, lastName1, lastName2, nickname, profilePicUrl, createdAt } = user;
@@ -35,6 +38,17 @@ export const PublicProfileHeader: React.FC<PublicProfileHeaderProps> = ({
 
   return (
     <div className="w-full bg-surface-container-lowest rounded-3xl border border-outline-variant/60 p-6 md:p-8 shadow-xs">
+      {/* Admin Inspector Pill (Visible exclusively for administrators) */}
+      {isAdmin && (
+        <div className="flex items-center gap-2 p-2 px-3.5 bg-error-container/40 border border-error/20 rounded-2xl text-xs flex-wrap mb-6 self-start shadow-2xs animate-in fade-in duration-150">
+          <span className="font-bold text-error flex items-center gap-1.5 shrink-0">
+            <Shield size={14} className="text-error" />
+            <span>ADMIN:</span>
+          </span>
+          <CopyIdButton id={user.id} prefix="ID Usuario:" />
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-8">
         {/* Avatar with image or initials */}
         <div className="relative shrink-0">

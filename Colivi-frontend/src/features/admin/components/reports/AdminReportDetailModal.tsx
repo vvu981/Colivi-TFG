@@ -276,22 +276,22 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
       <div
         role="dialog"
         aria-modal="true"
-        className="fixed inset-0 z-50 bg-[#0b1c30]/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
+        className="fixed inset-0 z-50 bg-on-surface/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
         onClick={onClose}
       >
         <div
-          className="w-full max-w-2xl lg:max-w-3xl max-h-[90vh] bg-white rounded-3xl border border-[#dec0b7] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
+          className="w-full max-w-2xl lg:max-w-3xl max-h-[90vh] bg-surface-container-lowest rounded-3xl border border-outline-variant shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header (Fijo) */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[#dec0b7] bg-[#FAF8F5] shrink-0">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant bg-surface shrink-0">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-[#9f3c16]/10 text-[#9f3c16] rounded-xl shrink-0">
+              <div className="p-2.5 bg-primary/10 text-primary rounded-xl shrink-0">
                 <FileText size={20} />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-base font-bold text-[#0b1c30]">Expediente de Denuncia</h3>
+                  <h3 className="text-base font-bold text-on-surface">Expediente de Denuncia</h3>
                   {getStatusBadge(report.status)}
                 </div>
                 <div className="mt-0.5">
@@ -301,7 +301,7 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
             </div>
             <button
               onClick={onClose}
-              className="text-[#565e74] hover:text-[#0b1c30] p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+              className="text-secondary hover:text-on-surface p-1.5 rounded-lg hover:bg-surface-container transition-colors cursor-pointer"
             >
               <X size={20} />
             </button>
@@ -315,8 +315,8 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
             </div>
           )}
           {actionError && (
-            <div className="mx-6 mt-4 p-3 bg-red-50 text-red-800 text-xs rounded-xl border border-red-200 flex items-center gap-2 shrink-0">
-              <AlertCircle size={16} className="shrink-0 text-red-600" />
+            <div className="mx-6 mt-4 p-3 bg-error-container text-on-error-container text-xs rounded-xl border border-error/20 flex items-center gap-2 shrink-0">
+              <AlertCircle size={16} className="shrink-0 text-error" />
               <span>{actionError}</span>
             </div>
           )}
@@ -324,32 +324,32 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
           {/* Body (Scrollable) */}
           <div className="p-6 space-y-6 overflow-y-auto flex-1">
             {/* Grid Info: Fechas y Reporter */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-[#f8f9ff] rounded-xl border border-slate-200">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-surface-container-low rounded-xl border border-outline-variant/50">
               <div>
-                <span className="text-xs text-[#565e74] block font-medium">Denunciante (Reporter ID)</span>
+                <span className="text-xs text-secondary block font-medium">Denunciante (Reporter ID)</span>
                 <CopyIdButton id={report.reporterId} />
               </div>
               <div>
-                <span className="text-xs text-[#565e74] block font-medium">Fecha de creación</span>
-                <span className="text-xs text-[#0b1c30] font-semibold flex items-center gap-1.5 mt-0.5">
-                  <Clock size={13} className="text-[#565e74]" />
+                <span className="text-xs text-secondary block font-medium">Fecha de creación</span>
+                <span className="text-xs text-on-surface font-semibold flex items-center gap-1.5 mt-0.5">
+                  <Clock size={13} className="text-secondary" />
                   {new Date(report.createdAt).toLocaleString('es-ES')}
                 </span>
               </div>
             </div>
 
             {/* Reported Target Snapshot */}
-            <div className="border border-slate-200 rounded-xl p-4 bg-white">
+            <div className="border border-outline-variant/60 rounded-xl p-4 bg-surface-container-lowest">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-bold text-[#0b1c30] uppercase tracking-wider flex items-center gap-1.5">
+                <span className="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-1.5">
                   {report.targetType === 'LISTING' ? (
                     <>
-                      <Home size={14} className="text-[#9f3c16]" />
+                      <Home size={14} className="text-primary" />
                       Anuncio Denunciado
                     </>
                   ) : (
                     <>
-                      <User size={14} className="text-[#9f3c16]" />
+                      <User size={14} className="text-primary" />
                       Usuario Denunciado
                     </>
                   )}
@@ -358,7 +358,7 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
               </div>
 
               {isLoadingTarget ? (
-                <div className="py-4 text-center text-xs text-[#565e74] animate-pulse">Cargando datos del objetivo...</div>
+                <div className="py-4 text-center text-xs text-secondary animate-pulse">Cargando datos del objetivo...</div>
               ) : targetListing ? (
                 <div className="flex flex-col sm:flex-row items-start gap-4">
                   {(targetListing.selectedImages && targetListing.selectedImages.length > 0) || ((targetListing as any).images && (targetListing as any).images.length > 0) ? (
@@ -369,16 +369,16 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
                         (targetListing as any).images?.[0]?.url
                       }
                       alt={targetListing.title}
-                      className="w-24 h-24 object-cover rounded-xl border border-slate-200 shrink-0"
+                      className="w-24 h-24 object-cover rounded-xl border border-outline-variant/60 shrink-0"
                     />
                   ) : (
-                    <div className="w-24 h-24 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 shrink-0">
+                    <div className="w-24 h-24 bg-surface-container rounded-xl flex items-center justify-center text-secondary shrink-0">
                       <Home size={28} />
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-bold text-[#0b1c30] truncate">{targetListing.title}</h4>
-                    <p className="text-xs text-[#565e74] mt-0.5">
+                    <h4 className="text-sm font-bold text-on-surface truncate">{targetListing.title}</h4>
+                    <p className="text-xs text-secondary mt-0.5">
                       {typeof targetListing.accommodation?.city === 'string'
                         ? targetListing.accommodation.city
                         : typeof targetListing.accommodation?.address === 'string'
@@ -391,7 +391,7 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
                       <span
                         className={`text-[11px] font-semibold px-2 py-0.5 rounded ${
                           targetListing.status === 'BANNED'
-                            ? 'bg-red-100 text-red-800'
+                            ? 'bg-error-container text-error'
                             : targetListing.status === 'AVAILABLE'
                             ? 'bg-emerald-100 text-emerald-800'
                             : 'bg-amber-100 text-amber-800'
@@ -409,7 +409,7 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
                       {onInspectListing && (
                         <button
                           onClick={() => onInspectListing(report.targetId)}
-                          className="text-xs text-[#9f3c16] hover:underline font-semibold flex items-center gap-1 cursor-pointer"
+                          className="text-xs text-primary hover:underline font-semibold flex items-center gap-1 cursor-pointer"
                         >
                           Inspeccionar anuncio <ExternalLink size={12} />
                         </button>
@@ -419,14 +419,14 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
                 </div>
               ) : targetUser ? (
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-[#9f3c16] text-white flex items-center justify-center font-bold text-base shrink-0">
+                  <div className="w-12 h-12 rounded-full bg-primary text-on-primary flex items-center justify-center font-bold text-base shrink-0">
                     {targetUser.nickname?.charAt(0).toUpperCase() || 'U'}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-bold text-[#0b1c30]">
+                    <h4 className="text-sm font-bold text-on-surface">
                       {targetUser.firstName} {targetUser.lastName1} ({targetUser.nickname})
                     </h4>
-                    <p className="text-xs text-[#565e74]">
+                    <p className="text-xs text-secondary">
                       {targetUser.email} • Rol:{' '}
                       {targetUser.role === 'ADMIN'
                         ? 'Administrador'
@@ -436,7 +436,7 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
                     </p>
                     <div className="flex items-center gap-2 mt-1">
                       {targetUser.bannedAt ? (
-                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-red-100 text-red-800">
+                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-error-container text-error">
                           BANEADO: {targetUser.banReason || 'Sin motivo especificado'}
                         </span>
                       ) : (
@@ -447,7 +447,7 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
                       {onInspectUser && (
                         <button
                           onClick={() => onInspectUser(report.targetId)}
-                          className="text-xs text-[#9f3c16] hover:underline font-semibold flex items-center gap-1 cursor-pointer"
+                          className="text-xs text-primary hover:underline font-semibold flex items-center gap-1 cursor-pointer"
                         >
                           Inspeccionar usuario <ExternalLink size={12} />
                         </button>
@@ -456,38 +456,38 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
                   </div>
                 </div>
               ) : (
-                <p className="text-xs text-[#565e74]">No se pudo cargar el resumen del objetivo (o fue eliminado).</p>
+                <p className="text-xs text-secondary">No se pudo cargar el resumen del objetivo (o fue eliminado).</p>
               )}
             </div>
 
             {/* Motivo y Descripción */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-[#565e74]">Motivo:</span>
-                <span className="text-xs font-bold px-2.5 py-0.5 bg-[#9f3c16]/10 text-[#9f3c16] rounded-md">
+                <span className="text-xs font-bold text-secondary">Motivo:</span>
+                <span className="text-xs font-bold px-2.5 py-0.5 bg-primary/10 text-primary rounded-md">
                   {getReasonLabel(report.reason)}
                 </span>
               </div>
-              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-[#0b1c30] whitespace-pre-wrap leading-relaxed">
+              <div className="p-3.5 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs text-on-surface whitespace-pre-wrap leading-relaxed">
                 {report.description || 'El denunciante no proporcionó una descripción adicional.'}
               </div>
             </div>
 
             {/* Notas Administrativas */}
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-[#0b1c30]">Notas Administrativas de Resolución</label>
+              <label className="block text-xs font-bold text-on-surface">Notas Administrativas de Resolución</label>
               <textarea
                 rows={3}
                 placeholder="Escribe las conclusiones de la moderación o medidas adoptadas..."
                 value={adminNotes}
                 onChange={(e) => setAdminNotes(e.target.value)}
-                className="w-full text-xs bg-white border border-[#dec0b7] rounded-xl p-3 text-[#0b1c30] focus:ring-2 focus:ring-[#9f3c16]/20 focus:border-[#9f3c16]"
+                className="w-full text-xs bg-surface-container-lowest border border-outline-variant rounded-xl p-3 text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
               />
             </div>
 
             {/* Acciones Directas de Moderación */}
-            <div className="pt-3 border-t border-slate-200 space-y-3">
-              <span className="text-xs font-bold text-[#565e74] uppercase tracking-wider block">
+            <div className="pt-3 border-t border-outline-variant/40 space-y-3">
+              <span className="text-xs font-bold text-secondary uppercase tracking-wider block">
                 Acciones Disciplinarias sobre el Objetivo
               </span>
               <div className="flex flex-wrap items-center gap-2.5">
@@ -513,7 +513,7 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
                 <button
                   type="button"
                   onClick={handleOpenDeleteConfirm}
-                  className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold bg-red-700 hover:bg-red-800 text-white rounded-xl transition-colors shadow-xs cursor-pointer"
+                  className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold bg-error hover:bg-error/90 text-on-error rounded-xl transition-colors shadow-xs cursor-pointer"
                 >
                   <Trash2 size={14} />
                   <span>Borrado Físico (Hard Delete)</span>
@@ -523,9 +523,9 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
           </div>
 
           {/* Footer (Fijo) */}
-          <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-t border-[#dec0b7] bg-[#FAF8F5] shrink-0">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-t border-outline-variant bg-surface shrink-0">
             <div className="flex items-center gap-2">
-              <span className="text-xs text-[#565e74] font-medium">Estado del expediente:</span>
+              <span className="text-xs text-secondary font-medium">Estado del expediente:</span>
               <button
                 type="button"
                 disabled={isUpdating || report.status === 'INVESTIGATING'}
@@ -556,7 +556,7 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
               type="button"
               disabled={isUpdating || isExecutingAction}
               onClick={handleOpenResolveAllConfirm}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold bg-[#9f3c16] hover:bg-[#832f0e] text-white rounded-xl transition-colors shadow-xs disabled:opacity-40 cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold bg-primary hover:bg-primary-container text-on-primary rounded-xl transition-colors shadow-xs disabled:opacity-40 cursor-pointer"
               title="Resuelve y cierra en bloque todas las denuncias abiertas de este objetivo"
             >
               <CheckCheck size={14} />

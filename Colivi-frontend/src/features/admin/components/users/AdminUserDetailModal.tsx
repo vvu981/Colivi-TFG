@@ -125,31 +125,31 @@ export const AdminUserDetailModal: React.FC<AdminUserDetailModalProps> = ({
       <div
         role="dialog"
         aria-modal="true"
-        className="fixed inset-0 z-50 bg-[#0b1c30]/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
+        className="fixed inset-0 z-50 bg-on-surface/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
         onClick={() => !isProcessing && onClose()}
       >
         <div
-          className="w-full max-w-xl max-h-[90vh] bg-white rounded-3xl border border-[#dec0b7] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
+          className="w-full max-w-xl max-h-[90vh] bg-surface-container-lowest rounded-3xl border border-outline-variant shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header (Fijo) */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[#dec0b7] bg-[#FAF8F5] shrink-0">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant bg-surface shrink-0">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-[#9f3c16]/10 text-[#9f3c16] rounded-xl shrink-0">
+              <div className="p-2.5 bg-primary/10 text-primary rounded-xl shrink-0">
                 <User size={20} />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-base font-bold text-[#0b1c30]">Expediente de Usuario</h3>
+                  <h3 className="text-base font-bold text-on-surface">Expediente de Usuario</h3>
                   <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold shrink-0 ${
-                    isBanned ? 'bg-red-100 text-red-800' :
-                    isDeleted ? 'bg-gray-100 text-gray-800' :
+                    isBanned ? 'bg-error-container text-error' :
+                    isDeleted ? 'bg-surface-container text-secondary' :
                     'bg-emerald-100 text-emerald-800'
                   }`}>
                     {isBanned ? 'Baneado' : isDeleted ? 'Eliminado' : 'Activo'}
                   </span>
                   <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
-                    user.role === 'ADMIN' ? 'bg-purple-100 text-purple-800 border border-purple-200' : 'bg-slate-100 text-slate-700'
+                    user.role === 'ADMIN' ? 'bg-error-container text-error border border-error/20' : 'bg-surface-container text-secondary'
                   }`}>
                     {user.role}
                   </span>
@@ -161,7 +161,7 @@ export const AdminUserDetailModal: React.FC<AdminUserDetailModalProps> = ({
             </div>
             <button
               onClick={onClose}
-              className="text-[#565e74] hover:text-[#0b1c30] p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+              className="text-secondary hover:text-on-surface p-1.5 rounded-lg hover:bg-surface-container transition-colors cursor-pointer"
             >
               <X size={20} />
             </button>
@@ -172,12 +172,12 @@ export const AdminUserDetailModal: React.FC<AdminUserDetailModalProps> = ({
             <div className={`mx-6 mt-4 p-3 rounded-xl border text-xs flex items-center gap-2 shrink-0 ${
               feedback.type === 'success'
                 ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                : 'bg-red-50 text-red-800 border-red-200'
+                : 'bg-error-container text-on-error-container border-error/20'
             }`}>
               {feedback.type === 'success' ? (
                 <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
               ) : (
-                <AlertTriangle size={16} className="text-red-600 shrink-0" />
+                <AlertTriangle size={16} className="text-error shrink-0" />
               )}
               <span>{feedback.message}</span>
             </div>
@@ -186,58 +186,58 @@ export const AdminUserDetailModal: React.FC<AdminUserDetailModalProps> = ({
           {/* Body (Scrollable) */}
           <div className="p-6 space-y-6 overflow-y-auto flex-1">
             {/* User Hero card */}
-            <div className="flex items-center gap-4 p-4 bg-[#f8f9ff] rounded-2xl border border-slate-200">
+            <div className="flex items-center gap-4 p-4 bg-surface-container-low rounded-2xl border border-outline-variant/50">
               {user.profilePicUrl ? (
                 <img
                   src={user.profilePicUrl}
                   alt={user.nickname}
-                  className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-sm shrink-0"
+                  className="w-16 h-16 rounded-full object-cover border-2 border-surface-container-lowest shadow-sm shrink-0"
                 />
               ) : (
-                <div className="w-16 h-16 rounded-full bg-[#9f3c16] text-white flex items-center justify-center font-bold text-xl shrink-0">
+                <div className="w-16 h-16 rounded-full bg-primary text-on-primary flex items-center justify-center font-bold text-xl shrink-0">
                   {user.nickname?.charAt(0).toUpperCase() || 'U'}
                 </div>
               )}
               <div className="min-w-0">
-                <h4 className="text-base font-bold text-[#0b1c30] truncate">
+                <h4 className="text-base font-bold text-on-surface truncate">
                   {user.firstName} {user.lastName1} {user.lastName2 || ''}
                 </h4>
-                <p className="text-xs font-semibold text-[#9f3c16]">@{user.nickname}</p>
-                <p className="text-xs text-[#565e74] mt-0.5">{user.email}</p>
+                <p className="text-xs font-semibold text-primary">@{user.nickname}</p>
+                <p className="text-xs text-secondary mt-0.5">{user.email}</p>
               </div>
             </div>
 
             {/* Detailed User Information Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
-              <div className="p-3 bg-white rounded-xl border border-slate-200 flex items-center gap-2.5">
-                <Mail size={16} className="text-[#565e74] shrink-0" />
+              <div className="p-3 bg-surface-container-lowest rounded-xl border border-outline-variant/60 flex items-center gap-2.5">
+                <Mail size={16} className="text-secondary shrink-0" />
                 <div className="min-w-0">
-                  <span className="text-[#565e74] block text-[11px]">Email</span>
-                  <span className="font-semibold text-[#0b1c30] truncate block">{user.email}</span>
+                  <span className="text-secondary block text-[11px]">Email</span>
+                  <span className="font-semibold text-on-surface truncate block">{user.email}</span>
                 </div>
               </div>
 
-              <div className="p-3 bg-white rounded-xl border border-slate-200 flex items-center gap-2.5">
-                <Phone size={16} className="text-[#565e74] shrink-0" />
+              <div className="p-3 bg-surface-container-lowest rounded-xl border border-outline-variant/60 flex items-center gap-2.5">
+                <Phone size={16} className="text-secondary shrink-0" />
                 <div className="min-w-0">
-                  <span className="text-[#565e74] block text-[11px]">Teléfono</span>
-                  <span className="font-semibold text-[#0b1c30] block">{user.phone || 'No registrado'}</span>
+                  <span className="text-secondary block text-[11px]">Teléfono</span>
+                  <span className="font-semibold text-on-surface block">{user.phone || 'No registrado'}</span>
                 </div>
               </div>
 
-              <div className="p-3 bg-white rounded-xl border border-slate-200 flex items-center gap-2.5">
-                <Shield size={16} className="text-[#565e74] shrink-0" />
+              <div className="p-3 bg-surface-container-lowest rounded-xl border border-outline-variant/60 flex items-center gap-2.5">
+                <Shield size={16} className="text-secondary shrink-0" />
                 <div className="min-w-0">
-                  <span className="text-[#565e74] block text-[11px]">Rol en Sistema</span>
-                  <span className="font-semibold text-[#0b1c30] block">{user.role}</span>
+                  <span className="text-secondary block text-[11px]">Rol en Sistema</span>
+                  <span className="font-semibold text-on-surface block">{user.role}</span>
                 </div>
               </div>
 
-              <div className="p-3 bg-white rounded-xl border border-slate-200 flex items-center gap-2.5">
-                <Calendar size={16} className="text-[#565e74] shrink-0" />
+              <div className="p-3 bg-surface-container-lowest rounded-xl border border-outline-variant/60 flex items-center gap-2.5">
+                <Calendar size={16} className="text-secondary shrink-0" />
                 <div className="min-w-0">
-                  <span className="text-[#565e74] block text-[11px]">Fecha de Alta</span>
-                  <span className="font-semibold text-[#0b1c30] block">
+                  <span className="text-secondary block text-[11px]">Fecha de Alta</span>
+                  <span className="font-semibold text-on-surface block">
                     {new Date(user.createdAt).toLocaleDateString('es-ES')}
                   </span>
                 </div>
@@ -246,16 +246,16 @@ export const AdminUserDetailModal: React.FC<AdminUserDetailModalProps> = ({
 
             {/* Ban info banner if user is currently banned */}
             {isBanned && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-xl space-y-1.5">
-                <div className="flex items-center gap-2 text-xs font-bold text-red-800">
+              <div className="p-4 bg-error-container/40 border border-error/20 rounded-xl space-y-1.5">
+                <div className="flex items-center gap-2 text-xs font-bold text-error">
                   <Ban size={15} />
                   <span>Usuario actualmente sancionado / baneado</span>
                 </div>
-                <p className="text-xs text-red-700 font-medium">
+                <p className="text-xs text-on-error-container font-medium">
                   <strong>Motivo:</strong> {user.banReason || 'Infracción de términos y condiciones.'}
                 </p>
                 {user.bannedUntil && (
-                  <p className="text-[11px] text-red-600">
+                  <p className="text-[11px] text-error">
                     Baneado hasta: {new Date(user.bannedUntil).toLocaleString('es-ES')}
                   </p>
                 )}
@@ -264,15 +264,15 @@ export const AdminUserDetailModal: React.FC<AdminUserDetailModalProps> = ({
           </div>
 
           {/* Footer (Fijo) */}
-          <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-t border-[#dec0b7] bg-[#FAF8F5] shrink-0">
-            <span className="text-xs text-[#565e74] font-medium">Acciones de administración:</span>
+          <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-t border-outline-variant bg-surface shrink-0">
+            <span className="text-xs text-secondary font-medium">Acciones de administración:</span>
             <div className="flex items-center gap-2">
               {isBanned ? (
                 <button
                   type="button"
                   disabled={isProcessing}
                   onClick={handleOpenUnbanConfirm}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-colors disabled:opacity-50 cursor-pointer"
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
                 >
                   <CheckCircle2 size={14} />
                   <span>Desbanear</span>
@@ -282,7 +282,7 @@ export const AdminUserDetailModal: React.FC<AdminUserDetailModalProps> = ({
                   type="button"
                   disabled={isProcessing}
                   onClick={() => onOpenBanModal(user)}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold bg-amber-600 hover:bg-amber-700 text-white rounded-xl transition-colors disabled:opacity-50 cursor-pointer"
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold bg-amber-600 hover:bg-amber-700 text-white rounded-xl transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
                 >
                   <Ban size={14} />
                   <span>Banear Usuario</span>
@@ -294,7 +294,7 @@ export const AdminUserDetailModal: React.FC<AdminUserDetailModalProps> = ({
                   type="button"
                   disabled={isProcessing}
                   onClick={handleOpenSetAdminConfirm}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold bg-purple-700 hover:bg-purple-800 text-white rounded-xl transition-colors disabled:opacity-50 cursor-pointer"
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold bg-tertiary hover:bg-tertiary/90 text-on-tertiary rounded-xl transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
                 >
                   <ShieldCheck size={14} />
                   <span>Hacer Admin</span>
@@ -305,7 +305,7 @@ export const AdminUserDetailModal: React.FC<AdminUserDetailModalProps> = ({
                 type="button"
                 disabled={isProcessing}
                 onClick={handleOpenHardDeleteConfirm}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold bg-red-700 hover:bg-red-800 text-white rounded-xl transition-colors disabled:opacity-50 cursor-pointer"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold bg-error hover:bg-error/90 text-on-error rounded-xl transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
               >
                 <Trash2 size={14} />
                 <span>Borrado Físico</span>

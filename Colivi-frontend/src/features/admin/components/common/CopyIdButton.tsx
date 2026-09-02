@@ -62,9 +62,9 @@ export const CopyIdButton: React.FC<CopyIdButtonProps> = ({
       type="button"
       onClick={handleCopy}
       title={copied ? '¡Copiado!' : `Copiar ID: ${id}`}
-      className={`inline-flex items-center gap-1 text-[11px] font-mono text-[#565e74] hover:text-[#9f3c16] transition-colors p-1 rounded-md hover:bg-slate-100/80 cursor-pointer ${className}`}
+      className={`inline-flex items-center gap-1 text-[11px] font-mono text-secondary hover:text-primary transition-colors p-1 rounded-md hover:bg-surface-container/60 cursor-pointer ${className}`}
     >
-      {prefix && <span className="font-sans font-normal text-[#565e74]">{prefix}</span>}
+      {prefix && <span className="font-sans font-normal text-secondary">{prefix}</span>}
       {showText && (
         <span className={truncate ? `truncate ${maxTruncateWidth}` : ''}>
           {id}
@@ -76,7 +76,7 @@ export const CopyIdButton: React.FC<CopyIdButtonProps> = ({
           <span>Copiado</span>
         </span>
       ) : (
-        <Copy size={iconSize} className="shrink-0 text-[#565e74] hover:text-[#9f3c16]" />
+        <Copy size={iconSize} className="shrink-0 text-secondary hover:text-primary" />
       )}
     </button>
   );

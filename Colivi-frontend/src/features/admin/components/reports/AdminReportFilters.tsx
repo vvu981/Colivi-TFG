@@ -39,15 +39,15 @@ export const AdminReportFilters: React.FC<AdminReportFiltersProps> = ({
   onReset,
 }) => {
   return (
-    <div className="bg-white p-4 rounded-xl border border-[#dec0b7] shadow-sm mb-6">
+    <div className="bg-surface-container-lowest p-4 rounded-2xl border border-outline-variant shadow-sm mb-6">
       <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2 text-sm font-semibold text-[#0b1c30]">
-          <Filter size={16} className="text-[#9f3c16]" />
+        <div className="flex items-center gap-2 text-sm font-semibold text-on-surface">
+          <Filter size={16} className="text-primary" />
           <span>Filtros de Búsqueda</span>
         </div>
         <button
           onClick={onReset}
-          className="flex items-center gap-1.5 text-xs text-[#565e74] hover:text-[#9f3c16] font-medium transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 text-xs text-secondary hover:text-primary font-medium transition-colors cursor-pointer"
         >
           <RotateCcw size={13} />
           <span>Limpiar filtros</span>
@@ -57,22 +57,22 @@ export const AdminReportFilters: React.FC<AdminReportFiltersProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {/* Buscar por ID Denuncia / Texto */}
         <div>
-          <label className="block text-xs font-medium text-[#565e74] mb-1">ID Denuncia / Texto</label>
+          <label className="block text-xs font-medium text-secondary mb-1">ID Denuncia / Texto</label>
           <div className="relative">
             <input
               type="text"
               placeholder="ID denuncia, texto..."
               value={filters.query || ''}
               onChange={(e) => onFilterChange('query', e.target.value)}
-              className="w-full text-xs bg-white border border-[#dec0b7] rounded-lg pl-7 pr-2.5 py-2 text-[#0b1c30] focus:ring-2 focus:ring-[#9f3c16]/20 focus:border-[#9f3c16]"
+              className="w-full text-xs bg-surface-container-lowest border border-outline-variant rounded-xl pl-7 pr-2.5 py-2 text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
-            <Search size={13} className="absolute left-2.5 top-2.5 text-[#565e74]" />
+            <Search size={13} className="absolute left-2.5 top-2.5 text-secondary" />
           </div>
         </div>
 
         {/* Estado (Select reutilizable) */}
         <div>
-          <label className="block text-xs font-medium text-[#565e74] mb-1">Estado</label>
+          <label className="block text-xs font-medium text-secondary mb-1">Estado</label>
           <Select
             value={filters.status || ''}
             onChange={(val) => onFilterChange('status', (val as ReportStatus) || '')}
@@ -83,7 +83,7 @@ export const AdminReportFilters: React.FC<AdminReportFiltersProps> = ({
 
         {/* Tipo de Objetivo (Select reutilizable) */}
         <div>
-          <label className="block text-xs font-medium text-[#565e74] mb-1">Tipo de Objetivo</label>
+          <label className="block text-xs font-medium text-secondary mb-1">Tipo de Objetivo</label>
           <Select
             value={filters.targetType || ''}
             onChange={(val) => onFilterChange('targetType', (val as ReportTargetType) || '')}
@@ -94,7 +94,7 @@ export const AdminReportFilters: React.FC<AdminReportFiltersProps> = ({
 
         {/* Motivo (Select reutilizable) */}
         <div>
-          <label className="block text-xs font-medium text-[#565e74] mb-1">Motivo</label>
+          <label className="block text-xs font-medium text-secondary mb-1">Motivo</label>
           <Select
             value={filters.reason || ''}
             onChange={(val) => onFilterChange('reason', (val as ReportReason) || '')}
@@ -105,27 +105,27 @@ export const AdminReportFilters: React.FC<AdminReportFiltersProps> = ({
 
         {/* ID Objetivo */}
         <div>
-          <label className="block text-xs font-medium text-[#565e74] mb-1">ID de Objetivo</label>
+          <label className="block text-xs font-medium text-secondary mb-1">ID de Objetivo</label>
           <div className="relative">
             <input
               type="text"
               placeholder="UUID de objetivo..."
               value={filters.targetId || ''}
               onChange={(e) => onFilterChange('targetId', e.target.value)}
-              className="w-full text-xs bg-white border border-[#dec0b7] rounded-lg pl-7 pr-2.5 py-2 text-[#0b1c30] focus:ring-2 focus:ring-[#9f3c16]/20 focus:border-[#9f3c16]"
+              className="w-full text-xs bg-surface-container-lowest border border-outline-variant rounded-xl pl-7 pr-2.5 py-2 text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
-            <Search size={13} className="absolute left-2.5 top-2.5 text-[#565e74]" />
+            <Search size={13} className="absolute left-2.5 top-2.5 text-secondary" />
           </div>
         </div>
 
         {/* Rango de Fechas */}
         <div>
-          <label className="block text-xs font-medium text-[#565e74] mb-1">Fecha Desde</label>
+          <label className="block text-xs font-medium text-secondary mb-1">Fecha Desde</label>
           <input
             type="date"
             value={filters.from || ''}
             onChange={(e) => onFilterChange('from', e.target.value)}
-            className="w-full text-xs bg-white border border-[#dec0b7] rounded-lg px-2.5 py-2 text-[#0b1c30] focus:ring-2 focus:ring-[#9f3c16]/20 focus:border-[#9f3c16]"
+            className="w-full text-xs bg-surface-container-lowest border border-outline-variant rounded-xl px-2.5 py-2 text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
           />
         </div>
       </div>

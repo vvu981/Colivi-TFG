@@ -2,7 +2,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { adminUserService } from '../services/adminUserService';
 import type { AdminUserProfile, BanUserRequest, PageResponse } from '../types/admin.types';
 
-export const useAdminUsers = (initialPageSize = 10) => {
+interface UseAdminUsersOptions {
+  initialPageSize?: number;
+  enabled?: boolean;
+}
+
+export const useAdminUsers = (options: UseAdminUsersOptions | number = 10) => {
+  const initialPageSize = typeof options === 'number' ? options : options.initialPageSize ?? 10;
+  const enabled = typeof options === 'number' ? true : options.enabled ?? true;
+
   const [usersPage, setUsersPage] = useState<PageResponse<AdminUserProfile> | null>(null);
   const [query, setQuery] = useState<string>('');
   const [role, setRole] = useState<string>('');
@@ -10,11 +18,12 @@ export const useAdminUsers = (initialPageSize = 10) => {
   const [deleted, setDeleted] = useState<boolean | undefined>(undefined);
   const [page, setPage] = useState<number>(0);
   const [size, setSize] = useState<number>(initialPageSize);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(enabled);
   const [error, setError] = useState<string | null>(null);
   const [activeUser, setActiveUser] = useState<AdminUserProfile | null>(null);
 
   const fetchUsers = useCallback(async () => {
+    if (!enabled) return;
     setIsLoading(true);
     setError(null);
     try {
@@ -25,11 +34,13 @@ export const useAdminUsers = (initialPageSize = 10) => {
     } finally {
       setIsLoading(false);
     }
-  }, [query, role, banned, deleted, page, size]);
+  }, [enabled, query, role, banned, deleted, page, size]);
 
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+    if (enabled) {
+      fetchUsers();
+    }
+  }, [enabled, fetchUsers]);
 
   const inspectUser = async (userId: string): Promise<AdminUserProfile> => {
     try {
@@ -44,9 +55,33 @@ export const useAdminUsers = (initialPageSize = 10) => {
   const banUser = async (userId: string, payload: BanUserRequest) => {
     try {
       await adminUserService.banUser(userId, payload);
-      await fetchUsers();
+      setUsersPage((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          content: prev.content.map((item) =>
+            item.id === userId
+              ? {
+                  ...item,
+                  bannedAt: new Date().toISOString(),
+                  banReason: payload.message,
+                  bannedUntil: payload.bannedUntil || null,
+                }
+              : item
+          ),
+        };
+      });
       if (activeUser?.id === userId) {
-        await inspectUser(userId);
+        setActiveUser((prev) =>
+          prev
+            ? {
+                ...prev,
+                bannedAt: new Date().toISOString(),
+                banReason: payload.message,
+                bannedUntil: payload.bannedUntil || null,
+              }
+            : null
+        );
       }
     } catch (err: any) {
       throw new Error(err.response?.data?.message || 'Error al banear al usuario.');
@@ -56,9 +91,33 @@ export const useAdminUsers = (initialPageSize = 10) => {
   const unbanUser = async (userId: string) => {
     try {
       await adminUserService.unbanUser(userId);
-      await fetchUsers();
+      setUsersPage((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          content: prev.content.map((item) =>
+            item.id === userId
+              ? {
+                  ...item,
+                  bannedAt: null,
+                  banReason: null,
+                  bannedUntil: null,
+                }
+              : item
+          ),
+        };
+      });
       if (activeUser?.id === userId) {
-        await inspectUser(userId);
+        setActiveUser((prev) =>
+          prev
+            ? {
+                ...prev,
+                bannedAt: null,
+                banReason: null,
+                bannedUntil: null,
+              }
+            : null
+        );
       }
     } catch (err: any) {
       throw new Error(err.response?.data?.message || 'Error al desbanear al usuario.');
@@ -68,10 +127,17 @@ export const useAdminUsers = (initialPageSize = 10) => {
   const hardDeleteUser = async (userId: string) => {
     try {
       await adminUserService.deleteUserHard(userId);
+      setUsersPage((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          totalElements: Math.max(0, prev.totalElements - 1),
+          content: prev.content.filter((item) => item.id !== userId),
+        };
+      });
       if (activeUser?.id === userId) {
         setActiveUser(null);
       }
-      await fetchUsers();
     } catch (err: any) {
       throw new Error(err.response?.data?.message || 'Error al eliminar físicamente al usuario.');
     }
@@ -80,9 +146,17 @@ export const useAdminUsers = (initialPageSize = 10) => {
   const setAdmin = async (userId: string) => {
     try {
       await adminUserService.setAdmin(userId);
-      await fetchUsers();
+      setUsersPage((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          content: prev.content.map((item) =>
+            item.id === userId ? { ...item, role: 'ADMIN' as const } : item
+          ),
+        };
+      });
       if (activeUser?.id === userId) {
-        await inspectUser(userId);
+        setActiveUser((prev) => (prev ? { ...prev, role: 'ADMIN' as const } : null));
       }
     } catch (err: any) {
       throw new Error(err.response?.data?.message || 'Error al promover a administrador.');

@@ -1,15 +1,12 @@
 import React, { useState } from 'react';
 import type { ReportItem, ReportStatus, PageResponse } from '../../types/admin.types';
 import { AdminBulkActionModal } from './AdminBulkActionModal';
-import { CopyIdButton } from '../common/CopyIdButton';
+import { AdminReportTableRow } from './AdminReportTableRow';
 import { Select } from '../../../../components/ui/Select';
 import {
   FileText,
   ChevronLeft,
   ChevronRight,
-  Eye,
-  Home,
-  User,
   Layers,
 } from 'lucide-react';
 
@@ -50,74 +47,22 @@ export const AdminReportsTable: React.FC<AdminReportsTableProps> = ({
 }) => {
   const [isBulkModalOpen, setIsBulkModalOpen] = useState<boolean>(false);
 
-  const getStatusBadge = (status: ReportStatus) => {
-    switch (status) {
-      case 'PENDING':
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
-            Pendiente
-          </span>
-        );
-      case 'INVESTIGATING':
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-800 border border-blue-200">
-            Investigando
-          </span>
-        );
-      case 'RESOLVED':
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
-            Resuelta
-          </span>
-        );
-      case 'DISMISSED':
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-50 text-slate-700 border border-slate-200">
-            Desestimada
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-50 text-gray-700">
-            {status}
-          </span>
-        );
-    }
-  };
-
-  const getReasonLabel = (reason: string) => {
-    switch (reason) {
-      case 'FRAUD':
-        return 'Fraude / Falso';
-      case 'SPAM':
-        return 'Spam';
-      case 'HARASSMENT':
-        return 'Acoso / Hostilidad';
-      case 'INAPPROPRIATE_CONTENT':
-        return 'Inapropiado';
-      case 'OTHER':
-        return 'Otro';
-      default:
-        return reason;
-    }
-  };
-
   const allSelected = reports.length > 0 && selectedIds.length === reports.length;
 
   return (
     <div className="space-y-4">
       {/* Table Container */}
-      <div className="bg-white rounded-xl border border-[#dec0b7] shadow-sm">
-        <div className="overflow-x-auto rounded-t-xl">
+      <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-[#FAF8F5] text-[#565e74] uppercase text-[11px] font-bold border-b border-[#dec0b7] tracking-wider">
+            <thead className="bg-surface text-secondary uppercase text-[11px] font-bold border-b border-outline-variant tracking-wider">
               <tr>
                 <th className="p-3.5 w-10 text-center">
                   <input
                     type="checkbox"
                     checked={allSelected}
                     onChange={onToggleSelectAll}
-                    className="rounded border-[#dec0b7] text-[#9f3c16] focus:ring-[#9f3c16] h-4 w-4"
+                    className="rounded border-outline-variant text-primary focus:ring-primary h-4 w-4 cursor-pointer"
                   />
                 </th>
                 <th className="p-3.5">ID / Fecha</th>
@@ -128,106 +73,32 @@ export const AdminReportsTable: React.FC<AdminReportsTableProps> = ({
                 <th className="p-3.5 text-right">Acción</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-[#0b1c30]">
+            <tbody className="divide-y divide-outline-variant/30 text-on-surface">
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-[#565e74]">
-                    <div className="inline-block w-6 h-6 border-2 border-[#9f3c16] border-t-transparent rounded-full animate-spin mb-2" />
+                  <td colSpan={7} className="p-8 text-center text-secondary">
+                    <div className="inline-block w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2" />
                     <p className="text-xs">Cargando cola de moderación...</p>
                   </td>
                 </tr>
               ) : reports.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-12 text-center text-[#565e74]">
-                    <FileText size={32} className="mx-auto text-slate-300 mb-2" />
-                    <p className="text-sm font-semibold text-[#0b1c30]">No se encontraron denuncias</p>
-                    <p className="text-xs text-[#565e74] mt-0.5">Ajusta los filtros o limpia la búsqueda.</p>
+                  <td colSpan={7} className="p-12 text-center text-secondary">
+                    <FileText size={32} className="mx-auto text-secondary/40 mb-2" />
+                    <p className="text-sm font-semibold text-on-surface">No se encontraron denuncias</p>
+                    <p className="text-xs text-secondary mt-0.5">Ajusta los filtros o limpia la búsqueda.</p>
                   </td>
                 </tr>
               ) : (
-                reports.map((item) => {
-                  const isSelected = selectedIds.includes(item.id);
-                  return (
-                    <tr
-                      key={item.id}
-                      onClick={() => onSelectReport(item)}
-                      className={`hover:bg-[#f8f9ff] cursor-pointer transition-colors ${
-                        isSelected ? 'bg-amber-50/60' : ''
-                      }`}
-                    >
-                      <td className="p-3.5 text-center" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => onToggleSelect(item.id)}
-                          className="rounded border-[#dec0b7] text-[#9f3c16] focus:ring-[#9f3c16] h-4 w-4"
-                        />
-                      </td>
-
-                      {/* ID & Date */}
-                      <td className="p-3.5">
-                        <CopyIdButton id={item.id} truncate maxTruncateWidth="max-w-[80px]" />
-                        <div className="text-[11px] text-[#565e74] mt-0.5">
-                          {new Date(item.createdAt).toLocaleDateString('es-ES', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </div>
-                      </td>
-
-                      {/* Target */}
-                      <td className="p-3.5">
-                        <div className="flex items-center gap-1.5 font-medium">
-                          {item.targetType === 'LISTING' ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-50 text-blue-700 text-[11px] font-semibold border border-blue-200">
-                              <Home size={11} />
-                              Anuncio
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-purple-50 text-purple-700 text-[11px] font-semibold border border-purple-200">
-                              <User size={11} />
-                              Usuario
-                            </span>
-                          )}
-                        </div>
-                        <div className="mt-0.5">
-                          <CopyIdButton id={item.targetId} truncate maxTruncateWidth="max-w-[90px]" />
-                        </div>
-                      </td>
-
-                      {/* Reason */}
-                      <td className="p-3.5">
-                        <span className="font-semibold text-xs text-[#0b1c30]">
-                          {getReasonLabel(item.reason)}
-                        </span>
-                      </td>
-
-                      {/* Description snippet */}
-                      <td className="p-3.5 max-w-[220px]">
-                        <p className="text-xs text-[#565e74] line-clamp-2" title={item.description}>
-                          {item.description || <span className="italic text-slate-400">Sin descripción</span>}
-                        </p>
-                      </td>
-
-                      {/* Status */}
-                      <td className="p-3.5">{getStatusBadge(item.status)}</td>
-
-                      {/* Action */}
-                      <td className="p-3.5 text-right" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          onClick={() => onSelectReport(item)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-[#9f3c16] hover:bg-[#9f3c16]/10 rounded-lg transition-colors border border-[#dec0b7]"
-                        >
-                          <Eye size={13} />
-                          <span>Expediente</span>
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
+                reports.map((item) => (
+                  <AdminReportTableRow
+                    key={item.id}
+                    item={item}
+                    isSelected={selectedIds.includes(item.id)}
+                    onToggleSelect={onToggleSelect}
+                    onSelectReport={onSelectReport}
+                  />
+                ))
               )}
             </tbody>
           </table>
@@ -235,7 +106,7 @@ export const AdminReportsTable: React.FC<AdminReportsTableProps> = ({
 
         {/* Pagination Footer */}
         {pageInfo && pageInfo.totalPages > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t border-[#dec0b7] bg-[#FAF8F5] text-xs text-[#565e74] rounded-b-xl">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t border-outline-variant bg-surface text-xs text-secondary">
             <div className="flex items-center gap-2">
               <span>Mostrar</span>
               <div className="w-36">
@@ -252,20 +123,20 @@ export const AdminReportsTable: React.FC<AdminReportsTableProps> = ({
 
             <div className="flex items-center gap-2">
               <span>
-                Página <strong className="text-[#0b1c30]">{page + 1}</strong> de {pageInfo.totalPages}
+                Página <strong className="text-on-surface">{page + 1}</strong> de {pageInfo.totalPages}
               </span>
               <div className="flex items-center gap-1">
                 <button
                   disabled={page === 0}
                   onClick={() => onPageChange(page - 1)}
-                  className="p-1.5 border border-[#dec0b7] rounded-md bg-white hover:bg-slate-50 disabled:opacity-40 transition-colors"
+                  className="p-1.5 border border-outline-variant rounded-lg bg-surface-container-lowest hover:bg-surface-container-low disabled:opacity-40 transition-colors cursor-pointer"
                 >
                   <ChevronLeft size={14} />
                 </button>
                 <button
                   disabled={page >= pageInfo.totalPages - 1}
                   onClick={() => onPageChange(page + 1)}
-                  className="p-1.5 border border-[#dec0b7] rounded-md bg-white hover:bg-slate-50 disabled:opacity-40 transition-colors"
+                  className="p-1.5 border border-outline-variant rounded-lg bg-surface-container-lowest hover:bg-surface-container-low disabled:opacity-40 transition-colors cursor-pointer"
                 >
                   <ChevronRight size={14} />
                 </button>
@@ -277,19 +148,19 @@ export const AdminReportsTable: React.FC<AdminReportsTableProps> = ({
 
       {/* Floating Bulk Actions Bar */}
       {selectedIds.length > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-[#0b1c30] text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-4 border border-slate-700 animate-in fade-in slide-in-from-bottom-4 duration-200">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-on-surface text-surface-container-lowest px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-4 border border-outline-variant/30 animate-in fade-in slide-in-from-bottom-4 duration-200">
           <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 bg-[#9f3c16] text-white text-xs font-bold rounded-full">
+            <span className="px-2 py-0.5 bg-primary text-on-primary text-xs font-bold rounded-full">
               {selectedIds.length}
             </span>
             <span className="text-xs font-medium">denuncias seleccionadas</span>
           </div>
 
-          <div className="h-4 w-px bg-slate-700" />
+          <div className="h-4 w-px bg-outline-variant/40" />
 
           <button
             onClick={() => setIsBulkModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#9f3c16] hover:bg-[#bf542c] text-white text-xs font-semibold rounded-lg transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:bg-primary-container text-on-primary text-xs font-semibold rounded-xl transition-colors cursor-pointer shadow-xs"
           >
             <Layers size={14} />
             <span>Aplicar Acción Masiva</span>

@@ -139,25 +139,25 @@ export const AdminListingDetailModal: React.FC<AdminListingDetailModalProps> = (
       <div
         role="dialog"
         aria-modal="true"
-        className="fixed inset-0 z-50 bg-[#0b1c30]/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
+        className="fixed inset-0 z-50 bg-on-surface/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
         onClick={() => !isProcessing && onClose()}
       >
         <div
-          className="w-full max-w-2xl lg:max-w-3xl max-h-[90vh] bg-white rounded-3xl border border-[#dec0b7] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
+          className="w-full max-w-2xl lg:max-w-3xl max-h-[90vh] bg-surface-container-lowest rounded-3xl border border-outline-variant shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header (Fijo) */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[#dec0b7] bg-[#FAF8F5] shrink-0">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant bg-surface shrink-0">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-[#9f3c16]/10 text-[#9f3c16] rounded-xl shrink-0">
+              <div className="p-2.5 bg-primary/10 text-primary rounded-xl shrink-0">
                 <Home size={20} />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-base font-bold text-[#0b1c30] truncate max-w-md">{listing.title}</h3>
+                  <h3 className="text-base font-bold text-on-surface truncate max-w-md">{listing.title}</h3>
                   <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold shrink-0 ${
-                    isBanned ? 'bg-red-100 text-red-800' :
-                    isDeleted ? 'bg-gray-100 text-gray-800' :
+                    isBanned ? 'bg-error-container text-error' :
+                    isDeleted ? 'bg-surface-container text-secondary' :
                     listing.status === 'AVAILABLE' ? 'bg-emerald-100 text-emerald-800' :
                     'bg-amber-100 text-amber-800'
                   }`}>
@@ -171,7 +171,7 @@ export const AdminListingDetailModal: React.FC<AdminListingDetailModalProps> = (
             </div>
             <button
               onClick={onClose}
-              className="text-[#565e74] hover:text-[#0b1c30] p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+              className="text-secondary hover:text-on-surface p-1.5 rounded-lg hover:bg-surface-container transition-colors cursor-pointer"
             >
               <X size={20} />
             </button>
@@ -182,12 +182,12 @@ export const AdminListingDetailModal: React.FC<AdminListingDetailModalProps> = (
             <div className={`mx-6 mt-4 p-3 rounded-xl border text-xs flex items-center gap-2 shrink-0 ${
               feedback.type === 'success'
                 ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                : 'bg-red-50 text-red-800 border-red-200'
+                : 'bg-error-container text-on-error-container border-error/20'
             }`}>
               {feedback.type === 'success' ? (
                 <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
               ) : (
-                <AlertTriangle size={16} className="text-red-600 shrink-0" />
+                <AlertTriangle size={16} className="text-error shrink-0" />
               )}
               <span>{feedback.message}</span>
             </div>
@@ -198,14 +198,14 @@ export const AdminListingDetailModal: React.FC<AdminListingDetailModalProps> = (
             {/* Images Grid */}
             {((listing.selectedImages && listing.selectedImages.length > 0) || ((listing as any).images && (listing as any).images.length > 0)) && (
               <div>
-                <span className="text-xs font-bold text-[#565e74] uppercase tracking-wider block mb-2">Galería de Imágenes</span>
+                <span className="text-xs font-bold text-secondary uppercase tracking-wider block mb-2">Galería de Imágenes</span>
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                   {(listing.selectedImages || (listing as any).images).map((img: any, idx: number) => (
                     <img
                       key={img.id || idx}
                       src={img.imageUrl || img.url}
                       alt={`${listing.title} ${idx + 1}`}
-                      className="w-full h-24 object-cover rounded-xl border border-slate-200"
+                      className="w-full h-24 object-cover rounded-xl border border-outline-variant/60"
                     />
                   ))}
                 </div>
@@ -213,24 +213,24 @@ export const AdminListingDetailModal: React.FC<AdminListingDetailModalProps> = (
             )}
 
             {/* Key specs */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-[#f8f9ff] rounded-xl border border-slate-200 text-xs">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-surface-container-low rounded-xl border border-outline-variant/50 text-xs">
               <div>
-                <span className="text-[#565e74] block font-medium">Precio Mensual</span>
-                <span className="text-sm font-bold text-[#9f3c16] flex items-center gap-1 mt-0.5">
+                <span className="text-secondary block font-medium">Precio Mensual</span>
+                <span className="text-sm font-bold text-primary flex items-center gap-1 mt-0.5">
                   <Euro size={15} />
                   {listing.pricePerMonth ?? (listing as any).price} €/mes
                 </span>
               </div>
               <div>
-                <span className="text-[#565e74] block font-medium">Tipo Alquiler</span>
-                <span className="text-sm font-bold text-[#0b1c30] mt-0.5 block">
+                <span className="text-secondary block font-medium">Tipo Alquiler</span>
+                <span className="text-sm font-bold text-on-surface mt-0.5 block">
                   {listing.rentalType === 'ROOM' ? 'Habitación' : 'Piso Completo'}
                 </span>
               </div>
               <div>
-                <span className="text-[#565e74] block font-medium">Ciudad / Ubicación</span>
-                <span className="text-xs font-semibold text-[#0b1c30] flex items-center gap-1 mt-0.5">
-                  <MapPin size={13} className="text-[#565e74]" />
+                <span className="text-secondary block font-medium">Ciudad / Ubicación</span>
+                <span className="text-xs font-semibold text-on-surface flex items-center gap-1 mt-0.5">
+                  <MapPin size={13} className="text-secondary" />
                   {typeof listing.accommodation?.city === 'string'
                     ? listing.accommodation.city
                     : typeof listing.accommodation?.address === 'string'
@@ -239,12 +239,12 @@ export const AdminListingDetailModal: React.FC<AdminListingDetailModalProps> = (
                 </span>
               </div>
               <div>
-                <span className="text-[#565e74] block font-medium">Propietario / Host ID</span>
+                <span className="text-secondary block font-medium">Propietario / Host ID</span>
                 <div className="mt-0.5">
                   {listing.hostId || (listing.accommodation as any)?.ownerId ? (
                     <CopyIdButton id={listing.hostId || (listing.accommodation as any)?.ownerId} truncate maxTruncateWidth="max-w-[100px]" />
                   ) : (
-                    <span className="text-xs font-mono text-[#565e74]">N/D</span>
+                    <span className="text-xs font-mono text-secondary">N/D</span>
                   )}
                 </div>
               </div>
@@ -253,8 +253,8 @@ export const AdminListingDetailModal: React.FC<AdminListingDetailModalProps> = (
             {/* Description */}
             {listing.description && (
               <div>
-                <span className="text-xs font-bold text-[#565e74] uppercase tracking-wider block mb-1">Descripción</span>
-                <p className="text-xs text-[#0b1c30] bg-slate-50 p-3.5 rounded-xl border border-slate-200 whitespace-pre-wrap leading-relaxed">
+                <span className="text-xs font-bold text-secondary uppercase tracking-wider block mb-1">Descripción</span>
+                <p className="text-xs text-on-surface bg-surface-container-low p-3.5 rounded-xl border border-outline-variant/40 whitespace-pre-wrap leading-relaxed">
                   {listing.description}
                 </p>
               </div>
@@ -262,14 +262,14 @@ export const AdminListingDetailModal: React.FC<AdminListingDetailModalProps> = (
 
             {/* Host Quick inspect */}
             {(listing.hostId || (listing.accommodation as any)?.ownerId) && onInspectUser && (
-              <div className="flex items-center justify-between p-3.5 bg-purple-50/60 rounded-xl border border-purple-200">
+              <div className="flex items-center justify-between p-3.5 bg-tertiary-container/30 rounded-xl border border-tertiary/20">
                 <div className="flex items-center gap-2">
-                  <User size={16} className="text-purple-700" />
-                  <span className="text-xs font-semibold text-purple-900">Anfitrión / Propietario</span>
+                  <User size={16} className="text-tertiary" />
+                  <span className="text-xs font-semibold text-on-surface">Anfitrión / Propietario</span>
                 </div>
                 <button
                   onClick={() => onInspectUser(listing.hostId || (listing.accommodation as any)?.ownerId)}
-                  className="text-xs font-semibold text-purple-700 hover:text-purple-900 underline cursor-pointer"
+                  className="text-xs font-semibold text-primary hover:underline cursor-pointer"
                 >
                   Inspeccionar perfil de anfitrión
                 </button>
@@ -278,15 +278,15 @@ export const AdminListingDetailModal: React.FC<AdminListingDetailModalProps> = (
           </div>
 
           {/* Footer (Fijo) */}
-          <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-t border-[#dec0b7] bg-[#FAF8F5] shrink-0">
-            <span className="text-xs text-[#565e74] font-medium">Acciones de moderación:</span>
+          <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-t border-outline-variant bg-surface shrink-0">
+            <span className="text-xs text-secondary font-medium">Acciones de moderación:</span>
             <div className="flex items-center gap-2">
               {isBanned ? (
                 <button
                   type="button"
                   disabled={isProcessing}
                   onClick={handleOpenUnbanConfirm}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-colors disabled:opacity-50 cursor-pointer"
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
                 >
                   <CheckCircle2 size={14} />
                   <span>Desbanear Anuncio</span>
@@ -296,7 +296,7 @@ export const AdminListingDetailModal: React.FC<AdminListingDetailModalProps> = (
                   type="button"
                   disabled={isProcessing}
                   onClick={handleOpenBanConfirm}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold bg-amber-600 hover:bg-amber-700 text-white rounded-xl transition-colors disabled:opacity-50 cursor-pointer"
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold bg-amber-600 hover:bg-amber-700 text-white rounded-xl transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
                 >
                   <Ban size={14} />
                   <span>Banear Anuncio</span>
@@ -308,7 +308,7 @@ export const AdminListingDetailModal: React.FC<AdminListingDetailModalProps> = (
                   type="button"
                   disabled={isProcessing}
                   onClick={handleRecover}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors disabled:opacity-50 cursor-pointer"
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
                 >
                   <RotateCcw size={14} />
                   <span>Recuperar Anuncio</span>
@@ -319,7 +319,7 @@ export const AdminListingDetailModal: React.FC<AdminListingDetailModalProps> = (
                 type="button"
                 disabled={isProcessing}
                 onClick={handleOpenHardDeleteConfirm}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold bg-red-700 hover:bg-red-800 text-white rounded-xl transition-colors disabled:opacity-50 cursor-pointer"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold bg-error hover:bg-error/90 text-on-error rounded-xl transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
               >
                 <Trash2 size={14} />
                 <span>Borrado Físico</span>

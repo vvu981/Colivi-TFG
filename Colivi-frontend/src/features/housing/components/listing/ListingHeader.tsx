@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { MapPin, Share2, Sparkles, Home, Bed, Check, Flag } from 'lucide-react';
+import { MapPin, Share2, Sparkles, Home, Bed, Check, Flag, Shield } from 'lucide-react';
 import type { AccommodationListingResponse } from '../../types/listing.types';
+import { CopyIdButton } from '../../../admin/components/common/CopyIdButton';
 
 export interface ListingHeaderProps {
   listing: AccommodationListingResponse;
   currentUserId?: string | null;
+  isAdmin?: boolean;
   onReportClick?: () => void;
 }
 
@@ -16,6 +18,7 @@ export interface ListingHeaderProps {
 export const ListingHeader: React.FC<ListingHeaderProps> = ({
   listing,
   currentUserId,
+  isAdmin = false,
   onReportClick,
 }) => {
   const [copied, setCopied] = useState(false);
@@ -55,7 +58,24 @@ export const ListingHeader: React.FC<ListingHeaderProps> = ({
   const isRoom = rentalType === 'ROOM';
 
   return (
-    <header className="flex flex-col gap-2">
+    <header className="flex flex-col gap-2.5">
+      {/* Admin Inspector Pill (Visible exclusively for administrators) */}
+      {isAdmin && (
+        <div className="flex items-center gap-2.5 p-2 px-3.5 bg-error-container/40 border border-error/20 rounded-2xl text-xs flex-wrap self-start shadow-2xs animate-in fade-in duration-150">
+          <span className="font-bold text-error flex items-center gap-1.5 shrink-0">
+            <Shield size={14} className="text-error" />
+            <span>ADMIN:</span>
+          </span>
+          <CopyIdButton id={listing.id} prefix="ID Anuncio:" />
+          {hostId && (
+            <>
+              <span className="text-outline-variant/60">•</span>
+              <CopyIdButton id={hostId} prefix="ID Host:" />
+            </>
+          )}
+        </div>
+      )}
+
       {/* Top Title & Actions row */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex flex-col gap-1.5 min-w-0">

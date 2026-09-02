@@ -49,9 +49,8 @@ export const AdminBanUserModal: React.FC<AdminBanUserModalProps> = ({
       bannedUntil = new Date(customDate).toISOString();
     } else if (presetDuration) {
       const days = parseInt(presetDuration, 10);
-      const date = new Date();
-      date.setDate(date.getDate() + days);
-      bannedUntil = date.toISOString();
+      const targetTime = Date.now() + days * 24 * 60 * 60 * 1000;
+      bannedUntil = new Date(targetTime).toISOString();
     }
 
     setIsSubmitting(true);
@@ -73,29 +72,29 @@ export const AdminBanUserModal: React.FC<AdminBanUserModalProps> = ({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 bg-[#0b1c30]/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 bg-on-surface/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
       onClick={() => !isSubmitting && onClose()}
     >
       <div
-        className="w-full max-w-lg max-h-[90vh] bg-white rounded-3xl border border-[#dec0b7] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
+        className="w-full max-w-lg max-h-[90vh] bg-surface-container-lowest rounded-3xl border border-outline-variant shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header (Fijo) */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#dec0b7] bg-[#FAF8F5] shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant bg-surface shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-red-100 text-red-700 rounded-xl shrink-0">
+            <div className="p-2.5 bg-error-container text-error rounded-xl shrink-0">
               <Ban size={20} />
             </div>
             <div>
-              <h3 className="text-base font-bold text-[#0b1c30]">Banear Usuario</h3>
-              <p className="text-xs text-[#565e74] mt-0.5">
+              <h3 className="text-base font-bold text-on-surface">Banear Usuario</h3>
+              <p className="text-xs text-secondary mt-0.5">
                 @{user.nickname} ({user.email})
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-[#565e74] hover:text-[#0b1c30] p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+            className="text-secondary hover:text-on-surface p-1.5 rounded-lg hover:bg-surface-container transition-colors cursor-pointer"
           >
             <X size={20} />
           </button>
@@ -104,16 +103,16 @@ export const AdminBanUserModal: React.FC<AdminBanUserModalProps> = ({
         {/* Form Body (Scrollable) */}
         <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto flex-1">
           {error && (
-            <div className="p-3 bg-red-50 text-red-800 text-xs rounded-xl border border-red-200 flex items-center gap-2">
-              <AlertTriangle size={16} className="shrink-0 text-red-600" />
+            <div className="p-3 bg-error-container text-on-error-container text-xs rounded-xl border border-error/20 flex items-center gap-2">
+              <AlertTriangle size={16} className="shrink-0 text-error" />
               <span>{error}</span>
             </div>
           )}
 
           {/* Motivo */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-bold text-[#0b1c30]">
-              Motivo del Baneo <span className="text-red-500">*</span>
+            <label className="block text-xs font-bold text-on-surface">
+              Motivo del Baneo <span className="text-error">*</span>
             </label>
             <textarea
               required
@@ -121,13 +120,13 @@ export const AdminBanUserModal: React.FC<AdminBanUserModalProps> = ({
               placeholder="Explica la razón de la suspensión (p. ej. spam repetitivo, quejas de convivencia, etc.)..."
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              className="w-full text-xs bg-white border border-[#dec0b7] rounded-xl p-3 text-[#0b1c30] focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+              className="w-full text-xs bg-surface-container-lowest border border-outline-variant rounded-xl p-3 text-on-surface focus:ring-2 focus:ring-error/20 focus:border-error"
             />
           </div>
 
           {/* Duración */}
           <div className="space-y-2">
-            <label className="block text-xs font-bold text-[#0b1c30]">Duración de la Suspensión</label>
+            <label className="block text-xs font-bold text-on-surface">Duración de la Suspensión</label>
             <div className="grid grid-cols-3 gap-2">
               {[
                 { label: '24 horas', val: '1' },
@@ -143,8 +142,8 @@ export const AdminBanUserModal: React.FC<AdminBanUserModalProps> = ({
                   onClick={() => setPresetDuration(p.val)}
                   className={`py-2 px-3 text-xs font-semibold rounded-xl border transition-all cursor-pointer ${
                     presetDuration === p.val
-                      ? 'bg-red-50 text-red-800 border-red-300 font-bold'
-                      : 'bg-white text-[#565e74] border-slate-200 hover:bg-slate-50'
+                      ? 'bg-error-container text-error border-error/30 font-bold'
+                      : 'bg-surface-container-lowest text-secondary border-outline-variant/60 hover:bg-surface-container-low'
                   }`}
                 >
                   {p.label}
@@ -154,7 +153,7 @@ export const AdminBanUserModal: React.FC<AdminBanUserModalProps> = ({
 
             {presetDuration === 'custom' && (
               <div className="pt-2">
-                <label className="block text-[11px] font-semibold text-[#565e74] mb-1">
+                <label className="block text-[11px] font-semibold text-secondary mb-1">
                   Fecha y hora de expiración
                 </label>
                 <input
@@ -162,26 +161,26 @@ export const AdminBanUserModal: React.FC<AdminBanUserModalProps> = ({
                   required
                   value={customDate}
                   onChange={(e) => setCustomDate(e.target.value)}
-                  className="w-full text-xs bg-white border border-[#dec0b7] rounded-xl p-2.5 text-[#0b1c30]"
+                  className="w-full text-xs bg-surface-container-lowest border border-outline-variant rounded-xl p-2.5 text-on-surface"
                 />
               </div>
             )}
           </div>
 
           {/* Footer (Dentro del form) */}
-          <div className="pt-4 border-t border-slate-200 flex items-center justify-end gap-2.5">
+          <div className="pt-4 border-t border-outline-variant/40 flex items-center justify-end gap-2.5">
             <button
               type="button"
               disabled={isSubmitting}
               onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-colors cursor-pointer"
+              className="px-4 py-2 text-xs font-semibold bg-surface-container hover:bg-surface-container-high text-on-surface rounded-xl transition-colors cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-red-700 hover:bg-red-800 text-white rounded-xl transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
+              className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-error hover:bg-error/90 text-on-error rounded-xl transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
             >
               <Ban size={14} />
               <span>{isSubmitting ? 'Aplicando...' : 'Confirmar Suspensión'}</span>

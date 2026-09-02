@@ -28,15 +28,15 @@ export const AdminListingFiltersComponent: React.FC<AdminListingFiltersProps> = 
   onReset,
 }) => {
   return (
-    <div className="bg-white p-4 rounded-xl border border-[#dec0b7] shadow-sm mb-6">
+    <div className="bg-surface-container-lowest p-4 rounded-2xl border border-outline-variant shadow-sm mb-6">
       <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2 text-sm font-semibold text-[#0b1c30]">
-          <Filter size={16} className="text-[#9f3c16]" />
+        <div className="flex items-center gap-2 text-sm font-semibold text-on-surface">
+          <Filter size={16} className="text-primary" />
           <span>Filtros de Anuncios</span>
         </div>
         <button
           onClick={onReset}
-          className="flex items-center gap-1.5 text-xs text-[#565e74] hover:text-[#9f3c16] font-medium transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 text-xs text-secondary hover:text-primary font-medium transition-colors cursor-pointer"
         >
           <RotateCcw size={13} />
           <span>Limpiar filtros</span>
@@ -46,37 +46,37 @@ export const AdminListingFiltersComponent: React.FC<AdminListingFiltersProps> = 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {/* Título o ID */}
         <div>
-          <label className="block text-xs font-medium text-[#565e74] mb-1">ID o Título</label>
+          <label className="block text-xs font-medium text-secondary mb-1">ID o Título</label>
           <div className="relative">
             <input
               type="text"
               placeholder="ID o título..."
               value={filters.title || ''}
               onChange={(e) => onFilterChange('title', e.target.value)}
-              className="w-full text-xs bg-white border border-[#dec0b7] rounded-lg pl-7 pr-2.5 py-2 text-[#0b1c30] focus:ring-2 focus:ring-[#9f3c16]/20 focus:border-[#9f3c16]"
+              className="w-full text-xs bg-surface-container-lowest border border-outline-variant rounded-xl pl-7 pr-2.5 py-2 text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
-            <Search size={13} className="absolute left-2.5 top-2.5 text-[#565e74]" />
+            <Search size={13} className="absolute left-2.5 top-2.5 text-secondary" />
           </div>
         </div>
 
         {/* Ciudad */}
         <div>
-          <label className="block text-xs font-medium text-[#565e74] mb-1">Ciudad</label>
+          <label className="block text-xs font-medium text-secondary mb-1">Ciudad</label>
           <div className="relative">
             <input
               type="text"
               placeholder="Madrid, Barcelona..."
               value={filters.city || ''}
               onChange={(e) => onFilterChange('city', e.target.value)}
-              className="w-full text-xs bg-white border border-[#dec0b7] rounded-lg pl-7 pr-2.5 py-2 text-[#0b1c30] focus:ring-2 focus:ring-[#9f3c16]/20 focus:border-[#9f3c16]"
+              className="w-full text-xs bg-surface-container-lowest border border-outline-variant rounded-xl pl-7 pr-2.5 py-2 text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
-            <Building size={13} className="absolute left-2.5 top-2.5 text-[#565e74]" />
+            <Building size={13} className="absolute left-2.5 top-2.5 text-secondary" />
           </div>
         </div>
 
         {/* Estado (Select reutilizable) */}
         <div>
-          <label className="block text-xs font-medium text-[#565e74] mb-1">Estado</label>
+          <label className="block text-xs font-medium text-secondary mb-1">Estado</label>
           <Select
             value={filters.status || ''}
             onChange={(val) => onFilterChange('status', val)}
@@ -87,7 +87,7 @@ export const AdminListingFiltersComponent: React.FC<AdminListingFiltersProps> = 
 
         {/* Tipo de Alquiler (Select reutilizable) */}
         <div>
-          <label className="block text-xs font-medium text-[#565e74] mb-1">Tipo de Alquiler</label>
+          <label className="block text-xs font-medium text-secondary mb-1">Tipo de Alquiler</label>
           <Select
             value={filters.rentalType || ''}
             onChange={(val) => onFilterChange('rentalType', val)}
@@ -98,25 +98,25 @@ export const AdminListingFiltersComponent: React.FC<AdminListingFiltersProps> = 
 
         {/* Precio Mínimo */}
         <div>
-          <label className="block text-xs font-medium text-[#565e74] mb-1">Precio Mín (€)</label>
+          <label className="block text-xs font-medium text-secondary mb-1">Precio Mín (€)</label>
           <input
             type="number"
             placeholder="0"
             value={filters.minPrice || ''}
             onChange={(e) => onFilterChange('minPrice', e.target.value)}
-            className="w-full text-xs bg-white border border-[#dec0b7] rounded-lg px-2.5 py-2 text-[#0b1c30] focus:ring-2 focus:ring-[#9f3c16]/20 focus:border-[#9f3c16]"
+            className="w-full text-xs bg-surface-container-lowest border border-outline-variant rounded-xl px-2.5 py-2 text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
           />
         </div>
 
         {/* Precio Máximo */}
         <div>
-          <label className="block text-xs font-medium text-[#565e74] mb-1">Precio Máx (€)</label>
+          <label className="block text-xs font-medium text-secondary mb-1">Precio Máx (€)</label>
           <input
             type="number"
             placeholder="3000"
             value={filters.maxPrice || ''}
             onChange={(e) => onFilterChange('maxPrice', e.target.value)}
-            className="w-full text-xs bg-white border border-[#dec0b7] rounded-lg px-2.5 py-2 text-[#0b1c30] focus:ring-2 focus:ring-[#9f3c16]/20 focus:border-[#9f3c16]"
+            className="w-full text-xs bg-surface-container-lowest border border-outline-variant rounded-xl px-2.5 py-2 text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
           />
         </div>
       </div>

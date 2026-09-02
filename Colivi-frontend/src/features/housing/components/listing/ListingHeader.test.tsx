@@ -102,4 +102,20 @@ describe('ListingHeader', () => {
       state: expect.any(Object),
     }));
   });
+
+  it('muestra el badge de administración con los IDs para copiar cuando isAdmin es true', () => {
+    render(
+      <MemoryRouter>
+        <ListingHeader
+          listing={mockListing}
+          currentUserId="admin-user-id"
+          isAdmin={true}
+        />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('ADMIN:')).toBeInTheDocument();
+    expect(screen.getByText('listing-123')).toBeInTheDocument();
+    expect(screen.getByText('host-user-999')).toBeInTheDocument();
+  });
 });

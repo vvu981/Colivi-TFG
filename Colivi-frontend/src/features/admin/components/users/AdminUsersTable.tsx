@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import type { AdminUserProfile, BanUserRequest, PageResponse } from '../../types/admin.types';
 import { AdminUserDetailModal } from './AdminUserDetailModal';
 import { AdminBanUserModal } from './AdminBanUserModal';
-import { CopyIdButton } from '../common/CopyIdButton';
+import { AdminUserTableRow } from './AdminUserTableRow';
 import { AdminConfirmModal } from '../common/AdminConfirmModal';
 import { Select } from '../../../../components/ui/Select';
 import {
@@ -10,12 +10,8 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
-  Eye,
-  Ban,
-  CheckCircle2,
-  Trash2,
-  ShieldCheck,
   Filter,
+  AlertTriangle,
 } from 'lucide-react';
 
 const pageSizeOptions = [
@@ -69,6 +65,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
 }) => {
   const [selectedUserForDetail, setSelectedUserForDetail] = useState<AdminUserProfile | null>(null);
   const [selectedUserForBan, setSelectedUserForBan] = useState<AdminUserProfile | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [confirmModal, setConfirmModal] = useState<{
     type: 'SET_ADMIN' | 'HARD_DELETE' | 'UNBAN';
     userId: string;
@@ -81,6 +78,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
   const [isProcessingAction, setIsProcessingAction] = useState<boolean>(false);
 
   const handleOpenPromoteConfirm = (user: AdminUserProfile) => {
+    setActionError(null);
     setConfirmModal({
       type: 'SET_ADMIN',
       userId: user.id,
@@ -93,6 +91,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
   };
 
   const handleOpenUnbanConfirm = (user: AdminUserProfile) => {
+    setActionError(null);
     setConfirmModal({
       type: 'UNBAN',
       userId: user.id,
@@ -105,6 +104,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
   };
 
   const handleOpenHardDeleteConfirm = (user: AdminUserProfile) => {
+    setActionError(null);
     setConfirmModal({
       type: 'HARD_DELETE',
       userId: user.id,
@@ -119,6 +119,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
   const handleConfirmAction = async () => {
     if (!confirmModal) return;
     setIsProcessingAction(true);
+    setActionError(null);
     try {
       if (confirmModal.type === 'SET_ADMIN') {
         await onSetAdmin(confirmModal.userId);
@@ -128,79 +129,57 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
         await onUnbanUser(confirmModal.userId);
       }
       setConfirmModal(null);
-    } catch (err) {
-      console.error('Error executing user action:', err);
+    } catch (err: any) {
+      setActionError(err.message || 'Error al ejecutar la acción sobre el usuario.');
       setConfirmModal(null);
     } finally {
       setIsProcessingAction(false);
     }
   };
 
-  const getRoleBadge = (r: string) => {
-    if (r === 'ADMIN') {
-      return (
-        <span className="px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-800 border border-red-200">
-          ADMIN
-        </span>
-      );
-    }
-    return (
-      <span className="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700">
-        {r}
-      </span>
-    );
-  };
-
-  const getStatusBadge = (user: AdminUserProfile) => {
-    if (user.bannedAt) {
-      return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-800 border border-red-200">
-          Baneado
-        </span>
-      );
-    }
-    if (user.deletedAt) {
-      return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 border border-gray-200">
-          Eliminado
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
-        Activo
-      </span>
-    );
-  };
-
   return (
     <div className="space-y-4">
+      {actionError && (
+        <div className="p-3 bg-error-container text-on-error-container text-xs rounded-xl border border-error/20 flex items-center justify-between gap-2 animate-in fade-in duration-150">
+          <div className="flex items-center gap-2">
+            <AlertTriangle size={16} className="shrink-0 text-error" />
+            <span>{actionError}</span>
+          </div>
+          <button
+            onClick={() => setActionError(null)}
+            className="text-xs font-bold hover:underline cursor-pointer"
+          >
+            Cerrar
+          </button>
+        </div>
+      )}
+
       {/* Filters bar */}
-      <div className="bg-white p-4 rounded-xl border border-[#dec0b7] shadow-sm mb-4">
-        <div className="flex items-center gap-2 text-sm font-semibold text-[#0b1c30] mb-3">
-          <Filter size={16} className="text-[#9f3c16]" />
+      <div className="bg-surface-container-lowest p-4 rounded-2xl border border-outline-variant shadow-sm mb-4">
+        <div className="flex items-center gap-2 text-sm font-semibold text-on-surface mb-3">
+          <Filter size={16} className="text-primary" />
           <span>Filtros de Usuarios</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
           {/* Search Query */}
           <div>
-            <label className="block text-xs font-medium text-[#565e74] mb-1">Buscar usuario</label>
+            <label className="block text-xs font-medium text-secondary mb-1">Buscar usuario</label>
             <div className="relative">
               <input
                 type="text"
                 placeholder="ID, email, nickname o nombre..."
                 value={query}
                 onChange={(e) => onQueryChange(e.target.value)}
-                className="w-full text-xs bg-white border border-[#dec0b7] rounded-lg pl-7 pr-2.5 py-2 text-[#0b1c30] focus:ring-2 focus:ring-[#9f3c16]/20 focus:border-[#9f3c16]"
+                className="w-full text-xs bg-surface-container-lowest border border-outline-variant rounded-xl pl-7 pr-2.5 py-2 text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary"
               />
-              <Search size={13} className="absolute left-2.5 top-2.5 text-[#565e74]" />
+              <Search size={13} className="absolute left-2.5 top-2.5 text-secondary" />
             </div>
           </div>
 
           {/* Role */}
           <div>
-            <label className="block text-xs font-medium text-[#565e74] mb-1">Rol</label>
+            <label className="block text-xs font-medium text-secondary mb-1">Rol</label>
             <Select
               value={role}
               onChange={(val) => onRoleChange(val)}
@@ -215,7 +194,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
 
           {/* Banned */}
           <div>
-            <label className="block text-xs font-medium text-[#565e74] mb-1">Estado de Baneo</label>
+            <label className="block text-xs font-medium text-secondary mb-1">Estado de Baneo</label>
             <Select
               value={banned === undefined ? '' : String(banned)}
               onChange={(val) => onBannedChange(val === '' ? undefined : val === 'true')}
@@ -230,7 +209,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
 
           {/* Deleted */}
           <div>
-            <label className="block text-xs font-medium text-[#565e74] mb-1">Estado de Cuenta</label>
+            <label className="block text-xs font-medium text-secondary mb-1">Estado de Cuenta</label>
             <Select
               value={deleted === undefined ? '' : String(deleted)}
               onChange={(val) => onDeletedChange(val === '' ? undefined : val === 'true')}
@@ -246,10 +225,10 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
       </div>
 
       {/* Users Table */}
-      <div className="bg-white rounded-xl border border-[#dec0b7] shadow-sm">
-        <div className="overflow-x-auto rounded-t-xl">
+      <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-[#FAF8F5] text-[#565e74] uppercase text-[11px] font-bold border-b border-[#dec0b7] tracking-wider">
+            <thead className="bg-surface text-secondary uppercase text-[11px] font-bold border-b border-outline-variant tracking-wider">
               <tr>
                 <th className="p-3.5">Usuario</th>
                 <th className="p-3.5">Contacto</th>
@@ -259,131 +238,34 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
                 <th className="p-3.5 text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-[#0b1c30]">
+            <tbody className="divide-y divide-outline-variant/30 text-on-surface">
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-[#565e74]">
-                    <div className="inline-block w-6 h-6 border-2 border-[#9f3c16] border-t-transparent rounded-full animate-spin mb-2" />
+                  <td colSpan={6} className="p-8 text-center text-secondary">
+                    <div className="inline-block w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2" />
                     <p className="text-xs">Cargando directorio de usuarios...</p>
                   </td>
                 </tr>
               ) : users.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-12 text-center text-[#565e74]">
-                    <Users size={32} className="mx-auto text-slate-300 mb-2" />
-                    <p className="text-sm font-semibold text-[#0b1c30]">No se encontraron usuarios</p>
-                    <p className="text-xs text-[#565e74] mt-0.5">Prueba con otro término de búsqueda.</p>
+                  <td colSpan={6} className="p-12 text-center text-secondary">
+                    <Users size={32} className="mx-auto text-secondary/40 mb-2" />
+                    <p className="text-sm font-semibold text-on-surface">No se encontraron usuarios</p>
+                    <p className="text-xs text-secondary mt-0.5">Prueba con otro término de búsqueda.</p>
                   </td>
                 </tr>
               ) : (
-                users.map((item) => {
-                  const isBanned = !!item.bannedAt;
-                  return (
-                    <tr
-                      key={item.id}
-                      onClick={() => setSelectedUserForDetail(item)}
-                      className="hover:bg-[#f8f9ff] cursor-pointer transition-colors"
-                    >
-                      {/* Avatar & Name */}
-                      <td className="p-3.5">
-                        <div className="flex items-center gap-3">
-                          {item.profilePicUrl ? (
-                            <img
-                              src={item.profilePicUrl}
-                              alt={item.nickname}
-                              className="w-10 h-10 rounded-full object-cover border border-slate-200 shrink-0"
-                            />
-                          ) : (
-                            <div className="w-10 h-10 rounded-full bg-[#9f3c16] text-white flex items-center justify-center font-bold text-xs shrink-0">
-                              {item.nickname?.charAt(0).toUpperCase() || 'U'}
-                            </div>
-                          )}
-                          <div className="min-w-0">
-                            <h4 className="font-bold text-xs text-[#0b1c30] truncate">
-                              {item.firstName} {item.lastName1 || ''}
-                            </h4>
-                            <p className="text-[11px] font-medium text-[#9f3c16] truncate">
-                              @{item.nickname}
-                            </p>
-                            <div className="mt-0.5" onClick={(e) => e.stopPropagation()}>
-                              <CopyIdButton id={item.id} prefix="ID:" truncate maxTruncateWidth="max-w-[100px]" />
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Contact */}
-                      <td className="p-3.5">
-                        <div className="text-xs text-[#0b1c30] truncate max-w-[180px]">{item.email}</div>
-                        {item.phone && <div className="text-[11px] text-[#565e74]">{item.phone}</div>}
-                      </td>
-
-                      {/* Role */}
-                      <td className="p-3.5">{getRoleBadge(item.role)}</td>
-
-                      {/* Status */}
-                      <td className="p-3.5">{getStatusBadge(item)}</td>
-
-                      {/* Registered Date */}
-                      <td className="p-3.5 text-[#565e74]">
-                        {new Date(item.createdAt).toLocaleDateString('es-ES', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric',
-                        })}
-                      </td>
-
-                      {/* Actions */}
-                      <td className="p-3.5 text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-1.5">
-                          {isBanned ? (
-                            <button
-                              onClick={() => handleOpenUnbanConfirm(item)}
-                              className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-emerald-200 cursor-pointer"
-                              title="Desbanear usuario"
-                            >
-                              <CheckCircle2 size={14} />
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => setSelectedUserForBan(item)}
-                              className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors border border-amber-200"
-                              title="Banear usuario"
-                            >
-                              <Ban size={14} />
-                            </button>
-                          )}
-
-                          {item.role !== 'ADMIN' && (
-                            <button
-                              onClick={() => handleOpenPromoteConfirm(item)}
-                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-blue-200 cursor-pointer"
-                              title="Promover a Admin"
-                            >
-                              <ShieldCheck size={14} />
-                            </button>
-                          )}
-
-                          <button
-                            onClick={() => handleOpenHardDeleteConfirm(item)}
-                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-red-200 cursor-pointer"
-                            title="Borrado físico"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-
-                          <button
-                            onClick={() => setSelectedUserForDetail(item)}
-                            className="p-1.5 text-[#565e74] hover:text-[#9f3c16] hover:bg-slate-100 rounded-lg transition-colors border border-slate-200"
-                            title="Ver ficha completa"
-                          >
-                            <Eye size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
+                users.map((item) => (
+                  <AdminUserTableRow
+                    key={item.id}
+                    item={item}
+                    onSelectUserForDetail={setSelectedUserForDetail}
+                    onSelectUserForBan={setSelectedUserForBan}
+                    onOpenUnbanConfirm={handleOpenUnbanConfirm}
+                    onOpenPromoteConfirm={handleOpenPromoteConfirm}
+                    onOpenHardDeleteConfirm={handleOpenHardDeleteConfirm}
+                  />
+                ))
               )}
             </tbody>
           </table>
@@ -391,7 +273,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
 
         {/* Pagination Footer */}
         {pageInfo && pageInfo.totalPages > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t border-[#dec0b7] bg-[#FAF8F5] text-xs text-[#565e74] rounded-b-xl">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t border-outline-variant bg-surface text-xs text-secondary">
             <div className="flex items-center gap-2">
               <span>Mostrar</span>
               <div className="w-36">
@@ -408,20 +290,20 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
 
             <div className="flex items-center gap-2">
               <span>
-                Página <strong className="text-[#0b1c30]">{page + 1}</strong> de {pageInfo.totalPages}
+                Página <strong className="text-on-surface">{page + 1}</strong> de {pageInfo.totalPages}
               </span>
               <div className="flex items-center gap-1">
                 <button
                   disabled={page === 0}
                   onClick={() => onPageChange(page - 1)}
-                  className="p-1.5 border border-[#dec0b7] rounded-md bg-white hover:bg-slate-50 disabled:opacity-40 transition-colors"
+                  className="p-1.5 border border-outline-variant rounded-lg bg-surface-container-lowest hover:bg-surface-container-low disabled:opacity-40 transition-colors cursor-pointer"
                 >
                   <ChevronLeft size={14} />
                 </button>
                 <button
                   disabled={page >= pageInfo.totalPages - 1}
                   onClick={() => onPageChange(page + 1)}
-                  className="p-1.5 border border-[#dec0b7] rounded-md bg-white hover:bg-slate-50 disabled:opacity-40 transition-colors"
+                  className="p-1.5 border border-outline-variant rounded-lg bg-surface-container-lowest hover:bg-surface-container-low disabled:opacity-40 transition-colors cursor-pointer"
                 >
                   <ChevronRight size={14} />
                 </button>

@@ -7,17 +7,26 @@ import type {
   PageResponse,
 } from '../types/admin.types';
 
-export const useAdminReports = (initialPageSize = 10) => {
+interface UseAdminReportsOptions {
+  initialPageSize?: number;
+  enabled?: boolean;
+}
+
+export const useAdminReports = (options: UseAdminReportsOptions | number = 10) => {
+  const initialPageSize = typeof options === 'number' ? options : options.initialPageSize ?? 10;
+  const enabled = typeof options === 'number' ? true : options.enabled ?? true;
+
   const [reportsPage, setReportsPage] = useState<PageResponse<ReportItem> | null>(null);
   const [filters, setFilters] = useState<ReportFilterCriteria>({});
   const [page, setPage] = useState<number>(0);
   const [size, setSize] = useState<number>(initialPageSize);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(enabled);
   const [error, setError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [activeReport, setActiveReport] = useState<ReportItem | null>(null);
 
   const fetchReports = useCallback(async () => {
+    if (!enabled) return;
     setIsLoading(true);
     setError(null);
     try {
@@ -28,11 +37,13 @@ export const useAdminReports = (initialPageSize = 10) => {
     } finally {
       setIsLoading(false);
     }
-  }, [filters, page, size]);
+  }, [enabled, filters, page, size]);
 
   useEffect(() => {
-    fetchReports();
-  }, [fetchReports]);
+    if (enabled) {
+      fetchReports();
+    }
+  }, [enabled, fetchReports]);
 
   const setFilter = useCallback((key: keyof ReportFilterCriteria, value: any) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
