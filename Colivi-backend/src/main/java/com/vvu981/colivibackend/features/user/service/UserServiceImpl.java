@@ -335,6 +335,21 @@ public class UserServiceImpl implements UserService {
         return userMapper.toAdminUserProfileDto(user);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<AdminUserProfileResponse> searchUsersForAdmin(
+            String query,
+            UserRole role,
+            Boolean banned,
+            Boolean deleted,
+            org.springframework.data.domain.Pageable pageable) {
+
+        org.springframework.data.jpa.domain.Specification<User> spec = 
+                com.vvu981.colivibackend.features.user.repository.UserSpecifications.buildAdminFilter(query, role, banned, deleted);
+
+        return userRepository.findAll(spec, pageable).map(userMapper::toAdminUserProfileDto);
+    }
+
     // ─── Flujo de reactivación de cuenta ─────────────────────────────────────
 
     /**

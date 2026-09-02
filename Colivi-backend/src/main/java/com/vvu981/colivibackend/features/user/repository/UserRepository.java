@@ -2,6 +2,7 @@ package com.vvu981.colivibackend.features.user.repository;
 
 import com.vvu981.colivibackend.features.user.domain.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -12,7 +13,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface UserRepository extends JpaRepository<User, UUID> {
+public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificationExecutor<User> {
     Optional<User> findByIdAndDeletedAtIsNull(UUID id);
     Optional<User> findByEmailAndDeletedAtIsNull(String email);
     Optional<User> findByNicknameAndDeletedAtIsNull(String nickname);

@@ -16,8 +16,10 @@ public class TitleFilter implements ListingFilter {
 
     @Override
     public Specification<AccommodationListing> apply(Map<String, String> params) {
-        return (root, query, criteriaBuilder) -> criteriaBuilder.like(
-                criteriaBuilder.lower(root.get("title")),
-                "%" + params.get("title").toLowerCase() + "%");
+        String searchTerm = params.get("title").trim().toLowerCase();
+        return (root, query, cb) -> cb.or(
+                cb.like(cb.lower(root.get("title")), "%" + searchTerm + "%"),
+                cb.like(cb.lower(root.get("id").as(String.class)), "%" + searchTerm + "%")
+        );
     }
 }

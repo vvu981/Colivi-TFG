@@ -7,6 +7,10 @@ import java.util.UUID;
 public record ReportTargetCountDTO(
         UUID targetId,
         ReportTargetType targetType,
-        Long reportCount
+        Long pendingCount,
+        Long totalCount
 ) {
+    public Long reportCount() {
+        return pendingCount != null ? pendingCount : 0L;
+    }
 }

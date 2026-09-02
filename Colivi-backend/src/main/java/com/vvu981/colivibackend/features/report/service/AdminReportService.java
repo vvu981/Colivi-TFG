@@ -22,4 +22,6 @@ public interface AdminReportService {
     ReportResponse getReportById(UUID id);
 
     void updateBulkReportStatus(BulkReportStatusUpdateRequest request, UUID adminId);
+
+    void resolveAllOpenReportsForTarget(UUID targetId, com.vvu981.colivibackend.features.report.domain.ReportStatus newStatus, String adminNotes, UUID adminId);
 }

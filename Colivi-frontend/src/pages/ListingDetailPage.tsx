@@ -83,10 +83,11 @@ export const ListingDetailPage: React.FC = () => {
   return (
     <MainLayout>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 flex flex-col gap-8">
-        {/* Header (Breadcrumbs, title, location, share, report) */}
+        {/* Header (Breadcrumbs, title, location, share, report, admin ID badge) */}
         <ListingHeader
           listing={listing}
           currentUserId={user?.id}
+          isAdmin={user?.role === 'ADMIN'}
           onReportClick={() => setIsReportModalOpen(true)}
         />
 

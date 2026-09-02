@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export const LoginForm = () => {
   const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -13,13 +14,25 @@ export const LoginForm = () => {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
+  const redirectAfterLogin = useCallback(
+    (role?: string) => {
+      if (role === "ADMIN") {
+        navigate("/admin", { replace: true });
+      } else {
+        const from = (location.state as any)?.from || "/";
+        navigate(from, { replace: true });
+      }
+    },
+    [navigate, location.state]
+  );
+
   const handleGoogleResponse = useCallback(
     async (response: any) => {
       setError("");
       setIsLoading(true);
       try {
-        await loginWithGoogle(response.credential);
-        navigate("/");
+        const loggedUser = await loginWithGoogle(response.credential);
+        redirectAfterLogin(loggedUser?.role);
       } catch (err: any) {
         console.error("Google login failed", err);
         setError(
@@ -30,7 +43,7 @@ export const LoginForm = () => {
         setIsLoading(false);
       }
     },
-    [loginWithGoogle, navigate]
+    [loginWithGoogle, redirectAfterLogin]
   );
 
   useEffect(() => {
@@ -74,8 +87,8 @@ export const LoginForm = () => {
     setError("");
     setIsLoading(true);
     try {
-      await login({ email, password });
-      navigate("/");
+      const loggedUser = await login({ email, password });
+      redirectAfterLogin(loggedUser?.role);
     } catch (err: any) {
       console.error("Login attempt failed", err);
       setError(

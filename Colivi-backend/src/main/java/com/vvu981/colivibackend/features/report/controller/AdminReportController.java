@@ -39,7 +39,7 @@ public class AdminReportController {
     @GetMapping("/most-reported")
     public ResponseEntity<Page<ReportTargetCountDTO>> getMostReportedTargets(
             @RequestParam(required = false) ReportTargetType type,
-            @PageableDefault(sort = "count", direction = Sort.Direction.DESC) Pageable pageable) {
+            @PageableDefault(size = 10) Pageable pageable) {
 
         Page<ReportTargetCountDTO> response = adminReportService.getMostReportedTargets(type, pageable);
         return ResponseEntity.ok(response);
@@ -67,6 +67,16 @@ public class AdminReportController {
             @AuthenticationPrincipal(expression = "id") UUID adminId) {
 
         adminReportService.updateBulkReportStatus(request, adminId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/target/{targetId}/resolve-all")
+    public ResponseEntity<Void> resolveAllReportsForTarget(
+            @PathVariable UUID targetId,
+            @Valid @RequestBody ReportStatusUpdateRequest request,
+            @AuthenticationPrincipal(expression = "id") UUID adminId) {
+
+        adminReportService.resolveAllOpenReportsForTarget(targetId, request.status(), request.adminNotes(), adminId);
         return ResponseEntity.noContent().build();
     }
 }

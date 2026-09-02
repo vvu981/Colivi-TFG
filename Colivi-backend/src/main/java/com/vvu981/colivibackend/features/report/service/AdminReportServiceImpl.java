@@ -15,6 +15,7 @@ import com.vvu981.colivibackend.features.report.repository.ReportSpecifications;
 import com.vvu981.colivibackend.features.report.dto.ReportFilterCriteriaDto;
 import lombok.RequiredArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
@@ -37,11 +38,13 @@ public class AdminReportServiceImpl implements AdminReportService {
     @Override
     @Transactional(readOnly = true)
     public Page<ReportResponse> listReports(ReportFilterCriteriaDto criteria, Pageable pageable) {
-        Specification<Report> spec = Specification.where(ReportSpecifications.hasStatus(criteria.status()))
+        Specification<Report> spec = Specification.where(ReportSpecifications.hasId(criteria.id()))
+                .and(ReportSpecifications.hasStatus(criteria.status()))
                 .and(ReportSpecifications.hasTargetType(criteria.targetType()))
                 .and(ReportSpecifications.hasTargetId(criteria.targetId()))
                 .and(ReportSpecifications.hasReporterId(criteria.reporterId()))
                 .and(ReportSpecifications.hasReason(criteria.reason()))
+                .and(ReportSpecifications.hasQuery(criteria.query()))
                 .and(ReportSpecifications.createdAfter(criteria.from()))
                 .and(ReportSpecifications.createdBefore(criteria.to()));
 
@@ -50,7 +53,12 @@ public class AdminReportServiceImpl implements AdminReportService {
 
     @Override
     public Page<ReportTargetCountDTO> getMostReportedTargets(ReportTargetType type, Pageable pageable) {
-        return reportRepository.findMostReportedTargets(type, pageable);
+        if (type == ReportTargetType.LISTING) {
+            return reportRepository.findMostReportedListingsUnbanned(pageable);
+        } else if (type == ReportTargetType.USER) {
+            return reportRepository.findMostReportedUsersUnbanned(pageable);
+        }
+        return reportRepository.findAllMostReportedUnbanned(pageable);
     }
 
     @Override
@@ -98,35 +106,38 @@ public class AdminReportServiceImpl implements AdminReportService {
                     "Solo puedes cambiar masivamente a INVESTIGATING, RESOLVED o DISMISSED.");
         }
 
-        List<Report> reports = reportRepository.findAllById(request.reportIds());
+        LocalDateTime now = LocalDateTime.now();
+        int updatedCount = reportRepository.bulkUpdateStatusByIds(
+                request.reportIds(),
+                request.status(),
+                request.adminNotes(),
+                adminId,
+                request.status() == ReportStatus.INVESTIGATING ? null : now,
+                now);
 
-        if (reports.size() != request.reportIds().size()) {
+        if (updatedCount != request.reportIds().size()) {
             throw new ResourceNotFoundException(
                     "Algunos IDs de denuncia proporcionados no existen.");
         }
+    }
 
-        for (Report report : reports) {
-            ReportStatus newStatus = request.status();
-
-            if (newStatus == ReportStatus.INVESTIGATING) {
-                report.investigate(adminId);
-            } else if (newStatus == ReportStatus.RESOLVED) {
-                report.resolve(request.adminNotes(), adminId);
-            } else {
-                report.dismiss(request.adminNotes(), adminId);
-            }
-
-            if (newStatus == ReportStatus.RESOLVED) {
-                eventPublisher.publishEvent(new ReportResolvedEvent(
-                        report.getId(),
-                        report.getTargetType(),
-                        report.getTargetId(),
-                        report.getResolverId(),
-                        report.getAdminNotes()));
-            }
+    @Override
+    @Transactional
+    public void resolveAllOpenReportsForTarget(UUID targetId, ReportStatus newStatus, String adminNotes, UUID adminId) {
+        if (newStatus == ReportStatus.PENDING || newStatus == ReportStatus.CANCELLED) {
+            throw new BusinessRuleValidationException(
+                    "Solo puedes cambiar masivamente a INVESTIGATING, RESOLVED o DISMISSED.");
         }
 
-        reportRepository.saveAll(reports);
+        LocalDateTime now = LocalDateTime.now();
+        reportRepository.bulkUpdateStatusByTargetId(
+                targetId,
+                newStatus,
+                List.of(ReportStatus.PENDING, ReportStatus.INVESTIGATING),
+                adminNotes,
+                adminId,
+                newStatus == ReportStatus.INVESTIGATING ? null : now,
+                now);
     }
 
     @Override

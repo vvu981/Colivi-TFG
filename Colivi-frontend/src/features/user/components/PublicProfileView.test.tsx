@@ -3,11 +3,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import { PublicProfileView } from './PublicProfileView';
 import * as usePublicProfileHook from '../hooks/usePublicProfile';
+import * as AuthContextModule from '../../auth/context/AuthContext';
 import type { PublicUserProfile } from '../types/user.types';
 import type { AccommodationListingResponse } from '../../housing/types/listing.types';
 
 vi.mock('../hooks/usePublicProfile', () => ({
   usePublicProfile: vi.fn(),
+}));
+
+vi.mock('../../auth/context/AuthContext', () => ({
+  useAuth: vi.fn(),
 }));
 
 const mockNavigate = vi.fn();
@@ -63,6 +68,17 @@ describe('PublicProfileView', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(AuthContextModule.useAuth).mockReturnValue({
+      user: null,
+      token: null,
+      isAuthenticated: false,
+      isLoading: false,
+      login: vi.fn(),
+      loginWithGoogle: vi.fn(),
+      register: vi.fn(),
+      updateUserContextData: vi.fn(),
+      logout: vi.fn(),
+    });
   });
 
   const renderComponent = (userId = 'user-123') => {
@@ -190,5 +206,44 @@ describe('PublicProfileView', () => {
     fireEvent.click(reportBtn);
 
     expect(screen.getByRole('heading', { name: /denunciar usuario/i })).toBeInTheDocument();
+  });
+
+  it('muestra el badge de administración con el ID para copiar si el usuario autenticado es ADMIN', () => {
+    vi.mocked(AuthContextModule.useAuth).mockReturnValue({
+      user: {
+        id: 'admin-1',
+        email: 'admin@colivi.com',
+        phone: null,
+        role: 'ADMIN',
+        nickname: 'admin',
+        firstName: 'Admin',
+        lastName1: 'Super',
+        lastName2: null,
+        profilePicUrl: null,
+        createdAt: '2026-01-01',
+      },
+      token: 'admin-token',
+      isAuthenticated: true,
+      isLoading: false,
+      login: vi.fn(),
+      loginWithGoogle: vi.fn(),
+      register: vi.fn(),
+      updateUserContextData: vi.fn(),
+      logout: vi.fn(),
+    });
+
+    vi.mocked(usePublicProfileHook.usePublicProfile).mockReturnValue({
+      user: mockUser,
+      listings: mockListings,
+      isLoading: false,
+      error: null,
+      isSelf: false,
+      refetch: vi.fn(),
+    });
+
+    renderComponent();
+
+    expect(screen.getByText('ADMIN:')).toBeInTheDocument();
+    expect(screen.getByText('user-123')).toBeInTheDocument();
   });
 });

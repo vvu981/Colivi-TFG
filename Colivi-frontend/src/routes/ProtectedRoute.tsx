@@ -4,16 +4,22 @@ import { useAuth } from '../features/auth/context/AuthContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  allowedRoles?: ('USER' | 'TENANT' | 'OWNER' | 'ADMIN')[];
+  forbiddenRoles?: ('USER' | 'TENANT' | 'OWNER' | 'ADMIN')[];
 }
 
 /**
- * Guards a route behind authentication.
- * If the user is not authenticated, redirects to /login and saves the
- * intended destination in location state so they can be returned afterwards.
- * While auth is still loading (initial hydration), renders nothing to avoid flash.
+ * Guards a route behind authentication with optional RBAC restrictions.
+ * - If unauthenticated, redirects to /login.
+ * - If user's role is in forbiddenRoles, redirects to /admin (for ADMIN) or / (for others).
+ * - If user's role is not in allowedRoles (when specified), redirects to /.
  */
-export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { isAuthenticated, isLoading } = useAuth();
+export const ProtectedRoute = ({
+  children,
+  allowedRoles,
+  forbiddenRoles = [],
+}: ProtectedRouteProps) => {
+  const { user, isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -29,6 +35,16 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
         replace
       />
     );
+  }
+
+  // Check forbidden roles
+  if (user && forbiddenRoles.includes(user.role as any)) {
+    return <Navigate to={user.role === 'ADMIN' ? '/admin' : '/'} replace />;
+  }
+
+  // Check allowed roles
+  if (user && allowedRoles && !allowedRoles.includes(user.role as any)) {
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;

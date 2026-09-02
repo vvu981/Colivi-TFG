@@ -99,4 +99,16 @@ class AdminReportControllerTest {
                 .with(csrf()))
                 .andExpect(status().isNoContent());
     }
+
+    @Test
+    void resolveAllForTarget_shouldReturn204() throws Exception {
+        UUID targetId = UUID.randomUUID();
+        ReportStatusUpdateRequest request = new ReportStatusUpdateRequest(ReportStatus.RESOLVED, "Resolved all notes");
+
+        mockMvc.perform(patch("/api/v1/admin/reports/target/" + targetId + "/resolve-all")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+                .with(csrf()))
+                .andExpect(status().isNoContent());
+    }
 }

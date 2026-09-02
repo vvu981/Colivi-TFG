@@ -16,6 +16,7 @@ export interface SelectProps {
   className?: string;
   disabled?: boolean;
   'aria-label'?: string;
+  direction?: 'down' | 'up' | 'auto';
 }
 
 export const Select: React.FC<SelectProps> = ({
@@ -27,13 +28,29 @@ export const Select: React.FC<SelectProps> = ({
   className = '',
   disabled = false,
   'aria-label': ariaLabel,
+  direction = 'auto',
 }) => {
   const generatedId = useId();
   const selectId = id || generatedId;
   const [isOpen, setIsOpen] = useState(false);
+  const [calculatedUp, setCalculatedUp] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const selectedOption = options.find((opt) => opt.value === value);
+
+  useEffect(() => {
+    if (isOpen && direction === 'auto' && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      if (spaceBelow < 180 && rect.top > spaceBelow) {
+        setCalculatedUp(true);
+      } else {
+        setCalculatedUp(false);
+      }
+    }
+  }, [isOpen, direction]);
+
+  const isUp = direction === 'up' || (direction === 'auto' && calculatedUp);
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -99,7 +116,9 @@ export const Select: React.FC<SelectProps> = ({
         <ul
           role="listbox"
           aria-labelledby={selectId}
-          className="absolute left-0 right-0 top-full mt-0.5 z-50 max-h-60 overflow-y-auto rounded-xl border border-outline-variant bg-surface-container-lowest shadow-lg py-1 animate-in fade-in zoom-in-95 duration-150"
+          className={`absolute left-0 right-0 ${
+            isUp ? 'bottom-full mb-1.5' : 'top-full mt-1'
+          } z-50 max-h-60 overflow-y-auto rounded-xl border border-outline-variant bg-surface-container-lowest shadow-lg py-1 animate-in fade-in zoom-in-95 duration-150`}
         >
           {options.map((option) => {
             const isSelected = option.value === value;
