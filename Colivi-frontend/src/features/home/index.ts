@@ -20,6 +20,7 @@ export * from './components/HomeMemberList';
 export * from './components/TransferAdminModal';
 export * from './components/ExpelMemberModal';
 export * from './components/ConfirmLeaveModal';
+export * from './components/ConfirmArchiveModal';
 export * from './components/ConfirmDeleteHomeModal';
 export * from './components/HomeActivityFeed';
 export * from './components/HomeHeader';

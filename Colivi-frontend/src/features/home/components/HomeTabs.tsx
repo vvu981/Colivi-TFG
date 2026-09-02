@@ -1,6 +1,6 @@
 import React from 'react';
 import type { HomeMemberStatus } from '../types';
-import { Home, History, Archive } from 'lucide-react';
+import { Home, History } from 'lucide-react';
 
 interface HomeTabsProps {
   activeTab: HomeMemberStatus;
@@ -23,11 +23,6 @@ export const HomeTabs: React.FC<HomeTabsProps> = ({
       id: 'LEFT',
       label: 'Salidos / Historial',
       icon: <History className="w-4 h-4" />,
-    },
-    {
-      id: 'ARCHIVED',
-      label: 'Archivados',
-      icon: <Archive className="w-4 h-4" />,
     },
   ];
 

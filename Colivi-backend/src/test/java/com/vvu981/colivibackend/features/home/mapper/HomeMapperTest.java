@@ -107,4 +107,44 @@ class HomeMapperTest {
         assertNotNull(dto.members());
         assertEquals(1, dto.members().size());
     }
+
+    @Test
+    void toDetailDto_FiltersMembersAfterLeftAt_WhenMemberLeftOrArchived() {
+        Home home = new Home();
+        home.setId(UUID.randomUUID());
+        home.setName("Historical Home");
+        home.setInvitationCode("CODE123");
+        home.setCreatedAt(LocalDateTime.of(2026, 1, 1, 10, 0));
+        home.setMembers(new ArrayList<>());
+
+        User userOld = new User();
+        userOld.setId(UUID.randomUUID());
+        userOld.setFirstName("Old");
+        userOld.setLastName1("Member");
+
+        HomeMember memberOld = new HomeMember();
+        memberOld.setUser(userOld);
+        memberOld.setRole(HomeRole.MEMBER);
+        memberOld.setStatus(HomeMemberStatus.ARCHIVED);
+        memberOld.setJoinedAt(LocalDateTime.of(2026, 1, 1, 10, 0));
+        memberOld.setLeftAt(LocalDateTime.of(2026, 6, 1, 10, 0));
+        home.addMember(memberOld);
+
+        User userNew = new User();
+        userNew.setId(UUID.randomUUID());
+        userNew.setFirstName("New");
+        userNew.setLastName1("Member");
+
+        HomeMember memberNew = new HomeMember();
+        memberNew.setUser(userNew);
+        memberNew.setRole(HomeRole.MEMBER);
+        memberNew.setStatus(HomeMemberStatus.ACTIVE);
+        memberNew.setJoinedAt(LocalDateTime.of(2026, 7, 1, 10, 0)); // Joined after userOld left
+        home.addMember(memberNew);
+
+        HomeDetailResponseDto dto = mapper.toDetailDto(home, memberOld);
+
+        assertEquals(1, dto.members().size());
+        assertEquals(userOld.getId(), dto.members().get(0).userId());
+    }
 }

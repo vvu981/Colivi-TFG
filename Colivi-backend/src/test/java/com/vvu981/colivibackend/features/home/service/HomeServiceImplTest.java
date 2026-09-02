@@ -173,7 +173,7 @@ class HomeServiceImplTest {
                 }
 
                 @Test
-                void shouldThrowForArchivedMember() {
+                void shouldReturnDetailForArchivedMember() {
                         UUID homeId = UUID.randomUUID();
                         Home home = buildHome(homeId);
                         HomeMember member = buildMember(home, testUser, HomeRole.MEMBER, HomeMemberStatus.ARCHIVED);
@@ -182,8 +182,7 @@ class HomeServiceImplTest {
                         when(homeMemberRepository.findByHomeIdAndUserId(homeId, testUserId))
                                         .thenReturn(Optional.of(member));
 
-                        assertThrows(UnauthorizedActionException.class,
-                                        () -> homeService.getHomeDetail(homeId, testUserId));
+                        assertDoesNotThrow(() -> homeService.getHomeDetail(homeId, testUserId));
                 }
 
                 @Test

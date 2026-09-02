@@ -9,6 +9,7 @@ import {
   JoinHomeModal,
   InviteMembersModal,
   ConfirmLeaveModal,
+  ConfirmArchiveModal,
   type HomeResponseDto,
 } from '../features/home';
 import { Plus, KeyRound, Search, Sparkles } from 'lucide-react';
@@ -39,6 +40,7 @@ export const HomesPage: React.FC = () => {
   const [isJoinOpen, setIsJoinOpen] = useState(false);
   const [inviteModalHome, setInviteModalHome] = useState<HomeResponseDto | null>(null);
   const [leaveModalHome, setLeaveModalHome] = useState<HomeResponseDto | null>(null);
+  const [archiveModalHome, setArchiveModalHome] = useState<HomeResponseDto | null>(null);
 
   const filteredHomes = useMemo(() => {
     if (!searchQuery.trim()) return homes;
@@ -156,7 +158,7 @@ export const HomesPage: React.FC = () => {
                 onOpenDetail={handleOpenDetail}
                 onInvite={(h) => setInviteModalHome(h)}
                 onLeave={(h) => setLeaveModalHome(h)}
-                onArchive={async (h) => await archiveHome(h.id)}
+                onArchive={(h) => setArchiveModalHome(h)}
                 onUnarchive={async (h) => await unarchiveHome(h.id)}
               />
             ))}
@@ -202,6 +204,18 @@ export const HomesPage: React.FC = () => {
           }}
           onOpenTransferAdmin={() => {
             navigate(`/homes/${leaveModalHome.id}?tab=settings`);
+          }}
+        />
+      )}
+
+      {archiveModalHome && (
+        <ConfirmArchiveModal
+          isOpen={!!archiveModalHome}
+          onClose={() => setArchiveModalHome(null)}
+          homeName={archiveModalHome.name}
+          onConfirmArchive={async () => {
+            await archiveHome(archiveModalHome.id);
+            setArchiveModalHome(null);
           }}
         />
       )}

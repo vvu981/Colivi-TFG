@@ -54,9 +54,21 @@ public class HomeMapper {
      * Mapea un {@link Home} con la perspectiva del miembro actual a un DTO de detalle completo.
      */
     public HomeDetailResponseDto toDetailDto(Home home, HomeMember currentMember) {
-        List<HomeMemberResponseDto> memberDtos = home.getMembers().stream()
+        List<HomeMember> members = home.getMembers();
+        if ((currentMember.getStatus() == HomeMemberStatus.LEFT || currentMember.getStatus() == HomeMemberStatus.ARCHIVED)
+                && currentMember.getLeftAt() != null) {
+            members = members.stream()
+                    .filter(m -> m.getJoinedAt() != null && !m.getJoinedAt().isAfter(currentMember.getLeftAt()))
+                    .toList();
+        }
+
+        List<HomeMemberResponseDto> memberDtos = members.stream()
                 .map(this::toMemberDto)
                 .toList();
+
+        long activeCount = (currentMember.getStatus() == HomeMemberStatus.ACTIVE)
+                ? countActiveMembers(home)
+                : memberDtos.stream().filter(m -> m.status() == HomeMemberStatus.ACTIVE).count();
 
         return new HomeDetailResponseDto(
                 home.getId(),
@@ -64,7 +76,7 @@ public class HomeMapper {
                 home.getInvitationCode(),
                 currentMember.getRole(),
                 currentMember.getStatus(),
-                countActiveMembers(home),
+                activeCount,
                 home.getCreatedAt(),
                 memberDtos
         );

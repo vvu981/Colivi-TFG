@@ -11,6 +11,7 @@ import {
   TransferAdminModal,
   ExpelMemberModal,
   ConfirmLeaveModal,
+  ConfirmArchiveModal,
   ConfirmDeleteHomeModal,
   type HomeMemberResponseDto,
 } from '../features/home';
@@ -51,6 +52,7 @@ export const HomeDetailPage: React.FC = () => {
   // Modales
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [isLeaveOpen, setIsLeaveOpen] = useState(false);
+  const [isArchiveOpen, setIsArchiveOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [expelTargetMember, setExpelTargetMember] = useState<HomeMemberResponseDto | null>(null);
@@ -112,7 +114,7 @@ export const HomeDetailPage: React.FC = () => {
           home={home}
           onOpenInvite={() => setIsInviteOpen(true)}
           onOpenLeave={() => setIsLeaveOpen(true)}
-          onArchive={archiveHome}
+          onArchive={() => setIsArchiveOpen(true)}
           onUnarchive={unarchiveHome}
         />
 
@@ -237,6 +239,13 @@ export const HomeDetailPage: React.FC = () => {
           handleTabChange('settings');
           setIsTransferOpen(true);
         }}
+      />
+
+      <ConfirmArchiveModal
+        isOpen={isArchiveOpen}
+        onClose={() => setIsArchiveOpen(false)}
+        homeName={home.name}
+        onConfirmArchive={archiveHome}
       />
 
       <ConfirmDeleteHomeModal

@@ -365,7 +365,9 @@ public class HomeServiceImpl implements HomeService {
     public HomeDetailResponseDto getHomeDetail(UUID homeId, UUID userId) {
         Home home = findActiveHome(homeId);
         HomeMember currentMember = homeMemberRepository.findByHomeIdAndUserId(homeId, userId)
-                .filter(m -> m.getStatus() == HomeMemberStatus.ACTIVE || m.getStatus() == HomeMemberStatus.LEFT)
+                .filter(m -> m.getStatus() == HomeMemberStatus.ACTIVE
+                        || m.getStatus() == HomeMemberStatus.LEFT
+                        || m.getStatus() == HomeMemberStatus.ARCHIVED)
                 .orElseThrow(() -> new UnauthorizedActionException(
                         "No tienes acceso a los detalles de este hogar."));
         return homeMapper.toDetailDto(home, currentMember);
