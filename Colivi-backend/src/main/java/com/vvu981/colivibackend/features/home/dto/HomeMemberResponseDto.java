@@ -14,6 +14,7 @@ public record HomeMemberResponseDto(
         UUID userId,
         String fullName,
         String email,
+        String profilePicUrl,
         HomeRole role,
         HomeMemberStatus status,
         LocalDateTime joinedAt,

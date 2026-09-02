@@ -27,6 +27,7 @@ public class HomeMapper {
                 member.getUser().getId(),
                 member.getUser().getFullName(),
                 member.getUser().getEmail(),
+                member.getUser().getProfilePicUrl(),
                 member.getRole(),
                 member.getStatus(),
                 member.getJoinedAt(),

@@ -34,6 +34,7 @@ class HomeMapperTest {
         user.setFirstName("John");
         user.setLastName1("Doe");
         user.setEmail("test@test.com");
+        user.setProfilePicUrl("https://example.com/photo.jpg");
 
         HomeMember member = new HomeMember();
         member.setUser(user);
@@ -46,6 +47,7 @@ class HomeMapperTest {
         assertEquals(user.getId(), dto.userId());
         assertEquals("John Doe", dto.fullName());
         assertEquals(user.getEmail(), dto.email());
+        assertEquals("https://example.com/photo.jpg", dto.profilePicUrl());
         assertEquals(HomeRole.MEMBER, dto.role());
         assertEquals(HomeMemberStatus.ACTIVE, dto.status());
     }

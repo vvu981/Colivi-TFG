@@ -3,7 +3,7 @@ import { Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../../features/auth/context/AuthContext';
 import { UserMenu } from './UserMenu';
 import { CreationDropdown } from './CreationDropdown';
-import { Map, Search, Shield } from 'lucide-react';
+import { Map, Search, Shield, Home } from 'lucide-react';
 
 // ── Header principal ───────────────────────────────────────────────────
 export const Header: React.FC = () => {
@@ -48,6 +48,21 @@ export const Header: React.FC = () => {
               Mapa
             </span>
           </NavLink>
+          {isAuthenticated && !isAdmin && (
+            <NavLink
+              to="/homes"
+              className={({ isActive }) =>
+                isActive
+                  ? 'text-primary border-b-2 border-primary font-semibold pb-1 flex items-center gap-1.5 flex-col justify-center h-full text-sm'
+                  : 'text-secondary hover:text-primary transition-colors duration-200 flex items-center gap-1.5 flex-col justify-center h-full text-sm'
+              }
+            >
+              <span className="flex items-center gap-1.5">
+                <Home size={14} />
+                Hogares
+              </span>
+            </NavLink>
+          )}
         </div>
 
         {/* Actions & Context Switcher */}
