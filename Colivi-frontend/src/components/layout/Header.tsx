@@ -7,46 +7,65 @@ import { Map, Search } from 'lucide-react';
 
 // ── Header principal ───────────────────────────────────────────────────
 export const Header: React.FC = () => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
 
   return (
     <nav className="bg-white font-body-md text-body-md border-b border-[#dec0b7] z-50 sticky top-0 shadow-[0_1px_4px_rgba(15,23,42,0.06)]">
       <div className="flex justify-between items-center w-full px-margin-desktop h-20">
         {/* Brand */}
-        <Link to="/" className="flex items-center gap-2.5 text-xl font-bold tracking-tight text-[#9f3c16] flex-shrink-0">
+        <Link to={isAdmin ? "/admin" : "/"} className="flex items-center gap-2.5 text-xl font-bold tracking-tight text-[#9f3c16] flex-shrink-0">
           <img src="/favicon.png" alt="Colivi" className="h-8 w-8 object-contain" />
           <span>Colivi</span>
         </Link>
 
         {/* Navigation Links (Desktop) */}
         <div className="hidden md:flex space-x-6 items-center h-full flex-grow justify-center">
-          <NavLink
-            to="/"
-            end
-            className={({ isActive }) =>
-              isActive
-                ? 'text-[#9f3c16] border-b-2 border-[#9f3c16] font-semibold pb-1 flex flex-col justify-center h-full text-sm'
-                : 'text-[#565e74] hover:text-[#9f3c16] transition-colors duration-200 flex flex-col justify-center h-full text-sm'
-            }
-          >
-            <span className="flex items-center gap-1.5">
-              <Search size={14} />
-              Explorar
-            </span>
-          </NavLink>
-          <NavLink
-            to="/map"
-            className={({ isActive }) =>
-              isActive
-                ? 'text-[#9f3c16] border-b-2 border-[#9f3c16] font-semibold pb-1 flex items-center gap-1.5 flex-col justify-center h-full text-sm'
-                : 'text-[#565e74] hover:text-[#9f3c16] transition-colors duration-200 flex items-center gap-1.5 flex-col justify-center h-full text-sm'
-            }
-          >
-            <span className="flex items-center gap-1.5">
-              <Map size={14} />
-              Mapa
-            </span>
-          </NavLink>
+          {isAdmin ? (
+            <NavLink
+              to="/admin"
+              end
+              className={({ isActive }) =>
+                isActive
+                  ? 'text-[#9f3c16] border-b-2 border-[#9f3c16] font-semibold pb-1 flex flex-col justify-center h-full text-sm'
+                  : 'text-[#565e74] hover:text-[#9f3c16] transition-colors duration-200 flex flex-col justify-center h-full text-sm'
+              }
+            >
+              <span className="flex items-center gap-1.5 font-bold">
+                Panel de Moderación
+              </span>
+            </NavLink>
+          ) : (
+            <>
+              <NavLink
+                to="/"
+                end
+                className={({ isActive }) =>
+                  isActive
+                    ? 'text-[#9f3c16] border-b-2 border-[#9f3c16] font-semibold pb-1 flex flex-col justify-center h-full text-sm'
+                    : 'text-[#565e74] hover:text-[#9f3c16] transition-colors duration-200 flex flex-col justify-center h-full text-sm'
+                }
+              >
+                <span className="flex items-center gap-1.5">
+                  <Search size={14} />
+                  Explorar
+                </span>
+              </NavLink>
+              <NavLink
+                to="/map"
+                className={({ isActive }) =>
+                  isActive
+                    ? 'text-[#9f3c16] border-b-2 border-[#9f3c16] font-semibold pb-1 flex items-center gap-1.5 flex-col justify-center h-full text-sm'
+                    : 'text-[#565e74] hover:text-[#9f3c16] transition-colors duration-200 flex items-center gap-1.5 flex-col justify-center h-full text-sm'
+                }
+              >
+                <span className="flex items-center gap-1.5">
+                  <Map size={14} />
+                  Mapa
+                </span>
+              </NavLink>
+            </>
+          )}
         </div>
 
         {/* Actions */}
@@ -55,8 +74,12 @@ export const Header: React.FC = () => {
             <div className="w-9 h-9 rounded-full bg-[#dec0b7] animate-pulse" />
           ) : isAuthenticated ? (
             <>
-              <CreationDropdown />
-              <div className="h-6 w-px bg-slate-200 mx-1 hidden sm:block"></div>
+              {!isAdmin && (
+                <>
+                  <CreationDropdown />
+                  <div className="h-6 w-px bg-slate-200 mx-1 hidden sm:block"></div>
+                </>
+              )}
               <UserMenu />
             </>
           ) : (

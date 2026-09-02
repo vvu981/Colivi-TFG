@@ -12,10 +12,12 @@ class ReportTargetCountDTOTest {
     @Test
     void record_shouldWork() {
         UUID id = UUID.randomUUID();
-        ReportTargetCountDTO dto = new ReportTargetCountDTO(id, ReportTargetType.USER, 5L);
+        ReportTargetCountDTO dto = new ReportTargetCountDTO(id, ReportTargetType.USER, 3L, 5L);
 
         assertThat(dto.targetId()).isEqualTo(id);
         assertThat(dto.targetType()).isEqualTo(ReportTargetType.USER);
-        assertThat(dto.reportCount()).isEqualTo(5L);
+        assertThat(dto.pendingCount()).isEqualTo(3L);
+        assertThat(dto.totalCount()).isEqualTo(5L);
+        assertThat(dto.reportCount()).isEqualTo(3L);
     }
 }

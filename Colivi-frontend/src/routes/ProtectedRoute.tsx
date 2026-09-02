@@ -13,7 +13,7 @@ interface ProtectedRouteProps {
  * While auth is still loading (initial hydration), renders nothing to avoid flash.
  */
 export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -29,6 +29,11 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
         replace
       />
     );
+  }
+
+  // Admins only have access to moderation functions
+  if (user?.role === 'ADMIN') {
+    return <Navigate to="/admin" replace />;
   }
 
   return <>{children}</>;

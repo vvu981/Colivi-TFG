@@ -1,0 +1,118 @@
+import { useState, useEffect, useCallback } from 'react';
+import { adminUserService } from '../services/adminUserService';
+import type { AdminUserProfile, BanUserRequest, PageResponse } from '../types/admin.types';
+
+export const useAdminUsers = (initialPageSize = 10) => {
+  const [usersPage, setUsersPage] = useState<PageResponse<AdminUserProfile> | null>(null);
+  const [query, setQuery] = useState<string>('');
+  const [role, setRole] = useState<string>('');
+  const [banned, setBanned] = useState<boolean | undefined>(undefined);
+  const [deleted, setDeleted] = useState<boolean | undefined>(undefined);
+  const [page, setPage] = useState<number>(0);
+  const [size, setSize] = useState<number>(initialPageSize);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [activeUser, setActiveUser] = useState<AdminUserProfile | null>(null);
+
+  const fetchUsers = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await adminUserService.searchUsers(query, role, banned, deleted, page, size);
+      setUsersPage(data);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al cargar los usuarios.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [query, role, banned, deleted, page, size]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
+
+  const inspectUser = async (userId: string): Promise<AdminUserProfile> => {
+    try {
+      const profile = await adminUserService.getAdminUserProfile(userId);
+      setActiveUser(profile);
+      return profile;
+    } catch (err: any) {
+      throw new Error(err.response?.data?.message || 'Error al cargar perfil de usuario.');
+    }
+  };
+
+  const banUser = async (userId: string, payload: BanUserRequest) => {
+    try {
+      await adminUserService.banUser(userId, payload);
+      await fetchUsers();
+      if (activeUser?.id === userId) {
+        await inspectUser(userId);
+      }
+    } catch (err: any) {
+      throw new Error(err.response?.data?.message || 'Error al banear al usuario.');
+    }
+  };
+
+  const unbanUser = async (userId: string) => {
+    try {
+      await adminUserService.unbanUser(userId);
+      await fetchUsers();
+      if (activeUser?.id === userId) {
+        await inspectUser(userId);
+      }
+    } catch (err: any) {
+      throw new Error(err.response?.data?.message || 'Error al desbanear al usuario.');
+    }
+  };
+
+  const hardDeleteUser = async (userId: string) => {
+    try {
+      await adminUserService.deleteUserHard(userId);
+      if (activeUser?.id === userId) {
+        setActiveUser(null);
+      }
+      await fetchUsers();
+    } catch (err: any) {
+      throw new Error(err.response?.data?.message || 'Error al eliminar físicamente al usuario.');
+    }
+  };
+
+  const setAdmin = async (userId: string) => {
+    try {
+      await adminUserService.setAdmin(userId);
+      await fetchUsers();
+      if (activeUser?.id === userId) {
+        await inspectUser(userId);
+      }
+    } catch (err: any) {
+      throw new Error(err.response?.data?.message || 'Error al promover a administrador.');
+    }
+  };
+
+  return {
+    users: usersPage?.content || [],
+    pageInfo: usersPage,
+    query,
+    role,
+    banned,
+    deleted,
+    page,
+    size,
+    isLoading,
+    error,
+    activeUser,
+    setActiveUser,
+    setQuery,
+    setRole,
+    setBanned,
+    setDeleted,
+    setPage,
+    setSize,
+    inspectUser,
+    banUser,
+    unbanUser,
+    hardDeleteUser,
+    setAdmin,
+    refetch: fetchUsers,
+  };
+};

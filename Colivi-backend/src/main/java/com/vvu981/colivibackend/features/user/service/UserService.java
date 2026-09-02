@@ -48,6 +48,13 @@ public interface UserService {
     
     AdminUserProfileResponse getAdminUserProfile(UUID userId);
 
+    org.springframework.data.domain.Page<AdminUserProfileResponse> searchUsersForAdmin(
+            String query,
+            com.vvu981.colivibackend.features.user.domain.UserRole role,
+            Boolean banned,
+            Boolean deleted,
+            org.springframework.data.domain.Pageable pageable);
+
     /**
      * Paso 1 del flujo de reactivación.
      *

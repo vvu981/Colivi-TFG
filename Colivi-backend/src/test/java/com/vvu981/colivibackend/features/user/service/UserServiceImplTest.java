@@ -23,6 +23,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
@@ -893,7 +894,7 @@ class UserServiceImplTest {
                                         .isInstanceOf(UserNotFoundException.class)
                                         .hasMessageContaining("Usuario no encontrado");
 
-                        verify(userRepository, never()).delete(any());
+                        verify(userRepository, never()).delete(any(User.class));
                 }
         }
 
@@ -1569,6 +1570,29 @@ class UserServiceImplTest {
 
                         assertThatThrownBy(() -> userService.getAdminUserProfile(randomId))
                                         .isInstanceOf(UserNotFoundException.class);
+                }
+        }
+
+        // searchUsersForAdmin
+        @Nested
+        @DisplayName("searchUsersForAdmin")
+        class SearchUsersForAdmin {
+                @Test
+                @DisplayName("retorna pagina mapeada de perfiles de admin")
+                void shouldReturnMappedPage() {
+                        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(0, 10);
+                        org.springframework.data.domain.Page<User> userPage = new org.springframework.data.domain.PageImpl<>(List.of(persistedUser));
+                        AdminUserProfileResponse dto = mock(AdminUserProfileResponse.class);
+
+                        when(userRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), eq(pageable)))
+                                        .thenReturn(userPage);
+                        when(userMapper.toAdminUserProfileDto(persistedUser)).thenReturn(dto);
+
+                        org.springframework.data.domain.Page<AdminUserProfileResponse> result = 
+                                        userService.searchUsersForAdmin("test", UserRole.USER, false, false, pageable);
+
+                        assertThat(result).isNotNull();
+                        assertThat(result.getContent()).containsExactly(dto);
                 }
         }
 }

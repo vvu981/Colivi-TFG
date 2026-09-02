@@ -8,8 +8,8 @@ export interface AuthContextType {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (data: LoginData) => Promise<void>;
-  loginWithGoogle: (idToken: string) => Promise<void>;
+  login: (data: LoginData) => Promise<UserProfile>;
+  loginWithGoogle: (idToken: string) => Promise<UserProfile>;
   register: (data: RegisterData) => Promise<void>;
   updateUserContextData: (data: Partial<UserProfile>) => void;
   logout: () => void;
@@ -39,16 +39,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     fetchUser();
   }, [token]);
 
-  const login = async (data: LoginData) => {
+  const login = async (data: LoginData): Promise<UserProfile> => {
     const response = await authService.login(data);
     localStorage.setItem('token', response.accessToken);
     setToken(response.accessToken);
+    const userData = await userService.getMe();
+    setUser(userData);
+    return userData;
   };
 
-  const loginWithGoogle = async (idToken: string) => {
+  const loginWithGoogle = async (idToken: string): Promise<UserProfile> => {
     const response = await authService.loginWithGoogle(idToken);
     localStorage.setItem('token', response.accessToken);
     setToken(response.accessToken);
+    const userData = await userService.getMe();
+    setUser(userData);
+    return userData;
   };
 
   const register = async (data: RegisterData) => {
@@ -56,6 +62,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (response.accessToken) {
       localStorage.setItem('token', response.accessToken);
       setToken(response.accessToken);
+      const userData = await userService.getMe();
+      setUser(userData);
     }
   };
 

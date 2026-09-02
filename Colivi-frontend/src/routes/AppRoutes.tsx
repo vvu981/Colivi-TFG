@@ -17,11 +17,23 @@ import { EditListingPage } from "../pages/EditListingPage";
 import { MyRequestsPage } from "../pages/MyRequestsPage";
 import { ReceivedRequestsPage } from "../pages/ReceivedRequestsPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
+import { AdminPage } from "../pages/AdminPage";
 import { ProtectedRoute } from "./ProtectedRoute";
+import { AdminRoute } from "./AdminRoute";
 
 export const AppRoutes = () => {
   return (
     <Routes>
+      {/* Admin Moderation Portal */}
+      <Route
+        path="/admin"
+        element={
+          <AdminRoute>
+            <AdminPage />
+          </AdminRoute>
+        }
+      />
+
       <Route path="/" element={<HomePage />} />
       <Route path="/map" element={<MapSearchPage />} />
       <Route path="/listings/:id" element={<ListingDetailPage />} />

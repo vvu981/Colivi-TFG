@@ -59,7 +59,10 @@ export interface AccommodationListingResponse {
   hostProfilePicUrl?: string;
   isPromoted: boolean;
   selectedImages: AccommodationImageResponse[];
+  deletedAt?: string | null;
 }
+
+export type AccommodationListing = AccommodationListingResponse;
 
 export interface RecommendationResponse {
   items: AccommodationListingResponse[];

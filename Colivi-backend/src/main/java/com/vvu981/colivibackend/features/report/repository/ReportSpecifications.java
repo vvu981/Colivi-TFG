@@ -16,13 +16,35 @@ public class ReportSpecifications {
         // Prevent instantiation
     }
 
+    public static Specification<Report> hasId(UUID id) {
+        return (root, query, cb) -> {
+            if (id == null)
+                return null;
+            return cb.equal(root.get("id"), id);
+        };
+    }
+
+    public static Specification<Report> hasQuery(String queryString) {
+        return (root, query, cb) -> {
+            if (queryString == null || queryString.isBlank()) {
+                return null;
+            }
+            String pattern = "%" + queryString.trim().toLowerCase() + "%";
+            return cb.or(
+                    cb.like(cb.lower(root.get("id").as(String.class)), pattern),
+                    cb.like(cb.lower(root.get("targetId").as(String.class)), pattern),
+                    cb.like(cb.lower(root.get("reporterId").as(String.class)), pattern),
+                    cb.like(cb.lower(root.get("description")), pattern)
+            );
+        };
+    }
+
     public static Specification<Report> hasStatus(ReportStatus status) {
         return (root, query, cb) -> {
             if (status == null)
                 return null;
             return cb.equal(root.get("status"), status);
         };
-
     }
 
     public static Specification<Report> hasTargetType(ReportTargetType targetType) {

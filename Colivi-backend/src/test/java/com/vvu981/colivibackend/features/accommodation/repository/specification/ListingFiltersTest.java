@@ -51,7 +51,7 @@ class ListingFiltersTest {
     }
 
     @Test
-    @DisplayName("TitleFilter apply debe generar la condicion like correcta sobre title")
+    @DisplayName("TitleFilter apply debe generar la condicion like correcta sobre title e id")
     @SuppressWarnings({ "rawtypes", "unchecked" })
     void testTitleFilterApply() {
         Map<String, String> params = Map.of("title", "Habitación");
@@ -61,18 +61,69 @@ class ListingFiltersTest {
         CriteriaQuery query = mock(CriteriaQuery.class);
         CriteriaBuilder cb = mock(CriteriaBuilder.class);
         Path titlePath = mock(Path.class);
+        Path idPath = mock(Path.class);
         Expression lowerTitle = mock(Expression.class);
-        Predicate likePredicate = mock(Predicate.class);
+        Expression lowerId = mock(Expression.class);
+        Predicate likeTitle = mock(Predicate.class);
+        Predicate likeId = mock(Predicate.class);
+        Predicate orPredicate = mock(Predicate.class);
 
         when(root.get("title")).thenReturn(titlePath);
-        when(cb.lower(any(Expression.class))).thenReturn(lowerTitle);
-        when(cb.like(any(Expression.class), anyString())).thenReturn(likePredicate);
+        when(root.get("id")).thenReturn(idPath);
+        when(idPath.as(String.class)).thenReturn(idPath);
+        when(cb.lower(titlePath)).thenReturn(lowerTitle);
+        when(cb.lower(idPath)).thenReturn(lowerId);
+        when(cb.like(lowerTitle, "%habitación%")).thenReturn(likeTitle);
+        when(cb.like(lowerId, "%habitación%")).thenReturn(likeId);
+        when(cb.or(likeTitle, likeId)).thenReturn(orPredicate);
+
+        Predicate result = spec.toPredicate(root, query, cb);
+
+        assertThat(result).isEqualTo(orPredicate);
+    }
+
+    @Test
+    @DisplayName("IdFilter debe ser aplicable si existe el parametro 'id' no vacio")
+    void testIdFilterApplicability() {
+        IdFilter idFilter = new IdFilter();
+        assertThat(idFilter.isApplicable(null)).isFalse();
+
+        Map<String, String> params = new HashMap<>();
+        assertThat(idFilter.isApplicable(params)).isFalse();
+
+        params.put("id", null);
+        assertThat(idFilter.isApplicable(params)).isFalse();
+
+        params.put("id", "   ");
+        assertThat(idFilter.isApplicable(params)).isFalse();
+
+        params.put("id", "123e4567-e89b-12d3-a456-426614174000");
+        assertThat(idFilter.isApplicable(params)).isTrue();
+    }
+
+    @Test
+    @DisplayName("IdFilter apply debe generar la condicion like correcta sobre id")
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    void testIdFilterApply() {
+        IdFilter idFilter = new IdFilter();
+        Map<String, String> params = Map.of("id", "123e4567");
+        Specification<AccommodationListing> spec = idFilter.apply(params);
+
+        Root root = mock(Root.class);
+        CriteriaQuery query = mock(CriteriaQuery.class);
+        CriteriaBuilder cb = mock(CriteriaBuilder.class);
+        Path idPath = mock(Path.class);
+        Expression lowerId = mock(Expression.class);
+        Predicate likePredicate = mock(Predicate.class);
+
+        when(root.get("id")).thenReturn(idPath);
+        when(idPath.as(String.class)).thenReturn(idPath);
+        when(cb.lower(idPath)).thenReturn(lowerId);
+        when(cb.like(lowerId, "%123e4567%")).thenReturn(likePredicate);
 
         Predicate result = spec.toPredicate(root, query, cb);
 
         assertThat(result).isEqualTo(likePredicate);
-        verify(root, times(1)).get("title");
-        verify(cb, times(1)).like(eq(lowerTitle), eq("%habitación%"));
     }
 
     @Test
