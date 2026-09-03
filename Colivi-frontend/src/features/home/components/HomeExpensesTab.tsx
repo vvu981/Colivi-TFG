@@ -5,9 +5,10 @@ import { ExpenseSummaryCards } from './ExpenseSummaryCards';
 import { ExpenseBalancesList } from './ExpenseBalancesList';
 import { ExpenseList } from './ExpenseList';
 import { CreateExpenseModal } from './CreateExpenseModal';
+import { RecordPaymentModal } from './RecordPaymentModal';
 import { ConfirmDeleteExpenseModal } from './ConfirmDeleteExpenseModal';
 import { Spinner } from '../../../components/feedback/Spinner';
-import { PlusCircle, RefreshCw } from 'lucide-react';
+import { PlusCircle, RefreshCw, ArrowRightLeft } from 'lucide-react';
 
 interface HomeExpensesTabProps {
   home: HomeDetailResponseDto;
@@ -32,13 +33,29 @@ export const HomeExpensesTab: React.FC<HomeExpensesTabProps> = ({
     error,
     refetch,
     createExpense,
+    recordPayment,
     deleteExpense,
   } = useHomeExpenses(home.id);
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isRecordPaymentOpen, setIsRecordPaymentOpen] = useState(false);
+  const [paymentPrefill, setPaymentPrefill] = useState<{
+    payerId?: string;
+    receiverId?: string;
+    amount?: number;
+  }>({});
   const [expenseToDelete, setExpenseToDelete] = useState<ExpenseResponseDto | null>(null);
 
   const activeMembers = home.members.filter((m) => m.status === 'ACTIVE');
+
+  const handleSettleTransfer = (fromUserId: string, toUserId: string, amount: number) => {
+    setPaymentPrefill({
+      payerId: fromUserId,
+      receiverId: toUserId,
+      amount,
+    });
+    setIsRecordPaymentOpen(true);
+  };
 
   if (isLoading) {
     return (
@@ -66,24 +83,37 @@ export const HomeExpensesTab: React.FC<HomeExpensesTabProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Barra Superior con Botón de Nuevo Gasto */}
+      {/* Barra Superior con Botones de Acción */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-bold text-on-surface">Gastos Compartidos</h2>
           <p className="text-xs text-secondary">
-            Control de cuentas, repartos por porcentaje o importe y liquidación de deudas.
+            Control de cuentas, repartos proporcionales y pagos directos para saldar deudas.
           </p>
         </div>
 
         {isActiveMember && (
-          <button
-            type="button"
-            onClick={() => setIsCreateOpen(true)}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-white text-xs font-semibold rounded-xl hover:bg-primary/90 transition-colors shadow-xs shrink-0"
-          >
-            <PlusCircle className="w-4 h-4" />
-            <span>Añadir Gasto</span>
-          </button>
+          <div className="flex items-center gap-2.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                setPaymentPrefill({});
+                setIsRecordPaymentOpen(true);
+              }}
+              className="inline-flex items-center justify-center gap-2 px-3.5 py-2.5 bg-surface border border-outline-variant/60 text-on-surface hover:bg-surface-container text-xs font-semibold rounded-xl transition-colors shadow-2xs cursor-pointer"
+            >
+              <ArrowRightLeft className="w-4 h-4 text-primary" />
+              <span>Registrar Pago</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsCreateOpen(true)}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-white text-xs font-semibold rounded-xl hover:bg-primary/90 transition-colors shadow-xs cursor-pointer"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>Añadir Gasto</span>
+            </button>
+          </div>
         )}
       </div>
 
@@ -111,12 +141,13 @@ export const HomeExpensesTab: React.FC<HomeExpensesTabProps> = ({
           />
         </div>
 
-        {/* Columna Derecha: Balances y Transferencias Optimizadas (5 cols) */}
-        <div className="lg:col-span-5">
+        {/* Columna Derecha: Balances y Transferencias Sugeridas (5 cols) */}
+        <div className="lg:col-span-5 space-y-6">
           <ExpenseBalancesList
             balances={balances}
             transfers={transfers}
             currentUserId={currentUserId}
+            onSettleTransfer={handleSettleTransfer}
           />
         </div>
       </div>
@@ -128,6 +159,20 @@ export const HomeExpensesTab: React.FC<HomeExpensesTabProps> = ({
         activeMembers={activeMembers}
         currentUserId={currentUserId}
         onCreateExpense={createExpense}
+      />
+
+      <RecordPaymentModal
+        isOpen={isRecordPaymentOpen}
+        onClose={() => {
+          setIsRecordPaymentOpen(false);
+          setPaymentPrefill({});
+        }}
+        activeMembers={activeMembers}
+        currentUserId={currentUserId}
+        initialPayerId={paymentPrefill.payerId}
+        initialReceiverId={paymentPrefill.receiverId}
+        initialAmount={paymentPrefill.amount}
+        onRecordPayment={recordPayment}
       />
 
       <ConfirmDeleteExpenseModal

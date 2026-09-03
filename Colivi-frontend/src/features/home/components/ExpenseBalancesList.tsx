@@ -1,17 +1,20 @@
 import React from 'react';
 import type { BalanceResponseDto, DebtTransferResponseDto } from '../types';
-import { ArrowRight, UserCheck, Sparkles } from 'lucide-react';
+import { ArrowRight, ArrowRightLeft, UserCheck, Sparkles } from 'lucide-react';
+import { formatUserDisplayName, getUserInitial } from '../utils/userDisplay';
 
 interface ExpenseBalancesListProps {
   balances: BalanceResponseDto[];
   transfers: DebtTransferResponseDto[];
   currentUserId?: string;
+  onSettleTransfer?: (fromUserId: string, toUserId: string, amount: number) => void;
 }
 
 export const ExpenseBalancesList: React.FC<ExpenseBalancesListProps> = ({
   balances,
   transfers,
   currentUserId,
+  onSettleTransfer,
 }) => {
   return (
     <div className="space-y-6">
@@ -40,32 +43,41 @@ export const ExpenseBalancesList: React.FC<ExpenseBalancesListProps> = ({
           </div>
         ) : (
           <div className="space-y-3">
-            {balances.map((b) => {
-              const isPositive = b.balance > 0;
-              const isNegative = b.balance < 0;
-              const isCurrentUser = b.userId === currentUserId;
+            {balances.map((b, idx) => {
+              const rawAmount = b.amount !== undefined ? b.amount : (b.balance ?? 0);
+              const amount =
+                typeof rawAmount === 'number'
+                  ? rawAmount
+                  : parseFloat(rawAmount as unknown as string) || 0;
+              const isPositive = amount > 0;
+              const isNegative = amount < 0;
+              const userId = b.user?.id || b.userId || `balance-user-${idx}`;
+              const isCurrentUser = Boolean(currentUserId && userId === currentUserId);
+              const fullName = formatUserDisplayName(b.user, b.fullName);
+              const initial = getUserInitial(fullName);
+              const profilePicUrl = b.user?.profilePicUrl || b.profilePicUrl;
 
               return (
                 <div
-                  key={b.userId}
+                  key={userId}
                   className="flex items-center justify-between p-3.5 bg-surface rounded-2xl border border-outline-variant/40 hover:border-outline-variant transition-all"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    {b.profilePicUrl ? (
+                    {profilePicUrl ? (
                       <img
-                        src={b.profilePicUrl}
-                        alt={b.fullName}
+                        src={profilePicUrl}
+                        alt={fullName}
                         className="w-9 h-9 rounded-full object-cover border border-outline-variant/60 shrink-0"
                       />
                     ) : (
                       <div className="w-9 h-9 rounded-full bg-primary/10 text-primary font-bold text-xs flex items-center justify-center shrink-0">
-                        {b.fullName.charAt(0).toUpperCase()}
+                        {initial}
                       </div>
                     )}
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="text-xs font-bold text-on-surface truncate">
-                          {b.fullName}
+                          {fullName}
                         </span>
                         {isCurrentUser && (
                           <span className="text-[9px] font-bold px-1.5 py-0.2 bg-secondary/10 text-secondary rounded">
@@ -110,7 +122,7 @@ export const ExpenseBalancesList: React.FC<ExpenseBalancesListProps> = ({
                           : 'text-on-surface'
                       }`}
                     >
-                      {isPositive ? `+${b.balance.toFixed(2)} €` : `${b.balance.toFixed(2)} €`}
+                      {isPositive ? `+${amount.toFixed(2)} €` : `${amount.toFixed(2)} €`}
                     </span>
                   </div>
                 </div>
@@ -143,12 +155,21 @@ export const ExpenseBalancesList: React.FC<ExpenseBalancesListProps> = ({
         ) : (
           <div className="space-y-2.5">
             {transfers.map((t, idx) => {
-              const isCurrentUserSender = t.fromUserId === currentUserId;
-              const isCurrentUserReceiver = t.toUserId === currentUserId;
+              const fromUserId = t.fromUser?.id || t.fromUserId || `from-${idx}`;
+              const toUserId = t.toUser?.id || t.toUserId || `to-${idx}`;
+              const isCurrentUserSender = Boolean(currentUserId && fromUserId === currentUserId);
+              const isCurrentUserReceiver = Boolean(currentUserId && toUserId === currentUserId);
+              const fromName = formatUserDisplayName(t.fromUser, t.fromUserFullName);
+              const toName = formatUserDisplayName(t.toUser, t.toUserFullName);
+              const rawAmount = t.amount ?? 0;
+              const amount =
+                typeof rawAmount === 'number'
+                  ? rawAmount
+                  : parseFloat(rawAmount as unknown as string) || 0;
 
               return (
                 <div
-                  key={`${t.fromUserId}-${t.toUserId}-${idx}`}
+                  key={`${fromUserId}-${toUserId}-${idx}`}
                   className={`flex items-center justify-between p-3 rounded-2xl border transition-all ${
                     isCurrentUserSender
                       ? 'bg-error-container/10 border-error/20'
@@ -159,19 +180,30 @@ export const ExpenseBalancesList: React.FC<ExpenseBalancesListProps> = ({
                 >
                   <div className="flex items-center gap-2 min-w-0 text-xs text-on-surface">
                     <span className="font-bold truncate max-w-[120px]">
-                      {t.fromUserFullName}
+                      {fromName}
                       {isCurrentUserSender && ' (Tú)'}
                     </span>
                     <ArrowRight className="w-3.5 h-3.5 text-secondary shrink-0" />
                     <span className="font-bold truncate max-w-[120px]">
-                      {t.toUserFullName}
+                      {toName}
                       {isCurrentUserReceiver && ' (Tú)'}
                     </span>
                   </div>
-                  <div className="text-right shrink-0">
+                  <div className="flex items-center gap-2.5 shrink-0">
                     <span className="text-xs font-bold text-primary px-2.5 py-1 bg-primary/10 rounded-full border border-primary/20">
-                      {t.amount.toFixed(2)} €
+                      {amount.toFixed(2)} €
                     </span>
+                    {onSettleTransfer && (
+                      <button
+                        type="button"
+                        onClick={() => onSettleTransfer(fromUserId, toUserId, amount)}
+                        className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-primary hover:text-white hover:bg-primary rounded-xl transition-all border border-primary/30 cursor-pointer shadow-2xs active:scale-95"
+                        title={`Registrar pago de ${fromName} a ${toName}`}
+                      >
+                        <ArrowRightLeft className="w-3 h-3" />
+                        <span>Saldar</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               );

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useId } from 'react';
+import React, { useState, useEffect, useId, useMemo } from 'react';
 import {
   X,
   Loader2,
@@ -9,6 +9,7 @@ import {
   AlertCircle,
   CheckCircle2,
 } from 'lucide-react';
+import { Select, type SelectOption } from '../../../components/ui/Select';
 import type {
   HomeMemberResponseDto,
   CreateExpenseRequest,
@@ -96,6 +97,24 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, isSubmitting, onClose]);
+
+  const payerOptions: SelectOption[] = useMemo(() => {
+    return activeMembers.map((m) => ({
+      value: m.userId,
+      label: `${m.fullName}${m.userId === currentUserId ? ' (Tú)' : ''}`,
+      icon: m.profilePicUrl ? (
+        <img
+          src={m.profilePicUrl}
+          alt={m.fullName}
+          className="w-5 h-5 rounded-full object-cover shrink-0"
+        />
+      ) : (
+        <div className="w-5 h-5 rounded-full bg-primary/10 text-primary font-bold text-[10px] flex items-center justify-center shrink-0">
+          {m.fullName.charAt(0).toUpperCase()}
+        </div>
+      ),
+    }));
+  }, [activeMembers, currentUserId]);
 
   if (!isOpen) return null;
 
@@ -358,19 +377,15 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
             <label htmlFor="expense-payer" className="text-xs font-semibold text-on-surface">
               ¿Quién pagó el gasto? <span className="text-error">*</span>
             </label>
-            <select
+            <Select
               id="expense-payer"
+              aria-label="¿Quién pagó el gasto?"
               value={payerId}
-              onChange={(e) => setPayerId(e.target.value)}
+              onChange={(val) => setPayerId(val)}
+              options={payerOptions}
               disabled={isSubmitting}
-              className="w-full px-3.5 py-2.5 bg-surface border border-outline-variant/60 rounded-xl text-xs font-medium text-on-surface focus:outline-hidden focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-            >
-              {activeMembers.map((m) => (
-                <option key={m.userId} value={m.userId}>
-                  {m.fullName} {m.userId === currentUserId ? '(Tú)' : ''}
-                </option>
-              ))}
-            </select>
+              className="py-2.5 text-xs bg-surface"
+            />
           </div>
 
           {/* Fila 3: Selección de Participantes */}

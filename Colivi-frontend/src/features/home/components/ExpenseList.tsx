@@ -2,41 +2,44 @@ import React, { useState } from 'react';
 import type { ExpenseResponseDto } from '../types';
 import {
   Receipt,
-  ChevronDown,
-  ChevronUp,
-  Trash2,
   Calendar,
   User,
   Users,
+  ChevronDown,
+  ChevronUp,
+  Trash2,
+  ArrowRightLeft,
 } from 'lucide-react';
+import { formatUserDisplayName, getUserInitial } from '../utils/userDisplay';
 
 interface ExpenseListProps {
   expenses: ExpenseResponseDto[];
   currentUserId?: string;
-  isAdmin: boolean;
+  isAdmin?: boolean;
   onDeleteExpense: (expense: ExpenseResponseDto) => void;
 }
 
 export const ExpenseList: React.FC<ExpenseListProps> = ({
   expenses,
   currentUserId,
-  isAdmin,
+  isAdmin = false,
   onDeleteExpense,
 }) => {
   const [expandedExpenseId, setExpandedExpenseId] = useState<string | null>(null);
 
-  const toggleExpand = (id: string) => {
-    setExpandedExpenseId((prev) => (prev === id ? null : id));
+  const toggleExpand = (expenseId: string) => {
+    setExpandedExpenseId((prev) => (prev === expenseId ? null : expenseId));
   };
 
   if (expenses.length === 0) {
     return (
-      <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl p-10 text-center shadow-2xs">
-        <Receipt className="w-10 h-10 text-secondary/40 mx-auto mb-3" />
-        <h3 className="text-sm font-bold text-on-surface">No hay gastos registrados</h3>
-        <p className="text-xs text-secondary mt-1 max-w-sm mx-auto">
-          Los gastos compartidos añadidos por los miembros del hogar aparecerán aquí desglosados con
-          sus participantes y cuotas correspondientes.
+      <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl p-8 text-center shadow-2xs">
+        <div className="w-12 h-12 rounded-2xl bg-surface text-secondary mx-auto flex items-center justify-center mb-3">
+          <Receipt className="w-6 h-6" />
+        </div>
+        <h3 className="text-sm font-bold text-on-surface mb-1">Sin gastos registrados</h3>
+        <p className="text-xs text-secondary max-w-sm mx-auto">
+          Añade el primer gasto para empezar a gestionar las cuentas compartidas y balances de este hogar.
         </p>
       </div>
     );
@@ -49,6 +52,9 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
         const isPayer = expense.payer.id === currentUserId;
         const canDelete = isPayer || isAdmin;
         const date = new Date(expense.createdAt);
+        const isPayment = Boolean(expense.isPayment);
+        const receiver = isPayment && expense.participants.length > 0 ? expense.participants[0].user : null;
+        const isReceiver = receiver?.id === currentUserId;
 
         return (
           <div
@@ -58,22 +64,52 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
             {/* Fila Principal del Gasto */}
             <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-start gap-3.5 min-w-0">
-                <div className="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
-                  <Receipt className="w-5 h-5" />
+                <div
+                  className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 mt-0.5 ${
+                    isPayment
+                      ? 'bg-teal-500/10 text-teal-700'
+                      : 'bg-primary/10 text-primary'
+                  }`}
+                >
+                  {isPayment ? (
+                    <ArrowRightLeft className="w-5 h-5" />
+                  ) : (
+                    <Receipt className="w-5 h-5" />
+                  )}
                 </div>
                 <div className="min-w-0">
-                  <h4 className="text-sm font-bold text-on-surface truncate">
-                    {expense.description}
-                  </h4>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="text-sm font-bold text-on-surface truncate">
+                      {expense.description}
+                    </h4>
+                    {isPayment && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-teal-500/10 text-teal-700 border border-teal-500/20">
+                        <ArrowRightLeft className="w-3 h-3" />
+                        Pago directo
+                      </span>
+                    )}
+                  </div>
                   <div className="flex items-center gap-3 text-xs text-secondary mt-1 flex-wrap">
                     <span className="flex items-center gap-1">
                       <User className="w-3.5 h-3.5 text-primary" />
-                      Pagado por:{' '}
+                      {isPayment ? 'De:' : 'Pagado por:'}{' '}
                       <strong className="text-on-surface">
-                        {expense.payer.firstName} {expense.payer.lastName1}
+                        {formatUserDisplayName(expense.payer)}
                         {isPayer && ' (Tú)'}
                       </strong>
                     </span>
+                    {isPayment && receiver && (
+                      <>
+                        <span>→</span>
+                        <span className="flex items-center gap-1">
+                          Para:{' '}
+                          <strong className="text-on-surface">
+                            {formatUserDisplayName(receiver)}
+                            {isReceiver && ' (Tú)'}
+                          </strong>
+                        </span>
+                      </>
+                    )}
                     <span>•</span>
                     <span className="flex items-center gap-1">
                       <Calendar className="w-3.5 h-3.5" />
@@ -83,12 +119,16 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
                         year: 'numeric',
                       })}
                     </span>
-                    <span>•</span>
-                    <span className="flex items-center gap-1">
-                      <Users className="w-3.5 h-3.5" />
-                      {expense.participants.length}{' '}
-                      {expense.participants.length === 1 ? 'participante' : 'participantes'}
-                    </span>
+                    {!isPayment && (
+                      <>
+                        <span>•</span>
+                        <span className="flex items-center gap-1">
+                          <Users className="w-3.5 h-3.5" />
+                          {expense.participants.length}{' '}
+                          {expense.participants.length === 1 ? 'participante' : 'participantes'}
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -144,7 +184,9 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {expense.participants.map((p) => {
-                    const isCurrentParticipant = p.user.id === currentUserId;
+                    const isCurrentParticipant = p.user?.id === currentUserId;
+                    const participantName = formatUserDisplayName(p.user);
+                    const participantInitial = getUserInitial(participantName);
                     const percentage =
                       expense.totalAmount > 0
                         ? Math.round((p.owedAmount / expense.totalAmount) * 10000) / 100
@@ -156,19 +198,19 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
                         className="flex items-center justify-between p-2.5 bg-surface-container-lowest border border-outline-variant/40 rounded-xl text-xs"
                       >
                         <div className="flex items-center gap-2 min-w-0">
-                          {p.user.profilePicUrl ? (
+                          {p.user?.profilePicUrl ? (
                             <img
                               src={p.user.profilePicUrl}
-                              alt={p.user.firstName}
+                              alt={participantName}
                               className="w-6 h-6 rounded-full object-cover border border-outline-variant/40 shrink-0"
                             />
                           ) : (
                             <div className="w-6 h-6 rounded-full bg-primary/10 text-primary font-bold text-[10px] flex items-center justify-center shrink-0">
-                              {p.user.firstName.charAt(0).toUpperCase()}
+                              {participantInitial}
                             </div>
                           )}
                           <span className="font-semibold text-on-surface truncate">
-                            {p.user.firstName} {p.user.lastName1}
+                            {participantName}
                             {isCurrentParticipant && ' (Tú)'}
                           </span>
                         </div>

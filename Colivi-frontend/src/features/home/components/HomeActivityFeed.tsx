@@ -10,6 +10,7 @@ import {
   Trash2,
   Receipt,
   CheckCircle2,
+  ArrowRightLeft,
   Clock,
   ChevronLeft,
   ChevronRight,
@@ -62,6 +63,11 @@ const getActivityIcon = (type: ActivityType) => {
       return {
         icon: <CheckCircle2 className="w-4 h-4 text-emerald-600" />,
         bg: 'bg-emerald-500/10 border-emerald-500/20',
+      };
+    case 'PAYMENT_RECORDED':
+      return {
+        icon: <ArrowRightLeft className="w-4 h-4 text-teal-600" />,
+        bg: 'bg-teal-500/10 border-teal-500/20',
       };
     default:
       return {

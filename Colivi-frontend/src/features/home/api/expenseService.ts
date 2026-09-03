@@ -2,6 +2,7 @@ import api from '../../../lib/api';
 import type {
   ExpenseResponseDto,
   CreateExpenseRequest,
+  RecordPaymentRequest,
   BalanceResponseDto,
   DebtTransferResponseDto,
 } from '../types';
@@ -24,6 +25,20 @@ export const expenseService = {
   ): Promise<ExpenseResponseDto> {
     const response = await api.post<ExpenseResponseDto>(
       `/homes/${homeId}/expenses`,
+      data
+    );
+    return response.data;
+  },
+
+  /**
+   * Registra un pago directo entre dos convivientes para saldar deudas.
+   */
+  async recordPayment(
+    homeId: string,
+    data: RecordPaymentRequest
+  ): Promise<ExpenseResponseDto> {
+    const response = await api.post<ExpenseResponseDto>(
+      `/homes/${homeId}/expenses/payments`,
       data
     );
     return response.data;

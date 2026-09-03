@@ -131,4 +131,29 @@ class ActivityLogFormattersTest {
         assertEquals("Se ha eliminado el gasto: 'Internet Bill'.", log.getDescription());
         assertEquals("Internet Bill", log.getMetadata().get("expenseDescription"));
     }
+
+    @Test
+    void testPaymentRecordedActivityFormatter() {
+        PaymentRecordedActivityFormatter formatter = new PaymentRecordedActivityFormatter();
+        UUID payerId = UUID.randomUUID();
+        UUID receiverId = UUID.randomUUID();
+        PaymentRecordedEvent event = new PaymentRecordedEvent(
+                homeId,
+                actorId,
+                payerId,
+                receiverId,
+                "Bob",
+                new BigDecimal("25.00"),
+                "Bizum"
+        );
+
+        assertTrue(formatter.supports(event));
+
+        ActivityLog log = formatter.format(event);
+        assertEquals(ActivityType.PAYMENT_RECORDED, log.getActivityType());
+        assertEquals("Ha registrado un pago de 25.00 € a Bob.", log.getDescription());
+        assertEquals("Bob", log.getMetadata().get("receiverName"));
+        assertEquals("25.00", log.getMetadata().get("amount"));
+        assertEquals("Bizum", log.getMetadata().get("notes"));
+    }
 }

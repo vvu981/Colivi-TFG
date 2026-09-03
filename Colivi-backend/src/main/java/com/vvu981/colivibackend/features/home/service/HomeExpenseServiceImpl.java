@@ -14,6 +14,7 @@ import com.vvu981.colivibackend.features.user.domain.UserRole;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
 import com.vvu981.colivibackend.features.home.domain.event.ExpenseCreatedEvent;
 import com.vvu981.colivibackend.features.home.domain.event.ExpenseDeletedEvent;
+import com.vvu981.colivibackend.features.home.domain.event.PaymentRecordedEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -72,6 +73,73 @@ public class HomeExpenseServiceImpl implements HomeExpenseService {
         ));
         
         return expenseMapper.toExpenseResponseDto(expense);
+    }
+
+    @Override
+    @Transactional
+    public ExpenseResponseDto recordPayment(UUID homeId, RecordPaymentRequest request, UUID requestUserId) {
+        validateActiveMember(homeId, requestUserId);
+
+        if (request.payerId().equals(request.receiverId())) {
+            throw new BusinessRuleValidationException("El pagador y el receptor no pueden ser la misma persona");
+        }
+
+        if (request.amount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessRuleValidationException("El importe del pago debe ser mayor que 0");
+        }
+
+        Home home = homeRepository.findByIdAndDeletedAtIsNull(homeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Hogar no encontrado"));
+
+        validatePayerAndParticipants(homeId, request.payerId(), List.of(request.receiverId()));
+
+        User requestUser = userRepository.findActiveById(requestUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+
+        boolean isPayer = request.payerId().equals(requestUserId);
+        boolean isReceiver = request.receiverId().equals(requestUserId);
+        boolean isSystemAdmin = requestUser.getRole() == UserRole.ADMIN;
+        boolean isHomeAdmin = memberRepository.findByHomeIdAndUserId(homeId, requestUserId)
+                .filter(m -> m.getStatus() == HomeMemberStatus.ACTIVE && m.getRole() == HomeRole.ADMIN)
+                .isPresent();
+
+        if (!isPayer && !isReceiver && !isSystemAdmin && !isHomeAdmin) {
+            throw new UnauthorizedActionException("Solo las partes involucradas en el pago o un administrador pueden registrar este pago");
+        }
+
+        User payer = userRepository.findActiveById(request.payerId())
+                .orElseThrow(() -> new ResourceNotFoundException("Pagador no encontrado"));
+        User receiver = userRepository.findActiveById(request.receiverId())
+                .orElseThrow(() -> new ResourceNotFoundException("Receptor no encontrado"));
+
+        HomeExpense payment = new HomeExpense();
+        payment.setHome(home);
+        payment.setPayer(payer);
+        String desc = (request.notes() != null && !request.notes().isBlank())
+                ? request.notes().trim()
+                : "Pago a " + (receiver.getFirstName() != null ? receiver.getFirstName() : receiver.getNickname());
+        payment.setDescription(desc);
+        payment.setTotalAmount(request.amount());
+        payment.setPayment(true);
+
+        HomeExpenseParticipant participant = new HomeExpenseParticipant();
+        participant.setUser(receiver);
+        participant.setOwedAmount(request.amount());
+        payment.addParticipant(participant);
+
+        expenseRepository.save(payment);
+
+        eventPublisher.publishEvent(new PaymentRecordedEvent(
+                homeId,
+                requestUserId,
+                request.payerId(),
+                request.receiverId(),
+                receiver.getFirstName() != null ? receiver.getFirstName() : receiver.getNickname(),
+                request.amount(),
+                request.notes()
+        ));
+
+        return expenseMapper.toExpenseResponseDto(payment);
     }
 
     @Override

@@ -5,6 +5,7 @@ import type {
   BalanceResponseDto,
   DebtTransferResponseDto,
   CreateExpenseRequest,
+  RecordPaymentRequest,
 } from '../types';
 import { useAuth } from '../../auth/context/AuthContext';
 
@@ -18,6 +19,7 @@ interface UseHomeExpensesReturn {
   error: string | null;
   refetch: () => Promise<void>;
   createExpense: (data: CreateExpenseRequest) => Promise<ExpenseResponseDto>;
+  recordPayment: (data: RecordPaymentRequest) => Promise<ExpenseResponseDto>;
   deleteExpense: (expenseId: string) => Promise<void>;
 }
 
@@ -64,6 +66,16 @@ export const useHomeExpenses = (homeId?: string): UseHomeExpensesReturn => {
     [homeId, fetchExpensesData]
   );
 
+  const recordPayment = useCallback(
+    async (data: RecordPaymentRequest): Promise<ExpenseResponseDto> => {
+      if (!homeId) throw new Error('Identificador de hogar no válido');
+      const created = await expenseService.recordPayment(homeId, data);
+      await fetchExpensesData();
+      return created;
+    },
+    [homeId, fetchExpensesData]
+  );
+
   const deleteExpense = useCallback(
     async (expenseId: string): Promise<void> => {
       if (!homeId) throw new Error('Identificador de hogar no válido');
@@ -75,8 +87,10 @@ export const useHomeExpenses = (homeId?: string): UseHomeExpensesReturn => {
 
   const myBalance = useMemo(() => {
     if (!user) return 0;
-    const found = balances.find((b) => b.userId === user.id);
-    return found ? found.balance : 0;
+    const found = balances.find((b) => (b.user?.id || b.userId) === user.id);
+    if (!found) return 0;
+    const raw = found.amount !== undefined ? found.amount : (found.balance ?? 0);
+    return typeof raw === 'number' ? raw : parseFloat(raw as unknown as string) || 0;
   }, [balances, user]);
 
   const totalExpensesAmount = useMemo(() => {
@@ -93,6 +107,7 @@ export const useHomeExpenses = (homeId?: string): UseHomeExpensesReturn => {
     error,
     refetch: fetchExpensesData,
     createExpense,
+    recordPayment,
     deleteExpense,
   };
 };

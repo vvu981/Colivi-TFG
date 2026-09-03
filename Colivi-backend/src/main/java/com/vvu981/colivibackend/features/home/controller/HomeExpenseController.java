@@ -4,6 +4,7 @@ import com.vvu981.colivibackend.features.home.dto.BalanceResponseDto;
 import com.vvu981.colivibackend.features.home.dto.CreateExpenseRequest;
 import com.vvu981.colivibackend.features.home.dto.DebtTransferResponseDto;
 import com.vvu981.colivibackend.features.home.dto.ExpenseResponseDto;
+import com.vvu981.colivibackend.features.home.dto.RecordPaymentRequest;
 import com.vvu981.colivibackend.features.home.service.HomeExpenseService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,15 @@ public class HomeExpenseController {
             @AuthenticationPrincipal(expression = "id") UUID requestUserId) {
         ExpenseResponseDto expense = commandService.createExpense(homeId, request, requestUserId);
         return ResponseEntity.status(HttpStatus.CREATED).body(expense);
+    }
+
+    @PostMapping("/payments")
+    public ResponseEntity<ExpenseResponseDto> recordPayment(
+            @PathVariable UUID homeId,
+            @Valid @RequestBody RecordPaymentRequest request,
+            @AuthenticationPrincipal(expression = "id") UUID requestUserId) {
+        ExpenseResponseDto payment = commandService.recordPayment(homeId, request, requestUserId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(payment);
     }
 
     @DeleteMapping("/{expenseId}")

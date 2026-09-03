@@ -8,6 +8,7 @@ import com.vvu981.colivibackend.features.home.mapper.HomeExpenseMapper;
 import com.vvu981.colivibackend.features.home.repository.HomeExpenseRepository;
 import com.vvu981.colivibackend.features.home.repository.HomeMemberRepository;
 import com.vvu981.colivibackend.features.home.repository.HomeRepository;
+import com.vvu981.colivibackend.features.home.domain.event.PaymentRecordedEvent;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
@@ -658,6 +659,71 @@ class HomeExpenseServiceImplTest {
 
             assertThrows(UnauthorizedActionException.class,
                     () -> service.deleteExpense(homeId, expense.getId(), regularUser.getId()));
+        }
+    }
+
+    @Nested
+    class RecordPaymentTests {
+
+        @Test
+        void recordPayment_Success() {
+            mockActiveMember(homeId, payerId);
+            when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
+            mockActiveMembersList(homeId, payer, participant1);
+
+            when(userRepository.findActiveById(payerId)).thenReturn(Optional.of(payer));
+            when(userRepository.findActiveById(participant1Id)).thenReturn(Optional.of(participant1));
+
+            RecordPaymentRequest req = new RecordPaymentRequest(payerId, participant1Id, new BigDecimal("25.00"), "Bizum cena");
+
+            service.recordPayment(homeId, req, payerId);
+
+            verify(expenseRepository).save(expenseCaptor.capture());
+            HomeExpense saved = expenseCaptor.getValue();
+            assertTrue(saved.isPayment());
+            assertEquals(new BigDecimal("25.00"), saved.getTotalAmount());
+            assertEquals("Bizum cena", saved.getDescription());
+            assertEquals(payerId, saved.getPayer().getId());
+            assertEquals(1, saved.getParticipants().size());
+            assertEquals(participant1Id, saved.getParticipants().get(0).getUser().getId());
+            assertEquals(new BigDecimal("25.00"), saved.getParticipants().get(0).getOwedAmount());
+
+            verify(eventPublisher).publishEvent(any(PaymentRecordedEvent.class));
+        }
+
+        @Test
+        void recordPayment_ThrowsWhenSameUser() {
+            mockActiveMember(homeId, payerId);
+
+            RecordPaymentRequest req = new RecordPaymentRequest(payerId, payerId, new BigDecimal("25.00"), "Autopago");
+
+            BusinessRuleValidationException ex = assertThrows(BusinessRuleValidationException.class,
+                    () -> service.recordPayment(homeId, req, payerId));
+
+            assertTrue(ex.getMessage().contains("no pueden ser la misma persona"));
+        }
+
+        @Test
+        void recordPayment_ThrowsWhenCallerNotPayerReceiverOrAdmin() {
+            User thirdParty = new User();
+            UUID thirdPartyId = UUID.randomUUID();
+            thirdParty.setId(thirdPartyId);
+            thirdParty.setRole(UserRole.USER);
+
+            HomeMember regularMember = new HomeMember();
+            regularMember.setStatus(HomeMemberStatus.ACTIVE);
+            regularMember.setRole(HomeRole.MEMBER);
+            when(memberRepository.findByHomeIdAndUserId(homeId, thirdPartyId)).thenReturn(Optional.of(regularMember));
+
+            when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
+            mockActiveMembersList(homeId, payer, participant1);
+
+            when(userRepository.findActiveById(thirdPartyId)).thenReturn(Optional.of(thirdParty));
+
+            RecordPaymentRequest req = new RecordPaymentRequest(payerId, participant1Id, new BigDecimal("25.00"), "Bizum");
+
+            assertThrows(UnauthorizedActionException.class,
+                    () -> service.recordPayment(homeId, req, thirdPartyId));
         }
     }
 }

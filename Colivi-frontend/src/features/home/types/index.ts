@@ -23,6 +23,7 @@ export type ActivityType =
   | 'HOME_DELETED'
   | 'EXPENSE_CREATED'
   | 'EXPENSE_DELETED'
+  | 'PAYMENT_RECORDED'
   | 'DEBT_SETTLED';
 
 /**
@@ -135,18 +136,31 @@ export interface CreateExpenseRequest {
 }
 
 /**
+ * Petición para registrar un pago directo entre dos convivientes.
+ */
+export interface RecordPaymentRequest {
+  payerId: string;
+  receiverId: string;
+  amount: number;
+  notes?: string;
+}
+
+/**
  * Proyección de un participante y su cuota debida dentro de un gasto.
  */
+export interface HomeUserProfileDto {
+  id: string;
+  nickname?: string | null;
+  firstName?: string | null;
+  lastName1?: string | null;
+  lastName2?: string | null;
+  profilePicUrl?: string | null;
+  createdAt?: string | null;
+}
+
 export interface ExpenseParticipantResponseDto {
   id: string;
-  user: {
-    id: string;
-    email: string;
-    firstName: string;
-    lastName1: string;
-    lastName2?: string | null;
-    profilePicUrl?: string | null;
-  };
+  user: HomeUserProfileDto;
   owedAmount: number;
 }
 
@@ -158,42 +172,37 @@ export interface ExpenseResponseDto {
   homeId: string;
   description: string;
   totalAmount: number;
-  payer: {
-    id: string;
-    email: string;
-    firstName: string;
-    lastName1: string;
-    lastName2?: string | null;
-    profilePicUrl?: string | null;
-  };
+  payer: HomeUserProfileDto;
   createdAt: string;
+  isPayment?: boolean;
   participants: ExpenseParticipantResponseDto[];
 }
 
 /**
  * Proyección del balance neto de un miembro en el hogar.
- * balance > 0: El grupo le debe dinero (círculo verde en UI).
- * balance < 0: Debe dinero al grupo (círculo rojo en UI).
+ * amount > 0: El grupo le debe dinero (círculo verde en UI).
+ * amount < 0: Debe dinero al grupo (círculo rojo en UI).
  */
 export interface BalanceResponseDto {
-  userId: string;
-  fullName: string;
-  email: string;
+  user?: HomeUserProfileDto;
+  amount?: number;
+  userId?: string;
+  fullName?: string;
+  balance?: number;
   profilePicUrl?: string | null;
-  balance: number;
 }
 
 /**
  * Proyección de una transferencia óptima sugerida por el algoritmo de simplificación de deudas.
  */
 export interface DebtTransferResponseDto {
-  fromUserId: string;
-  fromUserFullName: string;
-  fromUserProfilePicUrl?: string | null;
-  toUserId: string;
-  toUserFullName: string;
-  toUserProfilePicUrl?: string | null;
+  fromUser?: HomeUserProfileDto;
+  toUser?: HomeUserProfileDto;
   amount: number;
+  fromUserId?: string;
+  fromUserFullName?: string;
+  toUserId?: string;
+  toUserFullName?: string;
 }
 
 /**
