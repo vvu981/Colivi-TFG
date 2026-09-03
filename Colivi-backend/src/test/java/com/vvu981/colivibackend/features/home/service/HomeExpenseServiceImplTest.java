@@ -156,6 +156,73 @@ class HomeExpenseServiceImplTest {
         }
 
         @Test
+        void createExpense_Success_CustomSplits() {
+            mockActiveMember(homeId, payerId);
+            when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
+            mockActiveMembersList(homeId, payer, participant1);
+
+            when(userRepository.findActiveById(payerId)).thenReturn(Optional.of(payer));
+            when(userRepository.findAllById(any())).thenReturn(List.of(payer, participant1));
+
+            List<ExpenseParticipantShareDto> splits = List.of(
+                    new ExpenseParticipantShareDto(payerId, new BigDecimal("60.00")),
+                    new ExpenseParticipantShareDto(participant1Id, new BigDecimal("40.00"))
+            );
+
+            CreateExpenseRequest request = new CreateExpenseRequest("Custom Split Test", new BigDecimal("100.00"), payerId,
+                    List.of(payerId, participant1Id), splits);
+
+            service.createExpense(homeId, request, payerId);
+
+            verify(expenseRepository).save(expenseCaptor.capture());
+            HomeExpense saved = expenseCaptor.getValue();
+            assertEquals(new BigDecimal("100.00"), saved.getTotalAmount());
+            assertEquals(2, saved.getParticipants().size());
+
+            // 60.00 and 40.00
+            assertEquals(new BigDecimal("60.00"), saved.getParticipants().get(0).getOwedAmount());
+            assertEquals(new BigDecimal("40.00"), saved.getParticipants().get(1).getOwedAmount());
+        }
+
+        @Test
+        void createExpense_CustomSplits_SumMismatch_ThrowsException() {
+            mockActiveMember(homeId, payerId);
+            when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
+            mockActiveMembersList(homeId, payer, participant1);
+
+            when(userRepository.findActiveById(payerId)).thenReturn(Optional.of(payer));
+
+            List<ExpenseParticipantShareDto> splits = List.of(
+                    new ExpenseParticipantShareDto(payerId, new BigDecimal("60.00")),
+                    new ExpenseParticipantShareDto(participant1Id, new BigDecimal("30.00")) // Sum 90 != 100
+            );
+
+            CreateExpenseRequest request = new CreateExpenseRequest("Sum Mismatch", new BigDecimal("100.00"), payerId,
+                    List.of(payerId, participant1Id), splits);
+
+            assertThrows(BusinessRuleValidationException.class, () -> service.createExpense(homeId, request, payerId));
+        }
+
+        @Test
+        void createExpense_CustomSplits_MissingParticipant_ThrowsException() {
+            mockActiveMember(homeId, payerId);
+            when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
+            mockActiveMembersList(homeId, payer, participant1);
+
+            when(userRepository.findActiveById(payerId)).thenReturn(Optional.of(payer));
+
+            // Only payer in splits, but participantIds has 2
+            List<ExpenseParticipantShareDto> splits = List.of(
+                    new ExpenseParticipantShareDto(payerId, new BigDecimal("100.00"))
+            );
+
+            CreateExpenseRequest request = new CreateExpenseRequest("Missing Participant", new BigDecimal("100.00"), payerId,
+                    List.of(payerId, participant1Id), splits);
+
+            assertThrows(BusinessRuleValidationException.class, () -> service.createExpense(homeId, request, payerId));
+        }
+
+        @Test
         void createExpense_InactiveParticipant_ThrowsException() {
             mockActiveMember(homeId, payerId);
             when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));

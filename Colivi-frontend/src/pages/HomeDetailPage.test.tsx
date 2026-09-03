@@ -6,6 +6,20 @@ import { useAuth } from '../features/auth/context/AuthContext';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 vi.mock('../features/home/hooks/useHomeDetail');
+vi.mock('../features/home/hooks/useHomeExpenses', () => ({
+  useHomeExpenses: () => ({
+    expenses: [],
+    balances: [],
+    transfers: [],
+    myBalance: 0,
+    totalExpensesAmount: 0,
+    isLoading: false,
+    error: null,
+    refetch: vi.fn(),
+    createExpense: vi.fn(),
+    deleteExpense: vi.fn(),
+  }),
+}));
 vi.mock('../features/auth/context/AuthContext');
 
 describe('HomeDetailPage', () => {
@@ -90,8 +104,24 @@ describe('HomeDetailPage', () => {
 
     expect(screen.getByText('Piso Retiro')).toBeInTheDocument();
     expect(screen.getByText('Miembros (1)')).toBeInTheDocument();
+    expect(screen.getByText('Gastos')).toBeInTheDocument();
     expect(screen.getByText('Actividad y Auditoría')).toBeInTheDocument();
     expect(screen.getByText('Ajustes del Hogar')).toBeInTheDocument();
+  });
+
+  it('permite conmutar a la pestaña de gastos', () => {
+    render(
+      <MemoryRouter initialEntries={['/homes/h1']}>
+        <Routes>
+          <Route path="/homes/:id" element={<HomeDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    const expensesTab = screen.getByText('Gastos');
+    fireEvent.click(expensesTab);
+
+    expect(screen.getByText('Gastos Compartidos')).toBeInTheDocument();
   });
 
   it('permite conmutar a la pestaña de ajustes', () => {

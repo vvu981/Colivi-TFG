@@ -114,3 +114,89 @@ export interface Page<T> {
   last: boolean;
   empty: boolean;
 }
+
+/**
+ * Desglose individual de cuota de un participante en la petición de creación de gasto.
+ */
+export interface ExpenseParticipantShareDto {
+  userId: string;
+  amount: number;
+}
+
+/**
+ * Petición para registrar un nuevo gasto en el hogar.
+ */
+export interface CreateExpenseRequest {
+  description: string;
+  totalAmount: number;
+  payerId: string;
+  participantIds: string[];
+  customSplits?: ExpenseParticipantShareDto[];
+}
+
+/**
+ * Proyección de un participante y su cuota debida dentro de un gasto.
+ */
+export interface ExpenseParticipantResponseDto {
+  id: string;
+  user: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName1: string;
+    lastName2?: string | null;
+    profilePicUrl?: string | null;
+  };
+  owedAmount: number;
+}
+
+/**
+ * Proyección completa de un gasto registrado en el hogar.
+ */
+export interface ExpenseResponseDto {
+  id: string;
+  homeId: string;
+  description: string;
+  totalAmount: number;
+  payer: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName1: string;
+    lastName2?: string | null;
+    profilePicUrl?: string | null;
+  };
+  createdAt: string;
+  participants: ExpenseParticipantResponseDto[];
+}
+
+/**
+ * Proyección del balance neto de un miembro en el hogar.
+ * balance > 0: El grupo le debe dinero (círculo verde en UI).
+ * balance < 0: Debe dinero al grupo (círculo rojo en UI).
+ */
+export interface BalanceResponseDto {
+  userId: string;
+  fullName: string;
+  email: string;
+  profilePicUrl?: string | null;
+  balance: number;
+}
+
+/**
+ * Proyección de una transferencia óptima sugerida por el algoritmo de simplificación de deudas.
+ */
+export interface DebtTransferResponseDto {
+  fromUserId: string;
+  fromUserFullName: string;
+  fromUserProfilePicUrl?: string | null;
+  toUserId: string;
+  toUserFullName: string;
+  toUserProfilePicUrl?: string | null;
+  amount: number;
+}
+
+/**
+ * Modalidad de reparto de un gasto dentro del formulario.
+ */
+export type ExpenseSplitMode = 'EQUAL' | 'PERCENTAGE' | 'EXACT';

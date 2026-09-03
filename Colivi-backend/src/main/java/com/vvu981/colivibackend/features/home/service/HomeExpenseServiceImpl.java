@@ -56,7 +56,11 @@ public class HomeExpenseServiceImpl implements HomeExpenseService {
         expense.setDescription(request.description());
         expense.setTotalAmount(request.totalAmount());
 
-        distributeExactAmount(expense, request.participantIds(), request.totalAmount());
+        if (request.customSplits() != null && !request.customSplits().isEmpty()) {
+            distributeCustomSplits(expense, request.customSplits(), request.participantIds(), request.totalAmount());
+        } else {
+            distributeExactAmount(expense, request.participantIds(), request.totalAmount());
+        }
 
         expenseRepository.save(expense);
         
@@ -189,6 +193,49 @@ public class HomeExpenseServiceImpl implements HomeExpenseService {
 
         if (sumCheck.compareTo(total) != 0) {
             throw new IllegalStateException("Error crítico financiero: Fuga de céntimos en el reparto. Suma: " + sumCheck + ", Total: " + total);
+        }
+    }
+
+    private void distributeCustomSplits(HomeExpense expense, List<ExpenseParticipantShareDto> splits, List<UUID> participantIds, BigDecimal total) {
+        Set<UUID> declaredParticipantIds = new HashSet<>(participantIds);
+        Set<UUID> splitUserIds = new HashSet<>();
+        BigDecimal sum = BigDecimal.ZERO;
+
+        for (ExpenseParticipantShareDto share : splits) {
+            if (share == null || share.userId() == null || share.amount() == null) {
+                throw new BusinessRuleValidationException("Cada desglose de participante debe ser válido y tener importe");
+            }
+            if (!splitUserIds.add(share.userId())) {
+                throw new BusinessRuleValidationException("No puede haber usuarios duplicados en el reparto personalizado");
+            }
+            if (!declaredParticipantIds.contains(share.userId())) {
+                throw new BusinessRuleValidationException("El usuario del reparto personalizado no está en la lista de participantes declarada");
+            }
+            sum = sum.add(share.amount());
+        }
+
+        if (splitUserIds.size() != declaredParticipantIds.size()) {
+            throw new BusinessRuleValidationException("Todos los participantes del gasto deben tener asignada su parte en el reparto");
+        }
+
+        if (sum.compareTo(total) != 0) {
+            throw new BusinessRuleValidationException(
+                    "La suma de los importes individuales (" + sum + ") debe coincidir exactamente con el total del gasto (" + total + ")");
+        }
+
+        Map<UUID, User> participantsMap = userRepository.findAllById(splitUserIds).stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
+
+        for (ExpenseParticipantShareDto share : splits) {
+            User user = participantsMap.get(share.userId());
+            if (user == null || user.getDeletedAt() != null) {
+                throw new ResourceNotFoundException("Participante no encontrado con ID: " + share.userId());
+            }
+
+            HomeExpenseParticipant hep = new HomeExpenseParticipant();
+            hep.setUser(user);
+            hep.setOwedAmount(share.amount());
+            expense.addParticipant(hep);
         }
     }
 

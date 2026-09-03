@@ -22,5 +22,12 @@ public record CreateExpenseRequest(
         UUID payerId,
 
         @NotEmpty(message = "Debe haber al menos un participante")
-        List<UUID> participantIds
-) {}
+        List<UUID> participantIds,
+
+        @jakarta.validation.Valid
+        List<ExpenseParticipantShareDto> customSplits
+) {
+        public CreateExpenseRequest(String description, BigDecimal totalAmount, UUID payerId, List<UUID> participantIds) {
+                this(description, totalAmount, payerId, participantIds, null);
+        }
+}

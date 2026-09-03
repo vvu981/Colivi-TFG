@@ -132,9 +132,16 @@ export const HomeActivityFeed: React.FC<HomeActivityFeedProps> = ({ homeId }) =>
 
               {/* Contenido del evento */}
               <div className="flex-1 min-w-0 bg-surface-container-lowest border border-outline-variant/40 rounded-xl p-3.5 hover:border-outline-variant transition-all">
-                <p className="text-xs font-semibold text-on-surface">
-                  {activity.description}
-                </p>
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-xs font-semibold text-on-surface">
+                    {activity.description}
+                  </p>
+                  {activity.metadata?.amount != null && (
+                    <span className="shrink-0 inline-flex items-center text-[10px] font-bold text-sky-700 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded-md">
+                      {Number(activity.metadata.amount).toFixed(2)} €
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center gap-2 text-[11px] text-secondary mt-1">
                   <span>Por: <strong>{activity.actorFullName}</strong></span>
                   <span>•</span>
