@@ -27,6 +27,7 @@ public class HomeMapper {
                 member.getUser().getId(),
                 member.getUser().getFullName(),
                 member.getUser().getEmail(),
+                member.getUser().getProfilePicUrl(),
                 member.getRole(),
                 member.getStatus(),
                 member.getJoinedAt(),
@@ -38,10 +39,14 @@ public class HomeMapper {
      * Mapea un {@link Home} con la perspectiva del miembro actual a un DTO de listado ligero.
      */
     public HomeResponseDto toResponseDto(Home home, HomeMember currentMember) {
+        String invitationCode = (currentMember.getStatus() == HomeMemberStatus.ACTIVE)
+                ? home.getInvitationCode()
+                : null;
+
         return new HomeResponseDto(
                 home.getId(),
                 home.getName(),
-                home.getInvitationCode(),
+                invitationCode,
                 currentMember.getRole(),
                 currentMember.getStatus(),
                 countActiveMembers(home),
@@ -53,17 +58,33 @@ public class HomeMapper {
      * Mapea un {@link Home} con la perspectiva del miembro actual a un DTO de detalle completo.
      */
     public HomeDetailResponseDto toDetailDto(Home home, HomeMember currentMember) {
-        List<HomeMemberResponseDto> memberDtos = home.getMembers().stream()
+        List<HomeMember> members = home.getMembers();
+        if ((currentMember.getStatus() == HomeMemberStatus.LEFT || currentMember.getStatus() == HomeMemberStatus.ARCHIVED)
+                && currentMember.getLeftAt() != null) {
+            members = members.stream()
+                    .filter(m -> m.getJoinedAt() != null && !m.getJoinedAt().isAfter(currentMember.getLeftAt()))
+                    .toList();
+        }
+
+        List<HomeMemberResponseDto> memberDtos = members.stream()
                 .map(this::toMemberDto)
                 .toList();
+
+        long activeCount = (currentMember.getStatus() == HomeMemberStatus.ACTIVE)
+                ? countActiveMembers(home)
+                : memberDtos.stream().filter(m -> m.status() == HomeMemberStatus.ACTIVE).count();
+
+        String invitationCode = (currentMember.getStatus() == HomeMemberStatus.ACTIVE)
+                ? home.getInvitationCode()
+                : null;
 
         return new HomeDetailResponseDto(
                 home.getId(),
                 home.getName(),
-                home.getInvitationCode(),
+                invitationCode,
                 currentMember.getRole(),
                 currentMember.getStatus(),
-                countActiveMembers(home),
+                activeCount,
                 home.getCreatedAt(),
                 memberDtos
         );

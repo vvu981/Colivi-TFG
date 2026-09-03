@@ -18,6 +18,9 @@ import { MyRequestsPage } from "../pages/MyRequestsPage";
 import { ReceivedRequestsPage } from "../pages/ReceivedRequestsPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { AdminPage } from "../pages/AdminPage";
+import { HomesPage } from "../pages/HomesPage";
+import { ArchivedHomesPage } from "../pages/ArchivedHomesPage";
+import { HomeDetailPage } from "../pages/HomeDetailPage";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { AdminRoute } from "./AdminRoute";
 
@@ -113,6 +116,30 @@ export const AppRoutes = () => {
         element={
           <ProtectedRoute forbiddenRoles={['ADMIN']}>
             <EditListingPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/homes"
+        element={
+          <ProtectedRoute forbiddenRoles={['ADMIN']}>
+            <HomesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/homes/archived"
+        element={
+          <ProtectedRoute forbiddenRoles={['ADMIN']}>
+            <ArchivedHomesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/homes/:id"
+        element={
+          <ProtectedRoute forbiddenRoles={['ADMIN']}>
+            <HomeDetailPage />
           </ProtectedRoute>
         }
       />
