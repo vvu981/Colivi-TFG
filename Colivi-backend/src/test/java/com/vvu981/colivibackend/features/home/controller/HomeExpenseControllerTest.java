@@ -144,6 +144,34 @@ class HomeExpenseControllerTest {
         }
 
         @Test
+        void recordPayment() throws Exception {
+                UUID receiverId = UUID.randomUUID();
+                com.vvu981.colivibackend.features.home.dto.RecordPaymentRequest request =
+                        new com.vvu981.colivibackend.features.home.dto.RecordPaymentRequest(authUser.getId(), receiverId, new BigDecimal("35.00"), "Bizum");
+
+                ExpenseResponseDto response = new ExpenseResponseDto(
+                                UUID.randomUUID(),
+                                homeId,
+                                "Pago a usuario",
+                                new BigDecimal("35.00"),
+                                null,
+                                java.time.LocalDateTime.now(),
+                                true,
+                                List.of()
+                );
+
+                when(homeExpenseService.recordPayment(eq(homeId), any(), eq(authUser.getId()))).thenReturn(response);
+
+                mockMvc.perform(post("/api/v1/homes/{homeId}/expenses/payments", homeId)
+                                .principal(authentication)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isCreated())
+                                .andExpect(jsonPath("$.totalAmount").value(35.00))
+                                .andExpect(jsonPath("$.isPayment").value(true));
+        }
+
+        @Test
         void getOptimizedTransfers() throws Exception {
                 when(homeExpenseService.getOptimizedTransfers(homeId, authUser.getId())).thenReturn(List.of());
 
