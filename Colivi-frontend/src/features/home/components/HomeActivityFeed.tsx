@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Activity,
+  Pencil,
 } from 'lucide-react';
 
 interface HomeActivityFeedProps {
@@ -58,6 +59,11 @@ const getActivityIcon = (type: ActivityType) => {
       return {
         icon: <Receipt className="w-4 h-4 text-sky-600" />,
         bg: 'bg-sky-500/10 border-sky-500/20',
+      };
+    case 'EXPENSE_UPDATED':
+      return {
+        icon: <Pencil className="w-4 h-4 text-blue-600" />,
+        bg: 'bg-blue-500/10 border-blue-500/20',
       };
     case 'DEBT_SETTLED':
       return {

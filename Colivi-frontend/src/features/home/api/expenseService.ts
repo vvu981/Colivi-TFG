@@ -2,17 +2,31 @@ import api from '../../../lib/api';
 import type {
   ExpenseResponseDto,
   CreateExpenseRequest,
+  UpdateExpenseRequest,
   RecordPaymentRequest,
   BalanceResponseDto,
   DebtTransferResponseDto,
+  ExpenseFilterParams,
+  Page,
 } from '../types';
 
 export const expenseService = {
   /**
-   * Obtiene la lista completa de gastos del hogar.
+   * Obtiene la lista paginada y filtrada de gastos del hogar.
    */
-  async getHomeExpenses(homeId: string): Promise<ExpenseResponseDto[]> {
-    const response = await api.get<ExpenseResponseDto[]>(`/homes/${homeId}/expenses`);
+  async getHomeExpenses(
+    homeId: string,
+    params?: ExpenseFilterParams
+  ): Promise<Page<ExpenseResponseDto>> {
+    const response = await api.get<Page<ExpenseResponseDto>>(`/homes/${homeId}/expenses`, {
+      params: {
+        search: params?.search || undefined,
+        payerId: params?.payerId || undefined,
+        onlyPayments: params?.onlyPayments,
+        page: params?.page ?? 0,
+        size: params?.size ?? 10,
+      },
+    });
     return response.data;
   },
 
@@ -25,6 +39,21 @@ export const expenseService = {
   ): Promise<ExpenseResponseDto> {
     const response = await api.post<ExpenseResponseDto>(
       `/homes/${homeId}/expenses`,
+      data
+    );
+    return response.data;
+  },
+
+  /**
+   * Actualiza un gasto existente (solo permitido al pagador o administrador).
+   */
+  async updateExpense(
+    homeId: string,
+    expenseId: string,
+    data: UpdateExpenseRequest
+  ): Promise<ExpenseResponseDto> {
+    const response = await api.put<ExpenseResponseDto>(
+      `/homes/${homeId}/expenses/${expenseId}`,
       data
     );
     return response.data;

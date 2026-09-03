@@ -27,6 +27,17 @@ describe('useHomeExpenses hook', () => {
     },
   ];
 
+  const mockExpensesPage = {
+    content: mockExpenses,
+    totalElements: 1,
+    totalPages: 1,
+    number: 0,
+    size: 10,
+    first: true,
+    last: true,
+    empty: false,
+  };
+
   const mockBalances = [
     {
       userId: 'u1',
@@ -60,7 +71,7 @@ describe('useHomeExpenses hook', () => {
       logout: vi.fn(),
     });
 
-    vi.mocked(expenseService.getHomeExpenses).mockResolvedValue(mockExpenses as any);
+    vi.mocked(expenseService.getHomeExpenses).mockResolvedValue(mockExpensesPage as any);
     vi.mocked(expenseService.getHomeBalances).mockResolvedValue(mockBalances as any);
     vi.mocked(expenseService.getOptimizedTransfers).mockResolvedValue(mockTransfers as any);
   });
@@ -79,6 +90,8 @@ describe('useHomeExpenses hook', () => {
     expect(result.current.transfers).toEqual(mockTransfers);
     expect(result.current.myBalance).toBe(30);
     expect(result.current.totalExpensesAmount).toBe(60);
+    expect(result.current.totalElements).toBe(1);
+    expect(result.current.totalPages).toBe(1);
   });
 
   it('calls createExpense and refreshes data', async () => {
@@ -101,6 +114,29 @@ describe('useHomeExpenses hook', () => {
     });
 
     expect(expenseService.createExpense).toHaveBeenCalledWith('h1', expect.anything());
+    expect(expenseService.getHomeExpenses).toHaveBeenCalledTimes(2);
+  });
+
+  it('calls updateExpense and refreshes data', async () => {
+    const updatedExp = { id: 'e1', totalAmount: 70 };
+    vi.mocked(expenseService.updateExpense).mockResolvedValueOnce(updatedExp as any);
+
+    const { result } = renderHook(() => useHomeExpenses('h1'));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.updateExpense('e1', {
+        description: 'Compra corregida',
+        totalAmount: 70,
+        payerId: 'u1',
+        participantIds: ['u1'],
+      });
+    });
+
+    expect(expenseService.updateExpense).toHaveBeenCalledWith('h1', 'e1', expect.anything());
     expect(expenseService.getHomeExpenses).toHaveBeenCalledTimes(2);
   });
 

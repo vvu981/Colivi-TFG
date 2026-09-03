@@ -4,7 +4,9 @@ import { useHomeExpenses } from '../hooks/useHomeExpenses';
 import { ExpenseSummaryCards } from './ExpenseSummaryCards';
 import { ExpenseBalancesList } from './ExpenseBalancesList';
 import { ExpenseList } from './ExpenseList';
+import { ExpenseFilterBar } from './ExpenseFilterBar';
 import { CreateExpenseModal } from './CreateExpenseModal';
+import { EditExpenseModal } from './EditExpenseModal';
 import { RecordPaymentModal } from './RecordPaymentModal';
 import { ConfirmDeleteExpenseModal } from './ConfirmDeleteExpenseModal';
 import { Spinner } from '../../../components/feedback/Spinner';
@@ -29,15 +31,27 @@ export const HomeExpensesTab: React.FC<HomeExpensesTabProps> = ({
     transfers,
     myBalance,
     totalExpensesAmount,
+    totalElements,
+    totalPages,
+    currentPage,
+    searchQuery,
+    payerFilter,
+    typeFilter,
     isLoading,
     error,
+    setPage,
+    setSearchQuery,
+    setPayerFilter,
+    setTypeFilter,
     refetch,
     createExpense,
+    updateExpense,
     recordPayment,
     deleteExpense,
   } = useHomeExpenses(home.id);
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [expenseToEdit, setExpenseToEdit] = useState<ExpenseResponseDto | null>(null);
   const [isRecordPaymentOpen, setIsRecordPaymentOpen] = useState(false);
   const [paymentPrefill, setPaymentPrefill] = useState<{
     payerId?: string;
@@ -57,7 +71,7 @@ export const HomeExpensesTab: React.FC<HomeExpensesTabProps> = ({
     setIsRecordPaymentOpen(true);
   };
 
-  if (isLoading) {
+  if (isLoading && expenses.length === 0 && !error) {
     return (
       <div className="min-h-[40vh] flex items-center justify-center">
         <Spinner />
@@ -65,14 +79,14 @@ export const HomeExpensesTab: React.FC<HomeExpensesTabProps> = ({
     );
   }
 
-  if (error) {
+  if (error && expenses.length === 0) {
     return (
       <div className="p-6 bg-error-container/20 border border-error/20 rounded-2xl text-center space-y-3">
         <p className="text-xs text-error font-medium">{error}</p>
         <button
           type="button"
           onClick={() => refetch()}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface border border-outline-variant/60 rounded-xl text-xs font-semibold text-on-surface hover:bg-surface-container transition-colors"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface border border-outline-variant/60 rounded-xl text-xs font-semibold text-on-surface hover:bg-surface-container transition-colors cursor-pointer"
         >
           <RefreshCw className="w-3.5 h-3.5" />
           <span>Reintentar</span>
@@ -121,23 +135,46 @@ export const HomeExpensesTab: React.FC<HomeExpensesTabProps> = ({
       <ExpenseSummaryCards
         myBalance={myBalance}
         totalExpensesAmount={totalExpensesAmount}
-        expensesCount={expenses.length}
+        expensesCount={totalElements}
       />
 
       {/* Layout de 2 Columnas: Gastos (Izquierda) vs Balances y Transferencias (Derecha) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Columna Izquierda: Historial de Gastos (7 cols) */}
+        {/* Columna Izquierda: Historial de Gastos con Filtros (7 cols) */}
         <div className="lg:col-span-7 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-on-surface">Historial de Gastos</h3>
-            <span className="text-xs text-secondary">{expenses.length} registrados</span>
+            <span className="text-xs text-secondary">{totalElements} registrados</span>
           </div>
+
+          {/* Barra de Filtros y Búsqueda */}
+          <ExpenseFilterBar
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            payerFilter={payerFilter}
+            onPayerChange={setPayerFilter}
+            typeFilter={typeFilter}
+            onTypeChange={setTypeFilter}
+            activeMembers={activeMembers}
+            totalResults={totalElements}
+          />
+
+          {isLoading && (
+            <div className="py-2 flex justify-center">
+              <Spinner />
+            </div>
+          )}
 
           <ExpenseList
             expenses={expenses}
             currentUserId={currentUserId}
             isAdmin={isAdmin}
             onDeleteExpense={(exp) => setExpenseToDelete(exp)}
+            onEditExpense={(exp) => setExpenseToEdit(exp)}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalElements={totalElements}
+            onPageChange={setPage}
           />
         </div>
 
@@ -160,6 +197,17 @@ export const HomeExpensesTab: React.FC<HomeExpensesTabProps> = ({
         currentUserId={currentUserId}
         onCreateExpense={createExpense}
       />
+
+      {expenseToEdit && (
+        <EditExpenseModal
+          isOpen={!!expenseToEdit}
+          onClose={() => setExpenseToEdit(null)}
+          expense={expenseToEdit}
+          activeMembers={activeMembers}
+          currentUserId={currentUserId}
+          onUpdateExpense={updateExpense}
+        />
+      )}
 
       <RecordPaymentModal
         isOpen={isRecordPaymentOpen}

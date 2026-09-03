@@ -250,6 +250,7 @@ export const HomeDetailPage: React.FC = () => {
           isOpen={!!expelTargetMember}
           onClose={() => setExpelTargetMember(null)}
           member={expelTargetMember}
+          homeId={home.id}
           onExpel={expelMember}
           onForceExpel={forceExpelMember}
         />
@@ -259,6 +260,8 @@ export const HomeDetailPage: React.FC = () => {
         isOpen={isLeaveOpen}
         onClose={() => setIsLeaveOpen(false)}
         homeName={home.name}
+        homeId={home.id}
+        currentUserId={user?.id}
         isSoleActiveMember={isSoleActiveMember}
         isOnlyAdminWithOtherMembers={isOnlyAdminWithOtherMembers}
         onConfirmLeave={handleLeaveConfirm}

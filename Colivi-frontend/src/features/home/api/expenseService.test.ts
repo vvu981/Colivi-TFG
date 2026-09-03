@@ -9,13 +9,35 @@ describe('expenseService', () => {
     vi.clearAllMocks();
   });
 
-  it('getHomeExpenses calls GET /homes/:id/expenses and returns data', async () => {
-    const mockExpenses = [{ id: 'e1', description: 'Compra', totalAmount: 50 }];
-    vi.mocked(api.get).mockResolvedValueOnce({ data: mockExpenses });
+  it('getHomeExpenses calls GET /homes/:id/expenses with pagination and params', async () => {
+    const mockPage = {
+      content: [{ id: 'e1', description: 'Compra', totalAmount: 50 }],
+      totalElements: 1,
+      totalPages: 1,
+      number: 0,
+      size: 10,
+      first: true,
+      last: true,
+      empty: false,
+    };
+    vi.mocked(api.get).mockResolvedValueOnce({ data: mockPage });
 
-    const res = await expenseService.getHomeExpenses('h1');
-    expect(api.get).toHaveBeenCalledWith('/homes/h1/expenses');
-    expect(res).toEqual(mockExpenses);
+    const res = await expenseService.getHomeExpenses('h1', {
+      search: 'compra',
+      page: 1,
+      size: 5,
+    });
+
+    expect(api.get).toHaveBeenCalledWith('/homes/h1/expenses', {
+      params: {
+        search: 'compra',
+        payerId: undefined,
+        onlyPayments: undefined,
+        page: 1,
+        size: 5,
+      },
+    });
+    expect(res).toEqual(mockPage);
   });
 
   it('createExpense calls POST /homes/:id/expenses with payload', async () => {
@@ -31,6 +53,21 @@ describe('expenseService', () => {
     const res = await expenseService.createExpense('h1', payload);
     expect(api.post).toHaveBeenCalledWith('/homes/h1/expenses', payload);
     expect(res).toEqual(mockCreated);
+  });
+
+  it('updateExpense calls PUT /homes/:id/expenses/:expenseId with payload', async () => {
+    const payload = {
+      description: 'Luz actualizada',
+      totalAmount: 120,
+      payerId: 'u1',
+      participantIds: ['u1', 'u2'],
+    };
+    const mockUpdated = { id: 'e2', ...payload };
+    vi.mocked(api.put).mockResolvedValueOnce({ data: mockUpdated });
+
+    const res = await expenseService.updateExpense('h1', 'e2', payload);
+    expect(api.put).toHaveBeenCalledWith('/homes/h1/expenses/e2', payload);
+    expect(res).toEqual(mockUpdated);
   });
 
   it('deleteExpense calls DELETE /homes/:id/expenses/:expenseId', async () => {

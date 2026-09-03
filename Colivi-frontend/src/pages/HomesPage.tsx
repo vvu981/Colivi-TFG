@@ -15,9 +15,11 @@ import {
 import { Plus, KeyRound, Search, Sparkles } from 'lucide-react';
 import { Spinner } from '../components/feedback/Spinner';
 import { MainLayout } from '../layouts/MainLayout';
+import { useAuth } from '../features/auth/context/AuthContext';
 
 export const HomesPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const {
     homes,
     statusFilter,
@@ -194,6 +196,8 @@ export const HomesPage: React.FC = () => {
           isOpen={!!leaveModalHome}
           onClose={() => setLeaveModalHome(null)}
           homeName={leaveModalHome.name}
+          homeId={leaveModalHome.id}
+          currentUserId={user?.id}
           isSoleActiveMember={leaveModalHome.totalActiveMembers === 1}
           isOnlyAdminWithOtherMembers={
             leaveModalHome.myRole === 'ADMIN' && leaveModalHome.totalActiveMembers > 1

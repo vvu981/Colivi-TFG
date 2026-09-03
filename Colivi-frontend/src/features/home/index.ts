@@ -33,6 +33,8 @@ export * from './utils/expenseSplitter';
 export * from './components/ExpenseSummaryCards';
 export * from './components/ExpenseBalancesList';
 export * from './components/ExpenseList';
+export * from './components/ExpenseFilterBar';
 export * from './components/CreateExpenseModal';
+export * from './components/EditExpenseModal';
 export * from './components/ConfirmDeleteExpenseModal';
 export * from './components/HomeExpensesTab';

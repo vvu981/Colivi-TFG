@@ -8,7 +8,10 @@ import {
   ChevronDown,
   ChevronUp,
   Trash2,
+  Pencil,
   ArrowRightLeft,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { formatUserDisplayName, getUserInitial } from '../utils/userDisplay';
 
@@ -17,6 +20,11 @@ interface ExpenseListProps {
   currentUserId?: string;
   isAdmin?: boolean;
   onDeleteExpense: (expense: ExpenseResponseDto) => void;
+  onEditExpense?: (expense: ExpenseResponseDto) => void;
+  currentPage?: number;
+  totalPages?: number;
+  totalElements?: number;
+  onPageChange?: (page: number) => void;
 }
 
 export const ExpenseList: React.FC<ExpenseListProps> = ({
@@ -24,6 +32,11 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
   currentUserId,
   isAdmin = false,
   onDeleteExpense,
+  onEditExpense,
+  currentPage = 0,
+  totalPages = 0,
+  totalElements,
+  onPageChange,
 }) => {
   const [expandedExpenseId, setExpandedExpenseId] = useState<string | null>(null);
 
@@ -159,11 +172,23 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
                     )}
                   </button>
 
+                  {canDelete && !isPayment && onEditExpense && (
+                    <button
+                      type="button"
+                      onClick={() => onEditExpense(expense)}
+                      className="p-1.5 text-secondary hover:text-primary hover:bg-primary/10 rounded-lg transition-colors cursor-pointer"
+                      title="Editar gasto"
+                      aria-label="Editar gasto"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                  )}
+
                   {canDelete && (
                     <button
                       type="button"
                       onClick={() => onDeleteExpense(expense)}
-                      className="p-1.5 text-secondary hover:text-error hover:bg-error-container/20 rounded-lg transition-colors"
+                      className="p-1.5 text-secondary hover:text-error hover:bg-error-container/20 rounded-lg transition-colors cursor-pointer"
                       title="Eliminar gasto"
                       aria-label="Eliminar gasto"
                     >
@@ -231,6 +256,37 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
           </div>
         );
       })}
+
+      {/* Controles de Paginación */}
+      {totalPages > 1 && onPageChange && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 px-1 border-t border-outline-variant/40 text-xs text-secondary">
+          <span>
+            Página <strong className="text-on-surface">{currentPage + 1}</strong> de{' '}
+            <strong className="text-on-surface">{totalPages}</strong>
+            {totalElements !== undefined && ` (${totalElements} movimientos)`}
+          </span>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => onPageChange(currentPage - 1)}
+              disabled={currentPage === 0}
+              className="inline-flex items-center gap-1 px-3 py-1.5 bg-surface border border-outline-variant/60 rounded-xl text-xs font-semibold text-on-surface hover:bg-surface-container disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+              <span>Anterior</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onPageChange(currentPage + 1)}
+              disabled={currentPage >= totalPages - 1}
+              className="inline-flex items-center gap-1 px-3 py-1.5 bg-surface border border-outline-variant/60 rounded-xl text-xs font-semibold text-on-surface hover:bg-surface-container disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+            >
+              <span>Siguiente</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

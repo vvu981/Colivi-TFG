@@ -14,9 +14,13 @@ import com.vvu981.colivibackend.features.user.domain.UserRole;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
 import com.vvu981.colivibackend.features.home.domain.event.ExpenseCreatedEvent;
 import com.vvu981.colivibackend.features.home.domain.event.ExpenseDeletedEvent;
+import com.vvu981.colivibackend.features.home.domain.event.ExpenseUpdatedEvent;
 import com.vvu981.colivibackend.features.home.domain.event.PaymentRecordedEvent;
+import com.vvu981.colivibackend.features.home.repository.specification.HomeExpenseSpecification;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -72,6 +76,64 @@ public class HomeExpenseServiceImpl implements HomeExpenseService {
                 expense.getTotalAmount()
         ));
         
+        return expenseMapper.toExpenseResponseDto(expense);
+    }
+
+    @Override
+    @Transactional
+    public ExpenseResponseDto updateExpense(UUID homeId, UUID expenseId, UpdateExpenseRequest request, UUID requestUserId) {
+        validateActiveMember(homeId, requestUserId);
+
+        HomeExpense expense = expenseRepository.findByIdAndDeletedAtIsNull(expenseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Gasto no encontrado"));
+
+        if (!expense.getHome().getId().equals(homeId)) {
+            throw new ResourceNotFoundException("El gasto no pertenece a este hogar");
+        }
+
+        if (expense.isPayment()) {
+            throw new BusinessRuleValidationException("Los pagos directos no pueden ser editados. Si hubo un error, elimínalo y regístralo de nuevo.");
+        }
+
+        User requestUser = userRepository.findActiveById(requestUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+
+        boolean isSystemAdmin = requestUser.getRole() == UserRole.ADMIN;
+        boolean isPayer = expense.getPayer().getId().equals(requestUserId);
+        boolean isHomeAdmin = memberRepository.findByHomeIdAndUserId(homeId, requestUserId)
+                .filter(m -> m.getStatus() == HomeMemberStatus.ACTIVE && m.getRole() == HomeRole.ADMIN)
+                .isPresent();
+
+        if (!isSystemAdmin && !isPayer && !isHomeAdmin) {
+            throw new UnauthorizedActionException("Solo el pagador original o un administrador pueden editar el gasto");
+        }
+
+        validatePayerAndParticipants(homeId, request.payerId(), request.participantIds());
+
+        User newPayer = userRepository.findActiveById(request.payerId())
+                .orElseThrow(() -> new ResourceNotFoundException("Pagador no encontrado"));
+
+        expense.setDescription(request.description());
+        expense.setTotalAmount(request.totalAmount());
+        expense.setPayer(newPayer);
+
+        expense.getParticipants().clear();
+
+        if (request.customSplits() != null && !request.customSplits().isEmpty()) {
+            distributeCustomSplits(expense, request.customSplits(), request.participantIds(), request.totalAmount());
+        } else {
+            distributeExactAmount(expense, request.participantIds(), request.totalAmount());
+        }
+
+        expenseRepository.save(expense);
+
+        eventPublisher.publishEvent(new ExpenseUpdatedEvent(
+                homeId,
+                requestUserId,
+                expense.getDescription(),
+                expense.getTotalAmount()
+        ));
+
         return expenseMapper.toExpenseResponseDto(expense);
     }
 
@@ -186,6 +248,18 @@ public class HomeExpenseServiceImpl implements HomeExpenseService {
         return expenses.stream()
                 .map(expenseMapper::toExpenseResponseDto)
                 .toList();
+    }
+
+    @Override
+    public Page<ExpenseResponseDto> getHomeExpensesPaged(UUID homeId, ExpenseFilterDto filter, Pageable pageable, UUID requestUserId) {
+        validateMemberHasReadAccess(homeId, requestUserId);
+
+        Page<HomeExpense> expensePage = expenseRepository.findAll(
+                HomeExpenseSpecification.withFilter(homeId, filter),
+                pageable
+        );
+
+        return expensePage.map(expenseMapper::toExpenseResponseDto);
     }
 
     @Override

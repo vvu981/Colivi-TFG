@@ -22,6 +22,7 @@ export type ActivityType =
   | 'ADMIN_TRANSFERRED'
   | 'HOME_DELETED'
   | 'EXPENSE_CREATED'
+  | 'EXPENSE_UPDATED'
   | 'EXPENSE_DELETED'
   | 'PAYMENT_RECORDED'
   | 'DEBT_SETTLED';
@@ -133,6 +134,22 @@ export interface CreateExpenseRequest {
   payerId: string;
   participantIds: string[];
   customSplits?: ExpenseParticipantShareDto[];
+}
+
+export interface UpdateExpenseRequest {
+  description: string;
+  totalAmount: number;
+  payerId: string;
+  participantIds: string[];
+  customSplits?: ExpenseParticipantShareDto[];
+}
+
+export interface ExpenseFilterParams {
+  search?: string;
+  payerId?: string;
+  onlyPayments?: boolean;
+  page?: number;
+  size?: number;
 }
 
 /**

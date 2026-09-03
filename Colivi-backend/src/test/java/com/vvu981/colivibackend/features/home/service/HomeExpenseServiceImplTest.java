@@ -8,6 +8,7 @@ import com.vvu981.colivibackend.features.home.mapper.HomeExpenseMapper;
 import com.vvu981.colivibackend.features.home.repository.HomeExpenseRepository;
 import com.vvu981.colivibackend.features.home.repository.HomeMemberRepository;
 import com.vvu981.colivibackend.features.home.repository.HomeRepository;
+import com.vvu981.colivibackend.features.home.domain.event.ExpenseUpdatedEvent;
 import com.vvu981.colivibackend.features.home.domain.event.PaymentRecordedEvent;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
@@ -724,6 +725,143 @@ class HomeExpenseServiceImplTest {
 
             assertThrows(UnauthorizedActionException.class,
                     () -> service.recordPayment(homeId, req, thirdPartyId));
+        }
+    }
+
+    @Nested
+    class UpdateExpenseTests {
+
+        @Test
+        void updateExpense_Success() {
+            mockActiveMember(homeId, payerId);
+
+            HomeExpense expense = new HomeExpense();
+            expense.setId(UUID.randomUUID());
+            expense.setHome(home);
+            expense.setPayer(payer);
+            expense.setDescription("Old Pizza");
+            expense.setTotalAmount(new BigDecimal("20.00"));
+
+            when(expenseRepository.findByIdAndDeletedAtIsNull(expense.getId())).thenReturn(Optional.of(expense));
+            when(userRepository.findActiveById(payerId)).thenReturn(Optional.of(payer));
+            when(userRepository.findAllById(any())).thenReturn(List.of(payer, participant1));
+            mockActiveMembersList(homeId, payer, participant1);
+
+            UpdateExpenseRequest req = new UpdateExpenseRequest(
+                    "New Pizza & Drinks",
+                    new BigDecimal("30.00"),
+                    payerId,
+                    List.of(payerId, participant1Id)
+            );
+
+            ExpenseResponseDto dto = new ExpenseResponseDto(
+                    expense.getId(),
+                    homeId,
+                    "New Pizza & Drinks",
+                    new BigDecimal("30.00"),
+                    null,
+                    java.time.LocalDateTime.now(),
+                    false,
+                    List.of()
+            );
+            when(expenseMapper.toExpenseResponseDto(any(HomeExpense.class))).thenReturn(dto);
+
+            ExpenseResponseDto result = service.updateExpense(homeId, expense.getId(), req, payerId);
+
+            assertNotNull(result);
+            assertEquals("New Pizza & Drinks", result.description());
+            verify(expenseRepository).save(expense);
+            verify(eventPublisher).publishEvent(any(ExpenseUpdatedEvent.class));
+        }
+
+        @Test
+        void updateExpense_ThrowsWhenExpenseIsPayment() {
+            mockActiveMember(homeId, payerId);
+
+            HomeExpense expense = new HomeExpense();
+            expense.setId(UUID.randomUUID());
+            expense.setHome(home);
+            expense.setPayer(payer);
+            expense.setPayment(true);
+
+            when(expenseRepository.findByIdAndDeletedAtIsNull(expense.getId())).thenReturn(Optional.of(expense));
+
+            UpdateExpenseRequest req = new UpdateExpenseRequest(
+                    "Cannot edit payment",
+                    new BigDecimal("30.00"),
+                    payerId,
+                    List.of(payerId)
+            );
+
+            BusinessRuleValidationException ex = assertThrows(BusinessRuleValidationException.class,
+                    () -> service.updateExpense(homeId, expense.getId(), req, payerId));
+
+            assertTrue(ex.getMessage().contains("Los pagos directos no pueden ser editados"));
+        }
+
+        @Test
+        void updateExpense_ThrowsWhenCallerNotPayerOrAdmin() {
+            mockActiveMember(homeId, participant1Id);
+
+            HomeExpense expense = new HomeExpense();
+            expense.setId(UUID.randomUUID());
+            expense.setHome(home);
+            expense.setPayer(payer);
+
+            when(expenseRepository.findByIdAndDeletedAtIsNull(expense.getId())).thenReturn(Optional.of(expense));
+            when(userRepository.findActiveById(participant1Id)).thenReturn(Optional.of(participant1));
+
+            HomeMember regularMember = new HomeMember();
+            regularMember.setStatus(HomeMemberStatus.ACTIVE);
+            regularMember.setRole(HomeRole.MEMBER);
+            when(memberRepository.findByHomeIdAndUserId(homeId, participant1Id)).thenReturn(Optional.of(regularMember));
+
+            UpdateExpenseRequest req = new UpdateExpenseRequest(
+                    "Try edit someone else",
+                    new BigDecimal("30.00"),
+                    payerId,
+                    List.of(payerId)
+            );
+
+            assertThrows(UnauthorizedActionException.class,
+                    () -> service.updateExpense(homeId, expense.getId(), req, participant1Id));
+        }
+
+        @Test
+        void getHomeExpensesPaged_Success() {
+            mockActiveMember(homeId, payerId);
+
+            HomeExpense expense = new HomeExpense();
+            expense.setId(UUID.randomUUID());
+            expense.setDescription("Compra");
+            expense.setTotalAmount(new BigDecimal("10.00"));
+
+            org.springframework.data.domain.Page<HomeExpense> page = new org.springframework.data.domain.PageImpl<>(List.of(expense));
+            when(expenseRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(org.springframework.data.domain.Pageable.class)))
+                    .thenReturn(page);
+
+            ExpenseResponseDto dto = new ExpenseResponseDto(
+                    expense.getId(),
+                    homeId,
+                    "Compra",
+                    new BigDecimal("10.00"),
+                    null,
+                    java.time.LocalDateTime.now(),
+                    false,
+                    List.of()
+            );
+            when(expenseMapper.toExpenseResponseDto(expense)).thenReturn(dto);
+
+            org.springframework.data.domain.Page<ExpenseResponseDto> result = service.getHomeExpensesPaged(
+                    homeId,
+                    ExpenseFilterDto.of("compra", null, null),
+                    org.springframework.data.domain.PageRequest.of(0, 10),
+                    payerId
+            );
+
+            assertNotNull(result);
+            assertEquals(1, result.getTotalElements());
+            assertEquals("Compra", result.getContent().get(0).description());
         }
     }
 }

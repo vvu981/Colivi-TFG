@@ -156,4 +156,19 @@ class ActivityLogFormattersTest {
         assertEquals("25.00", log.getMetadata().get("amount"));
         assertEquals("Bizum", log.getMetadata().get("notes"));
     }
+
+    @Test
+    void testExpenseUpdatedActivityFormatter() {
+        ExpenseUpdatedActivityFormatter formatter = new ExpenseUpdatedActivityFormatter();
+        ExpenseUpdatedEvent event = new ExpenseUpdatedEvent(homeId, actorId, "Internet Bill Modificado", new BigDecimal("60.00"));
+
+        assertTrue(formatter.supports(event));
+
+        ActivityLog log = formatter.format(event);
+        assertEquals(ActivityType.EXPENSE_UPDATED, log.getActivityType());
+        assertEquals("Se ha modificado el gasto: 'Internet Bill Modificado'.", log.getDescription());
+        Map<String, Object> meta = log.getMetadata();
+        assertEquals("Internet Bill Modificado", meta.get("expenseDescription"));
+        assertEquals("60.00", meta.get("amount"));
+    }
 }
