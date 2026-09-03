@@ -5,7 +5,7 @@ interface InviteMembersModalProps {
   isOpen: boolean;
   onClose: () => void;
   homeName: string;
-  invitationCode: string;
+  invitationCode?: string | null;
   isAdmin: boolean;
   onRegenerateCode?: () => Promise<string>;
 }
@@ -22,10 +22,10 @@ export const InviteMembersModal: React.FC<InviteMembersModalProps> = ({
   const [copiedMsg, setCopiedMsg] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [showRegenConfirm, setShowRegenConfirm] = useState(false);
-  const [currentCode, setCurrentCode] = useState(invitationCode);
+  const [currentCode, setCurrentCode] = useState(invitationCode ?? '');
 
   useEffect(() => {
-    setCurrentCode(invitationCode);
+    setCurrentCode(invitationCode ?? '');
   }, [invitationCode]);
 
   useEffect(() => {

@@ -74,7 +74,7 @@ export function useHomeDetail(homeId: string | undefined): UseHomeDetailReturn {
     if (!homeId) throw new Error('Hogar no especificado');
     const updated = await homeService.regenerateInvitationCode(homeId);
     setHome(updated);
-    return updated.invitationCode;
+    return updated.invitationCode ?? '';
   };
 
   const handleTransferAdmin = async (targetUserId: string): Promise<void> => {

@@ -23,9 +23,11 @@ export const HomeCard: React.FC<HomeCardProps> = ({
 
   const handleCopyCode = (e: React.MouseEvent) => {
     e.stopPropagation();
-    navigator.clipboard.writeText(home.invitationCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (home.invitationCode) {
+      navigator.clipboard.writeText(home.invitationCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const isAdmin = home.myRole === 'ADMIN';

@@ -22,9 +22,11 @@ export const HomeSettingsPanel: React.FC<HomeSettingsPanelProps> = ({
   const [showRegenConfirm, setShowRegenConfirm] = useState(false);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(home.invitationCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (home.invitationCode) {
+      navigator.clipboard.writeText(home.invitationCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const handleRegenerate = async () => {
