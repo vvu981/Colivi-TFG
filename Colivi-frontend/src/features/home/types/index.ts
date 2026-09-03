@@ -24,8 +24,7 @@ export type ActivityType =
   | 'EXPENSE_CREATED'
   | 'EXPENSE_UPDATED'
   | 'EXPENSE_DELETED'
-  | 'PAYMENT_RECORDED'
-  | 'DEBT_SETTLED';
+  | 'PAYMENT_RECORDED';
 
 /**
  * Proyección ligera de un hogar para tarjetas y listados.

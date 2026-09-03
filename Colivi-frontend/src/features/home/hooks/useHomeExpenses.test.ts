@@ -40,6 +40,12 @@ describe('useHomeExpenses hook', () => {
 
   const mockBalances = [
     {
+      user: {
+        id: 'u1',
+        fullName: 'User One',
+        email: 'user1@test.com',
+      },
+      amount: 30,
       userId: 'u1',
       fullName: 'User One',
       email: 'user1@test.com',

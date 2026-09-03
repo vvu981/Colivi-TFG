@@ -135,7 +135,7 @@ public class HomeServiceImpl implements HomeService {
             }
         }
 
-        homeBalanceValidator.validateZeroBalance(homeId, userId);
+        homeBalanceValidator.validateNoPendingDebt(homeId, userId);
         currentMember.leave();
         eventPublisher.publishEvent(new MemberLeftEvent(homeId, userId, currentMember.getUser().getFullName()));
     }

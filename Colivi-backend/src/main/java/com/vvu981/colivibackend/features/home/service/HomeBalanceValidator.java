@@ -34,4 +34,18 @@ public class HomeBalanceValidator {
             );
         }
     }
+
+    /**
+     * Valida que el miembro no tenga saldo deudor pendiente (< 0).
+     * Permite salir voluntariamente si el balance es 0 o positivo (a favor).
+     */
+    public void validateNoPendingDebt(UUID homeId, UUID userId) {
+        BigDecimal balanceNeto = expenseQueryService.getUserBalance(homeId, userId);
+
+        if (balanceNeto.compareTo(BigDecimal.ZERO) < 0) {
+            throw new BusinessRuleValidationException(
+                    "No puedes salir del hogar porque tienes un balance deudor pendiente (" + balanceNeto + "€). Salda tus deudas antes de salir."
+            );
+        }
+    }
 }

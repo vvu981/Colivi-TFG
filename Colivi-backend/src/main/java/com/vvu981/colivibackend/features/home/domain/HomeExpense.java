@@ -48,6 +48,7 @@ public class HomeExpense {
     @Column(name = "is_payment", nullable = false)
     private boolean isPayment = false;
 
+    @org.hibernate.annotations.BatchSize(size = 25)
     @OneToMany(mappedBy = "expense", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<HomeExpenseParticipant> participants = new ArrayList<>();
 

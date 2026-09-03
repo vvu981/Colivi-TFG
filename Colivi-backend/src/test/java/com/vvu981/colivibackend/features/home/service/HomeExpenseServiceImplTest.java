@@ -563,6 +563,28 @@ class HomeExpenseServiceImplTest {
         }
 
         @Test
+        void deleteExpense_Success_ByPaymentReceiver() {
+            HomeExpense payment = new HomeExpense();
+            payment.setHome(home);
+            payment.setPayer(payer);
+            payment.setPayment(true);
+            payment.setDescription("Pago a Juan");
+
+            HomeExpenseParticipant p = new HomeExpenseParticipant();
+            p.setUser(participant1);
+            p.setOwedAmount(new BigDecimal("25.00"));
+            payment.addParticipant(p);
+
+            when(expenseRepository.findByIdAndDeletedAtIsNull(payment.getId())).thenReturn(Optional.of(payment));
+            when(userRepository.findActiveById(participant1Id)).thenReturn(Optional.of(participant1));
+
+            service.deleteExpense(homeId, payment.getId(), participant1Id);
+
+            assertNotNull(payment.getDeletedAt());
+            verify(expenseRepository).save(payment);
+        }
+
+        @Test
         void createExpense_ThrowsIfPayerNotFound() {
             mockActiveMember(homeId, payerId);
             when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));

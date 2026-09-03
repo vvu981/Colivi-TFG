@@ -27,15 +27,14 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class HomeExpenseController {
 
-    private final HomeExpenseService commandService;
-    private final HomeExpenseService queryService;
+    private final HomeExpenseService expenseService;
 
     @PostMapping
     public ResponseEntity<ExpenseResponseDto> createExpense(
             @PathVariable UUID homeId,
             @Valid @RequestBody CreateExpenseRequest request,
             @AuthenticationPrincipal(expression = "id") UUID requestUserId) {
-        ExpenseResponseDto expense = commandService.createExpense(homeId, request, requestUserId);
+        ExpenseResponseDto expense = expenseService.createExpense(homeId, request, requestUserId);
         return ResponseEntity.status(HttpStatus.CREATED).body(expense);
     }
 
@@ -45,7 +44,7 @@ public class HomeExpenseController {
             @PathVariable UUID expenseId,
             @Valid @RequestBody UpdateExpenseRequest request,
             @AuthenticationPrincipal(expression = "id") UUID requestUserId) {
-        ExpenseResponseDto expense = commandService.updateExpense(homeId, expenseId, request, requestUserId);
+        ExpenseResponseDto expense = expenseService.updateExpense(homeId, expenseId, request, requestUserId);
         return ResponseEntity.ok(expense);
     }
 
@@ -54,7 +53,7 @@ public class HomeExpenseController {
             @PathVariable UUID homeId,
             @Valid @RequestBody RecordPaymentRequest request,
             @AuthenticationPrincipal(expression = "id") UUID requestUserId) {
-        ExpenseResponseDto payment = commandService.recordPayment(homeId, request, requestUserId);
+        ExpenseResponseDto payment = expenseService.recordPayment(homeId, request, requestUserId);
         return ResponseEntity.status(HttpStatus.CREATED).body(payment);
     }
 
@@ -63,7 +62,7 @@ public class HomeExpenseController {
             @PathVariable UUID homeId,
             @PathVariable UUID expenseId,
             @AuthenticationPrincipal(expression = "id") UUID requestUserId) {
-        commandService.deleteExpense(homeId, expenseId, requestUserId);
+        expenseService.deleteExpense(homeId, expenseId, requestUserId);
         return ResponseEntity.noContent().build();
     }
 
@@ -76,7 +75,7 @@ public class HomeExpenseController {
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
             @AuthenticationPrincipal(expression = "id") UUID requestUserId) {
         ExpenseFilterDto filter = ExpenseFilterDto.of(search, payerId, onlyPayments);
-        Page<ExpenseResponseDto> expenses = queryService.getHomeExpensesPaged(homeId, filter, pageable, requestUserId);
+        Page<ExpenseResponseDto> expenses = expenseService.getHomeExpensesPaged(homeId, filter, pageable, requestUserId);
         return ResponseEntity.ok(expenses);
     }
 
@@ -84,7 +83,7 @@ public class HomeExpenseController {
     public ResponseEntity<List<BalanceResponseDto>> getHomeBalances(
             @PathVariable UUID homeId,
             @AuthenticationPrincipal(expression = "id") UUID requestUserId) {
-        List<BalanceResponseDto> balances = queryService.getHomeBalances(homeId, requestUserId);
+        List<BalanceResponseDto> balances = expenseService.getHomeBalances(homeId, requestUserId);
         return ResponseEntity.ok(balances);
     }
 
@@ -92,7 +91,7 @@ public class HomeExpenseController {
     public ResponseEntity<List<DebtTransferResponseDto>> getOptimizedTransfers(
             @PathVariable UUID homeId,
             @AuthenticationPrincipal(expression = "id") UUID requestUserId) {
-        List<DebtTransferResponseDto> transfers = queryService.getOptimizedTransfers(homeId, requestUserId);
+        List<DebtTransferResponseDto> transfers = expenseService.getOptimizedTransfers(homeId, requestUserId);
         return ResponseEntity.ok(transfers);
     }
 }

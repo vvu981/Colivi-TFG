@@ -63,11 +63,11 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
       {expenses.map((expense) => {
         const isExpanded = expandedExpenseId === expense.id;
         const isPayer = expense.payer.id === currentUserId;
-        const canDelete = isPayer || isAdmin;
-        const date = new Date(expense.createdAt);
         const isPayment = Boolean(expense.isPayment);
         const receiver = isPayment && expense.participants.length > 0 ? expense.participants[0].user : null;
         const isReceiver = receiver?.id === currentUserId;
+        const canDelete = isPayer || (isPayment && isReceiver) || isAdmin;
+        const date = new Date(expense.createdAt);
 
         return (
           <div

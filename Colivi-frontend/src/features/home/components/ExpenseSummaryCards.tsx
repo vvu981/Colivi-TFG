@@ -52,10 +52,10 @@ export const ExpenseSummaryCards: React.FC<ExpenseSummaryCardsProps> = ({
         </div>
       </div>
 
-      {/* Tarjeta de Gasto Total */}
+      {/* Tarjeta de Gasto Visible */}
       <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-2xl p-5 flex flex-col justify-between shadow-2xs">
         <div className="flex items-center justify-between gap-2 mb-2">
-          <span className="text-xs font-semibold text-secondary">Gasto total acumulado</span>
+          <span className="text-xs font-semibold text-secondary">Total gastos visibles</span>
           <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center">
             <Receipt className="w-4 h-4" />
           </div>
@@ -64,7 +64,7 @@ export const ExpenseSummaryCards: React.FC<ExpenseSummaryCardsProps> = ({
           <div className="text-2xl font-black tracking-tight text-on-surface">
             {totalExpensesAmount.toFixed(2)} €
           </div>
-          <p className="text-[11px] text-secondary mt-1">Suma de todos los gastos registrados</p>
+          <p className="text-[11px] text-secondary mt-1">Suma de los gastos en la vista actual</p>
         </div>
       </div>
 

@@ -23,6 +23,6 @@ public interface HomeExpenseRepository extends JpaRepository<HomeExpense, UUID>,
     Optional<HomeExpense> findByIdAndDeletedAtIsNull(UUID id);
 
     @Override
-    @EntityGraph(attributePaths = {"payer", "participants.user"})
+    @EntityGraph(attributePaths = {"payer"})
     Page<HomeExpense> findAll(Specification<HomeExpense> spec, Pageable pageable);
 }

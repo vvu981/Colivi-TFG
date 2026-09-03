@@ -118,6 +118,7 @@ public class HomeExpenseServiceImpl implements HomeExpenseService {
         expense.setPayer(newPayer);
 
         expense.getParticipants().clear();
+        expenseRepository.saveAndFlush(expense);
 
         if (request.customSplits() != null && !request.customSplits().isEmpty()) {
             distributeCustomSplits(expense, request.customSplits(), request.participantIds(), request.totalAmount());
@@ -219,6 +220,8 @@ public class HomeExpenseServiceImpl implements HomeExpenseService {
 
         boolean isSystemAdmin = requestUser.getRole() == UserRole.ADMIN;
         boolean isPayer = expense.getPayer().getId().equals(requestUserId);
+        boolean isPaymentReceiver = expense.isPayment() && expense.getParticipants().stream()
+                .anyMatch(p -> p.getUser().getId().equals(requestUserId));
         
         boolean isHomeAdmin = false;
         Optional<HomeMember> memberOpt = memberRepository.findByHomeIdAndUserId(homeId, requestUserId);
@@ -226,8 +229,12 @@ public class HomeExpenseServiceImpl implements HomeExpenseService {
             isHomeAdmin = true;
         }
 
-        if (!isSystemAdmin && !isPayer && !isHomeAdmin) {
-            throw new UnauthorizedActionException("Solo el pagador original o un administrador pueden eliminar el gasto");
+        if (!isSystemAdmin && !isPayer && !isPaymentReceiver && !isHomeAdmin) {
+            throw new UnauthorizedActionException(
+                    expense.isPayment()
+                            ? "Solo las partes involucradas en el pago o un administrador pueden eliminar este pago"
+                            : "Solo el pagador original o un administrador pueden eliminar el gasto"
+            );
         }
 
         expense.softDelete();
