@@ -7,23 +7,30 @@ import com.vvu981.colivibackend.features.home.domain.Home;
 import com.vvu981.colivibackend.features.home.domain.HomeMember;
 import com.vvu981.colivibackend.features.home.domain.HomeMemberStatus;
 import com.vvu981.colivibackend.features.home.domain.HomeRole;
+import com.vvu981.colivibackend.features.home.domain.event.AdminTransferredEvent;
+import com.vvu981.colivibackend.features.home.domain.event.HomeCreatedEvent;
+import com.vvu981.colivibackend.features.home.domain.event.HomeDeletedEvent;
+import com.vvu981.colivibackend.features.home.domain.event.MemberExpelledEvent;
+import com.vvu981.colivibackend.features.home.domain.event.MemberJoinedEvent;
+import com.vvu981.colivibackend.features.home.domain.event.MemberLeftEvent;
+import com.vvu981.colivibackend.features.home.dto.CreateExpenseRequest;
 import com.vvu981.colivibackend.features.home.dto.CreateHomeRequest;
 import com.vvu981.colivibackend.features.home.dto.HomeDetailResponseDto;
 import com.vvu981.colivibackend.features.home.dto.HomeResponseDto;
 import com.vvu981.colivibackend.features.home.dto.JoinHomeRequest;
-import com.vvu981.colivibackend.features.home.domain.event.*;
-import org.springframework.context.ApplicationEventPublisher;
 import com.vvu981.colivibackend.features.home.mapper.HomeMapper;
+import com.vvu981.colivibackend.features.home.repository.ActivityLogRepository;
 import com.vvu981.colivibackend.features.home.repository.HomeMemberRepository;
 import com.vvu981.colivibackend.features.home.repository.HomeRepository;
-import com.vvu981.colivibackend.features.home.repository.ActivityLogRepository;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -176,17 +183,17 @@ public class HomeServiceImpl implements HomeService {
                     "Solo puedes expulsar a un miembro activo.");
         }
 
-        java.math.BigDecimal userBalance = homeExpenseService.getUserBalance(homeId, targetUserId);
+        BigDecimal userBalance = homeExpenseService.getUserBalance(homeId, targetUserId);
 
-        if (userBalance.compareTo(java.math.BigDecimal.ZERO) != 0) {
+        if (userBalance.compareTo(BigDecimal.ZERO) != 0) {
             String baseDesc = "CONDONACIÓN_EXPULSIÓN";
             String expenseDescription = reason != null && !reason.isBlank() ? baseDesc + ": " + reason : baseDesc;
-            java.math.BigDecimal absBalance = userBalance.abs();
+            BigDecimal absBalance = userBalance.abs();
             
             Home home = homeRepository.findByIdForUpdate(homeId)
                     .orElseThrow(() -> new ResourceNotFoundException("Hogar no encontrado o eliminado"));
             
-            java.util.List<UUID> activeMemberIds = home.getMembers().stream()
+            List<UUID> activeMemberIds = home.getMembers().stream()
                     .filter(m -> m.getStatus() == HomeMemberStatus.ACTIVE && !m.getUser().getId().equals(targetUserId))
                     .map(m -> m.getUser().getId())
                     .toList();
@@ -195,11 +202,11 @@ public class HomeServiceImpl implements HomeService {
                 throw new BusinessRuleValidationException("No hay miembros activos suficientes para condonar la deuda.");
             }
 
-            com.vvu981.colivibackend.features.home.dto.CreateExpenseRequest request;
+            CreateExpenseRequest request;
 
-            if (userBalance.compareTo(java.math.BigDecimal.ZERO) < 0) {
+            if (userBalance.compareTo(BigDecimal.ZERO) < 0) {
                 // Moroso: su deuda se reparte. El moroso figura como pagador para subir su balance, y el resto como consumidores (asumen la pérdida).
-                request = new com.vvu981.colivibackend.features.home.dto.CreateExpenseRequest(
+                request = new CreateExpenseRequest(
                         expenseDescription, absBalance, targetUserId, activeMemberIds);
             } else {
                 // Acreedor: la casa asume el beneficio. El resto son pagadores figurativos, el expulsado es el consumidor.
@@ -207,8 +214,8 @@ public class HomeServiceImpl implements HomeService {
                 // idealmente todos deberían abonarle. Para simplificar, si hay acreencia, el admin la representa, pero es mejor
                 // que asuma el pago un solo miembro (ej. el admin) y se reparta el consumo. 
                 // Moroso es el caso crítico a arreglar. En ambos casos, targetUserId es el que se neutraliza.
-                request = new com.vvu981.colivibackend.features.home.dto.CreateExpenseRequest(
-                        expenseDescription, absBalance, adminUserId, java.util.List.of(targetUserId));
+                request = new CreateExpenseRequest(
+                        expenseDescription, absBalance, adminUserId, List.of(targetUserId));
             }
 
             homeExpenseService.createExpense(homeId, request, adminUserId);

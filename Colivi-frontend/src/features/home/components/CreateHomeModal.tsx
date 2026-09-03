@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Home, X, Loader2 } from 'lucide-react';
 import type { CreateHomeRequest } from '../types';
 
@@ -16,6 +16,17 @@ export const CreateHomeModal: React.FC<CreateHomeModalProps> = ({
   const [name, setName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isSubmitting) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, isSubmitting, onClose]);
 
   if (!isOpen) return null;
 
@@ -41,13 +52,15 @@ export const CreateHomeModal: React.FC<CreateHomeModalProps> = ({
       const message =
         err instanceof Error ? err.message : 'Error al crear el hogar. Inténtalo de nuevo.';
       setError(message);
-    } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="create-home-title"
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150"
       onClick={onClose}
     >
@@ -59,6 +72,7 @@ export const CreateHomeModal: React.FC<CreateHomeModalProps> = ({
           type="button"
           onClick={onClose}
           className="absolute top-4 right-4 p-1.5 text-secondary hover:text-on-surface rounded-lg transition-colors"
+          aria-label="Cerrar modal"
         >
           <X className="w-5 h-5" />
         </button>
@@ -68,7 +82,7 @@ export const CreateHomeModal: React.FC<CreateHomeModalProps> = ({
             <Home className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-on-surface">Crear un Nuevo Hogar</h2>
+            <h2 id="create-home-title" className="text-lg font-bold text-on-surface">Crear un Nuevo Hogar</h2>
             <p className="text-xs text-secondary">Serás el administrador de este grupo.</p>
           </div>
         </div>

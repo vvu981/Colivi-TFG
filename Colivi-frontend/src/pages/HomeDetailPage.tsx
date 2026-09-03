@@ -46,8 +46,13 @@ export const HomeDetailPage: React.FC = () => {
     unarchiveHome,
   } = useHomeDetail(id);
 
-  const initialTab = (searchParams.get('tab') as HomeDetailTab) || 'members';
-  const [activeTab, setActiveTab] = useState<HomeDetailTab>(initialTab);
+  const requestedTab = (searchParams.get('tab') as HomeDetailTab) || 'members';
+  const activeTab: HomeDetailTab =
+    requestedTab === 'settings' && (!isAdmin || !isActiveMember)
+      ? 'members'
+      : requestedTab === 'activities' || requestedTab === 'settings'
+        ? requestedTab
+        : 'members';
 
   // Modales
   const [isInviteOpen, setIsInviteOpen] = useState(false);
@@ -58,7 +63,6 @@ export const HomeDetailPage: React.FC = () => {
   const [expelTargetMember, setExpelTargetMember] = useState<HomeMemberResponseDto | null>(null);
 
   const handleTabChange = (tab: HomeDetailTab) => {
-    setActiveTab(tab);
     setSearchParams({ tab });
   };
 

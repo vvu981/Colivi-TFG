@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserMinus, X, Loader2, AlertTriangle, ShieldCheck } from 'lucide-react';
 import type { HomeMemberResponseDto } from '../types';
 
@@ -22,6 +22,17 @@ export const ExpelMemberModal: React.FC<ExpelMemberModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isSubmitting) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, isSubmitting, onClose]);
+
   if (!isOpen || !member) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -41,13 +52,15 @@ export const ExpelMemberModal: React.FC<ExpelMemberModalProps> = ({
           ? err.message
           : 'Error al expulsar al miembro. Si tiene deudas pendientes, prueba con la opción de expulsión forzosa.';
       setError(message);
-    } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="expel-member-title"
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150"
       onClick={onClose}
     >
@@ -59,6 +72,7 @@ export const ExpelMemberModal: React.FC<ExpelMemberModalProps> = ({
           type="button"
           onClick={onClose}
           className="absolute top-4 right-4 p-1.5 text-secondary hover:text-on-surface rounded-lg transition-colors"
+          aria-label="Cerrar modal"
         >
           <X className="w-5 h-5" />
         </button>
@@ -68,7 +82,7 @@ export const ExpelMemberModal: React.FC<ExpelMemberModalProps> = ({
             <UserMinus className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-on-surface">Expulsar Miembro</h2>
+            <h2 id="expel-member-title" className="text-lg font-bold text-on-surface">Expulsar Miembro</h2>
             <p className="text-xs text-secondary">{member.fullName} ({member.email})</p>
           </div>
         </div>

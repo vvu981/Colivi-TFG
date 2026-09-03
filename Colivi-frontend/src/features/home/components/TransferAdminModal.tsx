@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShieldAlert, X, Loader2, Check } from 'lucide-react';
 import type { HomeMemberResponseDto } from '../types';
 
@@ -26,6 +26,17 @@ export const TransferAdminModal: React.FC<TransferAdminModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isSubmitting) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, isSubmitting, onClose]);
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -46,13 +57,15 @@ export const TransferAdminModal: React.FC<TransferAdminModalProps> = ({
           ? err.message
           : 'Error al transferir la administración del hogar.';
       setError(message);
-    } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="transfer-admin-title"
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150"
       onClick={onClose}
     >
@@ -64,6 +77,7 @@ export const TransferAdminModal: React.FC<TransferAdminModalProps> = ({
           type="button"
           onClick={onClose}
           className="absolute top-4 right-4 p-1.5 text-secondary hover:text-on-surface rounded-lg transition-colors"
+          aria-label="Cerrar modal"
         >
           <X className="w-5 h-5" />
         </button>
@@ -73,7 +87,7 @@ export const TransferAdminModal: React.FC<TransferAdminModalProps> = ({
             <ShieldAlert className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-on-surface">Transferir Administración</h2>
+            <h2 id="transfer-admin-title" className="text-lg font-bold text-on-surface">Transferir Administración</h2>
             <p className="text-xs text-secondary">Elige quién será el nuevo administrador.</p>
           </div>
         </div>

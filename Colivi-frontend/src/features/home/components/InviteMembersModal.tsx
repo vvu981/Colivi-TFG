@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserPlus, X, Copy, Check, Share2, RefreshCw, AlertTriangle, Loader2 } from 'lucide-react';
 
 interface InviteMembersModalProps {
@@ -23,6 +23,21 @@ export const InviteMembersModal: React.FC<InviteMembersModalProps> = ({
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [showRegenConfirm, setShowRegenConfirm] = useState(false);
   const [currentCode, setCurrentCode] = useState(invitationCode);
+
+  useEffect(() => {
+    setCurrentCode(invitationCode);
+  }, [invitationCode]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isRegenerating) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, isRegenerating, onClose]);
 
   if (!isOpen) return null;
 
@@ -61,6 +76,9 @@ export const InviteMembersModal: React.FC<InviteMembersModalProps> = ({
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="invite-modal-title"
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150"
       onClick={onClose}
     >
@@ -72,6 +90,7 @@ export const InviteMembersModal: React.FC<InviteMembersModalProps> = ({
           type="button"
           onClick={onClose}
           className="absolute top-4 right-4 p-1.5 text-secondary hover:text-on-surface rounded-lg transition-colors"
+          aria-label="Cerrar modal"
         >
           <X className="w-5 h-5" />
         </button>
@@ -81,7 +100,7 @@ export const InviteMembersModal: React.FC<InviteMembersModalProps> = ({
             <UserPlus className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-on-surface">Invitar a {homeName}</h2>
+            <h2 id="invite-modal-title" className="text-lg font-bold text-on-surface">Invitar a {homeName}</h2>
             <p className="text-xs text-secondary">Comparte el código con tus futuros compañeros.</p>
           </div>
         </div>

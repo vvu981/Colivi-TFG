@@ -146,5 +146,25 @@ class HomeMapperTest {
 
         assertEquals(1, dto.members().size());
         assertEquals(userOld.getId(), dto.members().get(0).userId());
+        org.junit.jupiter.api.Assertions.assertNull(dto.invitationCode(), "Invitation code must be null for ARCHIVED members");
+    }
+
+    @Test
+    void toResponseDto_MasksInvitationCode_WhenMemberNotActive() {
+        Home home = new Home();
+        home.setId(UUID.randomUUID());
+        home.setName("My Left Home");
+        home.setInvitationCode("SECRET_CODE");
+        home.setCreatedAt(LocalDateTime.now());
+        home.setMembers(new ArrayList<>());
+
+        HomeMember member = new HomeMember();
+        member.setRole(HomeRole.MEMBER);
+        member.setStatus(HomeMemberStatus.LEFT);
+        home.addMember(member);
+
+        HomeResponseDto dto = mapper.toResponseDto(home, member);
+
+        org.junit.jupiter.api.Assertions.assertNull(dto.invitationCode(), "Invitation code must be null for LEFT members");
     }
 }

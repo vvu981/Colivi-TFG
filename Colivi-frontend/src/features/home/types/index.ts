@@ -31,7 +31,7 @@ export type ActivityType =
 export interface HomeResponseDto {
   id: string;
   name: string;
-  invitationCode: string;
+  invitationCode?: string | null;
   myRole: HomeRole;
   myStatus: HomeMemberStatus;
   totalActiveMembers: number;
@@ -58,7 +58,7 @@ export interface HomeMemberResponseDto {
 export interface HomeDetailResponseDto {
   id: string;
   name: string;
-  invitationCode: string;
+  invitationCode?: string | null;
   myRole: HomeRole;
   myStatus: HomeMemberStatus;
   totalActiveMembers: number;

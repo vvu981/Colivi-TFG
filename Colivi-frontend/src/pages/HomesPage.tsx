@@ -48,7 +48,7 @@ export const HomesPage: React.FC = () => {
     return homes.filter(
       (h) =>
         h.name.toLowerCase().includes(q) ||
-        h.invitationCode.toLowerCase().includes(q)
+        (h.invitationCode && h.invitationCode.toLowerCase().includes(q))
     );
   }, [homes, searchQuery]);
 

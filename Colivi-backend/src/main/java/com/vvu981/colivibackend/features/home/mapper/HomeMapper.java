@@ -39,10 +39,14 @@ public class HomeMapper {
      * Mapea un {@link Home} con la perspectiva del miembro actual a un DTO de listado ligero.
      */
     public HomeResponseDto toResponseDto(Home home, HomeMember currentMember) {
+        String invitationCode = (currentMember.getStatus() == HomeMemberStatus.ACTIVE)
+                ? home.getInvitationCode()
+                : null;
+
         return new HomeResponseDto(
                 home.getId(),
                 home.getName(),
-                home.getInvitationCode(),
+                invitationCode,
                 currentMember.getRole(),
                 currentMember.getStatus(),
                 countActiveMembers(home),
@@ -70,10 +74,14 @@ public class HomeMapper {
                 ? countActiveMembers(home)
                 : memberDtos.stream().filter(m -> m.status() == HomeMemberStatus.ACTIVE).count();
 
+        String invitationCode = (currentMember.getStatus() == HomeMemberStatus.ACTIVE)
+                ? home.getInvitationCode()
+                : null;
+
         return new HomeDetailResponseDto(
                 home.getId(),
                 home.getName(),
-                home.getInvitationCode(),
+                invitationCode,
                 currentMember.getRole(),
                 currentMember.getStatus(),
                 activeCount,

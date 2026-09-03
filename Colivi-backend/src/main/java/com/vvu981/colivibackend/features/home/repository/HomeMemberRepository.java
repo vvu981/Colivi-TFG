@@ -22,13 +22,13 @@ public interface HomeMemberRepository extends JpaRepository<HomeMember, UUID> {
      * Retorna los hogares de un usuario filtrados por su estado de membresía,
      * excluyendo hogares eliminados lógicamente.
      */
-    @EntityGraph(attributePaths = {"user", "home"})
+    @EntityGraph(attributePaths = {"user", "home", "home.members"})
     List<HomeMember> findByUserIdAndStatusAndHomeDeletedAtIsNull(UUID userId, HomeMemberStatus status);
 
     /**
      * Retorna todos los hogares de un usuario, excluyendo hogares eliminados lógicamente.
      */
-    @EntityGraph(attributePaths = {"user", "home"})
+    @EntityGraph(attributePaths = {"user", "home", "home.members"})
     List<HomeMember> findByUserIdAndHomeDeletedAtIsNull(UUID userId);
 
     /**

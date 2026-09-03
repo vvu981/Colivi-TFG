@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LogOut, X, Loader2, AlertTriangle, ShieldAlert } from 'lucide-react';
 
 interface ConfirmLeaveModalProps {
@@ -23,6 +23,17 @@ export const ConfirmLeaveModal: React.FC<ConfirmLeaveModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isSubmitting) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, isSubmitting, onClose]);
+
   if (!isOpen) return null;
 
   const handleConfirm = async () => {
@@ -37,13 +48,15 @@ export const ConfirmLeaveModal: React.FC<ConfirmLeaveModalProps> = ({
           ? err.message
           : 'Error al salir del hogar. Asegúrate de no tener balances pendientes.';
       setError(message);
-    } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="leave-home-title"
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150"
       onClick={onClose}
     >
@@ -55,6 +68,7 @@ export const ConfirmLeaveModal: React.FC<ConfirmLeaveModalProps> = ({
           type="button"
           onClick={onClose}
           className="absolute top-4 right-4 p-1.5 text-secondary hover:text-on-surface rounded-lg transition-colors"
+          aria-label="Cerrar modal"
         >
           <X className="w-5 h-5" />
         </button>
@@ -64,7 +78,7 @@ export const ConfirmLeaveModal: React.FC<ConfirmLeaveModalProps> = ({
             <LogOut className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-on-surface">Salir de {homeName}</h2>
+            <h2 id="leave-home-title" className="text-lg font-bold text-on-surface">Salir de {homeName}</h2>
             <p className="text-xs text-secondary">Confirmación de abandono de hogar</p>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Archive, X, Loader2, Info } from 'lucide-react';
 
 interface ConfirmArchiveModalProps {
@@ -17,6 +17,17 @@ export const ConfirmArchiveModal: React.FC<ConfirmArchiveModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isSubmitting) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, isSubmitting, onClose]);
+
   if (!isOpen) return null;
 
   const handleConfirm = async () => {
@@ -31,13 +42,15 @@ export const ConfirmArchiveModal: React.FC<ConfirmArchiveModalProps> = ({
           ? err.message
           : 'Error al archivar el hogar. Inténtalo de nuevo.';
       setError(message);
-    } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="archive-modal-title"
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150"
       onClick={onClose}
     >
@@ -49,6 +62,7 @@ export const ConfirmArchiveModal: React.FC<ConfirmArchiveModalProps> = ({
           type="button"
           onClick={onClose}
           className="absolute top-5 right-5 p-1.5 text-secondary hover:text-on-surface rounded-lg transition-colors"
+          aria-label="Cerrar modal"
         >
           <X className="w-5 h-5" />
         </button>
@@ -58,7 +72,7 @@ export const ConfirmArchiveModal: React.FC<ConfirmArchiveModalProps> = ({
             <Archive className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-on-surface">¿Archivar hogar?</h2>
+            <h2 id="archive-modal-title" className="text-lg font-bold text-on-surface">¿Archivar hogar?</h2>
             <p className="text-xs text-secondary truncate max-w-[260px]">{homeName}</p>
           </div>
         </div>
