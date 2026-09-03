@@ -8,6 +8,8 @@ import com.vvu981.colivibackend.features.home.mapper.HomeExpenseMapper;
 import com.vvu981.colivibackend.features.home.repository.HomeExpenseRepository;
 import com.vvu981.colivibackend.features.home.repository.HomeMemberRepository;
 import com.vvu981.colivibackend.features.home.repository.HomeRepository;
+import com.vvu981.colivibackend.features.home.domain.event.ExpenseUpdatedEvent;
+import com.vvu981.colivibackend.features.home.domain.event.PaymentRecordedEvent;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.domain.UserRole;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
@@ -153,6 +155,73 @@ class HomeExpenseServiceImplTest {
             assertEquals(new BigDecimal("33.34"), saved.getParticipants().get(0).getOwedAmount());
             assertEquals(new BigDecimal("33.33"), saved.getParticipants().get(1).getOwedAmount());
             assertEquals(new BigDecimal("33.33"), saved.getParticipants().get(2).getOwedAmount());
+        }
+
+        @Test
+        void createExpense_Success_CustomSplits() {
+            mockActiveMember(homeId, payerId);
+            when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
+            mockActiveMembersList(homeId, payer, participant1);
+
+            when(userRepository.findActiveById(payerId)).thenReturn(Optional.of(payer));
+            when(userRepository.findAllById(any())).thenReturn(List.of(payer, participant1));
+
+            List<ExpenseParticipantShareDto> splits = List.of(
+                    new ExpenseParticipantShareDto(payerId, new BigDecimal("60.00")),
+                    new ExpenseParticipantShareDto(participant1Id, new BigDecimal("40.00"))
+            );
+
+            CreateExpenseRequest request = new CreateExpenseRequest("Custom Split Test", new BigDecimal("100.00"), payerId,
+                    List.of(payerId, participant1Id), splits);
+
+            service.createExpense(homeId, request, payerId);
+
+            verify(expenseRepository).save(expenseCaptor.capture());
+            HomeExpense saved = expenseCaptor.getValue();
+            assertEquals(new BigDecimal("100.00"), saved.getTotalAmount());
+            assertEquals(2, saved.getParticipants().size());
+
+            // 60.00 and 40.00
+            assertEquals(new BigDecimal("60.00"), saved.getParticipants().get(0).getOwedAmount());
+            assertEquals(new BigDecimal("40.00"), saved.getParticipants().get(1).getOwedAmount());
+        }
+
+        @Test
+        void createExpense_CustomSplits_SumMismatch_ThrowsException() {
+            mockActiveMember(homeId, payerId);
+            when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
+            mockActiveMembersList(homeId, payer, participant1);
+
+            when(userRepository.findActiveById(payerId)).thenReturn(Optional.of(payer));
+
+            List<ExpenseParticipantShareDto> splits = List.of(
+                    new ExpenseParticipantShareDto(payerId, new BigDecimal("60.00")),
+                    new ExpenseParticipantShareDto(participant1Id, new BigDecimal("30.00")) // Sum 90 != 100
+            );
+
+            CreateExpenseRequest request = new CreateExpenseRequest("Sum Mismatch", new BigDecimal("100.00"), payerId,
+                    List.of(payerId, participant1Id), splits);
+
+            assertThrows(BusinessRuleValidationException.class, () -> service.createExpense(homeId, request, payerId));
+        }
+
+        @Test
+        void createExpense_CustomSplits_MissingParticipant_ThrowsException() {
+            mockActiveMember(homeId, payerId);
+            when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
+            mockActiveMembersList(homeId, payer, participant1);
+
+            when(userRepository.findActiveById(payerId)).thenReturn(Optional.of(payer));
+
+            // Only payer in splits, but participantIds has 2
+            List<ExpenseParticipantShareDto> splits = List.of(
+                    new ExpenseParticipantShareDto(payerId, new BigDecimal("100.00"))
+            );
+
+            CreateExpenseRequest request = new CreateExpenseRequest("Missing Participant", new BigDecimal("100.00"), payerId,
+                    List.of(payerId, participant1Id), splits);
+
+            assertThrows(BusinessRuleValidationException.class, () -> service.createExpense(homeId, request, payerId));
         }
 
         @Test
@@ -494,6 +563,28 @@ class HomeExpenseServiceImplTest {
         }
 
         @Test
+        void deleteExpense_Success_ByPaymentReceiver() {
+            HomeExpense payment = new HomeExpense();
+            payment.setHome(home);
+            payment.setPayer(payer);
+            payment.setPayment(true);
+            payment.setDescription("Pago a Juan");
+
+            HomeExpenseParticipant p = new HomeExpenseParticipant();
+            p.setUser(participant1);
+            p.setOwedAmount(new BigDecimal("25.00"));
+            payment.addParticipant(p);
+
+            when(expenseRepository.findByIdAndDeletedAtIsNull(payment.getId())).thenReturn(Optional.of(payment));
+            when(userRepository.findActiveById(participant1Id)).thenReturn(Optional.of(participant1));
+
+            service.deleteExpense(homeId, payment.getId(), participant1Id);
+
+            assertNotNull(payment.getDeletedAt());
+            verify(expenseRepository).save(payment);
+        }
+
+        @Test
         void createExpense_ThrowsIfPayerNotFound() {
             mockActiveMember(homeId, payerId);
             when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
@@ -591,6 +682,513 @@ class HomeExpenseServiceImplTest {
 
             assertThrows(UnauthorizedActionException.class,
                     () -> service.deleteExpense(homeId, expense.getId(), regularUser.getId()));
+        }
+    }
+
+    @Nested
+    class RecordPaymentTests {
+
+        @Test
+        void recordPayment_Success() {
+            mockActiveMember(homeId, payerId);
+            when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
+            mockActiveMembersList(homeId, payer, participant1);
+
+            when(userRepository.findActiveById(payerId)).thenReturn(Optional.of(payer));
+            when(userRepository.findActiveById(participant1Id)).thenReturn(Optional.of(participant1));
+
+            RecordPaymentRequest req = new RecordPaymentRequest(payerId, participant1Id, new BigDecimal("25.00"), "Bizum cena");
+
+            service.recordPayment(homeId, req, payerId);
+
+            verify(expenseRepository).save(expenseCaptor.capture());
+            HomeExpense saved = expenseCaptor.getValue();
+            assertTrue(saved.isPayment());
+            assertEquals(new BigDecimal("25.00"), saved.getTotalAmount());
+            assertEquals("Bizum cena", saved.getDescription());
+            assertEquals(payerId, saved.getPayer().getId());
+            assertEquals(1, saved.getParticipants().size());
+            assertEquals(participant1Id, saved.getParticipants().get(0).getUser().getId());
+            assertEquals(new BigDecimal("25.00"), saved.getParticipants().get(0).getOwedAmount());
+
+            verify(eventPublisher).publishEvent(any(PaymentRecordedEvent.class));
+        }
+
+        @Test
+        void recordPayment_Success_NullNotes_UsesReceiverFirstName() {
+            mockActiveMember(homeId, payerId);
+            when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
+            mockActiveMembersList(homeId, payer, participant1);
+
+            when(userRepository.findActiveById(payerId)).thenReturn(Optional.of(payer));
+
+            participant1.setFirstName("Carlos");
+            when(userRepository.findActiveById(participant1Id)).thenReturn(Optional.of(participant1));
+
+            RecordPaymentRequest req = new RecordPaymentRequest(payerId, participant1Id, new BigDecimal("20.00"), null);
+
+            service.recordPayment(homeId, req, payerId);
+
+            verify(expenseRepository).save(expenseCaptor.capture());
+            HomeExpense saved = expenseCaptor.getValue();
+            assertTrue(saved.getDescription().contains("Carlos"));
+        }
+
+        @Test
+        void recordPayment_Success_NullNotes_NullFirstName_UsesNickname() {
+            mockActiveMember(homeId, payerId);
+            when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
+            mockActiveMembersList(homeId, payer, participant1);
+
+            when(userRepository.findActiveById(payerId)).thenReturn(Optional.of(payer));
+
+            participant1.setFirstName(null);
+            participant1.setNickname("carlosuser");
+            when(userRepository.findActiveById(participant1Id)).thenReturn(Optional.of(participant1));
+
+            RecordPaymentRequest req = new RecordPaymentRequest(payerId, participant1Id, new BigDecimal("20.00"), null);
+
+            service.recordPayment(homeId, req, payerId);
+
+            verify(expenseRepository).save(expenseCaptor.capture());
+            HomeExpense saved = expenseCaptor.getValue();
+            assertTrue(saved.getDescription().contains("carlosuser"));
+        }
+
+        @Test
+        void recordPayment_Success_AsReceiver() {
+            mockActiveMember(homeId, participant1Id);
+            when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
+            mockActiveMembersList(homeId, payer, participant1);
+
+            when(userRepository.findActiveById(participant1Id)).thenReturn(Optional.of(participant1));
+            when(userRepository.findActiveById(payerId)).thenReturn(Optional.of(payer));
+            participant1.setFirstName("Carlos");
+            when(userRepository.findActiveById(participant1Id)).thenReturn(Optional.of(participant1));
+
+            RecordPaymentRequest req = new RecordPaymentRequest(payerId, participant1Id, new BigDecimal("10.00"), "Pago recibido");
+
+            service.recordPayment(homeId, req, participant1Id);
+
+            verify(expenseRepository).save(any(HomeExpense.class));
+        }
+
+        @Test
+        void recordPayment_Success_AsHomeAdmin() {
+            User homeAdmin = new User();
+            UUID homeAdminId = UUID.randomUUID();
+            homeAdmin.setId(homeAdminId);
+            homeAdmin.setRole(UserRole.USER);
+
+            HomeMember activeMember = new HomeMember();
+            activeMember.setStatus(HomeMemberStatus.ACTIVE);
+            when(memberRepository.findByHomeIdAndUserId(homeId, homeAdminId)).thenReturn(Optional.of(activeMember));
+
+            when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
+            mockActiveMembersList(homeId, payer, participant1);
+
+            when(userRepository.findActiveById(homeAdminId)).thenReturn(Optional.of(homeAdmin));
+            participant1.setFirstName("Carlos");
+            when(userRepository.findActiveById(participant1Id)).thenReturn(Optional.of(participant1));
+            when(userRepository.findActiveById(payerId)).thenReturn(Optional.of(payer));
+
+            HomeMember adminMember = new HomeMember();
+            adminMember.setStatus(HomeMemberStatus.ACTIVE);
+            adminMember.setRole(HomeRole.ADMIN);
+            when(memberRepository.findByHomeIdAndUserId(homeId, homeAdminId)).thenReturn(Optional.of(adminMember));
+
+            RecordPaymentRequest req = new RecordPaymentRequest(payerId, participant1Id, new BigDecimal("15.00"), "Admin registra pago");
+
+            service.recordPayment(homeId, req, homeAdminId);
+
+            verify(expenseRepository).save(any(HomeExpense.class));
+        }
+
+        @Test
+        void recordPayment_ThrowsWhenSameUser() {
+            mockActiveMember(homeId, payerId);
+
+            RecordPaymentRequest req = new RecordPaymentRequest(payerId, payerId, new BigDecimal("25.00"), "Autopago");
+
+            BusinessRuleValidationException ex = assertThrows(BusinessRuleValidationException.class,
+                    () -> service.recordPayment(homeId, req, payerId));
+
+            assertTrue(ex.getMessage().contains("no pueden ser la misma persona"));
+        }
+
+        @Test
+        void recordPayment_ThrowsWhenAmountIsZero() {
+            mockActiveMember(homeId, payerId);
+
+            RecordPaymentRequest req = new RecordPaymentRequest(payerId, participant1Id, BigDecimal.ZERO, "Pago cero");
+
+            assertThrows(BusinessRuleValidationException.class,
+                    () -> service.recordPayment(homeId, req, payerId));
+        }
+
+        @Test
+        void recordPayment_ThrowsWhenAmountIsNegative() {
+            mockActiveMember(homeId, payerId);
+
+            RecordPaymentRequest req = new RecordPaymentRequest(payerId, participant1Id, new BigDecimal("-5.00"), "Pago negativo");
+
+            assertThrows(BusinessRuleValidationException.class,
+                    () -> service.recordPayment(homeId, req, payerId));
+        }
+
+        @Test
+        void recordPayment_ThrowsWhenCallerNotPayerReceiverOrAdmin() {
+            User thirdParty = new User();
+            UUID thirdPartyId = UUID.randomUUID();
+            thirdParty.setId(thirdPartyId);
+            thirdParty.setRole(UserRole.USER);
+
+            HomeMember regularMember = new HomeMember();
+            regularMember.setStatus(HomeMemberStatus.ACTIVE);
+            regularMember.setRole(HomeRole.MEMBER);
+            when(memberRepository.findByHomeIdAndUserId(homeId, thirdPartyId)).thenReturn(Optional.of(regularMember));
+
+            when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
+            mockActiveMembersList(homeId, payer, participant1);
+
+            when(userRepository.findActiveById(thirdPartyId)).thenReturn(Optional.of(thirdParty));
+
+            RecordPaymentRequest req = new RecordPaymentRequest(payerId, participant1Id, new BigDecimal("25.00"), "Bizum");
+
+            assertThrows(UnauthorizedActionException.class,
+                    () -> service.recordPayment(homeId, req, thirdPartyId));
+        }
+    }
+
+    @Nested
+    class UpdateExpenseTests {
+
+        @Test
+        void updateExpense_Success() {
+            mockActiveMember(homeId, payerId);
+
+            HomeExpense expense = new HomeExpense();
+            expense.setId(UUID.randomUUID());
+            expense.setHome(home);
+            expense.setPayer(payer);
+            expense.setDescription("Old Pizza");
+            expense.setTotalAmount(new BigDecimal("20.00"));
+
+            when(expenseRepository.findByIdAndDeletedAtIsNull(expense.getId())).thenReturn(Optional.of(expense));
+            when(userRepository.findActiveById(payerId)).thenReturn(Optional.of(payer));
+            when(userRepository.findAllById(any())).thenReturn(List.of(payer, participant1));
+            mockActiveMembersList(homeId, payer, participant1);
+
+            UpdateExpenseRequest req = new UpdateExpenseRequest(
+                    "New Pizza & Drinks",
+                    new BigDecimal("30.00"),
+                    payerId,
+                    List.of(payerId, participant1Id)
+            );
+
+            ExpenseResponseDto dto = new ExpenseResponseDto(
+                    expense.getId(),
+                    homeId,
+                    "New Pizza & Drinks",
+                    new BigDecimal("30.00"),
+                    null,
+                    java.time.LocalDateTime.now(),
+                    false,
+                    List.of()
+            );
+            when(expenseMapper.toExpenseResponseDto(any(HomeExpense.class))).thenReturn(dto);
+
+            ExpenseResponseDto result = service.updateExpense(homeId, expense.getId(), req, payerId);
+
+            assertNotNull(result);
+            assertEquals("New Pizza & Drinks", result.description());
+            verify(expenseRepository).save(expense);
+            verify(eventPublisher).publishEvent(any(ExpenseUpdatedEvent.class));
+        }
+
+        @Test
+        void updateExpense_Success_WithCustomSplits() {
+            mockActiveMember(homeId, payerId);
+
+            HomeExpense expense = new HomeExpense();
+            expense.setId(UUID.randomUUID());
+            expense.setHome(home);
+            expense.setPayer(payer);
+            expense.setDescription("Old Description");
+            expense.setTotalAmount(new BigDecimal("100.00"));
+
+            when(expenseRepository.findByIdAndDeletedAtIsNull(expense.getId())).thenReturn(Optional.of(expense));
+            when(userRepository.findActiveById(payerId)).thenReturn(Optional.of(payer));
+            mockActiveMembersList(homeId, payer, participant1);
+            when(userRepository.findAllById(any())).thenReturn(List.of(payer, participant1));
+
+            List<ExpenseParticipantShareDto> splits = List.of(
+                    new ExpenseParticipantShareDto(payerId, new BigDecimal("70.00")),
+                    new ExpenseParticipantShareDto(participant1Id, new BigDecimal("30.00"))
+            );
+
+            UpdateExpenseRequest req = new UpdateExpenseRequest(
+                    "Split Personalizado",
+                    new BigDecimal("100.00"),
+                    payerId,
+                    List.of(payerId, participant1Id),
+                    splits
+            );
+
+            when(expenseMapper.toExpenseResponseDto(any(HomeExpense.class))).thenReturn(
+                    new ExpenseResponseDto(expense.getId(), homeId, "Split Personalizado",
+                            new BigDecimal("100.00"), null, java.time.LocalDateTime.now(), false, List.of())
+            );
+
+            ExpenseResponseDto result = service.updateExpense(homeId, expense.getId(), req, payerId);
+
+            assertNotNull(result);
+            verify(expenseRepository).save(expense);
+        }
+
+        @Test
+        void updateExpense_Success_AsHomeAdmin() {
+            HomeExpense expense = new HomeExpense();
+            expense.setId(UUID.randomUUID());
+            expense.setHome(home);
+            expense.setPayer(payer);
+            expense.setDescription("Old");
+            expense.setTotalAmount(new BigDecimal("50.00"));
+
+            User homeAdmin = new User();
+            UUID homeAdminId = UUID.randomUUID();
+            homeAdmin.setId(homeAdminId);
+            homeAdmin.setRole(UserRole.USER);
+
+            HomeMember activeMember = new HomeMember();
+            activeMember.setStatus(HomeMemberStatus.ACTIVE);
+            when(memberRepository.findByHomeIdAndUserId(homeId, homeAdminId)).thenReturn(Optional.of(activeMember));
+
+            when(expenseRepository.findByIdAndDeletedAtIsNull(expense.getId())).thenReturn(Optional.of(expense));
+            when(userRepository.findActiveById(homeAdminId)).thenReturn(Optional.of(homeAdmin));
+            mockActiveMembersList(homeId, payer, participant1);
+            when(userRepository.findActiveById(payerId)).thenReturn(Optional.of(payer));
+            when(userRepository.findAllById(any())).thenReturn(List.of(payer));
+
+            HomeMember adminMember = new HomeMember();
+            adminMember.setStatus(HomeMemberStatus.ACTIVE);
+            adminMember.setRole(HomeRole.ADMIN);
+            when(memberRepository.findByHomeIdAndUserId(homeId, homeAdminId)).thenReturn(Optional.of(adminMember));
+
+            UpdateExpenseRequest req = new UpdateExpenseRequest(
+                    "Edited By Admin",
+                    new BigDecimal("50.00"),
+                    payerId,
+                    List.of(payerId)
+            );
+
+            when(expenseMapper.toExpenseResponseDto(any(HomeExpense.class))).thenReturn(
+                    new ExpenseResponseDto(expense.getId(), homeId, "Edited By Admin",
+                            new BigDecimal("50.00"), null, java.time.LocalDateTime.now(), false, List.of())
+            );
+
+            ExpenseResponseDto result = service.updateExpense(homeId, expense.getId(), req, homeAdminId);
+            assertNotNull(result);
+        }
+
+        @Test
+        void updateExpense_ThrowsWhenExpenseIsPayment() {
+            mockActiveMember(homeId, payerId);
+
+            HomeExpense expense = new HomeExpense();
+            expense.setId(UUID.randomUUID());
+            expense.setHome(home);
+            expense.setPayer(payer);
+            expense.setPayment(true);
+
+            when(expenseRepository.findByIdAndDeletedAtIsNull(expense.getId())).thenReturn(Optional.of(expense));
+
+            UpdateExpenseRequest req = new UpdateExpenseRequest(
+                    "Cannot edit payment",
+                    new BigDecimal("30.00"),
+                    payerId,
+                    List.of(payerId)
+            );
+
+            BusinessRuleValidationException ex = assertThrows(BusinessRuleValidationException.class,
+                    () -> service.updateExpense(homeId, expense.getId(), req, payerId));
+
+            assertTrue(ex.getMessage().contains("Los pagos directos no pueden ser editados"));
+        }
+
+        @Test
+        void updateExpense_ThrowsWhenCallerNotPayerOrAdmin() {
+            mockActiveMember(homeId, participant1Id);
+
+            HomeExpense expense = new HomeExpense();
+            expense.setId(UUID.randomUUID());
+            expense.setHome(home);
+            expense.setPayer(payer);
+
+            when(expenseRepository.findByIdAndDeletedAtIsNull(expense.getId())).thenReturn(Optional.of(expense));
+            when(userRepository.findActiveById(participant1Id)).thenReturn(Optional.of(participant1));
+
+            HomeMember regularMember = new HomeMember();
+            regularMember.setStatus(HomeMemberStatus.ACTIVE);
+            regularMember.setRole(HomeRole.MEMBER);
+            when(memberRepository.findByHomeIdAndUserId(homeId, participant1Id)).thenReturn(Optional.of(regularMember));
+
+            UpdateExpenseRequest req = new UpdateExpenseRequest(
+                    "Try edit someone else",
+                    new BigDecimal("30.00"),
+                    payerId,
+                    List.of(payerId)
+            );
+
+            assertThrows(UnauthorizedActionException.class,
+                    () -> service.updateExpense(homeId, expense.getId(), req, participant1Id));
+        }
+
+        @Test
+        void updateExpense_ThrowsWhenExpenseBelongsToDifferentHome() {
+            mockActiveMember(homeId, payerId);
+
+            HomeExpense expense = new HomeExpense();
+            expense.setId(UUID.randomUUID());
+            Home otherHome = new Home();
+            otherHome.setId(UUID.randomUUID());
+            expense.setHome(otherHome);
+            expense.setPayer(payer);
+
+            when(expenseRepository.findByIdAndDeletedAtIsNull(expense.getId())).thenReturn(Optional.of(expense));
+
+            UpdateExpenseRequest req = new UpdateExpenseRequest(
+                    "Wrong home",
+                    new BigDecimal("30.00"),
+                    payerId,
+                    List.of(payerId)
+            );
+
+            assertThrows(com.vvu981.colivibackend.core.exception.ResourceNotFoundException.class,
+                    () -> service.updateExpense(homeId, expense.getId(), req, payerId));
+        }
+
+        @Test
+        void updateExpense_ThrowsWhenExpenseNotFound() {
+            mockActiveMember(homeId, payerId);
+            UUID missingExpenseId = UUID.randomUUID();
+
+            when(expenseRepository.findByIdAndDeletedAtIsNull(missingExpenseId)).thenReturn(Optional.empty());
+
+            UpdateExpenseRequest req = new UpdateExpenseRequest(
+                    "Not found",
+                    new BigDecimal("30.00"),
+                    payerId,
+                    List.of(payerId)
+            );
+
+            assertThrows(com.vvu981.colivibackend.core.exception.ResourceNotFoundException.class,
+                    () -> service.updateExpense(homeId, missingExpenseId, req, payerId));
+        }
+
+        @Test
+        void getHomeExpensesPaged_Success() {
+            mockActiveMember(homeId, payerId);
+
+            HomeExpense expense = new HomeExpense();
+            expense.setId(UUID.randomUUID());
+            expense.setDescription("Compra");
+            expense.setTotalAmount(new BigDecimal("10.00"));
+
+            org.springframework.data.domain.Page<HomeExpense> page = new org.springframework.data.domain.PageImpl<>(List.of(expense));
+            when(expenseRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(org.springframework.data.domain.Pageable.class)))
+                    .thenReturn(page);
+
+            ExpenseResponseDto dto = new ExpenseResponseDto(
+                    expense.getId(),
+                    homeId,
+                    "Compra",
+                    new BigDecimal("10.00"),
+                    null,
+                    java.time.LocalDateTime.now(),
+                    false,
+                    List.of()
+            );
+            when(expenseMapper.toExpenseResponseDto(expense)).thenReturn(dto);
+
+            org.springframework.data.domain.Page<ExpenseResponseDto> result = service.getHomeExpensesPaged(
+                    homeId,
+                    ExpenseFilterDto.of("compra", null, null),
+                    org.springframework.data.domain.PageRequest.of(0, 10),
+                    payerId
+            );
+
+            assertNotNull(result);
+            assertEquals(1, result.getTotalElements());
+            assertEquals("Compra", result.getContent().get(0).description());
+        }
+    }
+
+    @Nested
+    class CustomSplitsValidationTests {
+
+        @Test
+        void createExpense_CustomSplits_DuplicateUserId_ThrowsException() {
+            mockActiveMember(homeId, payerId);
+            when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
+            mockActiveMembersList(homeId, payer, participant1);
+            when(userRepository.findActiveById(payerId)).thenReturn(Optional.of(payer));
+
+            List<ExpenseParticipantShareDto> splits = List.of(
+                    new ExpenseParticipantShareDto(payerId, new BigDecimal("50.00")),
+                    new ExpenseParticipantShareDto(payerId, new BigDecimal("50.00")) // duplicate
+            );
+
+            CreateExpenseRequest request = new CreateExpenseRequest("Duplicate Split", new BigDecimal("100.00"),
+                    payerId, List.of(payerId, participant1Id), splits);
+
+            assertThrows(BusinessRuleValidationException.class,
+                    () -> service.createExpense(homeId, request, payerId));
+        }
+
+        @Test
+        void createExpense_CustomSplits_UserNotInParticipants_ThrowsException() {
+            mockActiveMember(homeId, payerId);
+            when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
+            mockActiveMembersList(homeId, payer, participant1);
+            when(userRepository.findActiveById(payerId)).thenReturn(Optional.of(payer));
+
+            // participant2 is in splits but NOT in participantIds
+            List<ExpenseParticipantShareDto> splits = List.of(
+                    new ExpenseParticipantShareDto(payerId, new BigDecimal("60.00")),
+                    new ExpenseParticipantShareDto(participant2Id, new BigDecimal("40.00"))
+            );
+
+            CreateExpenseRequest request = new CreateExpenseRequest("Rogue Participant", new BigDecimal("100.00"),
+                    payerId, List.of(payerId, participant1Id), splits);
+
+            assertThrows(BusinessRuleValidationException.class,
+                    () -> service.createExpense(homeId, request, payerId));
+        }
+
+        @Test
+        void createExpense_CustomSplits_DeletedUser_ThrowsException() {
+            mockActiveMember(homeId, payerId);
+            when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
+            mockActiveMembersList(homeId, payer, participant1);
+            when(userRepository.findActiveById(payerId)).thenReturn(Optional.of(payer));
+
+            User deletedUser = new User();
+            deletedUser.setId(participant1Id);
+            deletedUser.setDeletedAt(java.time.LocalDateTime.now());
+
+            when(userRepository.findAllById(any())).thenReturn(List.of(payer, deletedUser));
+
+            List<ExpenseParticipantShareDto> splits = List.of(
+                    new ExpenseParticipantShareDto(payerId, new BigDecimal("60.00")),
+                    new ExpenseParticipantShareDto(participant1Id, new BigDecimal("40.00"))
+            );
+
+            CreateExpenseRequest request = new CreateExpenseRequest("Deleted User", new BigDecimal("100.00"),
+                    payerId, List.of(payerId, participant1Id), splits);
+
+            assertThrows(com.vvu981.colivibackend.core.exception.ResourceNotFoundException.class,
+                    () -> service.createExpense(homeId, request, payerId));
         }
     }
 }

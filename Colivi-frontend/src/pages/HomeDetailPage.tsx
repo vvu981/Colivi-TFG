@@ -13,13 +13,14 @@ import {
   ConfirmLeaveModal,
   ConfirmArchiveModal,
   ConfirmDeleteHomeModal,
+  HomeExpensesTab,
   type HomeMemberResponseDto,
 } from '../features/home';
-import { Users, Activity, Settings, ChevronLeft } from 'lucide-react';
+import { Users, Receipt, Activity, Settings, ChevronLeft } from 'lucide-react';
 import { Spinner } from '../components/feedback/Spinner';
 import { MainLayout } from '../layouts/MainLayout';
 
-type HomeDetailTab = 'members' | 'activities' | 'settings';
+type HomeDetailTab = 'members' | 'expenses' | 'activities' | 'settings';
 
 export const HomeDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -50,7 +51,7 @@ export const HomeDetailPage: React.FC = () => {
   const activeTab: HomeDetailTab =
     requestedTab === 'settings' && (!isAdmin || !isActiveMember)
       ? 'members'
-      : requestedTab === 'activities' || requestedTab === 'settings'
+      : requestedTab === 'expenses' || requestedTab === 'activities' || requestedTab === 'settings'
         ? requestedTab
         : 'members';
 
@@ -139,6 +140,19 @@ export const HomeDetailPage: React.FC = () => {
 
           <button
             type="button"
+            onClick={() => handleTabChange('expenses')}
+            className={`flex items-center gap-2 py-3 px-3 font-medium text-sm transition-all border-b-2 whitespace-nowrap ${
+              activeTab === 'expenses'
+                ? 'border-primary text-primary font-semibold'
+                : 'border-transparent text-secondary hover:text-on-surface'
+            }`}
+          >
+            <Receipt className="w-4 h-4" />
+            <span>Gastos</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => handleTabChange('activities')}
             className={`flex items-center gap-2 py-3 px-3 font-medium text-sm transition-all border-b-2 whitespace-nowrap ${
               activeTab === 'activities'
@@ -178,6 +192,15 @@ export const HomeDetailPage: React.FC = () => {
                 onExpelMember={(member) => setExpelTargetMember(member)}
               />
             </div>
+          )}
+
+          {activeTab === 'expenses' && (
+            <HomeExpensesTab
+              home={home}
+              isAdmin={isAdmin}
+              isActiveMember={isActiveMember}
+              currentUserId={user?.id}
+            />
           )}
 
           {activeTab === 'activities' && (
@@ -227,6 +250,7 @@ export const HomeDetailPage: React.FC = () => {
           isOpen={!!expelTargetMember}
           onClose={() => setExpelTargetMember(null)}
           member={expelTargetMember}
+          homeId={home.id}
           onExpel={expelMember}
           onForceExpel={forceExpelMember}
         />
@@ -236,6 +260,8 @@ export const HomeDetailPage: React.FC = () => {
         isOpen={isLeaveOpen}
         onClose={() => setIsLeaveOpen(false)}
         homeName={home.name}
+        homeId={home.id}
+        currentUserId={user?.id}
         isSoleActiveMember={isSoleActiveMember}
         isOnlyAdminWithOtherMembers={isOnlyAdminWithOtherMembers}
         onConfirmLeave={handleLeaveConfirm}

@@ -9,11 +9,12 @@ import {
   Shield,
   Trash2,
   Receipt,
-  CheckCircle2,
+  ArrowRightLeft,
   Clock,
   ChevronLeft,
   ChevronRight,
   Activity,
+  Pencil,
 } from 'lucide-react';
 
 interface HomeActivityFeedProps {
@@ -58,10 +59,15 @@ const getActivityIcon = (type: ActivityType) => {
         icon: <Receipt className="w-4 h-4 text-sky-600" />,
         bg: 'bg-sky-500/10 border-sky-500/20',
       };
-    case 'DEBT_SETTLED':
+    case 'EXPENSE_UPDATED':
       return {
-        icon: <CheckCircle2 className="w-4 h-4 text-emerald-600" />,
-        bg: 'bg-emerald-500/10 border-emerald-500/20',
+        icon: <Pencil className="w-4 h-4 text-blue-600" />,
+        bg: 'bg-blue-500/10 border-blue-500/20',
+      };
+    case 'PAYMENT_RECORDED':
+      return {
+        icon: <ArrowRightLeft className="w-4 h-4 text-teal-600" />,
+        bg: 'bg-teal-500/10 border-teal-500/20',
       };
     default:
       return {
@@ -132,9 +138,16 @@ export const HomeActivityFeed: React.FC<HomeActivityFeedProps> = ({ homeId }) =>
 
               {/* Contenido del evento */}
               <div className="flex-1 min-w-0 bg-surface-container-lowest border border-outline-variant/40 rounded-xl p-3.5 hover:border-outline-variant transition-all">
-                <p className="text-xs font-semibold text-on-surface">
-                  {activity.description}
-                </p>
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-xs font-semibold text-on-surface">
+                    {activity.description}
+                  </p>
+                  {activity.metadata?.amount != null && (
+                    <span className="shrink-0 inline-flex items-center text-[10px] font-bold text-sky-700 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded-md">
+                      {Number(activity.metadata.amount).toFixed(2)} €
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center gap-2 text-[11px] text-secondary mt-1">
                   <span>Por: <strong>{activity.actorFullName}</strong></span>
                   <span>•</span>

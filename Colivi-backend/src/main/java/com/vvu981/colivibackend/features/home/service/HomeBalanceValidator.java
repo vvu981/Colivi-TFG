@@ -30,7 +30,7 @@ public class HomeBalanceValidator {
 
         if (balanceNeto.compareTo(BigDecimal.ZERO) != 0) {
             throw new BusinessRuleValidationException(
-                    "El usuario no puede salir o ser expulsado porque tiene un balance neto pendiente (" + balanceNeto + "€)."
+                    "No puedes salir o ser expulsado del hogar porque tienes un balance pendiente (" + balanceNeto + "€). Salda todas las cuentas antes de salir."
             );
         }
     }

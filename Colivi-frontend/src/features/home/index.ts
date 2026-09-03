@@ -25,3 +25,16 @@ export * from './components/ConfirmDeleteHomeModal';
 export * from './components/HomeActivityFeed';
 export * from './components/HomeHeader';
 export * from './components/HomeSettingsPanel';
+
+// Expenses
+export * from './api/expenseService';
+export * from './hooks/useHomeExpenses';
+export * from './utils/expenseSplitter';
+export * from './components/ExpenseSummaryCards';
+export * from './components/ExpenseBalancesList';
+export * from './components/ExpenseList';
+export * from './components/ExpenseFilterBar';
+export * from './components/CreateExpenseModal';
+export * from './components/EditExpenseModal';
+export * from './components/ConfirmDeleteExpenseModal';
+export * from './components/HomeExpensesTab';

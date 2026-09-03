@@ -14,8 +14,13 @@ import com.vvu981.colivibackend.features.user.domain.UserRole;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
 import com.vvu981.colivibackend.features.home.domain.event.ExpenseCreatedEvent;
 import com.vvu981.colivibackend.features.home.domain.event.ExpenseDeletedEvent;
+import com.vvu981.colivibackend.features.home.domain.event.ExpenseUpdatedEvent;
+import com.vvu981.colivibackend.features.home.domain.event.PaymentRecordedEvent;
+import com.vvu981.colivibackend.features.home.repository.specification.HomeExpenseSpecification;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -56,7 +61,11 @@ public class HomeExpenseServiceImpl implements HomeExpenseService {
         expense.setDescription(request.description());
         expense.setTotalAmount(request.totalAmount());
 
-        distributeExactAmount(expense, request.participantIds(), request.totalAmount());
+        if (request.customSplits() != null && !request.customSplits().isEmpty()) {
+            distributeCustomSplits(expense, request.customSplits(), request.participantIds(), request.totalAmount());
+        } else {
+            distributeExactAmount(expense, request.participantIds(), request.totalAmount());
+        }
 
         expenseRepository.save(expense);
         
@@ -68,6 +77,132 @@ public class HomeExpenseServiceImpl implements HomeExpenseService {
         ));
         
         return expenseMapper.toExpenseResponseDto(expense);
+    }
+
+    @Override
+    @Transactional
+    public ExpenseResponseDto updateExpense(UUID homeId, UUID expenseId, UpdateExpenseRequest request, UUID requestUserId) {
+        validateActiveMember(homeId, requestUserId);
+
+        HomeExpense expense = expenseRepository.findByIdAndDeletedAtIsNull(expenseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Gasto no encontrado"));
+
+        if (!expense.getHome().getId().equals(homeId)) {
+            throw new ResourceNotFoundException("El gasto no pertenece a este hogar");
+        }
+
+        if (expense.isPayment()) {
+            throw new BusinessRuleValidationException("Los pagos directos no pueden ser editados. Si hubo un error, elimínalo y regístralo de nuevo.");
+        }
+
+        User requestUser = userRepository.findActiveById(requestUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+
+        boolean isSystemAdmin = requestUser.getRole() == UserRole.ADMIN;
+        boolean isPayer = expense.getPayer().getId().equals(requestUserId);
+        boolean isHomeAdmin = memberRepository.findByHomeIdAndUserId(homeId, requestUserId)
+                .filter(m -> m.getStatus() == HomeMemberStatus.ACTIVE && m.getRole() == HomeRole.ADMIN)
+                .isPresent();
+
+        if (!isSystemAdmin && !isPayer && !isHomeAdmin) {
+            throw new UnauthorizedActionException("Solo el pagador original o un administrador pueden editar el gasto");
+        }
+
+        validatePayerAndParticipants(homeId, request.payerId(), request.participantIds());
+
+        User newPayer = userRepository.findActiveById(request.payerId())
+                .orElseThrow(() -> new ResourceNotFoundException("Pagador no encontrado"));
+
+        expense.setDescription(request.description());
+        expense.setTotalAmount(request.totalAmount());
+        expense.setPayer(newPayer);
+
+        expense.getParticipants().clear();
+        expenseRepository.saveAndFlush(expense);
+
+        if (request.customSplits() != null && !request.customSplits().isEmpty()) {
+            distributeCustomSplits(expense, request.customSplits(), request.participantIds(), request.totalAmount());
+        } else {
+            distributeExactAmount(expense, request.participantIds(), request.totalAmount());
+        }
+
+        expenseRepository.save(expense);
+
+        eventPublisher.publishEvent(new ExpenseUpdatedEvent(
+                homeId,
+                requestUserId,
+                expense.getDescription(),
+                expense.getTotalAmount()
+        ));
+
+        return expenseMapper.toExpenseResponseDto(expense);
+    }
+
+    @Override
+    @Transactional
+    public ExpenseResponseDto recordPayment(UUID homeId, RecordPaymentRequest request, UUID requestUserId) {
+        validateActiveMember(homeId, requestUserId);
+
+        if (request.payerId().equals(request.receiverId())) {
+            throw new BusinessRuleValidationException("El pagador y el receptor no pueden ser la misma persona");
+        }
+
+        if (request.amount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessRuleValidationException("El importe del pago debe ser mayor que 0");
+        }
+
+        Home home = homeRepository.findByIdAndDeletedAtIsNull(homeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Hogar no encontrado"));
+
+        validatePayerAndParticipants(homeId, request.payerId(), List.of(request.receiverId()));
+
+        User requestUser = userRepository.findActiveById(requestUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+
+        boolean isPayer = request.payerId().equals(requestUserId);
+        boolean isReceiver = request.receiverId().equals(requestUserId);
+        boolean isSystemAdmin = requestUser.getRole() == UserRole.ADMIN;
+        boolean isHomeAdmin = memberRepository.findByHomeIdAndUserId(homeId, requestUserId)
+                .filter(m -> m.getStatus() == HomeMemberStatus.ACTIVE && m.getRole() == HomeRole.ADMIN)
+                .isPresent();
+
+        if (!isPayer && !isReceiver && !isSystemAdmin && !isHomeAdmin) {
+            throw new UnauthorizedActionException("Solo las partes involucradas en el pago o un administrador pueden registrar este pago");
+        }
+
+        User payer = userRepository.findActiveById(request.payerId())
+                .orElseThrow(() -> new ResourceNotFoundException("Pagador no encontrado"));
+        User receiver = userRepository.findActiveById(request.receiverId())
+                .orElseThrow(() -> new ResourceNotFoundException("Receptor no encontrado"));
+
+        HomeExpense payment = new HomeExpense();
+        payment.setHome(home);
+        payment.setPayer(payer);
+        String desc = (request.notes() != null && !request.notes().isBlank())
+                ? request.notes().trim()
+                : "Pago a " + (receiver.getFirstName() != null ? receiver.getFirstName() : receiver.getNickname());
+        payment.setDescription(desc);
+        payment.setTotalAmount(request.amount());
+        payment.setPayment(true);
+
+        HomeExpenseParticipant participant = new HomeExpenseParticipant();
+        participant.setUser(receiver);
+        participant.setOwedAmount(request.amount());
+        payment.addParticipant(participant);
+
+        expenseRepository.save(payment);
+
+        eventPublisher.publishEvent(new PaymentRecordedEvent(
+                homeId,
+                requestUserId,
+                request.payerId(),
+                request.receiverId(),
+                receiver.getFirstName() != null ? receiver.getFirstName() : receiver.getNickname(),
+                request.amount(),
+                request.notes()
+        ));
+
+        return expenseMapper.toExpenseResponseDto(payment);
     }
 
     @Override
@@ -85,6 +220,8 @@ public class HomeExpenseServiceImpl implements HomeExpenseService {
 
         boolean isSystemAdmin = requestUser.getRole() == UserRole.ADMIN;
         boolean isPayer = expense.getPayer().getId().equals(requestUserId);
+        boolean isPaymentReceiver = expense.isPayment() && expense.getParticipants().stream()
+                .anyMatch(p -> p.getUser().getId().equals(requestUserId));
         
         boolean isHomeAdmin = false;
         Optional<HomeMember> memberOpt = memberRepository.findByHomeIdAndUserId(homeId, requestUserId);
@@ -92,8 +229,12 @@ public class HomeExpenseServiceImpl implements HomeExpenseService {
             isHomeAdmin = true;
         }
 
-        if (!isSystemAdmin && !isPayer && !isHomeAdmin) {
-            throw new UnauthorizedActionException("Solo el pagador original o un administrador pueden eliminar el gasto");
+        if (!isSystemAdmin && !isPayer && !isPaymentReceiver && !isHomeAdmin) {
+            throw new UnauthorizedActionException(
+                    expense.isPayment()
+                            ? "Solo las partes involucradas en el pago o un administrador pueden eliminar este pago"
+                            : "Solo el pagador original o un administrador pueden eliminar el gasto"
+            );
         }
 
         expense.softDelete();
@@ -114,6 +255,18 @@ public class HomeExpenseServiceImpl implements HomeExpenseService {
         return expenses.stream()
                 .map(expenseMapper::toExpenseResponseDto)
                 .toList();
+    }
+
+    @Override
+    public Page<ExpenseResponseDto> getHomeExpensesPaged(UUID homeId, ExpenseFilterDto filter, Pageable pageable, UUID requestUserId) {
+        validateMemberHasReadAccess(homeId, requestUserId);
+
+        Page<HomeExpense> expensePage = expenseRepository.findAll(
+                HomeExpenseSpecification.withFilter(homeId, filter),
+                pageable
+        );
+
+        return expensePage.map(expenseMapper::toExpenseResponseDto);
     }
 
     @Override
@@ -189,6 +342,49 @@ public class HomeExpenseServiceImpl implements HomeExpenseService {
 
         if (sumCheck.compareTo(total) != 0) {
             throw new IllegalStateException("Error crítico financiero: Fuga de céntimos en el reparto. Suma: " + sumCheck + ", Total: " + total);
+        }
+    }
+
+    private void distributeCustomSplits(HomeExpense expense, List<ExpenseParticipantShareDto> splits, List<UUID> participantIds, BigDecimal total) {
+        Set<UUID> declaredParticipantIds = new HashSet<>(participantIds);
+        Set<UUID> splitUserIds = new HashSet<>();
+        BigDecimal sum = BigDecimal.ZERO;
+
+        for (ExpenseParticipantShareDto share : splits) {
+            if (share == null || share.userId() == null || share.amount() == null) {
+                throw new BusinessRuleValidationException("Cada desglose de participante debe ser válido y tener importe");
+            }
+            if (!splitUserIds.add(share.userId())) {
+                throw new BusinessRuleValidationException("No puede haber usuarios duplicados en el reparto personalizado");
+            }
+            if (!declaredParticipantIds.contains(share.userId())) {
+                throw new BusinessRuleValidationException("El usuario del reparto personalizado no está en la lista de participantes declarada");
+            }
+            sum = sum.add(share.amount());
+        }
+
+        if (splitUserIds.size() != declaredParticipantIds.size()) {
+            throw new BusinessRuleValidationException("Todos los participantes del gasto deben tener asignada su parte en el reparto");
+        }
+
+        if (sum.compareTo(total) != 0) {
+            throw new BusinessRuleValidationException(
+                    "La suma de los importes individuales (" + sum + ") debe coincidir exactamente con el total del gasto (" + total + ")");
+        }
+
+        Map<UUID, User> participantsMap = userRepository.findAllById(splitUserIds).stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
+
+        for (ExpenseParticipantShareDto share : splits) {
+            User user = participantsMap.get(share.userId());
+            if (user == null || user.getDeletedAt() != null) {
+                throw new ResourceNotFoundException("Participante no encontrado con ID: " + share.userId());
+            }
+
+            HomeExpenseParticipant hep = new HomeExpenseParticipant();
+            hep.setUser(user);
+            hep.setOwedAmount(share.amount());
+            expense.addParticipant(hep);
         }
     }
 

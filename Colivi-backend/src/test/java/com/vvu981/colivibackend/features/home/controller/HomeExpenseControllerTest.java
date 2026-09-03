@@ -84,6 +84,34 @@ class HomeExpenseControllerTest {
         }
 
         @Test
+        void updateExpense() throws Exception {
+                UUID expenseId = UUID.randomUUID();
+                com.vvu981.colivibackend.features.home.dto.UpdateExpenseRequest request = 
+                        new com.vvu981.colivibackend.features.home.dto.UpdateExpenseRequest("Pizza Familiar", new BigDecimal("25.00"), authUser.getId(), List.of(authUser.getId()));
+
+                ExpenseResponseDto response = new ExpenseResponseDto(
+                                expenseId,
+                                homeId,
+                                "Pizza Familiar",
+                                new BigDecimal("25.00"),
+                                null,
+                                java.time.LocalDateTime.now(),
+                                false,
+                                List.of()
+                );
+
+                when(homeExpenseService.updateExpense(eq(homeId), eq(expenseId), any(), eq(authUser.getId()))).thenReturn(response);
+
+                mockMvc.perform(put("/api/v1/homes/{homeId}/expenses/{expenseId}", homeId, expenseId)
+                                .principal(authentication)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.description").value("Pizza Familiar"))
+                                .andExpect(jsonPath("$.totalAmount").value(25.00));
+        }
+
+        @Test
         void deleteExpense() throws Exception {
                 UUID expenseId = UUID.randomUUID();
 
@@ -96,12 +124,13 @@ class HomeExpenseControllerTest {
 
         @Test
         void getHomeExpenses() throws Exception {
-                when(homeExpenseService.getHomeExpenses(homeId, authUser.getId())).thenReturn(List.of());
+                when(homeExpenseService.getHomeExpensesPaged(eq(homeId), any(), any(), eq(authUser.getId())))
+                        .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of()));
 
                 mockMvc.perform(get("/api/v1/homes/{homeId}/expenses", homeId)
                                 .principal(authentication))
                                 .andExpect(status().isOk())
-                                .andExpect(jsonPath("$").isArray());
+                                .andExpect(jsonPath("$.content").isArray());
         }
 
         @Test
@@ -112,6 +141,34 @@ class HomeExpenseControllerTest {
                                 .principal(authentication))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$").isArray());
+        }
+
+        @Test
+        void recordPayment() throws Exception {
+                UUID receiverId = UUID.randomUUID();
+                com.vvu981.colivibackend.features.home.dto.RecordPaymentRequest request =
+                        new com.vvu981.colivibackend.features.home.dto.RecordPaymentRequest(authUser.getId(), receiverId, new BigDecimal("35.00"), "Bizum");
+
+                ExpenseResponseDto response = new ExpenseResponseDto(
+                                UUID.randomUUID(),
+                                homeId,
+                                "Pago a usuario",
+                                new BigDecimal("35.00"),
+                                null,
+                                java.time.LocalDateTime.now(),
+                                true,
+                                List.of()
+                );
+
+                when(homeExpenseService.recordPayment(eq(homeId), any(), eq(authUser.getId()))).thenReturn(response);
+
+                mockMvc.perform(post("/api/v1/homes/{homeId}/expenses/payments", homeId)
+                                .principal(authentication)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isCreated())
+                                .andExpect(jsonPath("$.totalAmount").value(35.00))
+                                .andExpect(jsonPath("$.isPayment").value(true));
         }
 
         @Test

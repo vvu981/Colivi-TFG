@@ -40,8 +40,14 @@ class HomeBalanceValidatorTest {
     }
 
     @Test
-    void validateZeroBalance_ThrowsException_WhenBalanceIsNotZero() {
+    void validateZeroBalance_ThrowsException_WhenBalanceIsPositive() {
         when(expenseQueryService.getUserBalance(homeId, userId)).thenReturn(new BigDecimal("10.00"));
+        assertThrows(BusinessRuleValidationException.class, () -> validator.validateZeroBalance(homeId, userId));
+    }
+
+    @Test
+    void validateZeroBalance_ThrowsException_WhenBalanceIsNegative() {
+        when(expenseQueryService.getUserBalance(homeId, userId)).thenReturn(new BigDecimal("-15.50"));
         assertThrows(BusinessRuleValidationException.class, () -> validator.validateZeroBalance(homeId, userId));
     }
 }

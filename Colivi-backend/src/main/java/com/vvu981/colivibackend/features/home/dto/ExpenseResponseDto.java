@@ -14,5 +14,18 @@ public record ExpenseResponseDto(
         BigDecimal totalAmount,
         UserProfileResponse payer,
         LocalDateTime createdAt,
+        boolean isPayment,
         List<ExpenseParticipantResponseDto> participants
-) {}
+) {
+    public ExpenseResponseDto(
+            UUID id,
+            UUID homeId,
+            String description,
+            BigDecimal totalAmount,
+            UserProfileResponse payer,
+            LocalDateTime createdAt,
+            List<ExpenseParticipantResponseDto> participants
+    ) {
+        this(id, homeId, description, totalAmount, payer, createdAt, false, participants);
+    }
+}

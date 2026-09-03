@@ -2,10 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { UserMinus, X, Loader2, AlertTriangle, ShieldCheck } from 'lucide-react';
 import type { HomeMemberResponseDto } from '../types';
 
+import { expenseService } from '../api/expenseService';
+
 interface ExpelMemberModalProps {
   isOpen: boolean;
   onClose: () => void;
   member: HomeMemberResponseDto | null;
+  homeId?: string;
+  memberBalance?: number;
   onExpel: (userId: string) => Promise<void>;
   onForceExpel: (userId: string, reason?: string) => Promise<void>;
 }
@@ -14,6 +18,8 @@ export const ExpelMemberModal: React.FC<ExpelMemberModalProps> = ({
   isOpen,
   onClose,
   member,
+  homeId,
+  memberBalance,
   onExpel,
   onForceExpel,
 }) => {
@@ -21,6 +27,24 @@ export const ExpelMemberModal: React.FC<ExpelMemberModalProps> = ({
   const [reason, setReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fetchedBalance, setFetchedBalance] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!isOpen || !member || memberBalance !== undefined || !homeId) return;
+    expenseService
+      .getHomeBalances(homeId)
+      .then((balances) => {
+        const found = balances.find((b) => (b.user?.id || b.userId) === member.userId);
+        const raw = found?.amount !== undefined ? found.amount : (found?.balance ?? 0);
+        const num = typeof raw === 'number' ? raw : parseFloat(raw as unknown as string) || 0;
+        setFetchedBalance(num);
+      })
+      .catch(() => {
+        setFetchedBalance(0);
+      });
+  }, [isOpen, member, homeId, memberBalance]);
+
+  const effectiveBalance = memberBalance !== undefined ? memberBalance : fetchedBalance;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -122,6 +146,27 @@ export const ExpelMemberModal: React.FC<ExpelMemberModalProps> = ({
         {error && (
           <div className="mb-4 p-3 bg-error-container/40 border border-error/20 rounded-xl text-xs text-error font-medium">
             {error}
+          </div>
+        )}
+
+        {effectiveBalance !== null && (
+          <div className="mb-4 p-2.5 bg-surface-container rounded-xl text-xs flex items-center justify-between">
+            <span className="text-secondary font-medium">Balance actual de {member.fullName}:</span>
+            <span
+              className={`font-bold ${
+                effectiveBalance > 0.005
+                  ? 'text-emerald-700'
+                  : effectiveBalance < -0.005
+                  ? 'text-error'
+                  : 'text-secondary'
+              }`}
+            >
+              {effectiveBalance > 0.005
+                ? `+${effectiveBalance.toFixed(2)} € (a favor)`
+                : effectiveBalance < -0.005
+                ? `-${Math.abs(effectiveBalance).toFixed(2)} € (debe dinero)`
+                : '0.00 € (al corriente)'}
+            </span>
           </div>
         )}
 

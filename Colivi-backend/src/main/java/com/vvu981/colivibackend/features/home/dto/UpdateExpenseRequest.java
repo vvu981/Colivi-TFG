@@ -1,6 +1,5 @@
 package com.vvu981.colivibackend.features.home.dto;
 
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
@@ -12,7 +11,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
-public record CreateExpenseRequest(
+public record UpdateExpenseRequest(
         @NotBlank(message = "La descripción no puede estar vacía")
         @Size(max = 255, message = "La descripción no puede exceder los 255 caracteres")
         String description,
@@ -28,10 +27,10 @@ public record CreateExpenseRequest(
         @NotEmpty(message = "Debe haber al menos un participante")
         List<UUID> participantIds,
 
-        @Valid
+        @jakarta.validation.Valid
         List<ExpenseParticipantShareDto> customSplits
 ) {
-        public CreateExpenseRequest(String description, BigDecimal totalAmount, UUID payerId, List<UUID> participantIds) {
+        public UpdateExpenseRequest(String description, BigDecimal totalAmount, UUID payerId, List<UUID> participantIds) {
                 this(description, totalAmount, payerId, participantIds, null);
         }
 }

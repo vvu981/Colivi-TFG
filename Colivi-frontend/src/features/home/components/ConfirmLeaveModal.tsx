@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { LogOut, X, Loader2, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { expenseService } from '../api/expenseService';
 
 interface ConfirmLeaveModalProps {
   isOpen: boolean;
@@ -7,6 +8,9 @@ interface ConfirmLeaveModalProps {
   homeName: string;
   isSoleActiveMember: boolean;
   isOnlyAdminWithOtherMembers: boolean;
+  userBalance?: number;
+  homeId?: string;
+  currentUserId?: string;
   onConfirmLeave: () => Promise<void>;
   onOpenTransferAdmin: () => void;
 }
@@ -17,11 +21,38 @@ export const ConfirmLeaveModal: React.FC<ConfirmLeaveModalProps> = ({
   homeName,
   isSoleActiveMember,
   isOnlyAdminWithOtherMembers,
+  userBalance,
+  homeId,
+  currentUserId,
   onConfirmLeave,
   onOpenTransferAdmin,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fetchedBalance, setFetchedBalance] = useState<number | null>(null);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+
+  const fetchBalance = useCallback(async () => {
+    if (userBalance !== undefined || !homeId || !currentUserId) return;
+    setIsLoadingBalance(true);
+    try {
+      const balances = await expenseService.getHomeBalances(homeId);
+      const found = balances.find((b) => (b.user?.id || b.userId) === currentUserId);
+      const raw = found?.amount !== undefined ? found.amount : (found?.balance ?? 0);
+      const num = typeof raw === 'number' ? raw : parseFloat(raw as unknown as string) || 0;
+      setFetchedBalance(num);
+    } catch {
+      // Si falla, el backend de todos modos valida el balance
+      setFetchedBalance(0);
+    } finally {
+      setIsLoadingBalance(false);
+    }
+  }, [userBalance, homeId, currentUserId]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    fetchBalance();
+  }, [isOpen, fetchBalance]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -52,6 +83,11 @@ export const ConfirmLeaveModal: React.FC<ConfirmLeaveModalProps> = ({
     }
   };
 
+  const effectiveBalance = userBalance !== undefined ? userBalance : (fetchedBalance ?? 0);
+  const hasDebt = effectiveBalance < -0.005;
+  const hasCredit = effectiveBalance > 0.005;
+  const hasPendingBalance = hasDebt || hasCredit;
+
   return (
     <div
       role="dialog"
@@ -67,7 +103,7 @@ export const ConfirmLeaveModal: React.FC<ConfirmLeaveModalProps> = ({
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 text-secondary hover:text-on-surface rounded-lg transition-colors"
+          className="absolute top-4 right-4 p-1.5 text-secondary hover:text-on-surface rounded-lg transition-colors cursor-pointer"
           aria-label="Cerrar modal"
         >
           <X className="w-5 h-5" />
@@ -89,6 +125,13 @@ export const ConfirmLeaveModal: React.FC<ConfirmLeaveModalProps> = ({
           </div>
         )}
 
+        {isLoadingBalance && (
+          <div className="mb-4 p-2.5 bg-surface-container rounded-xl flex items-center gap-2 text-xs text-secondary">
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            <span>Comprobando saldo de gastos...</span>
+          </div>
+        )}
+
         {isOnlyAdminWithOtherMembers ? (
           <div className="space-y-4">
             <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-900 space-y-2">
@@ -105,7 +148,7 @@ export const ConfirmLeaveModal: React.FC<ConfirmLeaveModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-secondary hover:text-on-surface hover:bg-surface-container rounded-xl transition-colors"
+                className="px-4 py-2 text-sm font-medium text-secondary hover:text-on-surface hover:bg-surface-container rounded-xl transition-colors cursor-pointer"
               >
                 Cancelar
               </button>
@@ -115,7 +158,7 @@ export const ConfirmLeaveModal: React.FC<ConfirmLeaveModalProps> = ({
                   onClose();
                   onOpenTransferAdmin();
                 }}
-                className="px-4 py-2 bg-amber-600 text-white text-sm font-semibold rounded-xl hover:bg-amber-700 transition-colors shadow-xs"
+                className="px-4 py-2 bg-amber-600 text-white text-sm font-semibold rounded-xl hover:bg-amber-700 transition-colors shadow-xs cursor-pointer"
               >
                 Transferir Administración
               </button>
@@ -123,7 +166,29 @@ export const ConfirmLeaveModal: React.FC<ConfirmLeaveModalProps> = ({
           </div>
         ) : (
           <div className="space-y-4">
-            {isSoleActiveMember ? (
+            {hasDebt ? (
+              <div className="p-3.5 bg-error-container/40 border border-error/20 rounded-xl text-xs text-error space-y-2">
+                <div className="flex items-center gap-1.5 font-bold">
+                  <AlertTriangle className="w-4 h-4 text-error" />
+                  <span>Acción bloqueada: Deuda activa</span>
+                </div>
+                <p>
+                  Tu balance actual es de <strong>-{Math.abs(effectiveBalance).toFixed(2)} €</strong>.
+                  Para poder salir del hogar, debes saldar tus deudas con tus compañeros registrando el pago correspondiente en la pestaña de Gastos.
+                </p>
+              </div>
+            ) : hasCredit ? (
+              <div className="p-3.5 bg-error-container/40 border border-error/20 rounded-xl text-xs text-error space-y-2">
+                <div className="flex items-center gap-1.5 font-bold">
+                  <AlertTriangle className="w-4 h-4 text-error" />
+                  <span>Acción bloqueada: Saldo a favor pendiente</span>
+                </div>
+                <p>
+                  El grupo te debe <strong>+{effectiveBalance.toFixed(2)} €</strong>.
+                  Para poder salir del hogar, debes recibir tus cobros pendientes o registrarlos como saldados en la pestaña de Gastos antes de salir.
+                </p>
+              </div>
+            ) : isSoleActiveMember ? (
               <div className="p-3.5 bg-error-container/40 border border-error/20 rounded-xl text-xs text-error space-y-1.5">
                 <div className="flex items-center gap-1.5 font-bold">
                   <AlertTriangle className="w-4 h-4" />
@@ -144,15 +209,22 @@ export const ConfirmLeaveModal: React.FC<ConfirmLeaveModalProps> = ({
                 type="button"
                 onClick={onClose}
                 disabled={isSubmitting}
-                className="px-4 py-2 text-sm font-medium text-secondary hover:text-on-surface hover:bg-surface-container rounded-xl transition-colors"
+                className="px-4 py-2 text-sm font-medium text-secondary hover:text-on-surface hover:bg-surface-container rounded-xl transition-colors cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={handleConfirm}
-                disabled={isSubmitting}
-                className="flex items-center gap-2 px-5 py-2 bg-error text-white text-sm font-semibold rounded-xl hover:bg-error/90 disabled:opacity-50 transition-colors shadow-xs"
+                disabled={isSubmitting || hasPendingBalance || isLoadingBalance}
+                title={
+                  hasDebt
+                    ? 'Debes saldar tu deuda antes de poder salir'
+                    : hasCredit
+                    ? 'Debes saldar tus cobros pendientes antes de poder salir'
+                    : undefined
+                }
+                className="flex items-center gap-2 px-5 py-2 bg-error text-white text-sm font-semibold rounded-xl hover:bg-error/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-xs cursor-pointer"
               >
                 {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
                 <span>Salir del Hogar</span>

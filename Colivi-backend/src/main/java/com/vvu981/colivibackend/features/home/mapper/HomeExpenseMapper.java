@@ -30,6 +30,7 @@ public class HomeExpenseMapper {
                 expense.getTotalAmount(),
                 userMapper.toUserProfileDto(expense.getPayer()),
                 expense.getCreatedAt(),
+                expense.isPayment(),
                 expense.getParticipants().stream()
                         .map(this::toParticipantResponseDto)
                         .toList()
