@@ -54,7 +54,7 @@ describe('ConfirmLeaveModal', () => {
     expect(leaveBtn).toBeDisabled();
   });
 
-  it('shows warning alert when user has credit balance', () => {
+  it('blocks leave action and disables button when user has credit balance (positive balance)', () => {
     const onConfirm = vi.fn();
     const onClose = vi.fn();
     const onTransfer = vi.fn();
@@ -72,10 +72,10 @@ describe('ConfirmLeaveModal', () => {
       />
     );
 
-    expect(screen.getByText(/Aviso: Saldo a favor pendiente/i)).toBeInTheDocument();
+    expect(screen.getByText(/Acción bloqueada: Saldo a favor pendiente/i)).toBeInTheDocument();
     expect(screen.getByText(/\+50.00 €/i)).toBeInTheDocument();
 
     const leaveBtn = screen.getByRole('button', { name: /salir del hogar/i });
-    expect(leaveBtn).not.toBeDisabled();
+    expect(leaveBtn).toBeDisabled();
   });
 });

@@ -1,5 +1,6 @@
 package com.vvu981.colivibackend.features.home.dto;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
@@ -27,7 +28,7 @@ public record CreateExpenseRequest(
         @NotEmpty(message = "Debe haber al menos un participante")
         List<UUID> participantIds,
 
-        @jakarta.validation.Valid
+        @Valid
         List<ExpenseParticipantShareDto> customSplits
 ) {
         public CreateExpenseRequest(String description, BigDecimal totalAmount, UUID payerId, List<UUID> participantIds) {

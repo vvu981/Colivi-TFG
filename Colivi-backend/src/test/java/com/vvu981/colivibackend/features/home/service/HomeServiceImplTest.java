@@ -385,7 +385,7 @@ class HomeServiceImplTest {
 
                         homeService.leaveHome(homeId, testUserId);
                         assertEquals(HomeMemberStatus.LEFT, member.getStatus());
-                        verify(homeBalanceValidator).validateNoPendingDebt(homeId, testUserId);
+                        verify(homeBalanceValidator).validateZeroBalance(homeId, testUserId);
                 }
 
                 @Test

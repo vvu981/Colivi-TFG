@@ -86,6 +86,7 @@ export const ConfirmLeaveModal: React.FC<ConfirmLeaveModalProps> = ({
   const effectiveBalance = userBalance !== undefined ? userBalance : (fetchedBalance ?? 0);
   const hasDebt = effectiveBalance < -0.005;
   const hasCredit = effectiveBalance > 0.005;
+  const hasPendingBalance = hasDebt || hasCredit;
 
   return (
     <div
@@ -177,14 +178,14 @@ export const ConfirmLeaveModal: React.FC<ConfirmLeaveModalProps> = ({
                 </p>
               </div>
             ) : hasCredit ? (
-              <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-900 space-y-2">
-                <div className="flex items-center gap-1.5 font-bold text-amber-800">
-                  <AlertTriangle className="w-4 h-4 text-amber-600" />
-                  <span>Aviso: Saldo a favor pendiente</span>
+              <div className="p-3.5 bg-error-container/40 border border-error/20 rounded-xl text-xs text-error space-y-2">
+                <div className="flex items-center gap-1.5 font-bold">
+                  <AlertTriangle className="w-4 h-4 text-error" />
+                  <span>Acción bloqueada: Saldo a favor pendiente</span>
                 </div>
                 <p>
                   El grupo te debe <strong>+{effectiveBalance.toFixed(2)} €</strong>.
-                  Si abandonas el hogar ahora, no podrás exigir activamente este cobro en el sistema.
+                  Para poder salir del hogar, debes recibir tus cobros pendientes o registrarlos como saldados en la pestaña de Gastos antes de salir.
                 </p>
               </div>
             ) : isSoleActiveMember ? (
@@ -215,8 +216,14 @@ export const ConfirmLeaveModal: React.FC<ConfirmLeaveModalProps> = ({
               <button
                 type="button"
                 onClick={handleConfirm}
-                disabled={isSubmitting || hasDebt || isLoadingBalance}
-                title={hasDebt ? 'Debes saldar tu deuda antes de poder salir' : undefined}
+                disabled={isSubmitting || hasPendingBalance || isLoadingBalance}
+                title={
+                  hasDebt
+                    ? 'Debes saldar tu deuda antes de poder salir'
+                    : hasCredit
+                    ? 'Debes saldar tus cobros pendientes antes de poder salir'
+                    : undefined
+                }
                 className="flex items-center gap-2 px-5 py-2 bg-error text-white text-sm font-semibold rounded-xl hover:bg-error/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-xs cursor-pointer"
               >
                 {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}

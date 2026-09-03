@@ -272,7 +272,7 @@ export const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
       }
       customSplitsPayload = selectedParticipantIds.map((id) => ({
         userId: id,
-        amount: customAmounts[id] || 0,
+        amount: fromCents(toCents(customAmounts[id] || 0)),
       }));
     }
 

@@ -40,26 +40,14 @@ class HomeBalanceValidatorTest {
     }
 
     @Test
-    void validateZeroBalance_ThrowsException_WhenBalanceIsNotZero() {
+    void validateZeroBalance_ThrowsException_WhenBalanceIsPositive() {
         when(expenseQueryService.getUserBalance(homeId, userId)).thenReturn(new BigDecimal("10.00"));
         assertThrows(BusinessRuleValidationException.class, () -> validator.validateZeroBalance(homeId, userId));
     }
 
     @Test
-    void validateNoPendingDebt_Success_WhenBalanceIsZero() {
-        when(expenseQueryService.getUserBalance(homeId, userId)).thenReturn(BigDecimal.ZERO);
-        assertDoesNotThrow(() -> validator.validateNoPendingDebt(homeId, userId));
-    }
-
-    @Test
-    void validateNoPendingDebt_Success_WhenBalanceIsPositive() {
-        when(expenseQueryService.getUserBalance(homeId, userId)).thenReturn(new BigDecimal("25.50"));
-        assertDoesNotThrow(() -> validator.validateNoPendingDebt(homeId, userId));
-    }
-
-    @Test
-    void validateNoPendingDebt_ThrowsException_WhenBalanceIsNegative() {
-        when(expenseQueryService.getUserBalance(homeId, userId)).thenReturn(new BigDecimal("-10.00"));
-        assertThrows(BusinessRuleValidationException.class, () -> validator.validateNoPendingDebt(homeId, userId));
+    void validateZeroBalance_ThrowsException_WhenBalanceIsNegative() {
+        when(expenseQueryService.getUserBalance(homeId, userId)).thenReturn(new BigDecimal("-15.50"));
+        assertThrows(BusinessRuleValidationException.class, () -> validator.validateZeroBalance(homeId, userId));
     }
 }

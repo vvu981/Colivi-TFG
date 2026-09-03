@@ -30,21 +30,7 @@ public class HomeBalanceValidator {
 
         if (balanceNeto.compareTo(BigDecimal.ZERO) != 0) {
             throw new BusinessRuleValidationException(
-                    "El usuario no puede salir o ser expulsado porque tiene un balance neto pendiente (" + balanceNeto + "€)."
-            );
-        }
-    }
-
-    /**
-     * Valida que el miembro no tenga saldo deudor pendiente (< 0).
-     * Permite salir voluntariamente si el balance es 0 o positivo (a favor).
-     */
-    public void validateNoPendingDebt(UUID homeId, UUID userId) {
-        BigDecimal balanceNeto = expenseQueryService.getUserBalance(homeId, userId);
-
-        if (balanceNeto.compareTo(BigDecimal.ZERO) < 0) {
-            throw new BusinessRuleValidationException(
-                    "No puedes salir del hogar porque tienes un balance deudor pendiente (" + balanceNeto + "€). Salda tus deudas antes de salir."
+                    "No puedes salir o ser expulsado del hogar porque tienes un balance pendiente (" + balanceNeto + "€). Salda todas las cuentas antes de salir."
             );
         }
     }
