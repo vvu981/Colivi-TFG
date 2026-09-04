@@ -11,6 +11,7 @@ export interface AuthContextType {
   login: (data: LoginData) => Promise<UserProfile>;
   loginWithGoogle: (idToken: string) => Promise<UserProfile>;
   register: (data: RegisterData) => Promise<void>;
+  reactivateAccount: (token: string) => Promise<UserProfile>;
   updateUserContextData: (data: Partial<UserProfile>) => void;
   logout: () => void;
 }
@@ -67,6 +68,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const reactivateAccount = async (reactivationToken: string): Promise<UserProfile> => {
+    const response = await authService.reactivateAccount(reactivationToken);
+    localStorage.setItem('token', response.accessToken);
+    setToken(response.accessToken);
+    const userData = await userService.getMe();
+    setUser(userData);
+    return userData;
+  };
+
   const updateUserContextData = (data: Partial<UserProfile>) => {
     if (user) {
       setUser({ ...user, ...data });
@@ -80,7 +90,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isAuthenticated: !!user, isLoading, login, loginWithGoogle, register, updateUserContextData, logout }}>
+    <AuthContext.Provider value={{ user, token, isAuthenticated: !!user, isLoading, login, loginWithGoogle, register, reactivateAccount, updateUserContextData, logout }}>
       {children}
     </AuthContext.Provider>
   );

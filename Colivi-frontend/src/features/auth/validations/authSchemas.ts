@@ -28,3 +28,14 @@ export const resetPasswordSchema = z
 
 // Inferencia del tipo para react-hook-form
 export type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
+
+// Esquema para la solicitud de reactivación de cuenta
+export const reactivationRequestSchema = z.object({
+  email: z
+    .string()
+    .min(1, 'Por favor, introduce tu correo electrónico.')
+    .email('El formato del correo electrónico no es válido.'),
+});
+
+export type ReactivationRequestFormData = z.infer<typeof reactivationRequestSchema>;
+

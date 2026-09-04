@@ -3,12 +3,13 @@ import { useAuth } from "../../auth/context/AuthContext";
 import { useUser } from "../hooks/useUser";
 import { Spinner } from "../../../components/feedback/Spinner";
 import { ChangePasswordModal } from "./ChangePasswordModal";
+import { DeleteAccountModal } from "./DeleteAccountModal";
 import { type Value as PhoneValue } from "react-phone-number-input";
 import { ProfileHeader } from "./ProfileHeader";
 import { ProfilePersonalInfoForm } from "./ProfilePersonalInfoForm";
 export const Profile = () => {
   const { logout } = useAuth();
-  const { user, updateProfile, updateProfilePicture } = useUser();
+  const { user, updateProfile, updateProfilePicture, deleteAccount } = useUser();
   
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -21,6 +22,7 @@ export const Profile = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
+  const [isDeleteAccountModalOpen, setIsDeleteAccountModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (!user) {
@@ -187,10 +189,42 @@ export const Profile = () => {
         )}
       </section>
 
+      {/* Danger Zone Section */}
+      {!isEditing && (
+        <section className="w-full max-w-3xl mt-12 pt-8 border-t border-outline-variant">
+          <div className="bg-red-50/60 border border-red-200/80 rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex flex-col gap-1">
+              <h3 className="font-headline-sm text-title-md font-semibold text-red-900 flex items-center gap-2">
+                <span className="material-symbols-outlined text-[20px] text-red-600">warning</span>
+                Zona de peligro
+              </h3>
+              <p className="text-body-sm text-on-surface-variant max-w-lg">
+                Al eliminar tu cuenta, se desactivará tu perfil y se cerrará tu sesión de forma inmediata.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsDeleteAccountModalOpen(true)}
+              className="px-6 py-3 rounded-lg border border-red-300 text-red-600 hover:bg-red-600 hover:text-white font-label-md text-label-md transition-colors duration-200 flex items-center justify-center gap-2 shrink-0 cursor-pointer shadow-xs w-full sm:w-auto"
+            >
+              <span className="material-symbols-outlined text-[20px]">delete_forever</span>
+              Eliminar cuenta
+            </button>
+          </div>
+        </section>
+      )}
+
       <ChangePasswordModal 
         isOpen={isChangePasswordModalOpen} 
         onClose={() => setIsChangePasswordModalOpen(false)} 
       />
+
+      <DeleteAccountModal
+        isOpen={isDeleteAccountModalOpen}
+        onClose={() => setIsDeleteAccountModalOpen(false)}
+        onConfirm={deleteAccount}
+      />
     </div>
   );
 };
+

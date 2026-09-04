@@ -57,6 +57,7 @@ describe('HomesPage', () => {
       login: vi.fn(),
       loginWithGoogle: vi.fn(),
       register: vi.fn(),
+      reactivateAccount: vi.fn(),
       updateUserContextData: vi.fn(),
       logout: vi.fn(),
     });

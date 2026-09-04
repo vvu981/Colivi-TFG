@@ -8,6 +8,8 @@ import { ProfilePage } from "../pages/ProfilePage";
 import { PublicProfilePage } from "../pages/PublicProfilePage";
 import { ForgotPasswordPage } from "../pages/ForgotPasswordPage";
 import { ResetPasswordPage } from "../pages/ResetPasswordPage";
+import { RequestReactivationPage } from "../pages/RequestReactivationPage";
+import { ReactivateAccountPage } from "../pages/ReactivateAccountPage";
 import { CreateAccommodationPage } from "../pages/CreateAccommodationPage";
 import { CreateListingPage } from "../pages/CreateListingPage";
 import { MyAccommodationsPage } from "../pages/MyAccommodationsPage";
@@ -46,6 +48,8 @@ export const AppRoutes = () => {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/reactivate-request" element={<RequestReactivationPage />} />
+      <Route path="/reactivate" element={<ReactivateAccountPage />} />
       {/* Protected: requires authentication */}
       <Route
         path="/profile"

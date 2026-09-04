@@ -90,6 +90,7 @@ describe('usePublicProfile', () => {
       loginWithGoogle: vi.fn(),
       logout: vi.fn(),
       register: vi.fn(),
+      reactivateAccount: vi.fn(),
       updateUserContextData: vi.fn(),
     });
     vi.mocked(userService.getById).mockResolvedValue(mockUser);
@@ -123,6 +124,7 @@ describe('usePublicProfile', () => {
       loginWithGoogle: vi.fn(),
       logout: vi.fn(),
       register: vi.fn(),
+      reactivateAccount: vi.fn(),
       updateUserContextData: vi.fn(),
     });
 

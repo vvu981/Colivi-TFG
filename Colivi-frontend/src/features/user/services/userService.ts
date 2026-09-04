@@ -43,4 +43,8 @@ export const userService = {
   updateCredentials: async (data: UpdateSensibleData): Promise<void> => {
     await api.patch('/users/me/credentials', data);
   },
+
+  deleteAccountSoft: async (): Promise<void> => {
+    await api.patch('/users/me/delete/soft');
+  },
 };

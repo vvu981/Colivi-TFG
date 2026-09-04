@@ -100,12 +100,26 @@ export const LoginForm = () => {
     }
   };
 
+  const isAccountDeletedError =
+    error.toLowerCase().includes('eliminada') ||
+    error.toLowerCase().includes('reactivación') ||
+    error.toLowerCase().includes('reactivar');
+
   return (
     <div className="w-full">
       {/* Error */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 text-sm">
-          {error}
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 text-sm flex flex-col gap-2">
+          <span>{error}</span>
+          {isAccountDeletedError && (
+            <Link
+              to="/reactivate-request"
+              className="text-xs font-semibold text-red-800 underline hover:text-red-900 inline-flex items-center gap-1"
+            >
+              <span className="material-symbols-outlined text-[16px]">restart_alt</span>
+              ¿Deseas reactivar tu cuenta? Solicita el enlace de reactivación aquí
+            </Link>
+          )}
         </div>
       )}
 
