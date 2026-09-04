@@ -2,7 +2,7 @@ import { useAuth } from "../../auth/context/AuthContext";
 import { userService, type UpdateProfileData } from "../services/userService";
 
 export const useUser = () => {
-  const { user, updateUserContextData } = useAuth();
+  const { user, updateUserContextData, logout } = useAuth();
 
   const updateProfile = async (data: UpdateProfileData) => {
     const updatedData = await userService.updateProfile(data);
@@ -14,9 +14,15 @@ export const useUser = () => {
     updateUserContextData({ profilePicUrl: newUrl });
   };
 
+  const deleteAccount = async () => {
+    await userService.deleteAccountSoft();
+    logout();
+  };
+
   return {
     user,
     updateProfile,
     updateProfilePicture,
+    deleteAccount,
   };
 };

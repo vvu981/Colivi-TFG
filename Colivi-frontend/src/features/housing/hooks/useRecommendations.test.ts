@@ -33,6 +33,7 @@ describe('useRecommendations', () => {
       loginWithGoogle: vi.fn(),
       logout: vi.fn(),
       register: vi.fn(),
+      reactivateAccount: vi.fn(),
       updateUserContextData: vi.fn(),
     });
     vi.mocked(recommendationsService.fetchRecommendations).mockResolvedValue(mockResponse);

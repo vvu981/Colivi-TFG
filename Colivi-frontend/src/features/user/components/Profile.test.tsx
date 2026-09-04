@@ -24,6 +24,7 @@ describe('Profile', () => {
   const mockLogout = vi.fn();
   const mockUpdateProfile = vi.fn();
   const mockUpdateProfilePicture = vi.fn();
+  const mockDeleteAccount = vi.fn();
   
   const mockUser = {
     id: '1',
@@ -47,6 +48,7 @@ describe('Profile', () => {
       user: mockUser,
       updateProfile: mockUpdateProfile,
       updateProfilePicture: mockUpdateProfilePicture,
+      deleteAccount: mockDeleteAccount,
     });
   });
 
@@ -95,5 +97,30 @@ describe('Profile', () => {
     });
     
     expect(mockUpdateProfile).not.toHaveBeenCalled();
+  });
+
+  it('renders danger zone and opens delete account modal', async () => {
+    render(<Profile />);
+
+    expect(screen.getByText('Zona de peligro')).toBeInTheDocument();
+    const deleteAccountButton = screen.getByRole('button', { name: /Eliminar cuenta/i });
+    expect(deleteAccountButton).toBeInTheDocument();
+
+    fireEvent.click(deleteAccountButton);
+
+    expect(
+      screen.getByText(/¿Estás seguro de que deseas eliminar tu cuenta\?/i)
+    ).toBeInTheDocument();
+
+    // Confirm deletion flow
+    const confirmInput = screen.getByPlaceholderText(/Escribe ELIMINAR/i);
+    fireEvent.change(confirmInput, { target: { value: 'ELIMINAR' } });
+
+    const confirmButton = screen.getByRole('button', { name: /Eliminar mi cuenta/i });
+    fireEvent.click(confirmButton);
+
+    await waitFor(() => {
+      expect(mockDeleteAccount).toHaveBeenCalledTimes(1);
+    });
   });
 });
