@@ -6,6 +6,8 @@ import com.vvu981.colivibackend.features.home.dto.HomeDetailResponseDto;
 import com.vvu981.colivibackend.features.home.dto.HomeResponseDto;
 import com.vvu981.colivibackend.features.home.dto.JoinHomeRequest;
 import com.vvu981.colivibackend.features.home.dto.ForceExpelRequestDto;
+import com.vvu981.colivibackend.features.home.dto.HomeMemberResponseDto;
+import com.vvu981.colivibackend.features.home.dto.UpdateMemberColorRequestDto;
 import com.vvu981.colivibackend.features.home.service.HomeService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -197,6 +199,18 @@ public class HomeController {
             @PathVariable("id") UUID homeId,
             @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
         HomeDetailResponseDto response = homeService.regenerateInvitationCode(homeId, currentUserId);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * PATCH /api/v1/homes/{id}/members/me/color — Actualiza el color personal del usuario en el hogar.
+     */
+    @PatchMapping("/{id}/members/me/color")
+    public ResponseEntity<HomeMemberResponseDto> updateMyColor(
+            @PathVariable("id") UUID homeId,
+            @Valid @RequestBody UpdateMemberColorRequestDto request,
+            @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
+        HomeMemberResponseDto response = homeService.updateMemberColor(homeId, currentUserId, request.color());
         return ResponseEntity.ok(response);
     }
 

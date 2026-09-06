@@ -258,6 +258,28 @@ class AdminReportServiceImplTest {
     }
 
     @Test
+    void updateBulkReportStatus_shouldThrowException_whenStatusIsPending() {
+        BulkReportStatusUpdateRequest request = new BulkReportStatusUpdateRequest(List.of(reportId),
+                ReportStatus.PENDING, null);
+
+        assertThatThrownBy(() -> adminReportService.updateBulkReportStatus(request, adminId))
+                .isInstanceOf(BusinessRuleValidationException.class);
+    }
+
+    @Test
+    void updateBulkReportStatus_shouldUpdateSuccessfully_whenStatusIsInvestigating() {
+        BulkReportStatusUpdateRequest request = new BulkReportStatusUpdateRequest(
+                List.of(reportId), ReportStatus.INVESTIGATING, "Investigating Notes");
+
+        when(reportRepository.bulkUpdateStatusByIds(eq(request.reportIds()), eq(ReportStatus.INVESTIGATING), eq("Investigating Notes"), eq(adminId), isNull(), any()))
+                .thenReturn(1);
+
+        adminReportService.updateBulkReportStatus(request, adminId);
+
+        verify(reportRepository).bulkUpdateStatusByIds(eq(request.reportIds()), eq(ReportStatus.INVESTIGATING), eq("Investigating Notes"), eq(adminId), isNull(), any());
+    }
+
+    @Test
     void updateBulkReportStatus_shouldThrowException_whenSomeReportIdsNotFound() {
         UUID id1 = UUID.randomUUID();
         UUID id2 = UUID.randomUUID();
@@ -294,9 +316,19 @@ class AdminReportServiceImplTest {
     }
 
     @Test
+    void resolveAllOpenReportsForTarget_shouldUpdateSuccessfully_whenStatusIsInvestigating() {
+        UUID targetId = UUID.randomUUID();
+        adminReportService.resolveAllOpenReportsForTarget(targetId, ReportStatus.INVESTIGATING, "Investigating Target", adminId);
+
+        verify(reportRepository).bulkUpdateStatusByTargetId(eq(targetId), eq(ReportStatus.INVESTIGATING), eq(List.of(ReportStatus.PENDING, ReportStatus.INVESTIGATING)), eq("Investigating Target"), eq(adminId), isNull(), any());
+    }
+
+    @Test
     void resolveAllOpenReportsForTarget_shouldThrowException_whenInvalidStatus() {
         UUID targetId = UUID.randomUUID();
         assertThatThrownBy(() -> adminReportService.resolveAllOpenReportsForTarget(targetId, ReportStatus.PENDING, "Closed", adminId))
+                .isInstanceOf(BusinessRuleValidationException.class);
+        assertThatThrownBy(() -> adminReportService.resolveAllOpenReportsForTarget(targetId, ReportStatus.CANCELLED, "Closed", adminId))
                 .isInstanceOf(BusinessRuleValidationException.class);
     }
 

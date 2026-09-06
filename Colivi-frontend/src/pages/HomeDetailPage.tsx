@@ -16,11 +16,12 @@ import {
   HomeExpensesTab,
   type HomeMemberResponseDto,
 } from '../features/home';
-import { Users, Receipt, Activity, Settings, ChevronLeft } from 'lucide-react';
+import { HomeChoresTab } from '../features/chore';
+import { Users, Receipt, Activity, Settings, ChevronLeft, Trophy } from 'lucide-react';
 import { Spinner } from '../components/feedback/Spinner';
 import { MainLayout } from '../layouts/MainLayout';
 
-type HomeDetailTab = 'members' | 'expenses' | 'activities' | 'settings';
+type HomeDetailTab = 'members' | 'expenses' | 'chores' | 'activities' | 'settings';
 
 export const HomeDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -37,6 +38,7 @@ export const HomeDetailPage: React.FC = () => {
     activeMembers,
     isSoleActiveMember,
     isOnlyAdminWithOtherMembers,
+    refetch,
     regenerateInvitationCode,
     transferAdmin,
     expelMember,
@@ -51,7 +53,7 @@ export const HomeDetailPage: React.FC = () => {
   const activeTab: HomeDetailTab =
     requestedTab === 'settings' && (!isAdmin || !isActiveMember)
       ? 'members'
-      : requestedTab === 'expenses' || requestedTab === 'activities' || requestedTab === 'settings'
+      : requestedTab === 'expenses' || requestedTab === 'chores' || requestedTab === 'activities' || requestedTab === 'settings'
         ? requestedTab
         : 'members';
 
@@ -153,6 +155,19 @@ export const HomeDetailPage: React.FC = () => {
 
           <button
             type="button"
+            onClick={() => handleTabChange('chores')}
+            className={`flex items-center gap-2 py-3 px-3 font-medium text-sm transition-all border-b-2 whitespace-nowrap ${
+              activeTab === 'chores'
+                ? 'border-primary text-primary font-semibold'
+                : 'border-transparent text-secondary hover:text-on-surface'
+            }`}
+          >
+            <Trophy className="w-4 h-4" />
+            <span>Tareas y Puntos</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => handleTabChange('activities')}
             className={`flex items-center gap-2 py-3 px-3 font-medium text-sm transition-all border-b-2 whitespace-nowrap ${
               activeTab === 'activities'
@@ -200,6 +215,14 @@ export const HomeDetailPage: React.FC = () => {
               isAdmin={isAdmin}
               isActiveMember={isActiveMember}
               currentUserId={user?.id}
+            />
+          )}
+
+          {activeTab === 'chores' && (
+            <HomeChoresTab
+              home={home}
+              currentUserId={user?.id}
+              onHomeUpdate={refetch}
             />
           )}
 

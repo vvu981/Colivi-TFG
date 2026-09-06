@@ -407,5 +407,154 @@ class AccommodationReviewServiceImplTest {
 
             verify(reviewRepository, never()).delete(any());
         }
+
+        @Test
+        @DisplayName("deleteReview throws UnauthorizedActionException when currentUserId is null and non-admin")
+        void deleteReview_nullUser_unauthorized() {
+            AccommodationReview review = AccommodationReview.builder()
+                    .id(reviewId)
+                    .author(author)
+                    .build();
+
+            when(reviewRepository.findById(reviewId)).thenReturn(Optional.of(review));
+
+            assertThatThrownBy(() -> reviewService.deleteReview(reviewId, null, false))
+                    .isInstanceOf(UnauthorizedActionException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("Additional Branch Coverage Tests")
+    class AdditionalBranchTests {
+
+        @Test
+        @DisplayName("checkEligibility covers null user, not found listing, empty booking, and future stay")
+        void testCheckEligibilityBranches() {
+            // Null currentUserId
+            ReviewEligibilityResponse resNullUser = reviewService.checkEligibility(listingId, null);
+            assertThat(resNullUser.eligible()).isFalse();
+            assertThat(resNullUser.reason()).contains("Inicia sesión");
+
+            // Listing not found
+            when(listingRepository.existsById(listingId)).thenReturn(false);
+            assertThatThrownBy(() -> reviewService.checkEligibility(listingId, userId))
+                    .isInstanceOf(ResourceNotFoundException.class);
+
+            when(listingRepository.existsById(listingId)).thenReturn(true);
+            when(reviewRepository.existsByAuthorIdAndListingId(userId, listingId)).thenReturn(false);
+
+            // Empty confirmed booking
+            when(bookingRequestRepository.findFirstByRequesterIdAndAccommodationListingIdAndStatusOrderByCreatedAtDesc(
+                    userId, listingId, RequestStatus.CONFIRMED)).thenReturn(Optional.empty());
+            ReviewEligibilityResponse resNoBooking = reviewService.checkEligibility(listingId, userId);
+            assertThat(resNoBooking.eligible()).isFalse();
+            assertThat(resNoBooking.reason()).contains("Se requiere una reserva confirmada");
+
+            // Confirmed booking in future
+            BookingRequest futureBooking = BookingRequest.builder()
+                    .id(bookingId)
+                    .startDate(LocalDate.now().plusDays(5))
+                    .build();
+            when(bookingRequestRepository.findFirstByRequesterIdAndAccommodationListingIdAndStatusOrderByCreatedAtDesc(
+                    userId, listingId, RequestStatus.CONFIRMED)).thenReturn(Optional.of(futureBooking));
+            ReviewEligibilityResponse resFuture = reviewService.checkEligibility(listingId, userId);
+            assertThat(resFuture.eligible()).isFalse();
+            assertThat(resFuture.reason()).contains("Solo puedes valorar el alojamiento una vez haya comenzado");
+
+            // Already reviewed this booking
+            BookingRequest pastBooking = BookingRequest.builder()
+                    .id(bookingId)
+                    .startDate(LocalDate.now().minusDays(5))
+                    .build();
+            when(bookingRequestRepository.findFirstByRequesterIdAndAccommodationListingIdAndStatusOrderByCreatedAtDesc(
+                    userId, listingId, RequestStatus.CONFIRMED)).thenReturn(Optional.of(pastBooking));
+            when(reviewRepository.existsByBookingRequestId(bookingId)).thenReturn(true);
+            ReviewEligibilityResponse resReviewed = reviewService.checkEligibility(listingId, userId);
+            assertThat(resReviewed.eligible()).isFalse();
+            assertThat(resReviewed.alreadyReviewed()).isTrue();
+        }
+
+        @Test
+        @DisplayName("getListingReviewSummary handles null breakdown and corrupted row elements")
+        void testReviewSummaryNullAndCorruptedRows() {
+            when(listingRepository.existsById(listingId)).thenReturn(true);
+            when(reviewRepository.getAverageRatingByListingId(listingId)).thenReturn(null);
+            when(reviewRepository.countByListingId(listingId)).thenReturn(null);
+
+            // null breakdown
+            when(reviewRepository.getRatingBreakdownByListingId(listingId)).thenReturn(null);
+            ReviewSummaryResponse resNull = reviewService.getListingReviewSummary(listingId);
+            assertThat(resNull.averageRating()).isEqualTo(0.0);
+            assertThat(resNull.totalReviews()).isEqualTo(0L);
+
+            // corrupted breakdown rows (null row, row length 1, wrong types)
+            List<Object[]> corruptedRows = new ArrayList<>();
+            corruptedRows.add(null);
+            corruptedRows.add(new Object[]{1});
+            corruptedRows.add(new Object[]{"not_int", "not_long"});
+            corruptedRows.add(new Object[]{5, 10L}); // valid row
+
+            when(reviewRepository.getRatingBreakdownByListingId(listingId)).thenReturn(corruptedRows);
+            ReviewSummaryResponse resCorrupted = reviewService.getListingReviewSummary(listingId);
+            assertThat(resCorrupted.ratingBreakdown().get(5)).isEqualTo(10L);
+        }
+
+        @Test
+        @DisplayName("getReviewsByCity returns empty list when city is null or blank")
+        void testGetReviewsByCityBlankOrNull() {
+            assertThat(reviewService.getReviewsByCity(null)).isEmpty();
+            assertThat(reviewService.getReviewsByCity("   ")).isEmpty();
+        }
+
+        @Test
+        @DisplayName("createReview handles null comment and null startDate without throwing")
+        void testCreateReviewNullCommentAndStartDate() {
+            Accommodation accommodation = Accommodation.builder().id(UUID.randomUUID()).build();
+            AccommodationListing listing = AccommodationListing.builder().id(listingId).accommodation(accommodation).build();
+            User requester = new User();
+            requester.setId(userId);
+            requester.setNickname("tenant");
+            BookingRequest booking = BookingRequest.builder()
+                    .id(bookingId)
+                    .requester(requester)
+                    .startDate(null) // null startDate
+                    .build();
+
+            when(listingRepository.findById(listingId)).thenReturn(Optional.of(listing));
+            when(bookingRequestRepository.findFirstByRequesterIdAndAccommodationListingIdAndStatusOrderByCreatedAtDesc(
+                    userId, listingId, RequestStatus.CONFIRMED)).thenReturn(Optional.of(booking));
+            when(reviewRepository.existsByBookingRequestId(bookingId)).thenReturn(false);
+            when(reviewRepository.existsByAuthorIdAndListingId(userId, listingId)).thenReturn(false);
+            when(reviewRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+            CreateReviewRequest reqNullComment = new CreateReviewRequest(5, null);
+            ReviewResponse response = reviewService.createReview(listingId, reqNullComment, userId);
+            assertThat(response).isNotNull();
+            assertThat(response.comment()).isNull();
+        }
+
+        @Test
+        @DisplayName("createReview throws when booking startDate is in the future")
+        void testCreateReviewFutureStartDateThrows() {
+            Accommodation accommodation = Accommodation.builder().id(UUID.randomUUID()).build();
+            AccommodationListing listing = AccommodationListing.builder().id(listingId).accommodation(accommodation).build();
+            User requester = new User();
+            requester.setId(userId);
+            requester.setNickname("tenant");
+            BookingRequest booking = BookingRequest.builder()
+                    .id(bookingId)
+                    .requester(requester)
+                    .startDate(LocalDate.now().plusDays(10)) // future
+                    .build();
+
+            when(listingRepository.findById(listingId)).thenReturn(Optional.of(listing));
+            when(bookingRequestRepository.findFirstByRequesterIdAndAccommodationListingIdAndStatusOrderByCreatedAtDesc(
+                    userId, listingId, RequestStatus.CONFIRMED)).thenReturn(Optional.of(booking));
+
+            CreateReviewRequest req = new CreateReviewRequest(5, "Muy bien");
+            assertThatThrownBy(() -> reviewService.createReview(listingId, req, userId))
+                    .isInstanceOf(BusinessRuleValidationException.class)
+                    .hasMessageContaining("No puedes valorar un alojamiento antes del inicio");
+        }
     }
 }

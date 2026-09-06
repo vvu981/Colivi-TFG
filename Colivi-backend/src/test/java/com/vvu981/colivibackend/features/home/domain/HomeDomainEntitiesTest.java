@@ -131,8 +131,9 @@ class HomeDomainEntitiesTest {
         member.unarchive();
         assertEquals(HomeMemberStatus.LEFT, member.getStatus());
         
-        HomeMember member2 = new HomeMember(id, home, user, HomeRole.MEMBER, LocalDateTime.now(), null, HomeMemberStatus.ACTIVE);
+        HomeMember member2 = new HomeMember(id, home, user, HomeRole.MEMBER, LocalDateTime.now(), null, HomeMemberStatus.ACTIVE, "#4F46E5");
         assertEquals(id, member2.getId());
+        assertEquals("#4F46E5", member2.getColor());
     }
 
     @Test

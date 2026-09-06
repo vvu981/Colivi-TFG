@@ -1190,5 +1190,237 @@ class HomeExpenseServiceImplTest {
             assertThrows(com.vvu981.colivibackend.core.exception.ResourceNotFoundException.class,
                     () -> service.createExpense(homeId, request, payerId));
         }
+
+        @Test
+        void updateExpense_asSystemAdmin_success() {
+            UUID adminUserId = UUID.randomUUID();
+            mockActiveMember(homeId, adminUserId);
+
+            User systemAdminUser = new User();
+            systemAdminUser.setId(adminUserId);
+            systemAdminUser.setRole(UserRole.ADMIN);
+            when(userRepository.findActiveById(adminUserId)).thenReturn(Optional.of(systemAdminUser));
+
+            HomeExpense expense = new HomeExpense();
+            expense.setId(UUID.randomUUID());
+            expense.setHome(home);
+            expense.setPayer(payer);
+            expense.setTotalAmount(new BigDecimal("50.00"));
+            expense.setDescription("Initial");
+            expense.setParticipants(new java.util.ArrayList<>());
+
+            when(expenseRepository.findByIdAndDeletedAtIsNull(expense.getId())).thenReturn(Optional.of(expense));
+            when(userRepository.findActiveById(payerId)).thenReturn(Optional.of(payer));
+            mockActiveMembersList(homeId, payer, participant1);
+            when(userRepository.findAllById(any())).thenReturn(List.of(payer, participant1));
+
+            UpdateExpenseRequest request = new UpdateExpenseRequest(
+                    "Updated by System Admin", new BigDecimal("60.00"), payerId, List.of(payerId, participant1Id), null
+            );
+
+            assertDoesNotThrow(() -> service.updateExpense(homeId, expense.getId(), request, adminUserId));
+        }
+
+        @Test
+        void deleteExpense_asHomeAdmin_success() {
+            UUID homeAdminUserId = UUID.randomUUID();
+            mockActiveMember(homeId, homeAdminUserId);
+
+            User homeAdminUser = new User();
+            homeAdminUser.setId(homeAdminUserId);
+            homeAdminUser.setRole(UserRole.USER); // not system admin
+            when(userRepository.findActiveById(homeAdminUserId)).thenReturn(Optional.of(homeAdminUser));
+
+            HomeMember homeAdminMember = new HomeMember();
+            homeAdminMember.setStatus(HomeMemberStatus.ACTIVE);
+            homeAdminMember.setRole(HomeRole.ADMIN); // home admin
+            when(memberRepository.findByHomeIdAndUserId(homeId, homeAdminUserId)).thenReturn(Optional.of(homeAdminMember));
+
+            HomeExpense expense = new HomeExpense();
+            expense.setId(UUID.randomUUID());
+            expense.setHome(home);
+            expense.setPayer(payer); // different user
+            expense.setTotalAmount(new BigDecimal("30.00"));
+            expense.setDescription("Delete test");
+
+            when(expenseRepository.findByIdAndDeletedAtIsNull(expense.getId())).thenReturn(Optional.of(expense));
+
+            assertDoesNotThrow(() -> service.deleteExpense(homeId, expense.getId(), homeAdminUserId));
+            assertNotNull(expense.getDeletedAt());
+        }
+
+        @Test
+        void createExpense_withEmptyCustomSplits_usesEqualDistribution() {
+            mockActiveMember(homeId, payerId);
+            when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
+            mockActiveMembersList(homeId, payer, participant1);
+
+            when(userRepository.findActiveById(payerId)).thenReturn(Optional.of(payer));
+            when(userRepository.findAllById(any())).thenReturn(List.of(payer, participant1));
+
+            CreateExpenseRequest request = new CreateExpenseRequest(
+                    "Vacío", new BigDecimal("50.00"), payerId, List.of(payerId, participant1Id), List.of()
+            );
+
+            assertDoesNotThrow(() -> service.createExpense(homeId, request, payerId));
+        }
+
+        @Test
+        void updateExpense_withEmptyCustomSplits_usesEqualDistribution() {
+            mockActiveMember(homeId, payerId);
+
+            HomeExpense expense = new HomeExpense();
+            expense.setId(UUID.randomUUID());
+            expense.setHome(home);
+            expense.setPayer(payer);
+            expense.setTotalAmount(new BigDecimal("100.00"));
+
+            when(expenseRepository.findByIdAndDeletedAtIsNull(expense.getId())).thenReturn(Optional.of(expense));
+            when(userRepository.findActiveById(payerId)).thenReturn(Optional.of(payer));
+            mockActiveMembersList(homeId, payer, participant1);
+            when(userRepository.findAllById(any())).thenReturn(List.of(payer, participant1));
+
+            UpdateExpenseRequest request = new UpdateExpenseRequest(
+                    "Modificado", new BigDecimal("80.00"), payerId, List.of(payerId, participant1Id), List.of()
+            );
+
+            assertDoesNotThrow(() -> service.updateExpense(homeId, expense.getId(), request, payerId));
+        }
+
+        @Test
+        void distributeCustomSplits_withNullShare_throwsException() {
+            mockActiveMember(homeId, payerId);
+            when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
+            mockActiveMembersList(homeId, payer, participant1);
+            when(userRepository.findActiveById(payerId)).thenReturn(Optional.of(payer));
+
+            List<ExpenseParticipantShareDto> splits = java.util.Collections.singletonList(null);
+            CreateExpenseRequest request = new CreateExpenseRequest(
+                    "Null Share", new BigDecimal("50.00"), payerId, List.of(payerId), splits
+            );
+
+            BusinessRuleValidationException ex = assertThrows(BusinessRuleValidationException.class,
+                    () -> service.createExpense(homeId, request, payerId));
+            assertTrue(ex.getMessage().contains("Cada desglose"));
+        }
+
+        @Test
+        void distributeCustomSplits_withNullShareUserId_throwsException() {
+            mockActiveMember(homeId, payerId);
+            when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
+            mockActiveMembersList(homeId, payer, participant1);
+            when(userRepository.findActiveById(payerId)).thenReturn(Optional.of(payer));
+
+            List<ExpenseParticipantShareDto> splits = List.of(new ExpenseParticipantShareDto(null, new BigDecimal("50.00")));
+            CreateExpenseRequest request = new CreateExpenseRequest(
+                    "Null UserId", new BigDecimal("50.00"), payerId, List.of(payerId), splits
+            );
+
+            BusinessRuleValidationException ex = assertThrows(BusinessRuleValidationException.class,
+                    () -> service.createExpense(homeId, request, payerId));
+            assertTrue(ex.getMessage().contains("Cada desglose"));
+        }
+
+        @Test
+        void distributeCustomSplits_withSoftDeletedParticipantUser_throwsResourceNotFound() {
+            mockActiveMember(homeId, payerId);
+            when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
+            mockActiveMembersList(homeId, payer);
+            when(userRepository.findActiveById(payerId)).thenReturn(Optional.of(payer));
+
+            User softDeletedUser = new User();
+            softDeletedUser.setId(payerId);
+            softDeletedUser.setDeletedAt(java.time.LocalDateTime.now());
+            when(userRepository.findAllById(any())).thenReturn(List.of(softDeletedUser));
+
+            List<ExpenseParticipantShareDto> splits = List.of(new ExpenseParticipantShareDto(payerId, new BigDecimal("50.00")));
+            CreateExpenseRequest request = new CreateExpenseRequest(
+                    "Soft Deleted", new BigDecimal("50.00"), payerId, List.of(payerId), splits
+            );
+
+            assertThrows(com.vvu981.colivibackend.core.exception.ResourceNotFoundException.class,
+                    () -> service.createExpense(homeId, request, payerId));
+        }
+
+        @Test
+        void recordPayment_bySystemAdmin_success() {
+            UUID adminUserId = UUID.randomUUID();
+            mockActiveMember(homeId, adminUserId);
+            when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
+            mockActiveMembersList(homeId, payer, participant1);
+
+            User systemAdmin = new User();
+            systemAdmin.setId(adminUserId);
+            systemAdmin.setRole(UserRole.ADMIN);
+            when(userRepository.findActiveById(adminUserId)).thenReturn(Optional.of(systemAdmin));
+            when(userRepository.findActiveById(payerId)).thenReturn(Optional.of(payer));
+            when(userRepository.findActiveById(participant1Id)).thenReturn(Optional.of(participant1));
+
+            RecordPaymentRequest request = new RecordPaymentRequest(payerId, participant1Id, new BigDecimal("15.00"), "Admin payment");
+            assertDoesNotThrow(() -> service.recordPayment(homeId, request, adminUserId));
+        }
+
+        @Test
+        void recordPayment_byHomeAdmin_success() {
+            UUID homeAdminUserId = UUID.randomUUID();
+            mockActiveMember(homeId, homeAdminUserId);
+            when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
+            mockActiveMembersList(homeId, payer, participant1);
+
+            User homeAdmin = new User();
+            homeAdmin.setId(homeAdminUserId);
+            homeAdmin.setRole(UserRole.USER);
+            when(userRepository.findActiveById(homeAdminUserId)).thenReturn(Optional.of(homeAdmin));
+
+            HomeMember adminMember = new HomeMember();
+            adminMember.setStatus(HomeMemberStatus.ACTIVE);
+            adminMember.setRole(HomeRole.ADMIN);
+            when(memberRepository.findByHomeIdAndUserId(homeId, homeAdminUserId)).thenReturn(Optional.of(adminMember));
+
+            when(userRepository.findActiveById(payerId)).thenReturn(Optional.of(payer));
+            when(userRepository.findActiveById(participant1Id)).thenReturn(Optional.of(participant1));
+
+            RecordPaymentRequest request = new RecordPaymentRequest(payerId, participant1Id, new BigDecimal("15.00"), "Home admin payment");
+            assertDoesNotThrow(() -> service.recordPayment(homeId, request, homeAdminUserId));
+        }
+
+        @Test
+        void recordPayment_withBlankNotesAndReceiverWithoutFirstName_success() {
+            mockActiveMember(homeId, payerId);
+            when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(home));
+            mockActiveMembersList(homeId, payer, participant1);
+
+            when(userRepository.findActiveById(payerId)).thenReturn(Optional.of(payer));
+            User receiverNoFirstName = new User();
+            receiverNoFirstName.setId(participant1Id);
+            receiverNoFirstName.setFirstName(null);
+            receiverNoFirstName.setNickname("Nicky");
+            when(userRepository.findActiveById(participant1Id)).thenReturn(Optional.of(receiverNoFirstName));
+
+            RecordPaymentRequest request = new RecordPaymentRequest(payerId, participant1Id, new BigDecimal("20.00"), "   ");
+            assertDoesNotThrow(() -> service.recordPayment(homeId, request, payerId));
+        }
+
+        @Test
+        void deleteExpense_paymentUnauthorized_throwsSpecificPaymentMessage() {
+            HomeExpense payment = new HomeExpense();
+            payment.setHome(home);
+            payment.setPayer(payer);
+            payment.setPayment(true);
+
+            when(expenseRepository.findByIdAndDeletedAtIsNull(payment.getId())).thenReturn(Optional.of(payment));
+
+            UUID randomUserId = UUID.randomUUID();
+            User randomUser = new User();
+            randomUser.setId(randomUserId);
+            randomUser.setRole(UserRole.USER);
+            when(userRepository.findActiveById(randomUserId)).thenReturn(Optional.of(randomUser));
+
+            when(memberRepository.findByHomeIdAndUserId(homeId, randomUserId)).thenReturn(Optional.empty());
+
+            UnauthorizedActionException ex = assertThrows(UnauthorizedActionException.class,
+                    () -> service.deleteExpense(homeId, payment.getId(), randomUserId));
+            assertTrue(ex.getMessage().contains("Solo las partes involucradas en el pago o un administrador"));
+        }
     }
 }

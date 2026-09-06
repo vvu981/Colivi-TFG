@@ -13,9 +13,11 @@ import com.vvu981.colivibackend.features.home.domain.event.HomeDeletedEvent;
 import com.vvu981.colivibackend.features.home.domain.event.MemberExpelledEvent;
 import com.vvu981.colivibackend.features.home.domain.event.MemberJoinedEvent;
 import com.vvu981.colivibackend.features.home.domain.event.MemberLeftEvent;
+import com.vvu981.colivibackend.features.home.domain.event.UserLeftHomeEvent;
 import com.vvu981.colivibackend.features.home.dto.CreateExpenseRequest;
 import com.vvu981.colivibackend.features.home.dto.CreateHomeRequest;
 import com.vvu981.colivibackend.features.home.dto.HomeDetailResponseDto;
+import com.vvu981.colivibackend.features.home.dto.HomeMemberResponseDto;
 import com.vvu981.colivibackend.features.home.dto.HomeResponseDto;
 import com.vvu981.colivibackend.features.home.dto.JoinHomeRequest;
 import com.vvu981.colivibackend.features.home.mapper.HomeMapper;
@@ -70,7 +72,7 @@ public class HomeServiceImpl implements HomeService {
 
         home.addMember(adminMember);
         homeRepository.save(home);
-        
+
         eventPublisher.publishEvent(new HomeCreatedEvent(home.getId(), userId, home.getName()));
 
         return homeMapper.toDetailDto(home, adminMember);
@@ -105,7 +107,7 @@ public class HomeServiceImpl implements HomeService {
         }
 
         homeRepository.save(home);
-        
+
         eventPublisher.publishEvent(new MemberJoinedEvent(home.getId(), userId, user.getFullName()));
 
         return homeMapper.toDetailDto(home, member);
@@ -126,7 +128,8 @@ public class HomeServiceImpl implements HomeService {
                 homeRepository.save(home);
                 eventPublisher.publishEvent(new HomeDeletedEvent(home.getId(), userId, home.getName()));
             } else {
-                long activeAdminCount = homeMemberRepository.countByHomeIdAndRoleAndStatus(homeId, HomeRole.ADMIN, HomeMemberStatus.ACTIVE);
+                long activeAdminCount = homeMemberRepository.countByHomeIdAndRoleAndStatus(homeId, HomeRole.ADMIN,
+                        HomeMemberStatus.ACTIVE);
 
                 if (activeAdminCount == 1) {
                     throw new BusinessRuleValidationException(
@@ -138,6 +141,7 @@ public class HomeServiceImpl implements HomeService {
         homeBalanceValidator.validateZeroBalance(homeId, userId);
         currentMember.leave();
         eventPublisher.publishEvent(new MemberLeftEvent(homeId, userId, currentMember.getUser().getFullName()));
+        eventPublisher.publishEvent(new UserLeftHomeEvent(homeId, userId));
     }
 
     @Override
@@ -161,7 +165,9 @@ public class HomeServiceImpl implements HomeService {
 
         homeBalanceValidator.validateZeroBalance(homeId, targetUserId);
         targetMember.leave();
-        eventPublisher.publishEvent(new MemberExpelledEvent(homeId, adminUserId, targetMember.getUser().getFullName(), null));
+        eventPublisher
+                .publishEvent(new MemberExpelledEvent(homeId, adminUserId, targetMember.getUser().getFullName(), null));
+        eventPublisher.publishEvent(new UserLeftHomeEvent(homeId, targetUserId));
     }
 
     @Override
@@ -189,31 +195,37 @@ public class HomeServiceImpl implements HomeService {
             String baseDesc = "CONDONACIÓN_EXPULSIÓN";
             String expenseDescription = reason != null && !reason.isBlank() ? baseDesc + ": " + reason : baseDesc;
             BigDecimal absBalance = userBalance.abs();
-            
+
             Home home = homeRepository.findByIdForUpdate(homeId)
                     .orElseThrow(() -> new ResourceNotFoundException("Hogar no encontrado o eliminado"));
-            
+
             List<UUID> activeMemberIds = home.getMembers().stream()
                     .filter(m -> m.getStatus() == HomeMemberStatus.ACTIVE && !m.getUser().getId().equals(targetUserId))
                     .map(m -> m.getUser().getId())
                     .toList();
-                    
+
             if (activeMemberIds.isEmpty()) {
-                throw new BusinessRuleValidationException("No hay miembros activos suficientes para condonar la deuda.");
+                throw new BusinessRuleValidationException(
+                        "No hay miembros activos suficientes para condonar la deuda.");
             }
 
             CreateExpenseRequest request;
 
             if (userBalance.compareTo(BigDecimal.ZERO) < 0) {
-                // Moroso: su deuda se reparte. El moroso figura como pagador para subir su balance, y el resto como consumidores (asumen la pérdida).
+                // Moroso: su deuda se reparte. El moroso figura como pagador para subir su
+                // balance, y el resto como consumidores (asumen la pérdida).
                 request = new CreateExpenseRequest(
                         expenseDescription, absBalance, targetUserId, activeMemberIds);
             } else {
-                // Acreedor: la casa asume el beneficio. El resto son pagadores figurativos, el expulsado es el consumidor.
-                // Como CreateExpenseRequest solo admite 1 pagador, usamos al adminUserId para representar el pago, pero
-                // idealmente todos deberían abonarle. Para simplificar, si hay acreencia, el admin la representa, pero es mejor
-                // que asuma el pago un solo miembro (ej. el admin) y se reparta el consumo. 
-                // Moroso es el caso crítico a arreglar. En ambos casos, targetUserId es el que se neutraliza.
+                // Acreedor: la casa asume el beneficio. El resto son pagadores figurativos, el
+                // expulsado es el consumidor.
+                // Como CreateExpenseRequest solo admite 1 pagador, usamos al adminUserId para
+                // representar el pago, pero
+                // idealmente todos deberían abonarle. Para simplificar, si hay acreencia, el
+                // admin la representa, pero es mejor
+                // que asuma el pago un solo miembro (ej. el admin) y se reparta el consumo.
+                // Moroso es el caso crítico a arreglar. En ambos casos, targetUserId es el que
+                // se neutraliza.
                 request = new CreateExpenseRequest(
                         expenseDescription, absBalance, adminUserId, List.of(targetUserId));
             }
@@ -224,7 +236,9 @@ public class HomeServiceImpl implements HomeService {
         // Una vez liquidado el balance, procedemos con la expulsión normal
         homeBalanceValidator.validateZeroBalance(homeId, targetUserId);
         targetMember.leave();
-        eventPublisher.publishEvent(new MemberExpelledEvent(homeId, adminUserId, targetMember.getUser().getFullName(), reason));
+        eventPublisher.publishEvent(
+                new MemberExpelledEvent(homeId, adminUserId, targetMember.getUser().getFullName(), reason));
+        eventPublisher.publishEvent(new UserLeftHomeEvent(homeId, targetUserId));
     }
 
     @Override
@@ -264,10 +278,10 @@ public class HomeServiceImpl implements HomeService {
     public HomeDetailResponseDto regenerateInvitationCode(UUID homeId, UUID userId) {
         requireAdminRole(homeId, userId);
         Home home = findActiveHome(homeId);
-        
+
         home.setInvitationCode(invitationCodeGenerator.generate());
         homeRepository.save(home);
-        
+
         HomeMember currentMember = findActiveMembership(homeId, userId);
         return homeMapper.toDetailDto(home, currentMember);
     }
@@ -309,15 +323,17 @@ public class HomeServiceImpl implements HomeService {
     public void hardDeleteHome(UUID homeId, UUID userId) {
         User user = findActiveUser(userId);
         if (user.getRole() != UserRole.ADMIN) {
-            throw new UnauthorizedActionException("Solo un administrador del sistema puede ejecutar un borrado físico.");
+            throw new UnauthorizedActionException(
+                    "Solo un administrador del sistema puede ejecutar un borrado físico.");
         }
-        
+
         Home home = homeRepository.findById(homeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Hogar no encontrado con id: " + homeId));
-        
-        // BYPASS GDPR: Borrado manual explícito de auditoría para evitar FK constraints.
+
+        // BYPASS GDPR: Borrado manual explícito de auditoría para evitar FK
+        // constraints.
         activityLogRepository.deleteByHomeId(homeId);
-        
+
         homeRepository.delete(home);
     }
 
@@ -350,7 +366,8 @@ public class HomeServiceImpl implements HomeService {
 
         targetMember.setRole(HomeRole.ADMIN);
         currentMember.setRole(HomeRole.MEMBER);
-        eventPublisher.publishEvent(new AdminTransferredEvent(homeId, currentUserId, targetMember.getUser().getFullName()));
+        eventPublisher
+                .publishEvent(new AdminTransferredEvent(homeId, currentUserId, targetMember.getUser().getFullName()));
     }
 
     // =========================================================================
@@ -398,7 +415,8 @@ public class HomeServiceImpl implements HomeService {
 
     /**
      * Busca la membresía del usuario en el hogar independientemente de su estado.
-     * Usar cuando se necesitan gestionar transiciones de estado (archivar, desarchivar).
+     * Usar cuando se necesitan gestionar transiciones de estado (archivar,
+     * desarchivar).
      */
     private HomeMember findMembership(UUID homeId, UUID userId) {
         return homeMemberRepository.findByHomeIdAndUserId(homeId, userId)
@@ -419,7 +437,8 @@ public class HomeServiceImpl implements HomeService {
 
     /**
      * Valida que el usuario es ADMIN activo en el hogar.
-     * Solo se usa para operaciones de dominio del hogar (transferAdmin, expelMember).
+     * Solo se usa para operaciones de dominio del hogar (transferAdmin,
+     * expelMember).
      * Los borrados son responsabilidad mixta y se verifican por separado.
      */
     private void requireAdminRole(UUID homeId, UUID userId) {
@@ -436,5 +455,14 @@ public class HomeServiceImpl implements HomeService {
             throw new UnauthorizedActionException(
                     "Solo el administrador puede realizar esta acción.");
         }
+    }
+
+    @Override
+    @Transactional
+    public HomeMemberResponseDto updateMemberColor(UUID homeId, UUID userId, String color) {
+        HomeMember member = findActiveMembership(homeId, userId);
+        member.setColor(color);
+        HomeMember saved = homeMemberRepository.save(member);
+        return homeMapper.toMemberDto(saved);
     }
 }

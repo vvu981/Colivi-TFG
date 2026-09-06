@@ -31,7 +31,8 @@ public class HomeMapper {
                 member.getRole(),
                 member.getStatus(),
                 member.getJoinedAt(),
-                member.getLeftAt()
+                member.getLeftAt(),
+                member.getColor()
         );
     }
 

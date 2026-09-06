@@ -46,6 +46,9 @@ public class HomeMember {
     @Column(name = "status", nullable = false)
     private HomeMemberStatus status = HomeMemberStatus.ACTIVE;
 
+    @Column(name = "color", length = 30)
+    private String color = "#4F46E5";
+
     @PrePersist
     protected void onCreate() {
         this.joinedAt = LocalDateTime.now();

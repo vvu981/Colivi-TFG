@@ -1,6 +1,7 @@
 import api from '../../../lib/api';
 import type {
   HomeMemberStatus,
+  HomeMemberResponseDto,
   HomeResponseDto,
   HomeDetailResponseDto,
   ActivityLogResponseDto,
@@ -123,6 +124,17 @@ export const homeService = {
       {
         params: { page, size },
       }
+    );
+    return response.data;
+  },
+
+  /**
+   * Actualiza el color personal del usuario autenticado para este hogar.
+   */
+  async updateMyMemberColor(homeId: string, color: string): Promise<HomeMemberResponseDto> {
+    const response = await api.patch<HomeMemberResponseDto>(
+      `/homes/${homeId}/members/me/color`,
+      { color }
     );
     return response.data;
   },

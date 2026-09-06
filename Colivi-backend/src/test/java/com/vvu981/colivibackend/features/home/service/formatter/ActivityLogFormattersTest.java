@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ActivityLogFormattersTest {
@@ -155,6 +156,20 @@ class ActivityLogFormattersTest {
         assertEquals("Bob", log.getMetadata().get("receiverName"));
         assertEquals("25.00", log.getMetadata().get("amount"));
         assertEquals("Bizum", log.getMetadata().get("notes"));
+
+        // Null notes
+        PaymentRecordedEvent eventNullNotes = new PaymentRecordedEvent(
+                homeId, actorId, payerId, receiverId, "Bob", new BigDecimal("25.00"), null
+        );
+        ActivityLog logNullNotes = formatter.format(eventNullNotes);
+        assertFalse(logNullNotes.getMetadata().containsKey("notes"));
+
+        // Blank notes
+        PaymentRecordedEvent eventBlankNotes = new PaymentRecordedEvent(
+                homeId, actorId, payerId, receiverId, "Bob", new BigDecimal("25.00"), "   "
+        );
+        ActivityLog logBlankNotes = formatter.format(eventBlankNotes);
+        assertFalse(logBlankNotes.getMetadata().containsKey("notes"));
     }
 
     @Test

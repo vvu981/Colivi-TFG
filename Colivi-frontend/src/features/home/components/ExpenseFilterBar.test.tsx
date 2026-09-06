@@ -47,8 +47,10 @@ describe('ExpenseFilterBar', () => {
     fireEvent.change(input, { target: { value: 'Supermercado' } });
     expect(onSearch).toHaveBeenCalledWith('Supermercado');
 
-    const select = screen.getByLabelText(/filtrar por pagador/i);
-    fireEvent.change(select, { target: { value: 'u1' } });
+    const selectBtn = screen.getByLabelText(/filtrar por pagador/i);
+    fireEvent.click(selectBtn);
+    const optionAlice = screen.getByRole('option', { name: /Alice Smith/i });
+    fireEvent.click(optionAlice);
     expect(onPayer).toHaveBeenCalledWith('u1');
 
     const paymentsBtn = screen.getByRole('button', { name: /solo pagos/i });

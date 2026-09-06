@@ -51,6 +51,7 @@ export interface HomeMemberResponseDto {
   status: HomeMemberStatus;
   joinedAt: string;
   leftAt?: string | null;
+  color?: string | null;
 }
 
 /**
