@@ -35,7 +35,7 @@ class ChoreActivityLogFormattersTest {
         assertEquals(homeId, log.getHome().getId());
         assertEquals(actorId, log.getActor().getId());
         assertEquals(ActivityType.CHORE_COMPLETED, log.getActivityType());
-        assertEquals("Se ha completado la tarea 'Limpiar cocina' a tiempo (+15 pts).", log.getDescription());
+        assertEquals("Se ha completado la tarea 'Limpiar cocina' (+15 pts).", log.getDescription());
         assertEquals(choreId.toString(), log.getMetadata().get("choreId"));
         assertEquals("Limpiar cocina", log.getMetadata().get("title"));
         assertEquals("15", log.getMetadata().get("pointsEarned"));

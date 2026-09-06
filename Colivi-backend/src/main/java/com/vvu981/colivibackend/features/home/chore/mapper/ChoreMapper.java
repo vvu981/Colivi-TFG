@@ -2,6 +2,7 @@ package com.vvu981.colivibackend.features.home.chore.mapper;
 
 import com.vvu981.colivibackend.features.home.chore.domain.Chore;
 import com.vvu981.colivibackend.features.home.chore.dto.ChoreResponseDto;
+import com.vvu981.colivibackend.features.user.domain.User;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -27,22 +28,12 @@ public class ChoreMapper {
         boolean canRescue = isLate && !isAssignee;
         boolean canComplete = chore.isPending() && (isAssignee || isLate);
 
-        String assigneeName = chore.getAssignee() != null ?
-                (chore.getAssignee().getFirstName() + " " +
-                        (chore.getAssignee().getLastName1() != null ? chore.getAssignee().getLastName1() : "")).trim() :
-                "Desconocido";
-        if (assigneeName.isBlank() && chore.getAssignee() != null) {
-            assigneeName = chore.getAssignee().getNickname();
-        }
+        String assigneeName = resolveUserDisplayName(chore.getAssignee());
 
         String completedByName = null;
         String completedByAvatar = null;
         if (chore.getCompletedBy() != null) {
-            completedByName = (chore.getCompletedBy().getFirstName() + " " +
-                    (chore.getCompletedBy().getLastName1() != null ? chore.getCompletedBy().getLastName1() : "")).trim();
-            if (completedByName.isBlank()) {
-                completedByName = chore.getCompletedBy().getNickname();
-            }
+            completedByName = resolveUserDisplayName(chore.getCompletedBy());
             completedByAvatar = chore.getCompletedBy().getProfilePicUrl();
         }
 
@@ -68,5 +59,17 @@ public class ChoreMapper {
                 canRescue,
                 canComplete
         );
+    }
+
+    private String resolveUserDisplayName(User user) {
+        if (user == null) {
+            return "Desconocido";
+        }
+        String fullName = user.getFullName();
+        if (fullName != null && !fullName.isBlank()) {
+            return fullName.trim();
+        }
+        String nickname = user.getNickname();
+        return (nickname != null && !nickname.isBlank()) ? nickname.trim() : "Desconocido";
     }
 }

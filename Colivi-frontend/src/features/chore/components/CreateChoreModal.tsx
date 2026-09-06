@@ -39,11 +39,20 @@ export const CreateChoreModal: React.FC<CreateChoreModalProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (members.length > 0) {
-      setSelectedParticipants((prev) => (prev.length === 0 ? members.map((m) => m.userId) : prev));
-      setAssigneeId((prev) => (!prev && members[0]?.userId ? members[0].userId : prev));
+    if (isOpen) {
+      setTitle('');
+      setDescription('');
+      setAssigneeId(members[0]?.userId || '');
+      setBasePoints(10);
+      setDueDate(tomorrowStr);
+      setRecurrence('NONE');
+      setOccurrences(7);
+      setCustomDays([1, 2, 4]);
+      setAssignmentMode('FIXED');
+      setSelectedParticipants(members.map((m) => m.userId));
+      setErrorMessage(null);
     }
-  }, [members]);
+  }, [isOpen, members, tomorrowStr]);
 
   const DAYS_OF_WEEK = [
     { value: 1, label: 'Lunes', short: 'L' },
@@ -439,16 +448,18 @@ export const CreateChoreModal: React.FC<CreateChoreModalProps> = ({
                         const isSelected = selectedParticipants.includes(member.userId);
                         const orderIndex = selectedParticipants.indexOf(member.userId);
 
+                        const toggleParticipant = () => {
+                          setSelectedParticipants((prev) =>
+                            isSelected
+                              ? prev.filter((id) => id !== member.userId)
+                              : [...prev, member.userId]
+                          );
+                        };
+
                         return (
-                          <div
+                          <label
                             key={member.userId}
-                            onClick={() => {
-                              setSelectedParticipants((prev) =>
-                                isSelected
-                                  ? prev.filter((id) => id !== member.userId)
-                                  : [...prev, member.userId]
-                              );
-                            }}
+                            htmlFor={`participant-${member.userId}`}
                             className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 transition-all cursor-pointer select-none ${
                               isSelected
                                 ? 'bg-primary/10 border-primary/40 text-on-surface shadow-xs'
@@ -460,7 +471,7 @@ export const CreateChoreModal: React.FC<CreateChoreModalProps> = ({
                                 type="checkbox"
                                 id={`participant-${member.userId}`}
                                 checked={isSelected}
-                                onChange={() => {}} // control handled by parent div click
+                                onChange={toggleParticipant}
                                 className="rounded border-outline-variant text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
                                 aria-label={`Seleccionar a ${member.fullName}`}
                               />
@@ -483,7 +494,7 @@ export const CreateChoreModal: React.FC<CreateChoreModalProps> = ({
                                 {orderIndex === 0 ? '1º Turno' : `${orderIndex + 1}º`}
                               </span>
                             )}
-                          </div>
+                          </label>
                         );
                       })}
                     </div>

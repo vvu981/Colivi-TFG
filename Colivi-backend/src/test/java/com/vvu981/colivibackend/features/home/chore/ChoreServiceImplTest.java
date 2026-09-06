@@ -395,17 +395,8 @@ class ChoreServiceImplTest {
             lateChore.setDueDate(today.minusDays(1));
             lateChore.setStatus(ChoreStatus.PENDING);
 
-            Chore futureChore = new Chore();
-            futureChore.setId(UUID.randomUUID());
-            futureChore.setHome(testHome);
-            futureChore.setAssignee(userA);
-            futureChore.setTitle("Fregar platos");
-            futureChore.setBasePoints(5);
-            futureChore.setDueDate(today.plusDays(1));
-            futureChore.setStatus(ChoreStatus.PENDING);
-
             when(choreRepository.findAll(any(Specification.class), any(Sort.class)))
-                    .thenReturn(List.of(lateChore, futureChore));
+                    .thenReturn(List.of(lateChore));
 
             ChoreFilterDto filter = new ChoreFilterDto(null, null, null, null, "LATE");
             List<ChoreResponseDto> result = choreService.getChores(homeId, filter, userAId);
@@ -536,6 +527,7 @@ class ChoreServiceImplTest {
             chore.setHome(testHome);
             chore.setTitle("Descongelar nevera");
             chore.setSeriesId(UUID.randomUUID());
+            chore.setStatus(ChoreStatus.PENDING);
 
             when(choreRepository.findByIdAndHomeId(chore.getId(), homeId)).thenReturn(Optional.of(chore));
 
@@ -593,6 +585,7 @@ class ChoreServiceImplTest {
             chore.setHome(testHome);
             chore.setTitle("Sin serie");
             chore.setSeries(null);
+            chore.setStatus(ChoreStatus.PENDING);
 
             when(choreRepository.findByIdAndHomeId(chore.getId(), homeId)).thenReturn(Optional.of(chore));
 
@@ -604,6 +597,37 @@ class ChoreServiceImplTest {
             verify(eventPublisher).publishEvent(eventCaptor.capture());
             assertEquals("DELETE_SINGLE", eventCaptor.getValue().deleteMode());
             assertEquals(1, eventCaptor.getValue().deletedCount());
+        }
+
+        @Test
+        @DisplayName("deleteChore rechaza eliminar una tarea completada o rescatada")
+        void shouldThrowWhenDeletingCompletedOrLateCompletedChore() {
+            when(homeMemberRepository.findByHomeIdAndUserId(homeId, userAId)).thenReturn(Optional.of(memberA));
+
+            Chore completedChore = new Chore();
+            completedChore.setId(UUID.randomUUID());
+            completedChore.setHome(testHome);
+            completedChore.setStatus(ChoreStatus.COMPLETED);
+
+            when(choreRepository.findByIdAndHomeId(completedChore.getId(), homeId)).thenReturn(Optional.of(completedChore));
+
+            BusinessRuleValidationException ex1 = assertThrows(BusinessRuleValidationException.class, () ->
+                    choreService.deleteChore(homeId, completedChore.getId(), DeleteMode.DELETE_SINGLE, userAId));
+            assertTrue(ex1.getMessage().contains("No se pueden eliminar tareas que ya han sido completadas"));
+
+            Chore lateCompletedChore = new Chore();
+            lateCompletedChore.setId(UUID.randomUUID());
+            lateCompletedChore.setHome(testHome);
+            lateCompletedChore.setStatus(ChoreStatus.LATE_COMPLETED);
+
+            when(choreRepository.findByIdAndHomeId(lateCompletedChore.getId(), homeId)).thenReturn(Optional.of(lateCompletedChore));
+
+            BusinessRuleValidationException ex2 = assertThrows(BusinessRuleValidationException.class, () ->
+                    choreService.deleteChore(homeId, lateCompletedChore.getId(), DeleteMode.DELETE_SINGLE, userAId));
+            assertTrue(ex2.getMessage().contains("No se pueden eliminar tareas que ya han sido completadas"));
+
+            verify(choreRepository, never()).delete(any(Chore.class));
+            verify(choreRepository, never()).deleteAll(any());
         }
 
         @Test

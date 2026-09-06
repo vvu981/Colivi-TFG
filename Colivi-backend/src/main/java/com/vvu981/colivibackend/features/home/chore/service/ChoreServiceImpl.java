@@ -9,7 +9,11 @@ import com.vvu981.colivibackend.features.home.chore.domain.event.ChoreCompletedE
 import com.vvu981.colivibackend.features.home.chore.domain.event.ChoreDeletedEvent;
 import com.vvu981.colivibackend.features.home.chore.domain.event.ChoreRescuedEvent;
 import com.vvu981.colivibackend.features.home.chore.domain.event.ChoreSeriesCreatedEvent;
-import com.vvu981.colivibackend.features.home.chore.dto.*;
+import com.vvu981.colivibackend.features.home.chore.dto.ChoreFilterDto;
+import com.vvu981.colivibackend.features.home.chore.dto.ChoreLeaderboardDto;
+import com.vvu981.colivibackend.features.home.chore.dto.ChoreResponseDto;
+import com.vvu981.colivibackend.features.home.chore.dto.CreateChoreRequest;
+import com.vvu981.colivibackend.features.home.chore.dto.DeleteMode;
 import com.vvu981.colivibackend.features.home.chore.mapper.ChoreMapper;
 import com.vvu981.colivibackend.features.home.chore.repository.ChoreRepository;
 import com.vvu981.colivibackend.features.home.domain.Home;
@@ -31,6 +35,7 @@ import com.vvu981.colivibackend.features.home.chore.domain.ChoreSeries;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -147,15 +152,13 @@ public class ChoreServiceImpl implements ChoreService {
         if (to != null) {
             spec = spec.and(ChoreSpecifications.withDueDateTo(to));
         }
+        if ("LATE".equalsIgnoreCase(period)) {
+            spec = spec.and(ChoreSpecifications.withDueDateBefore(today))
+                    .and(ChoreSpecifications.withStatus(ChoreStatus.PENDING));
+        }
 
         Sort sort = Sort.by(Sort.Direction.ASC, "dueDate").and(Sort.by(Sort.Direction.ASC, "createdAt"));
         List<Chore> chores = choreRepository.findAll(spec, sort);
-
-        if ("LATE".equalsIgnoreCase(period)) {
-            chores = chores.stream()
-                    .filter(c -> c.isLate(today) && c.isPending())
-                    .toList();
-        }
 
         Map<UUID, String> memberColors = getActiveMemberColors(homeId);
         return chores.stream()
@@ -241,6 +244,10 @@ public class ChoreServiceImpl implements ChoreService {
         Chore chore = choreRepository.findByIdAndHomeId(choreId, homeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Tarea no encontrada"));
 
+        if (chore.isCompleted()) {
+            throw new BusinessRuleValidationException("No se pueden eliminar tareas que ya han sido completadas");
+        }
+
         DeleteMode mode = deleteMode != null ? deleteMode : DeleteMode.DELETE_SINGLE;
 
         if (mode == DeleteMode.DELETE_SINGLE || chore.getSeriesId() == null) {
@@ -279,7 +286,7 @@ public class ChoreServiceImpl implements ChoreService {
         List<HomeMember> members = homeMemberRepository.findByHomeIdAndStatus(homeId, HomeMemberStatus.ACTIVE);
 
         LocalDateTime startDateTime = range.startDate().atStartOfDay();
-        LocalDateTime endDateTime = range.endDate().atTime(23, 59, 59);
+        LocalDateTime endDateTime = range.endDate().atTime(LocalTime.MAX);
 
         List<Chore> chores = choreRepository.findForLeaderboard(
                 homeId,
@@ -304,9 +311,12 @@ public class ChoreServiceImpl implements ChoreService {
         if (user == null) {
             return "Desconocido";
         }
-        String fullName = (user.getFirstName() + " " +
-                (user.getLastName1() != null ? user.getLastName1() : "")).trim();
-        return fullName.isBlank() ? user.getNickname() : fullName;
+        String fullName = user.getFullName();
+        if (fullName != null && !fullName.isBlank()) {
+            return fullName.trim();
+        }
+        String nickname = user.getNickname();
+        return (nickname != null && !nickname.isBlank()) ? nickname.trim() : "Desconocido";
     }
 
     private Map<UUID, String> getActiveMemberColors(UUID homeId) {

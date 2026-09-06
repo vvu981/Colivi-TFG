@@ -31,7 +31,7 @@ public class ChoreCompletedActivityFormatter implements ActivityLogFormatter<Cho
         log.setActor(actor);
 
         log.setActivityType(event.activityType());
-        log.setDescription("Se ha completado la tarea '" + event.title() + "' a tiempo (+" + event.pointsEarned() + " pts).");
+        log.setDescription("Se ha completado la tarea '" + event.title() + "' (+" + event.pointsEarned() + " pts).");
         log.setMetadata(Map.of(
                 "choreId", event.choreId().toString(),
                 "title", event.title(),

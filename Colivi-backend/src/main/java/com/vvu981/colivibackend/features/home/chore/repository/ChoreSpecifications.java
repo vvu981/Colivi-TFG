@@ -34,6 +34,10 @@ public final class ChoreSpecifications {
         return (root, query, cb) -> to == null ? null : cb.lessThanOrEqualTo(root.get("dueDate"), to);
     }
 
+    public static Specification<Chore> withDueDateBefore(LocalDate date) {
+        return (root, query, cb) -> date == null ? null : cb.lessThan(root.get("dueDate"), date);
+    }
+
     public static Specification<Chore> fetchAssociations() {
         return (root, query, cb) -> {
             if (query.getResultType() != Long.class && query.getResultType() != long.class) {

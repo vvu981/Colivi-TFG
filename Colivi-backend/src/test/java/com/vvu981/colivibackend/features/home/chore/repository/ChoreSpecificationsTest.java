@@ -141,6 +141,28 @@ class ChoreSpecificationsTest {
     }
 
     @Test
+    void withDueDateBefore_ShouldReturnLtPredicate_WhenNotNull() {
+        LocalDate before = LocalDate.now();
+        Path<LocalDate> path = mock(Path.class);
+        Predicate predicate = mock(Predicate.class);
+
+        doReturn(path).when(root).get("dueDate");
+        when(builder.lessThan(path, before)).thenReturn(predicate);
+
+        Specification<Chore> spec = ChoreSpecifications.withDueDateBefore(before);
+        Predicate result = spec.toPredicate(root, query, builder);
+
+        assertThat(result).isEqualTo(predicate);
+    }
+
+    @Test
+    void withDueDateBefore_ShouldReturnNull_WhenNull() {
+        Specification<Chore> spec = ChoreSpecifications.withDueDateBefore(null);
+        Predicate result = spec.toPredicate(root, query, builder);
+        assertThat(result).isNull();
+    }
+
+    @Test
     @SuppressWarnings("unchecked")
     void fetchAssociations_ShouldFetch_WhenNotCountQuery() {
         doReturn(Chore.class).when(query).getResultType();

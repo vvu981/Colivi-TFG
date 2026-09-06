@@ -21,7 +21,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -79,9 +86,11 @@ public class ChoreRotationServiceImpl implements ChoreRotationService {
         }
 
         ChoreAssignmentStrategy strategy = strategyResolver.resolve(series.getRotationType());
-        int occurrences = series.getOccurrences() != null && series.getOccurrences() > 0 ? series.getOccurrences() : 1;
+        int occurrences = series.getRecurrenceType() == RecurrenceType.NONE
+                ? 1
+                : (series.getOccurrences() != null && series.getOccurrences() > 0 ? series.getOccurrences() : 1);
         List<Chore> choresToSave = new ArrayList<>(occurrences);
-        int startIndex = 0;
+        int startIndex = series.getLastAssigneeIndex() != null ? series.getLastAssigneeIndex() : 0;
 
         if (series.getRecurrenceType() == RecurrenceType.CUSTOM) {
             Set<DayOfWeek> targetDays = parseCustomDays(series.getCustomDaysOfWeek());
@@ -205,7 +214,10 @@ public class ChoreRotationServiceImpl implements ChoreRotationService {
         }
 
         ChoreAssignmentStrategy strategy = strategyResolver.resolve(series.getRotationType());
-        int startIndex = 0;
+        int startIndex = series.getLastAssigneeIndex() != null ? series.getLastAssigneeIndex() : 0;
+        if (startIndex >= orderedParticipants.size()) {
+            startIndex = 0;
+        }
 
         for (int i = 0; i < pendingChores.size(); i++) {
             Chore chore = pendingChores.get(i);

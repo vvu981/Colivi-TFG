@@ -2,6 +2,7 @@ package com.vvu981.colivibackend.features.home.chore.dto;
 
 import com.vvu981.colivibackend.features.home.chore.domain.RecurrenceType;
 import com.vvu981.colivibackend.features.home.chore.domain.RotationType;
+import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -28,6 +29,7 @@ public record CreateChoreRequest(
         Integer basePoints,
 
         @NotNull(message = "La fecha de vencimiento es obligatoria")
+        @FutureOrPresent(message = "La fecha de vencimiento no puede ser anterior a hoy")
         LocalDate dueDate,
 
         RecurrenceType recurrence,
@@ -72,6 +74,9 @@ public record CreateChoreRequest(
     }
 
     public int getSafeOccurrences() {
+        if (getSafeRecurrence() == RecurrenceType.NONE) {
+            return 1;
+        }
         return (occurrences != null && occurrences > 0) ? occurrences : 1;
     }
 

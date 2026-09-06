@@ -30,27 +30,32 @@ class CreateChoreRequestTest {
     }
 
     @Test
-    @DisplayName("getSafeOccurrences handles null, zero, negative, and positive values")
+    @DisplayName("getSafeOccurrences handles null, zero, negative, and positive values, forcing 1 on NONE")
     void testGetSafeOccurrences() {
         CreateChoreRequest reqNull = new CreateChoreRequest(
-                "Title", "Desc", UUID.randomUUID(), 10, LocalDate.now(), null, null
+                "Title", "Desc", UUID.randomUUID(), 10, LocalDate.now(), RecurrenceType.WEEKLY, null
         );
         assertEquals(1, reqNull.getSafeOccurrences());
 
         CreateChoreRequest reqZero = new CreateChoreRequest(
-                "Title", "Desc", UUID.randomUUID(), 10, LocalDate.now(), null, 0
+                "Title", "Desc", UUID.randomUUID(), 10, LocalDate.now(), RecurrenceType.WEEKLY, 0
         );
         assertEquals(1, reqZero.getSafeOccurrences());
 
         CreateChoreRequest reqNegative = new CreateChoreRequest(
-                "Title", "Desc", UUID.randomUUID(), 10, LocalDate.now(), null, -5
+                "Title", "Desc", UUID.randomUUID(), 10, LocalDate.now(), RecurrenceType.WEEKLY, -5
         );
         assertEquals(1, reqNegative.getSafeOccurrences());
 
         CreateChoreRequest reqPositive = new CreateChoreRequest(
-                "Title", "Desc", UUID.randomUUID(), 10, LocalDate.now(), null, 5
+                "Title", "Desc", UUID.randomUUID(), 10, LocalDate.now(), RecurrenceType.WEEKLY, 5
         );
         assertEquals(5, reqPositive.getSafeOccurrences());
+
+        CreateChoreRequest reqNoneWithMany = new CreateChoreRequest(
+                "Title", "Desc", UUID.randomUUID(), 10, LocalDate.now(), RecurrenceType.NONE, 10
+        );
+        assertEquals(1, reqNoneWithMany.getSafeOccurrences());
     }
 
     @Test

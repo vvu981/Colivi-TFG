@@ -11,7 +11,10 @@ import org.springframework.stereotype.Component;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.UUID;
 
 @Component
 public class ChorePointCalculator {
@@ -87,16 +90,13 @@ public class ChorePointCalculator {
 
             int expectedPoints = currentPoints + pendingPoints;
 
-            String fullName = (user.getFirstName() + " " +
-                    (user.getLastName1() != null ? user.getLastName1() : "")).trim();
-            if (fullName.isBlank()) {
-                fullName = user.getNickname();
-            }
+            String fullName = user.getFullName();
+            String displayName = (fullName != null && !fullName.isBlank()) ? fullName.trim() : user.getNickname();
 
             scores.add(new UserChoreScoreDto(
                     userId,
                     user.getNickname(),
-                    fullName,
+                    displayName,
                     user.getProfilePicUrl(),
                     currentPoints,
                     expectedPoints,

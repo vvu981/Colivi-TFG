@@ -85,13 +85,15 @@ export const HomeChoresTab: React.FC<HomeChoresTabProps> = ({
   } = useChores(home.id, undefined, leaderboardPeriod);
 
   // Conteo de tareas pendientes por usuario para el filtro global
-  const pendingCountsByUserId: Record<string, number> = {};
-  for (const chore of chores) {
-    if (chore.status === 'PENDING') {
-      pendingCountsByUserId[chore.assigneeId] =
-        (pendingCountsByUserId[chore.assigneeId] || 0) + 1;
+  const pendingCountsByUserId = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const chore of chores) {
+      if (chore.status === 'PENDING') {
+        counts[chore.assigneeId] = (counts[chore.assigneeId] || 0) + 1;
+      }
     }
-  }
+    return counts;
+  }, [chores]);
 
   // Conteo de tareas por estado para el dropdown de filtros según los filtros activos
   const statusCounts = useMemo(() => {
@@ -311,7 +313,7 @@ export const HomeChoresTab: React.FC<HomeChoresTabProps> = ({
           />
         ) : (
           <ChoreListView
-            chores={filteredChores}
+            chores={chores}
             timeFilter={timeFilter}
             onTimeFilterChange={setTimeFilter}
             selectedUserId={selectedUserId}
