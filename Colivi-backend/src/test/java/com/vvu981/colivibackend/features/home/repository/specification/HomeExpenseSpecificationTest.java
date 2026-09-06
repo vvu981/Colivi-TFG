@@ -130,4 +130,16 @@ class HomeExpenseSpecificationTest {
         verify(cb, never()).like(any(), anyString());
         verify(cb).equal(pathIsPayment, false);
     }
+
+    @Test
+    void withFilter_SearchNullAndOnlyPaymentsNull() {
+        ExpenseFilterDto filter = ExpenseFilterDto.of(null, null, null);
+
+        Specification<HomeExpense> spec = HomeExpenseSpecification.withFilter(homeId, filter);
+        Predicate result = spec.toPredicate(root, query, cb);
+
+        assertNotNull(result);
+        verify(cb, never()).like(any(), anyString());
+        verify(cb, never()).equal(eq(pathIsPayment), any());
+    }
 }

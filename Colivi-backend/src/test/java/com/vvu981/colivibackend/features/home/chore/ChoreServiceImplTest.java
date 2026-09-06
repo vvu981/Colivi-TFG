@@ -689,4 +689,244 @@ class ChoreServiceImplTest {
             assertEquals(1, anaScore.penalizedCount());
         }
     }
+
+    @Nested
+    @DisplayName("Ramas y Casos Borde Adicionales")
+    class AdditionalBranchTests {
+
+        @Test
+        @DisplayName("createChore lanza excepción si no hay ni rotationUserIds ni assigneeId")
+        void shouldThrowWhenNoAssigneeOrRotationUsers() {
+            when(homeMemberRepository.findByHomeIdAndUserId(homeId, userAId)).thenReturn(Optional.of(memberA));
+            when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(testHome));
+
+            CreateChoreRequest request = new CreateChoreRequest(
+                    "Sin asignar", null, null, 10, LocalDate.now(), null, 1, null, null, null
+            );
+
+            assertThrows(BusinessRuleValidationException.class, () ->
+                    choreService.createChore(homeId, request, userAId));
+        }
+
+        @Test
+        @DisplayName("createChore lanza excepción si un usuario asignado no se encuentra en BD")
+        void shouldThrowWhenAssignedUserNotFoundInDb() {
+            when(homeMemberRepository.findByHomeIdAndUserId(homeId, userAId)).thenReturn(Optional.of(memberA));
+            when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(testHome));
+
+            UUID nonExistentUserId = UUID.randomUUID();
+            when(homeMemberRepository.findByHomeIdAndUserId(homeId, nonExistentUserId)).thenReturn(Optional.of(memberA));
+            when(userRepository.findAllById(List.of(nonExistentUserId))).thenReturn(List.of());
+
+            CreateChoreRequest request = new CreateChoreRequest(
+                    "Fantasma", null, nonExistentUserId, 10, LocalDate.now(), null, 1
+            );
+
+            assertThrows(com.vvu981.colivibackend.core.exception.ResourceNotFoundException.class, () ->
+                    choreService.createChore(homeId, request, userAId));
+        }
+
+        @Test
+        @DisplayName("getChores filtra por period TODAY, WEEK, MONTH y por filtros individuales")
+        void shouldFilterByVariousPeriodsAndFilters() {
+            when(homeMemberRepository.findByHomeIdAndUserId(homeId, userAId)).thenReturn(Optional.of(memberA));
+            when(choreRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(org.springframework.data.domain.Sort.class)))
+                    .thenReturn(List.of());
+
+            // Null filter
+            List<ChoreResponseDto> resNull = choreService.getChores(homeId, null, userAId);
+            assertNotNull(resNull);
+
+            // TODAY filter
+            ChoreFilterDto todayFilter = new ChoreFilterDto(null, null, null, null, "TODAY");
+            choreService.getChores(homeId, todayFilter, userAId);
+
+            // WEEK filter
+            ChoreFilterDto weekFilter = new ChoreFilterDto(null, null, null, null, "WEEK");
+            choreService.getChores(homeId, weekFilter, userAId);
+
+            // MONTH filter
+            ChoreFilterDto monthFilter = new ChoreFilterDto(null, null, null, null, "MONTH");
+            choreService.getChores(homeId, monthFilter, userAId);
+
+            // Specific from, to, assignee, status
+            ChoreFilterDto fullFilter = new ChoreFilterDto(
+                    userAId, ChoreStatus.PENDING, LocalDate.now().minusDays(5), LocalDate.now().plusDays(5), null
+            );
+            choreService.getChores(homeId, fullFilter, userAId);
+
+            verify(choreRepository, times(5)).findAll(any(org.springframework.data.jpa.domain.Specification.class), any(org.springframework.data.domain.Sort.class));
+        }
+
+        @Test
+        @DisplayName("completeChore lanza excepción si la tarea ya no está pendiente")
+        void shouldThrowWhenCompletingNonPendingChore() {
+            when(homeMemberRepository.findByHomeIdAndUserId(homeId, userAId)).thenReturn(Optional.of(memberA));
+
+            Chore completedChore = new Chore();
+            completedChore.setId(UUID.randomUUID());
+            completedChore.setStatus(ChoreStatus.COMPLETED);
+
+            when(choreRepository.findByIdAndHomeId(completedChore.getId(), homeId)).thenReturn(Optional.of(completedChore));
+
+            assertThrows(BusinessRuleValidationException.class, () ->
+                    choreService.completeChore(homeId, completedChore.getId(), userAId));
+        }
+
+        @Test
+        @DisplayName("getActiveMemberColors tolera miembros con usuario nulo y aplica color por defecto")
+        void shouldHandleNullUserAndNullColorInActiveMembers() {
+            HomeMember memberWithoutUser = new HomeMember();
+            memberWithoutUser.setUser(null);
+
+            HomeMember memberNullColor = new HomeMember();
+            User userNullColor = new User();
+            userNullColor.setId(UUID.randomUUID());
+            memberNullColor.setUser(userNullColor);
+            memberNullColor.setColor(null); // color null
+
+            when(userRepository.findActiveById(userAId)).thenReturn(Optional.of(userA));
+            when(homeMemberRepository.findByHomeIdAndUserId(homeId, userAId)).thenReturn(Optional.of(memberA));
+            when(homeMemberRepository.findByHomeIdAndStatus(homeId, HomeMemberStatus.ACTIVE))
+                    .thenReturn(List.of(memberWithoutUser, memberNullColor, memberA));
+
+            Chore chore = new Chore();
+            chore.setId(UUID.randomUUID());
+            chore.setStatus(ChoreStatus.PENDING);
+            chore.setAssignee(userA);
+            chore.setDueDate(LocalDate.now());
+
+            when(choreRepository.findByIdAndHomeId(chore.getId(), homeId)).thenReturn(Optional.of(chore));
+            when(choreRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+            ChoreResponseDto result = choreService.completeChore(homeId, chore.getId(), userAId);
+            assertNotNull(result);
+        }
+
+        @Test
+        @DisplayName("createChore con rotationUserIds vacío usa assigneeId")
+        void shouldFallbackToAssigneeWhenRotationUserIdsIsEmpty() {
+            when(homeMemberRepository.findByHomeIdAndUserId(homeId, userAId)).thenReturn(Optional.of(memberA));
+            when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(testHome));
+            when(userRepository.findAllById(List.of(userAId))).thenReturn(List.of(userA));
+
+            CreateChoreRequest request = new CreateChoreRequest(
+                    "Limpieza", null, userAId, 10, LocalDate.now(), null, 1, null, List.of(), null
+            );
+
+            List<ChoreResponseDto> res = choreService.createChore(homeId, request, userAId);
+            assertNotNull(res);
+        }
+
+        @Test
+        @DisplayName("createChore lanza ResourceNotFoundException si el participante está soft-deleted")
+        void shouldThrowWhenParticipantIsSoftDeleted() {
+            when(homeMemberRepository.findByHomeIdAndUserId(homeId, userAId)).thenReturn(Optional.of(memberA));
+            when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(testHome));
+
+            User softDeleted = new User();
+            softDeleted.setId(userAId);
+            softDeleted.setDeletedAt(java.time.LocalDateTime.now());
+            when(userRepository.findAllById(List.of(userAId))).thenReturn(List.of(softDeleted));
+
+            CreateChoreRequest request = new CreateChoreRequest(
+                    "Limpieza", null, userAId, 10, LocalDate.now(), null, 1
+            );
+
+            assertThrows(com.vvu981.colivibackend.core.exception.ResourceNotFoundException.class,
+                    () -> choreService.createChore(homeId, request, userAId));
+        }
+
+        @Test
+        @DisplayName("getChores filtra por period WEEKLY y MONTHLY")
+        void shouldFilterByWeeklyAndMonthlyPeriods() {
+            when(homeMemberRepository.findByHomeIdAndUserId(homeId, userAId)).thenReturn(Optional.of(memberA));
+            when(choreRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(org.springframework.data.domain.Sort.class)))
+                    .thenReturn(List.of());
+
+            ChoreFilterDto weeklyFilter = new ChoreFilterDto(null, null, null, null, "WEEKLY");
+            choreService.getChores(homeId, weeklyFilter, userAId);
+
+            ChoreFilterDto monthlyFilter = new ChoreFilterDto(null, null, null, null, "MONTHLY");
+            choreService.getChores(homeId, monthlyFilter, userAId);
+
+            verify(choreRepository, times(2)).findAll(any(org.springframework.data.jpa.domain.Specification.class), any(org.springframework.data.domain.Sort.class));
+        }
+
+        @Test
+        @DisplayName("completeChore permite que el asignado complete la tarea atrasada sin rescate")
+        void assigneeCompletesLateChoreWithoutRescue() {
+            when(homeMemberRepository.findByHomeIdAndUserId(homeId, userAId)).thenReturn(Optional.of(memberA));
+            when(userRepository.findActiveById(userAId)).thenReturn(Optional.of(userA));
+
+            Chore chore = new Chore();
+            chore.setId(UUID.randomUUID());
+            chore.setHome(testHome);
+            chore.setAssignee(userA);
+            chore.setTitle("Barrer tarde");
+            chore.setBasePoints(10);
+            chore.setDueDate(LocalDate.now().minusDays(3)); // Atrasada
+            chore.setStatus(ChoreStatus.PENDING);
+
+            when(choreRepository.findByIdAndHomeId(chore.getId(), homeId)).thenReturn(Optional.of(chore));
+            when(choreRepository.save(any(Chore.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            ChoreResponseDto result = choreService.completeChore(homeId, chore.getId(), userAId);
+
+            assertEquals(ChoreStatus.COMPLETED, result.status());
+            verify(eventPublisher).publishEvent(any(ChoreCompletedEvent.class));
+            verify(eventPublisher, never()).publishEvent(any(ChoreRescuedEvent.class));
+        }
+
+        @Test
+        @DisplayName("completeChore rescate usa nickname cuando nombre completo es blanco y apellido nulo")
+        void rescueChoreUsesNicknameWhenFullNameIsBlank() {
+            when(homeMemberRepository.findByHomeIdAndUserId(homeId, userBId)).thenReturn(Optional.of(memberB));
+
+            User userBWithNickname = new User();
+            userBWithNickname.setId(userBId);
+            userBWithNickname.setFirstName("");
+            userBWithNickname.setLastName1(null);
+            userBWithNickname.setNickname("Bori");
+            when(userRepository.findActiveById(userBId)).thenReturn(Optional.of(userBWithNickname));
+
+            Chore chore = new Chore();
+            chore.setId(UUID.randomUUID());
+            chore.setHome(testHome);
+            chore.setAssignee(userA);
+            chore.setTitle("Barrer tarde");
+            chore.setBasePoints(10);
+            chore.setDueDate(LocalDate.now().minusDays(3)); // Atrasada
+            chore.setStatus(ChoreStatus.PENDING);
+
+            when(choreRepository.findByIdAndHomeId(chore.getId(), homeId)).thenReturn(Optional.of(chore));
+            when(choreRepository.save(any(Chore.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            ChoreResponseDto result = choreService.completeChore(homeId, chore.getId(), userBId);
+            assertEquals(ChoreStatus.LATE_COMPLETED, result.status());
+
+            ArgumentCaptor<ChoreRescuedEvent> captor = ArgumentCaptor.forClass(ChoreRescuedEvent.class);
+            verify(eventPublisher).publishEvent(captor.capture());
+            assertEquals("Bori", captor.getValue().rescuerName());
+        }
+
+        @Test
+        @DisplayName("deleteChore con serie y deleteMode null aplica DELETE_SINGLE")
+        void deleteChoreWithSeriesAndNullDeleteModeDefaultsToSingle() {
+            when(homeMemberRepository.findByHomeIdAndUserId(homeId, userAId)).thenReturn(Optional.of(memberA));
+
+            Chore chore = new Chore();
+            chore.setId(UUID.randomUUID());
+            chore.setHome(testHome);
+            chore.setTitle("Tarea con serie");
+            chore.setSeriesId(UUID.randomUUID());
+
+            when(choreRepository.findByIdAndHomeId(chore.getId(), homeId)).thenReturn(Optional.of(chore));
+
+            choreService.deleteChore(homeId, chore.getId(), null, userAId);
+
+            verify(choreRepository).delete(chore);
+            verify(choreRepository, never()).deleteAll(any());
+        }
+    }
 }

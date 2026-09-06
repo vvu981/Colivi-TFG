@@ -191,6 +191,93 @@ class ReportSpecificationsTest {
     }
 
     @Test
+    void hasId_ShouldReturnEqualPredicate_WhenIdIsNotNull() {
+        java.util.UUID id = java.util.UUID.randomUUID();
+        Path<Object> path = mock(Path.class);
+        Predicate predicate = mock(Predicate.class);
+
+        when(root.get("id")).thenReturn(path);
+        when(builder.equal(path, id)).thenReturn(predicate);
+
+        Specification<Report> spec = ReportSpecifications.hasId(id);
+        Predicate result = spec.toPredicate(root, query, builder);
+
+        assertThat(result).isEqualTo(predicate);
+    }
+
+    @Test
+    void hasId_ShouldReturnNull_WhenIdIsNull() {
+        Specification<Report> spec = ReportSpecifications.hasId(null);
+        Predicate result = spec.toPredicate(root, query, builder);
+        assertThat(result).isNull();
+    }
+
+    @Test
+    void hasQuery_ShouldReturnNull_WhenQueryIsNull() {
+        Specification<Report> spec = ReportSpecifications.hasQuery(null);
+        Predicate result = spec.toPredicate(root, query, builder);
+        assertThat(result).isNull();
+    }
+
+    @Test
+    void hasQuery_ShouldReturnNull_WhenQueryIsBlank() {
+        Specification<Report> spec = ReportSpecifications.hasQuery("   ");
+        Predicate result = spec.toPredicate(root, query, builder);
+        assertThat(result).isNull();
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void hasQuery_ShouldReturnOrPredicate_WhenQueryIsProvided() {
+        Path<Object> pathId = mock(Path.class);
+        Path<Object> pathTarget = mock(Path.class);
+        Path<Object> pathReporter = mock(Path.class);
+        Path<String> pathDesc = mock(Path.class);
+
+        jakarta.persistence.criteria.Expression<String> strId = mock(jakarta.persistence.criteria.Expression.class);
+        jakarta.persistence.criteria.Expression<String> strTarget = mock(jakarta.persistence.criteria.Expression.class);
+        jakarta.persistence.criteria.Expression<String> strReporter = mock(jakarta.persistence.criteria.Expression.class);
+
+        jakarta.persistence.criteria.Expression<String> lowerId = mock(jakarta.persistence.criteria.Expression.class);
+        jakarta.persistence.criteria.Expression<String> lowerTarget = mock(jakarta.persistence.criteria.Expression.class);
+        jakarta.persistence.criteria.Expression<String> lowerReporter = mock(jakarta.persistence.criteria.Expression.class);
+        jakarta.persistence.criteria.Expression<String> lowerDesc = mock(jakarta.persistence.criteria.Expression.class);
+
+        Predicate p1 = mock(Predicate.class);
+        Predicate p2 = mock(Predicate.class);
+        Predicate p3 = mock(Predicate.class);
+        Predicate p4 = mock(Predicate.class);
+        Predicate orPred = mock(Predicate.class);
+
+        when(root.get("id")).thenReturn(pathId);
+        when(root.get("targetId")).thenReturn(pathTarget);
+        when(root.get("reporterId")).thenReturn(pathReporter);
+        doReturn(pathDesc).when(root).get("description");
+
+        when(pathId.as(String.class)).thenReturn(strId);
+        when(pathTarget.as(String.class)).thenReturn(strTarget);
+        when(pathReporter.as(String.class)).thenReturn(strReporter);
+
+        when(builder.lower(strId)).thenReturn(lowerId);
+        when(builder.lower(strTarget)).thenReturn(lowerTarget);
+        when(builder.lower(strReporter)).thenReturn(lowerReporter);
+        when(builder.lower(pathDesc)).thenReturn(lowerDesc);
+
+        String pattern = "%query%";
+        when(builder.like(lowerId, pattern)).thenReturn(p1);
+        when(builder.like(lowerTarget, pattern)).thenReturn(p2);
+        when(builder.like(lowerReporter, pattern)).thenReturn(p3);
+        when(builder.like(lowerDesc, pattern)).thenReturn(p4);
+
+        when(builder.or(p1, p2, p3, p4)).thenReturn(orPred);
+
+        Specification<Report> spec = ReportSpecifications.hasQuery("  QUERY  ");
+        Predicate result = spec.toPredicate(root, query, builder);
+
+        assertThat(result).isEqualTo(orPred);
+    }
+
+    @Test
     void testPrivateConstructor() throws Exception {
         java.lang.reflect.Constructor<ReportSpecifications> constructor = ReportSpecifications.class.getDeclaredConstructor();
         constructor.setAccessible(true);

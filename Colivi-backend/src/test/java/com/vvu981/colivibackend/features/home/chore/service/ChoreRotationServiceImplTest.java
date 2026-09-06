@@ -324,6 +324,74 @@ class ChoreRotationServiceImplTest {
                         rotationService.createSeries(home, request, List.of()));
 
                 assertThrows(com.vvu981.colivibackend.core.exception.BusinessRuleValidationException.class, () ->
+                        rotationService.createSeries(home, request, null));
+
+                assertThrows(com.vvu981.colivibackend.core.exception.BusinessRuleValidationException.class, () ->
                         rotationService.generateOccurrences(new ChoreSeries(), LocalDate.now(), List.of()));
+
+                assertThrows(com.vvu981.colivibackend.core.exception.BusinessRuleValidationException.class, () ->
+                        rotationService.generateOccurrences(new ChoreSeries(), LocalDate.now(), null));
+        }
+
+        @Test
+        @DisplayName("generateOccurrences con occurrences null o menores a 1 usa default de 1")
+        void shouldHandleNullOrZeroOccurrences() {
+                when(choreRepository.saveAll(any())).thenAnswer(inv -> inv.getArgument(0));
+
+                ChoreSeries seriesNull = new ChoreSeries();
+                seriesNull.setRecurrenceType(RecurrenceType.NONE);
+                seriesNull.setOccurrences(null);
+                seriesNull.setRotationType(RotationType.FIXED);
+                List<Chore> resNull = rotationService.generateOccurrences(seriesNull, LocalDate.now(), List.of(userA));
+                assertEquals(1, resNull.size());
+
+                ChoreSeries seriesZero = new ChoreSeries();
+                seriesZero.setRecurrenceType(RecurrenceType.NONE);
+                seriesZero.setOccurrences(0);
+                seriesZero.setRotationType(RotationType.FIXED);
+                List<Chore> resZero = rotationService.generateOccurrences(seriesZero, LocalDate.now(), List.of(userA));
+                assertEquals(1, resZero.size());
+        }
+
+        @Test
+        @DisplayName("parseCustomDays maneja null, cadenas en blanco y valores numéricos fuera de rango [1,7]")
+        void shouldHandleCustomDaysBoundaries() {
+                ChoreSeries seriesBlank = new ChoreSeries();
+                seriesBlank.setRecurrenceType(RecurrenceType.CUSTOM);
+                seriesBlank.setCustomDaysOfWeek("   ");
+                assertThrows(com.vvu981.colivibackend.core.exception.BusinessRuleValidationException.class, () ->
+                        rotationService.generateOccurrences(seriesBlank, LocalDate.now(), List.of(userA)));
+
+                ChoreSeries seriesOutOfRange = new ChoreSeries();
+                seriesOutOfRange.setRecurrenceType(RecurrenceType.CUSTOM);
+                seriesOutOfRange.setCustomDaysOfWeek("0,8,99");
+                assertThrows(com.vvu981.colivibackend.core.exception.BusinessRuleValidationException.class, () ->
+                        rotationService.generateOccurrences(seriesOutOfRange, LocalDate.now(), List.of(userA)));
+        }
+
+        @Test
+        @DisplayName("reassignPendingChores elimina tareas si los usuarios restantes no existen en la base de datos")
+        void shouldDeleteChoresIfRemainingUsersDoNotExistInDb() {
+                ChoreSeries series = new ChoreSeries();
+                series.setId(UUID.randomUUID());
+                UUID orphanUserId = UUID.randomUUID();
+                series.setParticipantOrder(new ArrayList<>(List.of(userA.getId(), orphanUserId)));
+
+                when(choreSeriesRepository.findByHomeIdAndParticipantUserIdForUpdate(home.getId(), userA.getId()))
+                        .thenReturn(List.of(series));
+
+                Chore chore = new Chore();
+                chore.setId(UUID.randomUUID());
+                chore.setStatus(ChoreStatus.PENDING);
+                when(choreRepository.findPendingFutureChoresBySeriesId(eq(series.getId()), any(LocalDate.class)))
+                        .thenReturn(List.of(chore));
+
+                // userRepository returns empty (orphan user deleted)
+                when(userRepository.findAllById(List.of(orphanUserId))).thenReturn(List.of());
+
+                rotationService.handleUserLeftHome(home.getId(), userA.getId());
+
+                verify(choreRepository).deleteAll(List.of(chore));
+                verify(choreSeriesRepository).save(series);
         }
 }
