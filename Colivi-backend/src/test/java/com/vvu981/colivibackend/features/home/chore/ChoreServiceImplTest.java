@@ -18,6 +18,14 @@ import com.vvu981.colivibackend.features.home.chore.mapper.ChoreMapper;
 import com.vvu981.colivibackend.features.home.chore.repository.ChoreRepository;
 import com.vvu981.colivibackend.features.home.chore.service.ChorePointCalculator;
 import com.vvu981.colivibackend.features.home.chore.service.ChoreServiceImpl;
+import com.vvu981.colivibackend.features.home.chore.domain.ChoreSeries;
+import com.vvu981.colivibackend.features.home.chore.domain.RotationType;
+import com.vvu981.colivibackend.features.home.chore.repository.ChoreSeriesRepository;
+import com.vvu981.colivibackend.features.home.chore.service.ChoreRotationService;
+import com.vvu981.colivibackend.features.home.chore.service.ChoreRotationServiceImpl;
+import com.vvu981.colivibackend.features.home.chore.service.strategy.ChoreAssignmentStrategyResolver;
+import com.vvu981.colivibackend.features.home.chore.service.strategy.FixedAssigneeStrategy;
+import com.vvu981.colivibackend.features.home.chore.service.strategy.RoundRobinRotationStrategy;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import com.vvu981.colivibackend.features.home.domain.Home;
@@ -41,6 +49,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -56,6 +65,9 @@ class ChoreServiceImplTest {
     private ChoreRepository choreRepository;
 
     @Mock
+    private ChoreSeriesRepository choreSeriesRepository;
+
+    @Mock
     private HomeRepository homeRepository;
 
     @Mock
@@ -69,6 +81,7 @@ class ChoreServiceImplTest {
 
     private ChoreMapper choreMapper;
     private ChorePointCalculator chorePointCalculator;
+    private ChoreRotationService choreRotationService;
     private ChoreServiceImpl choreService;
 
     private UUID homeId;
@@ -84,6 +97,17 @@ class ChoreServiceImplTest {
     void setUp() {
         choreMapper = new ChoreMapper();
         chorePointCalculator = new ChorePointCalculator();
+
+        ChoreAssignmentStrategyResolver strategyResolver = new ChoreAssignmentStrategyResolver(
+                List.of(new FixedAssigneeStrategy(), new RoundRobinRotationStrategy())
+        );
+        choreRotationService = new ChoreRotationServiceImpl(
+                choreSeriesRepository,
+                choreRepository,
+                userRepository,
+                strategyResolver
+        );
+
         choreService = new ChoreServiceImpl(
                 choreRepository,
                 homeRepository,
@@ -91,7 +115,8 @@ class ChoreServiceImplTest {
                 userRepository,
                 choreMapper,
                 chorePointCalculator,
-                eventPublisher
+                eventPublisher,
+                choreRotationService
         );
 
         homeId = UUID.randomUUID();
@@ -113,6 +138,24 @@ class ChoreServiceImplTest {
         userB.setNickname("borja_m");
         userB.setFirstName("Borja");
         userB.setLastName1("Martín");
+
+        lenient().when(choreSeriesRepository.save(any(ChoreSeries.class))).thenAnswer(invocation -> {
+            ChoreSeries s = invocation.getArgument(0);
+            if (s.getId() == null) {
+                s.setId(UUID.randomUUID());
+            }
+            return s;
+        });
+
+        lenient().when(userRepository.findAllById(any())).thenAnswer(invocation -> {
+            Iterable<UUID> ids = invocation.getArgument(0);
+            List<User> users = new ArrayList<>();
+            for (UUID id : ids) {
+                if (userAId != null && userAId.equals(id)) users.add(userA);
+                else if (userBId != null && userBId.equals(id)) users.add(userB);
+            }
+            return users;
+        });
 
         memberA = new HomeMember();
         memberA.setId(UUID.randomUUID());
@@ -138,7 +181,6 @@ class ChoreServiceImplTest {
         void shouldCreateSingleChore() {
             when(homeMemberRepository.findByHomeIdAndUserId(homeId, userAId)).thenReturn(Optional.of(memberA));
             when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(testHome));
-            when(userRepository.findActiveById(userAId)).thenReturn(Optional.of(userA));
             when(choreRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
             CreateChoreRequest request = new CreateChoreRequest(
@@ -168,7 +210,6 @@ class ChoreServiceImplTest {
         void shouldMaterializeRecurringChores() {
             when(homeMemberRepository.findByHomeIdAndUserId(homeId, userAId)).thenReturn(Optional.of(memberA));
             when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(testHome));
-            when(userRepository.findActiveById(userAId)).thenReturn(Optional.of(userA));
             when(choreRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
             LocalDate start = LocalDate.now();
@@ -203,7 +244,6 @@ class ChoreServiceImplTest {
         void shouldMaterializeCustomDaysOfWeekChores() {
             when(homeMemberRepository.findByHomeIdAndUserId(homeId, userAId)).thenReturn(Optional.of(memberA));
             when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(testHome));
-            when(userRepository.findActiveById(userAId)).thenReturn(Optional.of(userA));
             when(choreRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
             // Base date is Monday, 7 Sept 2026
@@ -247,7 +287,6 @@ class ChoreServiceImplTest {
         void shouldFailIfCustomRecurrenceHasNoDays() {
             when(homeMemberRepository.findByHomeIdAndUserId(homeId, userAId)).thenReturn(Optional.of(memberA));
             when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(testHome));
-            when(userRepository.findActiveById(userAId)).thenReturn(Optional.of(userA));
 
             CreateChoreRequest request = new CreateChoreRequest(
                     "Limpiar baño",
@@ -275,6 +314,37 @@ class ChoreServiceImplTest {
 
             assertThrows(UnauthorizedActionException.class, () ->
                     choreService.createChore(homeId, request, userAId));
+        }
+
+        @Test
+        @DisplayName("Debe crear tareas rotativas asignando secuencialmente entre los participantes seleccionados")
+        void shouldCreateRotatingChoresWithMultipleParticipants() {
+            when(homeMemberRepository.findByHomeIdAndUserId(homeId, userAId)).thenReturn(Optional.of(memberA));
+            when(homeMemberRepository.findByHomeIdAndUserId(homeId, userBId)).thenReturn(Optional.of(memberB));
+            when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(testHome));
+            when(choreRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+            LocalDate start = LocalDate.now();
+            CreateChoreRequest request = new CreateChoreRequest(
+                    "Limpiar salón",
+                    "Aspirar alfombra",
+                    null,
+                    20,
+                    start,
+                    RecurrenceType.WEEKLY,
+                    4,
+                    null,
+                    List.of(userAId, userBId),
+                    RotationType.ROUND_ROBIN
+            );
+
+            List<ChoreResponseDto> result = choreService.createChore(homeId, request, userAId);
+
+            assertEquals(4, result.size());
+            assertEquals(userAId, result.get(0).assigneeId());
+            assertEquals(userBId, result.get(1).assigneeId());
+            assertEquals(userAId, result.get(2).assigneeId());
+            assertEquals(userBId, result.get(3).assigneeId());
         }
     }
 

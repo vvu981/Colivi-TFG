@@ -1,10 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import type { HomeMemberResponseDto } from '../../home/types';
-import type { CreateChoreRequest, RecurrenceType } from '../types';
+import type { CreateChoreRequest, RecurrenceType, RotationType } from '../types';
 import { Select, type SelectOption } from '../../../components/ui/Select';
 import { DatePicker } from '../../../components/ui/DatePicker';
 import { getUserInitial } from '../../home/utils/userDisplay';
-import { X, Sparkles, Calendar, User as UserIcon, Repeat } from 'lucide-react';
+import { X, Sparkles, Calendar, User as UserIcon, Repeat, RotateCcw, Users } from 'lucide-react';
 
 interface CreateChoreModalProps {
   isOpen: boolean;
@@ -32,7 +32,18 @@ export const CreateChoreModal: React.FC<CreateChoreModalProps> = ({
   const [recurrence, setRecurrence] = useState<RecurrenceType>('NONE');
   const [occurrences, setOccurrences] = useState(7);
   const [customDays, setCustomDays] = useState<number[]>([1, 2, 4]); // Lunes, Martes, Jueves
+  const [assignmentMode, setAssignmentMode] = useState<RotationType>('FIXED');
+  const [selectedParticipants, setSelectedParticipants] = useState<string[]>(() =>
+    members.map((m) => m.userId)
+  );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (members.length > 0) {
+      setSelectedParticipants((prev) => (prev.length === 0 ? members.map((m) => m.userId) : prev));
+      setAssigneeId((prev) => (!prev && members[0]?.userId ? members[0].userId : prev));
+    }
+  }, [members]);
 
   const DAYS_OF_WEEK = [
     { value: 1, label: 'Lunes', short: 'L' },
@@ -84,9 +95,18 @@ export const CreateChoreModal: React.FC<CreateChoreModalProps> = ({
       return;
     }
 
-    if (!assigneeId) {
-      setErrorMessage('Debes seleccionar un miembro responsable.');
-      return;
+    const isRotating = recurrence !== 'NONE' && assignmentMode === 'ROUND_ROBIN';
+
+    if (isRotating) {
+      if (selectedParticipants.length === 0) {
+        setErrorMessage('Debes seleccionar al menos un compañero para la rueda rotativa.');
+        return;
+      }
+    } else {
+      if (!assigneeId) {
+        setErrorMessage('Debes seleccionar un miembro responsable.');
+        return;
+      }
     }
 
     if (recurrence === 'CUSTOM' && customDays.length === 0) {
@@ -95,15 +115,19 @@ export const CreateChoreModal: React.FC<CreateChoreModalProps> = ({
     }
 
     try {
+      const effectiveAssigneeId = isRotating ? selectedParticipants[0] : assigneeId;
+
       await onSubmit({
         title: title.trim(),
         description: description.trim() || undefined,
-        assigneeId,
+        assigneeId: effectiveAssigneeId,
         basePoints,
         dueDate,
         recurrence,
         occurrences: recurrence !== 'NONE' ? occurrences : 1,
         customDaysOfWeek: recurrence === 'CUSTOM' ? customDays : undefined,
+        rotationType: isRotating ? 'ROUND_ROBIN' : 'FIXED',
+        rotationUserIds: isRotating ? selectedParticipants : (effectiveAssigneeId ? [effectiveAssigneeId] : []),
       });
 
       // Reset form
@@ -111,6 +135,8 @@ export const CreateChoreModal: React.FC<CreateChoreModalProps> = ({
       setDescription('');
       setBasePoints(10);
       setRecurrence('NONE');
+      setAssignmentMode('FIXED');
+      setSelectedParticipants(members.map((m) => m.userId));
       setCustomDays([1, 2, 4]);
       onClose();
     } catch (err: unknown) {
@@ -121,9 +147,11 @@ export const CreateChoreModal: React.FC<CreateChoreModalProps> = ({
 
   const pointOptions = [5, 10, 15, 20, 30];
 
+  const isRotating = recurrence !== 'NONE' && assignmentMode === 'ROUND_ROBIN';
+
   return (
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in">
-      <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl max-w-lg w-full p-6 shadow-xl space-y-5">
+      <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl max-w-lg w-full p-6 shadow-xl space-y-5 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-outline-variant/40 pb-3">
           <div className="flex items-center gap-2">
@@ -187,22 +215,59 @@ export const CreateChoreModal: React.FC<CreateChoreModalProps> = ({
 
           {/* Miembro asignado y Fecha Límite */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* Miembro Asignado */}
-            <div className="space-y-1">
-              <label htmlFor="assignee-select" className="text-xs font-bold text-on-surface flex items-center gap-1">
-                <UserIcon className="w-3.5 h-3.5 text-secondary" />
-                <span>Asignar a <span className="text-primary">*</span></span>
-              </label>
-              <Select
-                id="assignee-select"
-                value={assigneeId}
-                onChange={setAssigneeId}
-                options={assigneeOptions}
-                placeholder="Selecciona miembro"
-                aria-label="Asignar a"
-                className="!py-2 !text-xs !bg-surface-container-low"
-              />
-            </div>
+            {isRotating ? (
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-on-surface flex items-center gap-1">
+                  <RotateCcw className="w-3.5 h-3.5 text-primary" />
+                  <span>Primer turno para</span>
+                </label>
+                <div className="px-3 py-2 bg-surface-container-low border border-outline-variant/60 rounded-xl text-xs text-on-surface flex items-center gap-2 min-h-[38px]">
+                  {selectedParticipants.length > 0 ? (
+                    (() => {
+                      const firstMember = members.find((m) => m.userId === selectedParticipants[0]);
+                      if (!firstMember) return <span className="text-secondary text-[11px]">Sin participante</span>;
+                      return (
+                        <>
+                          {firstMember.profilePicUrl ? (
+                            <img
+                              src={firstMember.profilePicUrl}
+                              alt={firstMember.fullName}
+                              className="w-5 h-5 rounded-full object-cover shrink-0"
+                            />
+                          ) : (
+                            <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[10px] font-bold flex items-center justify-center shrink-0">
+                              {getUserInitial(firstMember.fullName)}
+                            </span>
+                          )}
+                          <span className="font-semibold truncate">{firstMember.fullName}</span>
+                          <span className="ml-auto text-[10px] bg-primary/15 text-primary font-bold px-1.5 py-0.5 rounded">
+                            Turno 1
+                          </span>
+                        </>
+                      );
+                    })()
+                  ) : (
+                    <span className="text-error font-medium text-[11px]">Selecciona participantes abajo</span>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <label htmlFor="assignee-select" className="text-xs font-bold text-on-surface flex items-center gap-1">
+                  <UserIcon className="w-3.5 h-3.5 text-secondary" />
+                  <span>Asignar a <span className="text-primary">*</span></span>
+                </label>
+                <Select
+                  id="assignee-select"
+                  value={assigneeId}
+                  onChange={setAssigneeId}
+                  options={assigneeOptions}
+                  placeholder="Selecciona miembro"
+                  aria-label="Asignar a"
+                  className="!py-2 !text-xs !bg-surface-container-low"
+                />
+              </div>
+            )}
 
             {/* Fecha Límite con componente reutilizado DatePicker */}
             <div className="space-y-1">
@@ -281,10 +346,151 @@ export const CreateChoreModal: React.FC<CreateChoreModalProps> = ({
                   onChange={(val) => setRecurrence(val as RecurrenceType)}
                   options={recurrenceOptions}
                   aria-label="Repetir tarea automáticamente"
+                  direction="up"
                   className="!py-1.5 !text-xs !bg-surface-container-lowest"
                 />
               </div>
             </div>
+
+            {recurrence !== 'NONE' && (
+              <>
+                {/* Modo de Asignación de la Serie */}
+                <div className="pt-2 border-t border-outline-variant/30 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-on-surface flex items-center gap-1.5">
+                      <RotateCcw className="w-3.5 h-3.5 text-primary" />
+                      <span>Modo de asignación</span>
+                    </span>
+                    <span className="text-[11px] text-secondary">
+                      {assignmentMode === 'ROUND_ROBIN' ? 'Rueda rotativa por turnos' : 'Mismo responsable siempre'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setAssignmentMode('FIXED')}
+                      className={`p-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 border transition-all cursor-pointer ${
+                        assignmentMode === 'FIXED'
+                          ? 'bg-primary text-white border-primary shadow-xs'
+                          : 'bg-surface-container-lowest text-secondary border-outline-variant/60 hover:text-on-surface hover:bg-surface-container'
+                      }`}
+                    >
+                      <UserIcon className="w-3.5 h-3.5" />
+                      <span>Responsable fijo</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAssignmentMode('ROUND_ROBIN');
+                        if (selectedParticipants.length === 0) {
+                          setSelectedParticipants(members.map((m) => m.userId));
+                        }
+                      }}
+                      className={`p-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 border transition-all cursor-pointer ${
+                        assignmentMode === 'ROUND_ROBIN'
+                          ? 'bg-primary text-white border-primary shadow-xs'
+                          : 'bg-surface-container-lowest text-secondary border-outline-variant/60 hover:text-on-surface hover:bg-surface-container'
+                      }`}
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Rueda rotativa</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Participantes de la Rueda Rotativa (Regla A.2: Selección Explícita) */}
+                {assignmentMode === 'ROUND_ROBIN' && (
+                  <div className="pt-2 border-t border-outline-variant/30 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-xs font-bold text-on-surface flex items-center gap-1.5">
+                          <Users className="w-3.5 h-3.5 text-primary" />
+                          <span>Participantes en la rueda</span>
+                          <span className="text-primary font-bold text-xs">
+                            ({selectedParticipants.length}/{members.length})
+                          </span>
+                        </span>
+                        <p className="text-[11px] text-secondary">
+                          Marca los miembros que participan en la rotación (orden determinista)
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedParticipants(members.map((m) => m.userId))}
+                          className="text-[11px] font-semibold text-primary hover:underline cursor-pointer"
+                        >
+                          Todos
+                        </button>
+                        <span className="text-outline-variant text-[10px]">|</span>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedParticipants([])}
+                          className="text-[11px] font-semibold text-secondary hover:text-on-surface cursor-pointer"
+                        >
+                          Ninguno
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                      {members.map((member) => {
+                        const isSelected = selectedParticipants.includes(member.userId);
+                        const orderIndex = selectedParticipants.indexOf(member.userId);
+
+                        return (
+                          <div
+                            key={member.userId}
+                            onClick={() => {
+                              setSelectedParticipants((prev) =>
+                                isSelected
+                                  ? prev.filter((id) => id !== member.userId)
+                                  : [...prev, member.userId]
+                              );
+                            }}
+                            className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 transition-all cursor-pointer select-none ${
+                              isSelected
+                                ? 'bg-primary/10 border-primary/40 text-on-surface shadow-xs'
+                                : 'bg-surface-container-lowest border-outline-variant/50 text-secondary hover:bg-surface-container-high/40'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <input
+                                type="checkbox"
+                                id={`participant-${member.userId}`}
+                                checked={isSelected}
+                                onChange={() => {}} // control handled by parent div click
+                                className="rounded border-outline-variant text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                                aria-label={`Seleccionar a ${member.fullName}`}
+                              />
+                              {member.profilePicUrl ? (
+                                <img
+                                  src={member.profilePicUrl}
+                                  alt={member.fullName}
+                                  className="w-5 h-5 rounded-full object-cover shrink-0 border border-outline-variant/60"
+                                />
+                              ) : (
+                                <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[10px] font-bold flex items-center justify-center shrink-0">
+                                  {getUserInitial(member.fullName)}
+                                </span>
+                              )}
+                              <span className="text-xs font-medium truncate">{member.fullName}</span>
+                            </div>
+
+                            {isSelected && (
+                              <span className="px-1.5 py-0.5 rounded-md bg-primary text-white text-[10px] font-bold shrink-0">
+                                {orderIndex === 0 ? '1º Turno' : `${orderIndex + 1}º`}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
 
             {recurrence === 'CUSTOM' && (
               <div className="pt-2 border-t border-outline-variant/30 space-y-2">

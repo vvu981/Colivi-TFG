@@ -1,6 +1,7 @@
 package com.vvu981.colivibackend.features.home.chore.dto;
 
 import com.vvu981.colivibackend.features.home.chore.domain.RecurrenceType;
+import com.vvu981.colivibackend.features.home.chore.domain.RotationType;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -19,7 +20,6 @@ public record CreateChoreRequest(
         @Size(max = 1000, message = "La descripción no puede exceder los 1000 caracteres")
         String description,
 
-        @NotNull(message = "El usuario asignado es obligatorio")
         UUID assigneeId,
 
         @NotNull(message = "Los puntos base son obligatorios")
@@ -36,7 +36,11 @@ public record CreateChoreRequest(
         @Max(value = 60, message = "El número máximo de ocurrencias permitidas es 60")
         Integer occurrences,
 
-        List<Integer> customDaysOfWeek
+        List<Integer> customDaysOfWeek,
+
+        List<UUID> rotationUserIds,
+
+        RotationType rotationType
 ) {
     public CreateChoreRequest(
             String title,
@@ -47,7 +51,20 @@ public record CreateChoreRequest(
             RecurrenceType recurrence,
             Integer occurrences
     ) {
-        this(title, description, assigneeId, basePoints, dueDate, recurrence, occurrences, null);
+        this(title, description, assigneeId, basePoints, dueDate, recurrence, occurrences, null, null, RotationType.FIXED);
+    }
+
+    public CreateChoreRequest(
+            String title,
+            String description,
+            UUID assigneeId,
+            Integer basePoints,
+            LocalDate dueDate,
+            RecurrenceType recurrence,
+            Integer occurrences,
+            List<Integer> customDaysOfWeek
+    ) {
+        this(title, description, assigneeId, basePoints, dueDate, recurrence, occurrences, customDaysOfWeek, null, RotationType.FIXED);
     }
 
     public RecurrenceType getSafeRecurrence() {
@@ -60,5 +77,19 @@ public record CreateChoreRequest(
 
     public List<Integer> getSafeCustomDaysOfWeek() {
         return customDaysOfWeek != null ? customDaysOfWeek : List.of();
+    }
+
+    public List<UUID> getSafeRotationUserIds() {
+        return rotationUserIds != null ? rotationUserIds : List.of();
+    }
+
+    public RotationType getSafeRotationType() {
+        if (rotationType != null) {
+            return rotationType;
+        }
+        if (rotationUserIds != null && rotationUserIds.size() > 1) {
+            return RotationType.ROUND_ROBIN;
+        }
+        return RotationType.FIXED;
     }
 }

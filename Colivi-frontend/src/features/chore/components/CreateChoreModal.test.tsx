@@ -178,6 +178,94 @@ describe('CreateChoreModal', () => {
       );
     });
   });
+
+  it('allows configuring round-robin rotating chores with explicit participant selection (Rule A.2)', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const onClose = vi.fn();
+
+    render(
+      <CreateChoreModal
+        isOpen={true}
+        onClose={onClose}
+        members={mockMembers}
+        onSubmit={onSubmit}
+      />
+    );
+
+    const titleInput = screen.getByPlaceholderText(/Fregar platos/i);
+    fireEvent.change(titleInput, { target: { value: 'Bajar basura rotativa' } });
+
+    // Select WEEKLY recurrence
+    const recurrenceBtn = screen.getByRole('button', { name: /Repetir tarea automáticamente/i });
+    fireEvent.click(recurrenceBtn);
+    const weeklyOption = screen.getByRole('option', { name: /Semanalmente/i });
+    fireEvent.click(weeklyOption);
+
+    // Switch to Round-Robin mode
+    const rotatingBtn = screen.getByRole('button', { name: /Rueda rotativa/i });
+    fireEvent.click(rotatingBtn);
+
+    // Verify participants section is visible with members
+    expect(screen.getByText(/Participantes en la rueda/i)).toBeInTheDocument();
+    expect(screen.getByLabelText('Seleccionar a Ana García')).toBeInTheDocument();
+    expect(screen.getByLabelText('Seleccionar a Borja Martín')).toBeInTheDocument();
+
+    const submitBtn = screen.getByRole('button', { name: /Crear Tarea/i });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Bajar basura rotativa',
+          recurrence: 'WEEKLY',
+          rotationType: 'ROUND_ROBIN',
+          rotationUserIds: ['user-1', 'user-2'],
+          assigneeId: 'user-1',
+        })
+      );
+    });
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('shows error when rotating mode has no participants selected', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const onClose = vi.fn();
+
+    render(
+      <CreateChoreModal
+        isOpen={true}
+        onClose={onClose}
+        members={mockMembers}
+        onSubmit={onSubmit}
+      />
+    );
+
+    const titleInput = screen.getByPlaceholderText(/Fregar platos/i);
+    fireEvent.change(titleInput, { target: { value: 'Limpieza baño rotativa' } });
+
+    // Select DAILY recurrence
+    const recurrenceBtn = screen.getByRole('button', { name: /Repetir tarea automáticamente/i });
+    fireEvent.click(recurrenceBtn);
+    const dailyOption = screen.getByRole('option', { name: /Diariamente/i });
+    fireEvent.click(dailyOption);
+
+    // Switch to Round-Robin
+    const rotatingBtn = screen.getByRole('button', { name: /Rueda rotativa/i });
+    fireEvent.click(rotatingBtn);
+
+    // Clear all participants
+    const clearBtn = screen.getByRole('button', { name: /Ninguno/i });
+    fireEvent.click(clearBtn);
+
+    // Attempt submit
+    const submitBtn = screen.getByRole('button', { name: /Crear Tarea/i });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Debes seleccionar al menos un compañero para la rueda rotativa/i)).toBeInTheDocument();
+    });
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
 });
 
 

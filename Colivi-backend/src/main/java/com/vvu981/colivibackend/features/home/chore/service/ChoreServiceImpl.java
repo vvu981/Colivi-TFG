@@ -5,7 +5,6 @@ import com.vvu981.colivibackend.core.exception.ResourceNotFoundException;
 import com.vvu981.colivibackend.core.exception.UnauthorizedActionException;
 import com.vvu981.colivibackend.features.home.chore.domain.Chore;
 import com.vvu981.colivibackend.features.home.chore.domain.ChoreStatus;
-import com.vvu981.colivibackend.features.home.chore.domain.RecurrenceType;
 import com.vvu981.colivibackend.features.home.chore.domain.event.ChoreCompletedEvent;
 import com.vvu981.colivibackend.features.home.chore.domain.event.ChoreDeletedEvent;
 import com.vvu981.colivibackend.features.home.chore.domain.event.ChoreRescuedEvent;
@@ -28,14 +27,13 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.DayOfWeek;
+import com.vvu981.colivibackend.features.home.chore.domain.ChoreSeries;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -51,6 +49,7 @@ public class ChoreServiceImpl implements ChoreService {
     private final ChoreMapper choreMapper;
     private final ChorePointCalculator chorePointCalculator;
     private final ApplicationEventPublisher eventPublisher;
+    private final ChoreRotationService choreRotationService;
 
     @Override
     @Transactional
@@ -60,80 +59,41 @@ public class ChoreServiceImpl implements ChoreService {
         Home home = homeRepository.findByIdAndDeletedAtIsNull(homeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Hogar no encontrado"));
 
-        validateActiveMember(homeId, request.assigneeId());
-
-        User assignee = userRepository.findActiveById(request.assigneeId())
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario asignado no encontrado"));
-
-        RecurrenceType recurrence = request.getSafeRecurrence();
-        int occurrences = recurrence == RecurrenceType.NONE ? 1 : request.getSafeOccurrences();
-        UUID seriesId = UUID.randomUUID();
-
-        List<Chore> choresToSave = new ArrayList<>();
-        LocalDate baseDate = request.dueDate();
-
-        if (recurrence == RecurrenceType.CUSTOM) {
-            List<Integer> customDays = request.getSafeCustomDaysOfWeek();
-            if (customDays.isEmpty()) {
-                throw new BusinessRuleValidationException("Debes seleccionar al menos un día de la semana para la repetición personalizada");
-            }
-            Set<DayOfWeek> targetDays = new HashSet<>();
-            for (Integer dayNum : customDays) {
-                if (dayNum == null || dayNum < 1 || dayNum > 7) {
-                    throw new BusinessRuleValidationException("Los días de la semana deben estar entre 1 (Lunes) y 7 (Domingo)");
-                }
-                targetDays.add(DayOfWeek.of(dayNum));
-            }
-
-            LocalDate candidate = baseDate;
-            while (choresToSave.size() < occurrences) {
-                if (targetDays.contains(candidate.getDayOfWeek())) {
-                    Chore chore = new Chore();
-                    chore.setHome(home);
-                    chore.setAssignee(assignee);
-                    chore.setSeriesId(seriesId);
-                    chore.setTitle(request.title().trim());
-                    chore.setDescription(request.description() != null ? request.description().trim() : null);
-                    chore.setBasePoints(request.basePoints());
-                    chore.setDueDate(candidate);
-                    chore.setStatus(ChoreStatus.PENDING);
-                    choresToSave.add(chore);
-                }
-                candidate = candidate.plusDays(1);
-            }
+        List<UUID> participantIds = new ArrayList<>();
+        if (request.rotationUserIds() != null && !request.rotationUserIds().isEmpty()) {
+            participantIds.addAll(request.rotationUserIds());
+        } else if (request.assigneeId() != null) {
+            participantIds.add(request.assigneeId());
         } else {
-            for (int i = 0; i < occurrences; i++) {
-                LocalDate choreDueDate = switch (recurrence) {
-                    case NONE -> baseDate;
-                    case DAILY -> baseDate.plusDays(i);
-                    case WEEKLY -> baseDate.plusWeeks(i);
-                    case MONTHLY -> baseDate.plusMonths(i);
-                    case CUSTOM -> baseDate;
-                };
-
-                Chore chore = new Chore();
-                chore.setHome(home);
-                chore.setAssignee(assignee);
-                chore.setSeriesId(seriesId);
-                chore.setTitle(request.title().trim());
-                chore.setDescription(request.description() != null ? request.description().trim() : null);
-                chore.setBasePoints(request.basePoints());
-                chore.setDueDate(choreDueDate);
-                chore.setStatus(ChoreStatus.PENDING);
-
-                choresToSave.add(chore);
-            }
+            throw new BusinessRuleValidationException("Debes asignar al menos un usuario responsable");
         }
 
-        List<Chore> saved = choreRepository.saveAll(choresToSave);
+        for (UUID participantId : participantIds) {
+            validateActiveMember(homeId, participantId);
+        }
+
+        Map<UUID, User> userMap = userRepository.findAllById(participantIds).stream()
+                .filter(u -> u.getDeletedAt() == null)
+                .collect(Collectors.toMap(User::getId, u -> u));
+
+        List<User> participants = new ArrayList<>();
+        for (UUID pid : participantIds) {
+            User u = userMap.get(pid);
+            if (u == null) {
+                throw new ResourceNotFoundException("Usuario asignado no encontrado: " + pid);
+            }
+            participants.add(u);
+        }
+
+        ChoreSeries series = choreRotationService.createSeries(home, request, participants);
+        List<Chore> saved = choreRotationService.generateOccurrences(series, request.dueDate(), participants);
 
         eventPublisher.publishEvent(new ChoreSeriesCreatedEvent(
                 homeId,
                 requestUserId,
                 request.title().trim(),
-                occurrences,
-                request.basePoints()
-        ));
+                saved.size(),
+                request.basePoints()));
 
         Map<UUID, String> memberColors = getActiveMemberColors(homeId);
         LocalDate today = LocalDate.now();
@@ -142,8 +102,7 @@ public class ChoreServiceImpl implements ChoreService {
                         chore,
                         requestUserId,
                         today,
-                        chore.getAssignee() != null ? memberColors.get(chore.getAssignee().getId()) : null
-                ))
+                        chore.getAssignee() != null ? memberColors.get(chore.getAssignee().getId()) : null))
                 .toList();
     }
 
@@ -204,8 +163,7 @@ public class ChoreServiceImpl implements ChoreService {
                         chore,
                         requestUserId,
                         today,
-                        chore.getAssignee() != null ? memberColors.get(chore.getAssignee().getId()) : null
-                ))
+                        chore.getAssignee() != null ? memberColors.get(chore.getAssignee().getId()) : null))
                 .toList();
     }
 
@@ -230,8 +188,7 @@ public class ChoreServiceImpl implements ChoreService {
 
         if (!isLate && !isAssignee) {
             throw new BusinessRuleValidationException(
-                    "Solo el usuario asignado puede completar la tarea antes de su vencimiento. Para rescatarla, debe estar atrasada."
-            );
+                    "Solo el usuario asignado puede completar la tarea antes de su vencimiento. Para rescatarla, debe estar atrasada.");
         }
 
         chore.setCompletedBy(currentUser);
@@ -254,8 +211,7 @@ public class ChoreServiceImpl implements ChoreService {
                     choreId,
                     chore.getTitle(),
                     chore.getBasePoints(),
-                    chore.getBasePoints()
-            ));
+                    chore.getBasePoints()));
         } else {
             // Assignee completed either on-time or late before rescue
             chore.setStatus(ChoreStatus.COMPLETED);
@@ -266,8 +222,7 @@ public class ChoreServiceImpl implements ChoreService {
                     requestUserId,
                     choreId,
                     chore.getTitle(),
-                    chore.getBasePoints()
-            ));
+                    chore.getBasePoints()));
         }
 
         Map<UUID, String> memberColors = getActiveMemberColors(homeId);
@@ -275,8 +230,7 @@ public class ChoreServiceImpl implements ChoreService {
                 chore,
                 requestUserId,
                 today,
-                chore.getAssignee() != null ? memberColors.get(chore.getAssignee().getId()) : null
-        );
+                chore.getAssignee() != null ? memberColors.get(chore.getAssignee().getId()) : null);
     }
 
     @Override
@@ -296,16 +250,14 @@ public class ChoreServiceImpl implements ChoreService {
                     requestUserId,
                     chore.getTitle(),
                     "DELETE_SINGLE",
-                    1
-            ));
+                    1));
         } else {
             // DELETE_FORWARD: delete this and all following pending chores of this series
             List<Chore> futurePending = choreRepository.findByHomeIdAndSeriesIdAndDueDateGreaterThanEqualAndStatus(
                     homeId,
                     chore.getSeriesId(),
                     chore.getDueDate(),
-                    ChoreStatus.PENDING
-            );
+                    ChoreStatus.PENDING);
 
             choreRepository.deleteAll(futurePending);
             eventPublisher.publishEvent(new ChoreDeletedEvent(
@@ -313,8 +265,7 @@ public class ChoreServiceImpl implements ChoreService {
                     requestUserId,
                     chore.getTitle(),
                     "DELETE_FORWARD",
-                    futurePending.size()
-            ));
+                    futurePending.size()));
         }
     }
 
@@ -335,8 +286,7 @@ public class ChoreServiceImpl implements ChoreService {
                 startDateTime,
                 endDateTime,
                 range.startDate(),
-                range.endDate()
-        );
+                range.endDate());
 
         return chorePointCalculator.calculateLeaderboard(period, range, members, chores);
     }
@@ -366,7 +316,6 @@ public class ChoreServiceImpl implements ChoreService {
                 .collect(Collectors.toMap(
                         m -> m.getUser().getId(),
                         m -> m.getColor() != null ? m.getColor() : "#4F46E5",
-                        (c1, c2) -> c1
-                ));
+                        (c1, c2) -> c1));
     }
 }

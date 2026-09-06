@@ -29,15 +29,19 @@ export interface ChoreResponseDto {
   canComplete: boolean;
 }
 
+export type RotationType = 'FIXED' | 'ROUND_ROBIN';
+
 export interface CreateChoreRequest {
   title: string;
   description?: string;
-  assigneeId: string;
+  assigneeId?: string;
   basePoints: number;
   dueDate: string;
   recurrence?: RecurrenceType;
   occurrences?: number;
   customDaysOfWeek?: number[];
+  rotationType?: RotationType;
+  rotationUserIds?: string[];
 }
 
 export interface ChoreFilterParams {

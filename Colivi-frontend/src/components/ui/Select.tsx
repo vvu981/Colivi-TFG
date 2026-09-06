@@ -42,8 +42,22 @@ export const Select: React.FC<SelectProps> = ({
   useEffect(() => {
     if (isOpen && direction === 'auto' && containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
-      const spaceBelow = window.innerHeight - rect.bottom;
-      if (spaceBelow < 180 && rect.top > spaceBelow) {
+      let spaceBelow = window.innerHeight - rect.bottom;
+
+      // Find closest scrollable ancestor (e.g. modal or overflow container)
+      let parent = containerRef.current.parentElement;
+      while (parent && parent !== document.body) {
+        const style = window.getComputedStyle(parent);
+        const overflowY = style.overflowY;
+        if (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'hidden') {
+          const parentRect = parent.getBoundingClientRect();
+          spaceBelow = Math.min(spaceBelow, parentRect.bottom - rect.bottom);
+          break;
+        }
+        parent = parent.parentElement;
+      }
+
+      if (spaceBelow < 220 && rect.top > 180) {
         setCalculatedUp(true);
       } else {
         setCalculatedUp(false);

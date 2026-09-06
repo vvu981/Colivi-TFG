@@ -13,6 +13,7 @@ import com.vvu981.colivibackend.features.home.domain.event.HomeDeletedEvent;
 import com.vvu981.colivibackend.features.home.domain.event.MemberExpelledEvent;
 import com.vvu981.colivibackend.features.home.domain.event.MemberJoinedEvent;
 import com.vvu981.colivibackend.features.home.domain.event.MemberLeftEvent;
+import com.vvu981.colivibackend.features.home.domain.event.UserLeftHomeEvent;
 import com.vvu981.colivibackend.features.home.dto.CreateExpenseRequest;
 import com.vvu981.colivibackend.features.home.dto.CreateHomeRequest;
 import com.vvu981.colivibackend.features.home.dto.HomeDetailResponseDto;
@@ -140,6 +141,7 @@ public class HomeServiceImpl implements HomeService {
         homeBalanceValidator.validateZeroBalance(homeId, userId);
         currentMember.leave();
         eventPublisher.publishEvent(new MemberLeftEvent(homeId, userId, currentMember.getUser().getFullName()));
+        eventPublisher.publishEvent(new UserLeftHomeEvent(homeId, userId));
     }
 
     @Override
@@ -165,6 +167,7 @@ public class HomeServiceImpl implements HomeService {
         targetMember.leave();
         eventPublisher
                 .publishEvent(new MemberExpelledEvent(homeId, adminUserId, targetMember.getUser().getFullName(), null));
+        eventPublisher.publishEvent(new UserLeftHomeEvent(homeId, targetUserId));
     }
 
     @Override
@@ -235,6 +238,7 @@ public class HomeServiceImpl implements HomeService {
         targetMember.leave();
         eventPublisher.publishEvent(
                 new MemberExpelledEvent(homeId, adminUserId, targetMember.getUser().getFullName(), reason));
+        eventPublisher.publishEvent(new UserLeftHomeEvent(homeId, targetUserId));
     }
 
     @Override

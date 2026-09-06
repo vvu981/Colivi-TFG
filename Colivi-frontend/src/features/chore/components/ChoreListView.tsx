@@ -55,24 +55,22 @@ export const ChoreListView: React.FC<ChoreListViewProps> = ({
 
   const filters = controlledFilters ?? internalFilters;
 
-  // Sincronizar prop timeFilter si cambia externamente (ej. tests o control superior)
+  // Sincronizar prop timeFilter si cambia externamente (solo en modo no controlado, ej. tests o vista standalone)
   useEffect(() => {
+    if (controlledFilters) return;
     if (!timeFilter) return;
     const targetStatus = (timeFilter === 'PENDING' || timeFilter === 'COMPLETED' || timeFilter === 'LATE') ? timeFilter : 'ALL';
     const targetDate = (timeFilter === 'TODAY' || timeFilter === 'WEEK' || timeFilter === 'MONTH') ? timeFilter : 'ALL';
 
-    if (controlledOnFilterChange) {
-      if (filters.status !== targetStatus || filters.date !== targetDate) {
-        controlledOnFilterChange({ ...filters, status: targetStatus, date: targetDate });
-      }
-    } else {
-      setInternalFilters((prev) => ({
+    setInternalFilters((prev) => {
+      if (prev.status === targetStatus && prev.date === targetDate) return prev;
+      return {
         ...prev,
         status: targetStatus,
         date: targetDate,
-      }));
-    }
-  }, [timeFilter]);
+      };
+    });
+  }, [timeFilter, controlledFilters]);
 
   const handleFilterChange = (newFilters: ChoreFilters) => {
     if (controlledOnFilterChange) {
@@ -243,6 +241,17 @@ export const ChoreListView: React.FC<ChoreListViewProps> = ({
                     <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold text-xs">
                       +{chore.basePoints} pts
                     </span>
+
+                    {/* Badge de Serie */}
+                    {chore.seriesId && (
+                      <span
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary font-semibold text-[10px]"
+                        title="Tarea periódica / serie"
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                        Serie
+                      </span>
+                    )}
 
                     {/* Estado contextual */}
                     {isLate && (

@@ -24,8 +24,9 @@ public class Chore {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "series_id")
-    private UUID seriesId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "series_id")
+    private ChoreSeries series;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "home_id", nullable = false)
@@ -88,5 +89,19 @@ public class Chore {
 
     public boolean isCompleted() {
         return this.status == ChoreStatus.COMPLETED || this.status == ChoreStatus.LATE_COMPLETED;
+    }
+
+    public UUID getSeriesId() {
+        return this.series != null ? this.series.getId() : null;
+    }
+
+    public void setSeriesId(UUID seriesId) {
+        if (seriesId == null) {
+            this.series = null;
+        } else if (this.series == null || !seriesId.equals(this.series.getId())) {
+            ChoreSeries s = new ChoreSeries();
+            s.setId(seriesId);
+            this.series = s;
+        }
     }
 }

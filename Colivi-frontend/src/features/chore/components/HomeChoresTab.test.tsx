@@ -206,4 +206,32 @@ describe('HomeChoresTab', () => {
       expect(colorDot).toHaveStyle({ backgroundColor: 'rgb(5, 150, 105)' });
     });
   });
+
+  it('retains selected filter without reverting to ALL when in list view mode', async () => {
+    renderComponent();
+
+    // Switch to list view first
+    const listBtn = screen.getByRole('button', { name: /Lista/i });
+    fireEvent.click(listBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('Limpiar la cocina')).toBeInTheDocument();
+    });
+
+    // Open filter dropdown
+    const filterBtn = screen.getByRole('button', { name: /Abrir filtros acumulables/i });
+    fireEvent.click(filterBtn);
+
+    // Select "No completadas"
+    const pendingFilterBtn = screen.getByRole('button', { name: /^No completadas/i });
+    fireEvent.click(pendingFilterBtn);
+
+    // Apply
+    const applyBtn = screen.getByRole('button', { name: /Aplicar/i });
+    fireEvent.click(applyBtn);
+
+    // Active chip must remain in the document and not reset to ALL
+    expect(screen.getByText(/Estado: No completadas/i)).toBeInTheDocument();
+    expect(screen.getByText('Limpiar la cocina')).toBeInTheDocument();
+  });
 });

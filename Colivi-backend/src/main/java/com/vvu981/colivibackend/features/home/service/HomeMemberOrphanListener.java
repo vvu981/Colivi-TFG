@@ -7,6 +7,7 @@ import com.vvu981.colivibackend.features.home.domain.HomeRole;
 import com.vvu981.colivibackend.features.home.domain.event.AdminTransferredEvent;
 import com.vvu981.colivibackend.features.home.domain.event.HomeDeletedEvent;
 import com.vvu981.colivibackend.features.home.domain.event.MemberLeftEvent;
+import com.vvu981.colivibackend.features.home.domain.event.UserLeftHomeEvent;
 import com.vvu981.colivibackend.features.home.repository.HomeMemberRepository;
 import com.vvu981.colivibackend.features.home.repository.HomeRepository;
 import com.vvu981.colivibackend.features.user.domain.event.UserDeletedEvent;
@@ -81,6 +82,7 @@ public class HomeMemberOrphanListener {
             homeMemberRepository.save(currentMember);
             eventPublisher.publishEvent(
                     new MemberLeftEvent(home.getId(), event.userId(), currentMember.getUser().getFullName()));
+            eventPublisher.publishEvent(new UserLeftHomeEvent(home.getId(), event.userId()));
         }
     }
 }

@@ -21,11 +21,18 @@ public interface ChoreRepository extends JpaRepository<Chore, UUID>, JpaSpecific
 
     List<Chore> findByHomeIdOrderByDueDateAscCreatedAtAsc(UUID homeId);
 
+    @Query("SELECT c FROM Chore c WHERE c.home.id = :homeId AND c.series.id = :seriesId AND c.dueDate >= :dueDate AND c.status = :status ORDER BY c.dueDate ASC, c.createdAt ASC")
     List<Chore> findByHomeIdAndSeriesIdAndDueDateGreaterThanEqualAndStatus(
-            UUID homeId,
-            UUID seriesId,
-            LocalDate dueDate,
-            ChoreStatus status
+            @Param("homeId") UUID homeId,
+            @Param("seriesId") UUID seriesId,
+            @Param("dueDate") LocalDate dueDate,
+            @Param("status") ChoreStatus status
+    );
+
+    @Query("SELECT c FROM Chore c WHERE c.series.id = :seriesId AND c.dueDate >= :dueDate AND c.status = 'PENDING' ORDER BY c.dueDate ASC, c.createdAt ASC")
+    List<Chore> findPendingFutureChoresBySeriesId(
+            @Param("seriesId") UUID seriesId,
+            @Param("dueDate") LocalDate dueDate
     );
 
     @Query("SELECT c FROM Chore c " +
