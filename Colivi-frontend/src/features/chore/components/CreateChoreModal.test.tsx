@@ -266,6 +266,60 @@ describe('CreateChoreModal', () => {
     });
     expect(onSubmit).not.toHaveBeenCalled();
   });
+
+  it('filters out members who have left the home from assignee options and rotation participants', async () => {
+    const membersWithExMember: HomeMemberResponseDto[] = [
+      ...mockMembers,
+      {
+        userId: 'user-inactive',
+        fullName: 'Carlos Excompañero',
+        email: 'carlos@test.com',
+        profilePicUrl: null,
+        role: 'MEMBER',
+        status: 'LEFT',
+        joinedAt: '2026-01-01',
+        leftAt: '2026-06-01',
+      },
+    ];
+
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const onClose = vi.fn();
+
+    render(
+      <CreateChoreModal
+        isOpen={true}
+        onClose={onClose}
+        members={membersWithExMember}
+        onSubmit={onSubmit}
+      />
+    );
+
+    // Open Assignee Select dropdown
+    const assigneeSelectBtn = screen.getByRole('button', { name: /Asignar a/i });
+    fireEvent.click(assigneeSelectBtn);
+
+    // Assert active members are present and ex-member is not present
+    expect(screen.getByRole('option', { name: /Ana García/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /Borja Martín/i })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: /Carlos Excompañero/i })).not.toBeInTheDocument();
+
+    // Close select
+    fireEvent.click(assigneeSelectBtn);
+
+    // Switch to rotating mode
+    const recurrenceBtn = screen.getByRole('button', { name: /Repetir tarea automáticamente/i });
+    fireEvent.click(recurrenceBtn);
+    const weeklyOption = screen.getByRole('option', { name: /Semanalmente/i });
+    fireEvent.click(weeklyOption);
+
+    const rotatingBtn = screen.getByRole('button', { name: /Rueda rotativa/i });
+    fireEvent.click(rotatingBtn);
+
+    // Check participants in round-robin list
+    expect(screen.getByLabelText('Seleccionar a Ana García')).toBeInTheDocument();
+    expect(screen.getByLabelText('Seleccionar a Borja Martín')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Seleccionar a Carlos Excompañero')).not.toBeInTheDocument();
+  });
 });
 
 

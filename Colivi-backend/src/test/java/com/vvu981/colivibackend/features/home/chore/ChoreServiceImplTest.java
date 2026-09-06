@@ -304,8 +304,8 @@ class ChoreServiceImplTest {
         }
 
         @Test
-        @DisplayName("Debe fallar si el usuario que solicita crear no es miembro activo")
-        void shouldFailIfRequesterIsNotActiveMember() {
+        @DisplayName("Debe fallar si el usuario que solicita crear no es miembro del hogar")
+        void shouldFailIfRequesterIsNotMember() {
             when(homeMemberRepository.findByHomeIdAndUserId(homeId, userAId)).thenReturn(Optional.empty());
 
             CreateChoreRequest request = new CreateChoreRequest(
@@ -314,6 +314,39 @@ class ChoreServiceImplTest {
 
             assertThrows(UnauthorizedActionException.class, () ->
                     choreService.createChore(homeId, request, userAId));
+        }
+
+        @Test
+        @DisplayName("Debe fallar si el usuario que solicita crear ha abandonado el hogar")
+        void shouldFailIfRequesterHasLeftHome() {
+            memberA.setStatus(HomeMemberStatus.LEFT);
+            when(homeMemberRepository.findByHomeIdAndUserId(homeId, userAId)).thenReturn(Optional.of(memberA));
+
+            CreateChoreRequest request = new CreateChoreRequest(
+                    "Pasar aspiradora", null, userAId, 10, LocalDate.now(), RecurrenceType.NONE, 1
+            );
+
+            UnauthorizedActionException ex = assertThrows(UnauthorizedActionException.class, () ->
+                    choreService.createChore(homeId, request, userAId));
+            assertTrue(ex.getMessage().contains("No puedes crear ni gestionar tareas"));
+        }
+
+        @Test
+        @DisplayName("Debe fallar con BusinessRuleValidationException si se intenta asignar a un miembro que ha abandonado el hogar")
+        void shouldFailIfAssigneeHasLeftHome() {
+            memberA.setStatus(HomeMemberStatus.ACTIVE);
+            memberB.setStatus(HomeMemberStatus.LEFT);
+            when(homeMemberRepository.findByHomeIdAndUserId(homeId, userAId)).thenReturn(Optional.of(memberA));
+            when(homeMemberRepository.findByHomeIdAndUserId(homeId, userBId)).thenReturn(Optional.of(memberB));
+            when(homeRepository.findByIdAndDeletedAtIsNull(homeId)).thenReturn(Optional.of(testHome));
+
+            CreateChoreRequest request = new CreateChoreRequest(
+                    "Pasar aspiradora", null, userBId, 10, LocalDate.now(), RecurrenceType.NONE, 1
+            );
+
+            BusinessRuleValidationException ex = assertThrows(BusinessRuleValidationException.class, () ->
+                    choreService.createChore(homeId, request, userAId));
+            assertTrue(ex.getMessage().contains("No se pueden asignar tareas a un usuario que no es miembro activo del hogar"));
         }
 
         @Test

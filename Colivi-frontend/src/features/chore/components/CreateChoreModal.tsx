@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { isAxiosError } from 'axios';
 import type { HomeMemberResponseDto } from '../../home/types';
 import type { CreateChoreRequest, RecurrenceType, RotationType } from '../types';
 import { Select, type SelectOption } from '../../../components/ui/Select';
@@ -24,9 +25,13 @@ export const CreateChoreModal: React.FC<CreateChoreModalProps> = ({
   const todayStr = new Date().toISOString().split('T')[0];
   const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
 
+  const activeMembers = useMemo(() => {
+    return members.filter((m) => (m.status ? m.status === 'ACTIVE' : true));
+  }, [members]);
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [assigneeId, setAssigneeId] = useState(members[0]?.userId || '');
+  const [assigneeId, setAssigneeId] = useState(activeMembers[0]?.userId || '');
   const [basePoints, setBasePoints] = useState(10);
   const [dueDate, setDueDate] = useState(tomorrowStr);
   const [recurrence, setRecurrence] = useState<RecurrenceType>('NONE');
@@ -34,7 +39,7 @@ export const CreateChoreModal: React.FC<CreateChoreModalProps> = ({
   const [customDays, setCustomDays] = useState<number[]>([1, 2, 4]); // Lunes, Martes, Jueves
   const [assignmentMode, setAssignmentMode] = useState<RotationType>('FIXED');
   const [selectedParticipants, setSelectedParticipants] = useState<string[]>(() =>
-    members.map((m) => m.userId)
+    activeMembers.map((m) => m.userId)
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -42,17 +47,17 @@ export const CreateChoreModal: React.FC<CreateChoreModalProps> = ({
     if (isOpen) {
       setTitle('');
       setDescription('');
-      setAssigneeId(members[0]?.userId || '');
+      setAssigneeId(activeMembers[0]?.userId || '');
       setBasePoints(10);
       setDueDate(tomorrowStr);
       setRecurrence('NONE');
       setOccurrences(7);
       setCustomDays([1, 2, 4]);
       setAssignmentMode('FIXED');
-      setSelectedParticipants(members.map((m) => m.userId));
+      setSelectedParticipants(activeMembers.map((m) => m.userId));
       setErrorMessage(null);
     }
-  }, [isOpen, members, tomorrowStr]);
+  }, [isOpen, activeMembers, tomorrowStr]);
 
   const DAYS_OF_WEEK = [
     { value: 1, label: 'Lunes', short: 'L' },
@@ -65,7 +70,7 @@ export const CreateChoreModal: React.FC<CreateChoreModalProps> = ({
   ];
 
   const assigneeOptions: SelectOption[] = useMemo(() => {
-    return members.map((member) => ({
+    return activeMembers.map((member) => ({
       value: member.userId,
       label: member.fullName,
       icon: member.profilePicUrl ? (
@@ -80,7 +85,7 @@ export const CreateChoreModal: React.FC<CreateChoreModalProps> = ({
         </span>
       ),
     }));
-  }, [members]);
+  }, [activeMembers]);
 
   const recurrenceOptions: SelectOption[] = useMemo(
     () => [
@@ -98,6 +103,11 @@ export const CreateChoreModal: React.FC<CreateChoreModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
+
+    if (activeMembers.length === 0) {
+      setErrorMessage('No hay miembros activos disponibles en este hogar para asignar tareas.');
+      return;
+    }
 
     if (!title.trim()) {
       setErrorMessage('El título de la tarea es obligatorio.');
@@ -145,12 +155,16 @@ export const CreateChoreModal: React.FC<CreateChoreModalProps> = ({
       setBasePoints(10);
       setRecurrence('NONE');
       setAssignmentMode('FIXED');
-      setSelectedParticipants(members.map((m) => m.userId));
+      setSelectedParticipants(activeMembers.map((m) => m.userId));
       setCustomDays([1, 2, 4]);
       onClose();
     } catch (err: unknown) {
-      const error = err as Error;
-      setErrorMessage(error.message || 'Error al crear la tarea');
+      const msg = isAxiosError(err)
+        ? (err.response?.data?.message || err.message || 'Error al crear la tarea')
+        : err instanceof Error
+          ? err.message
+          : 'Error al crear la tarea';
+      setErrorMessage(msg);
     }
   };
 
@@ -233,7 +247,7 @@ export const CreateChoreModal: React.FC<CreateChoreModalProps> = ({
                 <div className="px-3 py-2 bg-surface-container-low border border-outline-variant/60 rounded-xl text-xs text-on-surface flex items-center gap-2 min-h-[38px]">
                   {selectedParticipants.length > 0 ? (
                     (() => {
-                      const firstMember = members.find((m) => m.userId === selectedParticipants[0]);
+                      const firstMember = activeMembers.find((m) => m.userId === selectedParticipants[0]);
                       if (!firstMember) return <span className="text-secondary text-[11px]">Sin participante</span>;
                       return (
                         <>
@@ -282,7 +296,10 @@ export const CreateChoreModal: React.FC<CreateChoreModalProps> = ({
             <div className="space-y-1">
               <label htmlFor="chore-due-date" className="text-xs font-bold text-on-surface flex items-center gap-1">
                 <Calendar className="w-3.5 h-3.5 text-secondary" />
-                <span>Fecha límite <span className="text-primary">*</span></span>
+                <span>
+                  {recurrence === 'NONE' ? 'Fecha límite' : 'Fecha de inicio / 1º turno'}{' '}
+                  <span className="text-primary">*</span>
+                </span>
               </label>
               <DatePicker
                 id="chore-due-date"
@@ -393,7 +410,7 @@ export const CreateChoreModal: React.FC<CreateChoreModalProps> = ({
                       onClick={() => {
                         setAssignmentMode('ROUND_ROBIN');
                         if (selectedParticipants.length === 0) {
-                          setSelectedParticipants(members.map((m) => m.userId));
+                          setSelectedParticipants(activeMembers.map((m) => m.userId));
                         }
                       }}
                       className={`p-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 border transition-all cursor-pointer ${
@@ -417,7 +434,7 @@ export const CreateChoreModal: React.FC<CreateChoreModalProps> = ({
                           <Users className="w-3.5 h-3.5 text-primary" />
                           <span>Participantes en la rueda</span>
                           <span className="text-primary font-bold text-xs">
-                            ({selectedParticipants.length}/{members.length})
+                            ({selectedParticipants.length}/{activeMembers.length})
                           </span>
                         </span>
                         <p className="text-[11px] text-secondary">
@@ -427,7 +444,7 @@ export const CreateChoreModal: React.FC<CreateChoreModalProps> = ({
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
-                          onClick={() => setSelectedParticipants(members.map((m) => m.userId))}
+                          onClick={() => setSelectedParticipants(activeMembers.map((m) => m.userId))}
                           className="text-[11px] font-semibold text-primary hover:underline cursor-pointer"
                         >
                           Todos
@@ -444,7 +461,7 @@ export const CreateChoreModal: React.FC<CreateChoreModalProps> = ({
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
-                      {members.map((member) => {
+                      {activeMembers.map((member) => {
                         const isSelected = selectedParticipants.includes(member.userId);
                         const orderIndex = selectedParticipants.indexOf(member.userId);
 

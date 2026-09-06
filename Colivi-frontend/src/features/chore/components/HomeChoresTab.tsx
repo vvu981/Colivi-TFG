@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { isAxiosError } from 'axios';
 import type { HomeDetailResponseDto } from '../../home/types';
 import type { ChoreResponseDto, ChoreTimeFilter, DeleteMode } from '../types';
 import { useQueryClient } from '@tanstack/react-query';
@@ -39,6 +40,10 @@ export const HomeChoresTab: React.FC<HomeChoresTabProps> = ({
       return override ? { ...m, color: override } : m;
     });
   }, [home.members, memberColorOverrides]);
+
+  const activeMembers = useMemo(() => {
+    return effectiveMembers.filter((m) => m.status === 'ACTIVE');
+  }, [effectiveMembers]);
 
   const currentMember = useMemo(() => {
     return effectiveMembers.find((m) => m.userId === currentUserId);
@@ -111,8 +116,12 @@ export const HomeChoresTab: React.FC<HomeChoresTabProps> = ({
     try {
       await completeChore(chore.id);
     } catch (err: unknown) {
-      const error = err as Error;
-      alert(error.message || 'Error al completar la tarea');
+      const msg = isAxiosError(err)
+        ? (err.response?.data?.message || err.message)
+        : err instanceof Error
+          ? err.message
+          : 'Error al completar la tarea';
+      alert(msg);
     }
   };
 
@@ -121,13 +130,26 @@ export const HomeChoresTab: React.FC<HomeChoresTabProps> = ({
       await deleteChore({ choreId, mode });
       setChoreToDelete(null);
     } catch (err: unknown) {
-      const error = err as Error;
-      alert(error.message || 'Error al eliminar la tarea');
+      const msg = isAxiosError(err)
+        ? (err.response?.data?.message || err.message)
+        : err instanceof Error
+          ? err.message
+          : 'Error al eliminar la tarea';
+      alert(msg);
     }
   };
 
+  const isActiveMember = currentMember?.status === 'ACTIVE';
+
   return (
     <div className="space-y-6">
+      {/* Banner de solo lectura para antiguos miembros */}
+      {!isActiveMember && (
+        <div className="p-3.5 bg-secondary/10 border border-secondary/20 rounded-2xl text-xs text-secondary font-medium flex items-center justify-between gap-3">
+          <span>Estás visualizando las tareas en modo solo lectura porque ya no participas activamente en este hogar.</span>
+        </div>
+      )}
+
       {/* Leaderboard / Panel de Rendimiento y Puntos Esperados */}
       <ChoreLeaderboard
         leaderboard={leaderboard}
@@ -204,8 +226,13 @@ export const HomeChoresTab: React.FC<HomeChoresTabProps> = ({
               <button
                 type="button"
                 onClick={() => setIsColorModalOpen(true)}
-                title="Personalizar mi color en este hogar"
-                className="inline-flex items-center gap-2 px-3 py-2 bg-surface-container text-on-surface hover:bg-surface-container-high text-xs font-semibold rounded-2xl border border-outline-variant/60 transition-all shrink-0 cursor-pointer"
+                disabled={!isActiveMember}
+                title={!isActiveMember ? 'No puedes personalizar el color porque no eres un miembro activo' : 'Personalizar mi color en este hogar'}
+                className={`inline-flex items-center gap-2 px-3 py-2 text-on-surface text-xs font-semibold rounded-2xl border border-outline-variant/60 transition-all shrink-0 ${
+                  isActiveMember
+                    ? 'bg-surface-container hover:bg-surface-container-high cursor-pointer'
+                    : 'bg-surface-container/50 opacity-50 cursor-not-allowed'
+                }`}
               >
                 <span
                   data-testid="my-color-dot"
@@ -219,7 +246,13 @@ export const HomeChoresTab: React.FC<HomeChoresTabProps> = ({
               <button
                 type="button"
                 onClick={() => setIsCreateModalOpen(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white text-xs font-bold rounded-2xl shadow-xs hover:bg-primary-container transition-all shrink-0 cursor-pointer"
+                disabled={!isActiveMember}
+                title={!isActiveMember ? 'No puedes crear tareas porque no eres un miembro activo de este hogar' : 'Crear nueva tarea'}
+                className={`inline-flex items-center gap-2 px-4 py-2 text-white text-xs font-bold rounded-2xl shadow-xs transition-all shrink-0 ${
+                  isActiveMember
+                    ? 'bg-primary hover:bg-primary-container cursor-pointer'
+                    : 'bg-primary/50 opacity-50 cursor-not-allowed'
+                }`}
               >
                 <Plus className="w-4 h-4" />
                 <span>Nueva Tarea</span>
@@ -331,7 +364,7 @@ export const HomeChoresTab: React.FC<HomeChoresTabProps> = ({
       <CreateChoreModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        members={effectiveMembers}
+        members={activeMembers}
         onSubmit={async (data) => {
           await createChore(data);
         }}

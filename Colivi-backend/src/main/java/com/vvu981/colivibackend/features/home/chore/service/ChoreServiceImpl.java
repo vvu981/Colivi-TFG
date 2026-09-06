@@ -74,7 +74,11 @@ public class ChoreServiceImpl implements ChoreService {
         }
 
         for (UUID participantId : participantIds) {
-            validateActiveMember(homeId, participantId);
+            HomeMember member = homeMemberRepository.findByHomeIdAndUserId(homeId, participantId)
+                    .orElseThrow(() -> new BusinessRuleValidationException("El usuario asignado no pertenece a este hogar"));
+            if (member.getStatus() != HomeMemberStatus.ACTIVE) {
+                throw new BusinessRuleValidationException("No se pueden asignar tareas a un usuario que no es miembro activo del hogar");
+            }
         }
 
         Map<UUID, User> userMap = userRepository.findAllById(participantIds).stream()
@@ -303,7 +307,7 @@ public class ChoreServiceImpl implements ChoreService {
                 .orElseThrow(() -> new UnauthorizedActionException("No perteneces a este hogar"));
 
         if (member.getStatus() != HomeMemberStatus.ACTIVE) {
-            throw new UnauthorizedActionException("Tu membresía en este hogar no está activa");
+            throw new UnauthorizedActionException("No puedes crear ni gestionar tareas porque ya no participas activamente en este hogar");
         }
     }
 
