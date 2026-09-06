@@ -582,6 +582,40 @@ class ChoreServiceImplTest {
             assertEquals(2, eventCaptor.getValue().deletedCount());
             assertEquals("DELETE_FORWARD", eventCaptor.getValue().deleteMode());
         }
+
+        @Test
+        @DisplayName("deleteChore con deleteMode null o sin seriesId aplica DELETE_SINGLE")
+        void deleteChoreWithNullModeOrNoSeries() {
+            when(homeMemberRepository.findByHomeIdAndUserId(homeId, userAId)).thenReturn(Optional.of(memberA));
+
+            Chore chore = new Chore();
+            chore.setId(UUID.randomUUID());
+            chore.setHome(testHome);
+            chore.setTitle("Sin serie");
+            chore.setSeries(null);
+
+            when(choreRepository.findByIdAndHomeId(chore.getId(), homeId)).thenReturn(Optional.of(chore));
+
+            // Test with null deleteMode on chore without series
+            choreService.deleteChore(homeId, chore.getId(), null, userAId);
+
+            verify(choreRepository).delete(chore);
+            ArgumentCaptor<ChoreDeletedEvent> eventCaptor = ArgumentCaptor.forClass(ChoreDeletedEvent.class);
+            verify(eventPublisher).publishEvent(eventCaptor.capture());
+            assertEquals("DELETE_SINGLE", eventCaptor.getValue().deleteMode());
+            assertEquals(1, eventCaptor.getValue().deletedCount());
+        }
+
+        @Test
+        @DisplayName("validateActiveMember lanza excepción si la membresía no está activa")
+        void shouldThrowWhenMembershipNotActive() {
+            HomeMember inactiveMember = new HomeMember();
+            inactiveMember.setStatus(HomeMemberStatus.LEFT);
+            when(homeMemberRepository.findByHomeIdAndUserId(homeId, userAId)).thenReturn(Optional.of(inactiveMember));
+
+            assertThrows(com.vvu981.colivibackend.core.exception.UnauthorizedActionException.class, () ->
+                    choreService.deleteChore(homeId, UUID.randomUUID(), DeleteMode.DELETE_SINGLE, userAId));
+        }
     }
 
     @Nested

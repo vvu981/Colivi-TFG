@@ -205,4 +205,125 @@ class ChoreRotationServiceImplTest {
                 verify(choreRepository).saveAll(List.of(chore1, chore2, chore3));
                 verify(choreSeriesRepository).save(series);
         }
+
+        @Test
+        @DisplayName("Generación de ocurrencias con RecurrenceType.CUSTOM y días específicos")
+        void shouldGenerateOccurrencesWithCustomRecurrence() {
+                ChoreSeries series = new ChoreSeries();
+                series.setId(UUID.randomUUID());
+                series.setHome(home);
+                series.setTitle("Custom Task");
+                series.setRecurrenceType(RecurrenceType.CUSTOM);
+                series.setCustomDaysOfWeek("1,3,5"); // Mon, Wed, Fri
+                series.setOccurrences(3);
+                series.setRotationType(RotationType.ROUND_ROBIN);
+                series.setParticipantOrder(new ArrayList<>(List.of(userA.getId(), userB.getId())));
+
+                when(choreRepository.saveAll(any())).thenAnswer(inv -> inv.getArgument(0));
+
+                // 2026-09-07 is Monday (1)
+                LocalDate baseDate = LocalDate.of(2026, 9, 7);
+                List<Chore> generated = rotationService.generateOccurrences(series, baseDate, List.of(userA, userB));
+
+                assertEquals(3, generated.size());
+                assertEquals(LocalDate.of(2026, 9, 7), generated.get(0).getDueDate());  // Mon
+                assertEquals(LocalDate.of(2026, 9, 9), generated.get(1).getDueDate());  // Wed
+                assertEquals(LocalDate.of(2026, 9, 11), generated.get(2).getDueDate()); // Fri
+        }
+
+        @Test
+        @DisplayName("Generación de ocurrencias con RecurrenceType.CUSTOM sin días válidos lanza excepción")
+        void shouldThrowExceptionWhenCustomRecurrenceHasNoValidDays() {
+                ChoreSeries series = new ChoreSeries();
+                series.setRecurrenceType(RecurrenceType.CUSTOM);
+                series.setCustomDaysOfWeek("invalid,data");
+                series.setOccurrences(3);
+
+                assertThrows(com.vvu981.colivibackend.core.exception.BusinessRuleValidationException.class, () ->
+                        rotationService.generateOccurrences(series, LocalDate.now(), List.of(userA)));
+        }
+
+        @Test
+        @DisplayName("Generación con DAILY, MONTHLY y NONE cubre todas las ramas de repetición")
+        void shouldGenerateOccurrencesForDailyMonthlyAndNone() {
+                when(choreRepository.saveAll(any())).thenAnswer(inv -> inv.getArgument(0));
+                LocalDate baseDate = LocalDate.of(2026, 9, 1);
+
+                // DAILY
+                ChoreSeries dailySeries = new ChoreSeries();
+                dailySeries.setRecurrenceType(RecurrenceType.DAILY);
+                dailySeries.setOccurrences(2);
+                dailySeries.setRotationType(RotationType.FIXED);
+                List<Chore> dailyChores = rotationService.generateOccurrences(dailySeries, baseDate, List.of(userA));
+                assertEquals(2, dailyChores.size());
+                assertEquals(baseDate, dailyChores.get(0).getDueDate());
+                assertEquals(baseDate.plusDays(1), dailyChores.get(1).getDueDate());
+
+                // MONTHLY
+                ChoreSeries monthlySeries = new ChoreSeries();
+                monthlySeries.setRecurrenceType(RecurrenceType.MONTHLY);
+                monthlySeries.setOccurrences(2);
+                monthlySeries.setRotationType(RotationType.FIXED);
+                List<Chore> monthlyChores = rotationService.generateOccurrences(monthlySeries, baseDate, List.of(userA));
+                assertEquals(2, monthlyChores.size());
+                assertEquals(baseDate, monthlyChores.get(0).getDueDate());
+                assertEquals(baseDate.plusMonths(1), monthlyChores.get(1).getDueDate());
+
+                // NONE
+                ChoreSeries noneSeries = new ChoreSeries();
+                noneSeries.setRecurrenceType(RecurrenceType.NONE);
+                noneSeries.setOccurrences(1);
+                noneSeries.setRotationType(RotationType.FIXED);
+                List<Chore> noneChores = rotationService.generateOccurrences(noneSeries, baseDate, List.of(userA));
+                assertEquals(1, noneChores.size());
+                assertEquals(baseDate, noneChores.get(0).getDueDate());
+        }
+
+        @Test
+        @DisplayName("handleUserLeftHome no altera la serie si el usuario no estaba en la lista de participantes")
+        void shouldIgnoreWhenUserNotParticipant() {
+                ChoreSeries series = new ChoreSeries();
+                series.setId(UUID.randomUUID());
+                series.setParticipantOrder(new ArrayList<>(List.of(userA.getId())));
+
+                when(choreSeriesRepository.findByHomeIdAndParticipantUserIdForUpdate(home.getId(), userB.getId()))
+                        .thenReturn(List.of(series));
+
+                rotationService.handleUserLeftHome(home.getId(), userB.getId());
+
+                verify(choreRepository, never()).deleteAll(any());
+                verify(choreRepository, never()).saveAll(any());
+        }
+
+        @Test
+        @DisplayName("handleUserLeftHome cuando quedan 0 participantes pero no hay tareas pendientes futuras")
+        void shouldHandleZeroParticipantsWhenNoFuturePendingChores() {
+                ChoreSeries series = new ChoreSeries();
+                series.setId(UUID.randomUUID());
+                series.setParticipantOrder(new ArrayList<>(List.of(userA.getId())));
+
+                when(choreSeriesRepository.findByHomeIdAndParticipantUserIdForUpdate(home.getId(), userA.getId()))
+                        .thenReturn(List.of(series));
+                when(choreRepository.findPendingFutureChoresBySeriesId(eq(series.getId()), any(LocalDate.class)))
+                        .thenReturn(List.of());
+
+                rotationService.handleUserLeftHome(home.getId(), userA.getId());
+
+                verify(choreRepository, never()).deleteAll(any());
+                verify(choreSeriesRepository).save(series);
+        }
+
+        @Test
+        @DisplayName("createSeries y generateOccurrences validan lista de participantes vacía")
+        void shouldValidateEmptyParticipants() {
+                CreateChoreRequest request = new CreateChoreRequest(
+                        "Task", null, userA.getId(), 10, LocalDate.now(), RecurrenceType.NONE, 1
+                );
+
+                assertThrows(com.vvu981.colivibackend.core.exception.BusinessRuleValidationException.class, () ->
+                        rotationService.createSeries(home, request, List.of()));
+
+                assertThrows(com.vvu981.colivibackend.core.exception.BusinessRuleValidationException.class, () ->
+                        rotationService.generateOccurrences(new ChoreSeries(), LocalDate.now(), List.of()));
+        }
 }

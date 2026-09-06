@@ -61,8 +61,7 @@ class ChoreStrategyTest {
                 List.of(userA, userB),
                 0,
                 3,
-                LocalDate.now()
-        );
+                LocalDate.now());
 
         User assignee = fixedStrategy.determineAssignee(ctx);
         assertEquals(userA, assignee);
@@ -76,8 +75,7 @@ class ChoreStrategyTest {
                 Collections.emptyList(),
                 0,
                 0,
-                LocalDate.now()
-        );
+                LocalDate.now());
 
         assertThrows(BusinessRuleValidationException.class, () -> fixedStrategy.determineAssignee(ctx));
     }
@@ -89,13 +87,20 @@ class ChoreStrategyTest {
         ChoreSeries series = new ChoreSeries();
 
         // 7 occurrences starting at index 0
-        User o0 = roundRobinStrategy.determineAssignee(new ChoreAssignmentContext(series, participants, 0, 0, LocalDate.now()));
-        User o1 = roundRobinStrategy.determineAssignee(new ChoreAssignmentContext(series, participants, 0, 1, LocalDate.now()));
-        User o2 = roundRobinStrategy.determineAssignee(new ChoreAssignmentContext(series, participants, 0, 2, LocalDate.now()));
-        User o3 = roundRobinStrategy.determineAssignee(new ChoreAssignmentContext(series, participants, 0, 3, LocalDate.now()));
-        User o4 = roundRobinStrategy.determineAssignee(new ChoreAssignmentContext(series, participants, 0, 4, LocalDate.now()));
-        User o5 = roundRobinStrategy.determineAssignee(new ChoreAssignmentContext(series, participants, 0, 5, LocalDate.now()));
-        User o6 = roundRobinStrategy.determineAssignee(new ChoreAssignmentContext(series, participants, 0, 6, LocalDate.now()));
+        User o0 = roundRobinStrategy
+                .determineAssignee(new ChoreAssignmentContext(series, participants, 0, 0, LocalDate.now()));
+        User o1 = roundRobinStrategy
+                .determineAssignee(new ChoreAssignmentContext(series, participants, 0, 1, LocalDate.now()));
+        User o2 = roundRobinStrategy
+                .determineAssignee(new ChoreAssignmentContext(series, participants, 0, 2, LocalDate.now()));
+        User o3 = roundRobinStrategy
+                .determineAssignee(new ChoreAssignmentContext(series, participants, 0, 3, LocalDate.now()));
+        User o4 = roundRobinStrategy
+                .determineAssignee(new ChoreAssignmentContext(series, participants, 0, 4, LocalDate.now()));
+        User o5 = roundRobinStrategy
+                .determineAssignee(new ChoreAssignmentContext(series, participants, 0, 5, LocalDate.now()));
+        User o6 = roundRobinStrategy
+                .determineAssignee(new ChoreAssignmentContext(series, participants, 0, 6, LocalDate.now()));
 
         assertEquals(userA, o0);
         assertEquals(userB, o1);
@@ -113,10 +118,51 @@ class ChoreStrategyTest {
         ChoreSeries series = new ChoreSeries();
 
         // Start index = 1 (Borja)
-        User o0 = roundRobinStrategy.determineAssignee(new ChoreAssignmentContext(series, participants, 1, 0, LocalDate.now()));
-        User o1 = roundRobinStrategy.determineAssignee(new ChoreAssignmentContext(series, participants, 1, 1, LocalDate.now()));
+        User o0 = roundRobinStrategy
+                .determineAssignee(new ChoreAssignmentContext(series, participants, 1, 0, LocalDate.now()));
+        User o1 = roundRobinStrategy
+                .determineAssignee(new ChoreAssignmentContext(series, participants, 1, 1, LocalDate.now()));
 
         assertEquals(userB, o0);
         assertEquals(userC, o1);
+    }
+
+    @Test
+    @DisplayName("RoundRobinRotationStrategy debe lanzar excepcion si lista es null o vacia")
+    void roundRobinStrategyShouldThrowWhenNullOrEmpty() {
+        ChoreAssignmentContext ctxEmpty = new ChoreAssignmentContext(
+                new ChoreSeries(),
+                Collections.emptyList(),
+                0,
+                0,
+                LocalDate.now());
+        assertThrows(BusinessRuleValidationException.class, () -> roundRobinStrategy.determineAssignee(ctxEmpty));
+
+        ChoreAssignmentContext ctxNull = new ChoreAssignmentContext(
+                new ChoreSeries(),
+                null,
+                0,
+                0,
+                LocalDate.now());
+        assertThrows(BusinessRuleValidationException.class, () -> roundRobinStrategy.determineAssignee(ctxNull));
+    }
+
+    @Test
+    @DisplayName("FixedAssigneeStrategy debe lanzar excepcion si lista es null")
+    void fixedAssigneeStrategyShouldThrowWhenNull() {
+        ChoreAssignmentContext ctxNull = new ChoreAssignmentContext(
+                new ChoreSeries(),
+                null,
+                0,
+                0,
+                LocalDate.now());
+        assertThrows(BusinessRuleValidationException.class, () -> fixedStrategy.determineAssignee(ctxNull));
+    }
+
+    @Test
+    @DisplayName("ChoreAssignmentStrategyResolver debe lanzar excepcion si la estrategia no esta registrada")
+    void resolverShouldThrowWhenStrategyNotRegistered() {
+        ChoreAssignmentStrategyResolver emptyResolver = new ChoreAssignmentStrategyResolver(List.of());
+        assertThrows(BusinessRuleValidationException.class, () -> emptyResolver.resolve(RotationType.ROUND_ROBIN));
     }
 }
