@@ -44,31 +44,41 @@ export const HomeMemberList: React.FC<HomeMemberListProps> = ({
         key={member.userId}
         className="flex items-center justify-between p-4 bg-surface-container-lowest border border-outline-variant/60 rounded-2xl hover:border-outline-variant transition-all"
       >
-        <div className="flex items-center gap-3 min-w-0">
-          {member.profilePicUrl ? (
-            <img
-              src={member.profilePicUrl}
-              alt={member.fullName}
-              className="w-10 h-10 rounded-full object-cover border border-outline-variant/60 shrink-0"
-              onError={(e) => {
-                (e.currentTarget as HTMLElement).style.display = 'none';
-                const sibling = (e.currentTarget as HTMLElement).nextElementSibling as HTMLElement;
-                if (sibling) sibling.style.display = 'flex';
-              }}
-            />
-          ) : null}
-          <div
-            className={`w-10 h-10 rounded-full bg-primary/10 text-primary font-bold text-sm flex items-center justify-center shrink-0 ${
-              member.profilePicUrl ? 'hidden' : ''
-            }`}
+        <div className="flex items-center gap-3.5 min-w-0">
+          <Link
+            to={`/users/${member.userId}`}
+            className="shrink-0 hover:opacity-85 transition-opacity"
+            title={`Ver perfil de ${member.fullName}`}
           >
-            {member.fullName.charAt(0).toUpperCase()}
-          </div>
+            {member.profilePicUrl ? (
+              <img
+                src={member.profilePicUrl}
+                alt={member.fullName}
+                className="w-10 h-10 rounded-full object-cover border border-outline-variant/60 shrink-0"
+                onError={(e) => {
+                  (e.currentTarget as HTMLElement).style.display = 'none';
+                  const sibling = (e.currentTarget as HTMLElement).nextElementSibling as HTMLElement;
+                  if (sibling) sibling.style.display = 'flex';
+                }}
+              />
+            ) : null}
+            <div
+              className={`w-10 h-10 rounded-full bg-primary/10 text-primary font-bold text-sm flex items-center justify-center shrink-0 ${
+                member.profilePicUrl ? 'hidden' : ''
+              }`}
+            >
+              {member.fullName.charAt(0).toUpperCase()}
+            </div>
+          </Link>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-bold text-on-surface truncate">
+              <Link
+                to={`/users/${member.userId}`}
+                className="text-sm font-bold text-on-surface truncate hover:text-primary hover:underline transition-colors"
+                title={`Ver perfil de ${member.fullName}`}
+              >
                 {member.fullName}
-              </span>
+              </Link>
               {isCurrentUser && (
                 <span className="text-[10px] font-bold px-1.5 py-0.5 bg-secondary/10 text-secondary rounded">
                   Tú

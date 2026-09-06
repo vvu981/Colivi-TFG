@@ -50,6 +50,7 @@ class HomeMapperTest {
         assertEquals("https://example.com/photo.jpg", dto.profilePicUrl());
         assertEquals(HomeRole.MEMBER, dto.role());
         assertEquals(HomeMemberStatus.ACTIVE, dto.status());
+        assertEquals("#4F46E5", dto.color());
     }
 
     @Test

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HomeDetailPage } from './HomeDetailPage';
 import { useHomeDetail } from '../features/home/hooks/useHomeDetail';
 import { useAuth } from '../features/auth/context/AuthContext';
@@ -18,6 +19,26 @@ vi.mock('../features/home/hooks/useHomeExpenses', () => ({
     refetch: vi.fn(),
     createExpense: vi.fn(),
     deleteExpense: vi.fn(),
+  }),
+}));
+vi.mock('../features/chore/hooks/useChores', () => ({
+  useChores: () => ({
+    chores: [],
+    isLoadingChores: false,
+    isFetchingChores: false,
+    choresError: null,
+    refetchChores: vi.fn(),
+    leaderboard: { weekly: [], monthly: [] },
+    isLoadingLeaderboard: false,
+    leaderboardError: null,
+    refetchLeaderboard: vi.fn(),
+    createChore: vi.fn(),
+    isCreatingChore: false,
+    createChoreError: null,
+    completeChore: vi.fn(),
+    isCompletingChore: false,
+    deleteChore: vi.fn(),
+    isDeletingChore: false,
   }),
 }));
 vi.mock('../features/auth/context/AuthContext');
@@ -66,8 +87,15 @@ describe('HomeDetailPage', () => {
     unarchiveHome: vi.fn(),
   };
 
+  let queryClient: QueryClient;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+      },
+    });
     vi.mocked(useHomeDetail).mockReturnValue(mockHomeDetail);
     vi.mocked(useAuth).mockReturnValue({
       user: {
@@ -94,30 +122,30 @@ describe('HomeDetailPage', () => {
     });
   });
 
-  it('renderiza encabezado del hogar y pestañas', () => {
+  const renderHomeDetailPage = () =>
     render(
-      <MemoryRouter initialEntries={['/homes/h1']}>
-        <Routes>
-          <Route path="/homes/:id" element={<HomeDetailPage />} />
-        </Routes>
-      </MemoryRouter>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/homes/h1']}>
+          <Routes>
+            <Route path="/homes/:id" element={<HomeDetailPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
     );
+
+  it('renderiza encabezado del hogar y pestañas', () => {
+    renderHomeDetailPage();
 
     expect(screen.getByText('Piso Retiro')).toBeInTheDocument();
     expect(screen.getByText('Miembros (1)')).toBeInTheDocument();
     expect(screen.getByText('Gastos')).toBeInTheDocument();
+    expect(screen.getByText('Tareas y Puntos')).toBeInTheDocument();
     expect(screen.getByText('Actividad y Auditoría')).toBeInTheDocument();
     expect(screen.getByText('Ajustes del Hogar')).toBeInTheDocument();
   });
 
   it('permite conmutar a la pestaña de gastos', () => {
-    render(
-      <MemoryRouter initialEntries={['/homes/h1']}>
-        <Routes>
-          <Route path="/homes/:id" element={<HomeDetailPage />} />
-        </Routes>
-      </MemoryRouter>
-    );
+    renderHomeDetailPage();
 
     const expensesTab = screen.getByText('Gastos');
     fireEvent.click(expensesTab);
@@ -125,14 +153,17 @@ describe('HomeDetailPage', () => {
     expect(screen.getByText('Gastos Compartidos')).toBeInTheDocument();
   });
 
+  it('permite conmutar a la pestaña de tareas y puntos', () => {
+    renderHomeDetailPage();
+
+    const choresTab = screen.getByText('Tareas y Puntos');
+    fireEvent.click(choresTab);
+
+    expect(screen.getByText('Tareas Domésticas Gamificadas')).toBeInTheDocument();
+  });
+
   it('permite conmutar a la pestaña de ajustes', () => {
-    render(
-      <MemoryRouter initialEntries={['/homes/h1']}>
-        <Routes>
-          <Route path="/homes/:id" element={<HomeDetailPage />} />
-        </Routes>
-      </MemoryRouter>
-    );
+    renderHomeDetailPage();
 
     const settingsTab = screen.getByText('Ajustes del Hogar');
     fireEvent.click(settingsTab);

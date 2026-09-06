@@ -18,5 +18,6 @@ public record HomeMemberResponseDto(
         HomeRole role,
         HomeMemberStatus status,
         LocalDateTime joinedAt,
-        LocalDateTime leftAt
+        LocalDateTime leftAt,
+        String color
 ) {}

@@ -3,6 +3,7 @@ package com.vvu981.colivibackend.features.home.service;
 import com.vvu981.colivibackend.features.home.domain.HomeMemberStatus;
 import com.vvu981.colivibackend.features.home.dto.CreateHomeRequest;
 import com.vvu981.colivibackend.features.home.dto.HomeDetailResponseDto;
+import com.vvu981.colivibackend.features.home.dto.HomeMemberResponseDto;
 import com.vvu981.colivibackend.features.home.dto.HomeResponseDto;
 import com.vvu981.colivibackend.features.home.dto.JoinHomeRequest;
 
@@ -36,4 +37,6 @@ public interface HomeService {
     List<HomeResponseDto> getUserHomes(UUID userId, HomeMemberStatus statusFilter);
 
     HomeDetailResponseDto getHomeDetail(UUID homeId, UUID userId);
+
+    HomeMemberResponseDto updateMemberColor(UUID homeId, UUID userId, String color);
 }

@@ -32,12 +32,14 @@ export function useHomeDetail(homeId: string | undefined): UseHomeDetailReturn {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchDetail = useCallback(async () => {
+  const fetchDetail = useCallback(async (isSilent = false) => {
     if (!homeId) {
       setIsLoading(false);
       return;
     }
-    setIsLoading(true);
+    if (!isSilent) {
+      setIsLoading(true);
+    }
     setError(null);
     try {
       const data = await homeService.getHomeDetail(homeId);
@@ -47,9 +49,15 @@ export function useHomeDetail(homeId: string | undefined): UseHomeDetailReturn {
         err instanceof Error ? err.message : 'Error al cargar el detalle del hogar';
       setError(message);
     } finally {
-      setIsLoading(false);
+      if (!isSilent) {
+        setIsLoading(false);
+      }
     }
   }, [homeId]);
+
+  const refetch = useCallback(async () => {
+    await fetchDetail(true);
+  }, [fetchDetail]);
 
   useEffect(() => {
     fetchDetail();
@@ -135,7 +143,7 @@ export function useHomeDetail(homeId: string | undefined): UseHomeDetailReturn {
     isSoleActiveMember,
     isOnlyAdminWithOtherMembers,
     canLeaveWithoutTransfer,
-    refetch: fetchDetail,
+    refetch,
     regenerateInvitationCode: handleRegenerateCode,
     transferAdmin: handleTransferAdmin,
     expelMember: handleExpelMember,

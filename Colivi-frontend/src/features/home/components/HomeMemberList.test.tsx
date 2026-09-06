@@ -91,4 +91,23 @@ describe('HomeMemberList', () => {
     expect(img).toBeInTheDocument();
     expect(img).toHaveAttribute('src', 'https://images.example.com/elena.jpg');
   });
+
+  it('permite acceder al perfil público al pulsar sobre el nombre o avatar', () => {
+    render(
+      <MemoryRouter>
+        <HomeMemberList
+          members={mockMembers}
+          isAdmin={false}
+        />
+      </MemoryRouter>
+    );
+
+    const nameLinks = screen.getAllByRole('link', { name: /Carlos García/i });
+    expect(nameLinks.length).toBeGreaterThanOrEqual(1);
+    expect(nameLinks[0]).toHaveAttribute('href', '/users/u1');
+
+    const luciaLinks = screen.getAllByRole('link', { name: /Lucía Pérez/i });
+    expect(luciaLinks.length).toBeGreaterThanOrEqual(1);
+    expect(luciaLinks[0]).toHaveAttribute('href', '/users/u2');
+  });
 });

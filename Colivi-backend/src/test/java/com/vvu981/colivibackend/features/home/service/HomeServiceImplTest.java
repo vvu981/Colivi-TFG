@@ -9,6 +9,7 @@ import com.vvu981.colivibackend.features.home.domain.HomeMemberStatus;
 import com.vvu981.colivibackend.features.home.domain.HomeRole;
 import com.vvu981.colivibackend.features.home.dto.CreateHomeRequest;
 import com.vvu981.colivibackend.features.home.dto.HomeDetailResponseDto;
+import com.vvu981.colivibackend.features.home.dto.HomeMemberResponseDto;
 import com.vvu981.colivibackend.features.home.dto.HomeResponseDto;
 import com.vvu981.colivibackend.features.home.dto.JoinHomeRequest;
 import com.vvu981.colivibackend.features.home.mapper.HomeMapper;
@@ -1157,6 +1158,40 @@ class HomeServiceImplTest {
                         homeService.softDeleteHome(homeId, testUserId);
 
                         verify(homeRepository).save(home);
+                }
+        }
+
+        // =========================================================================
+        // updateMemberColor
+        // =========================================================================
+
+        @Nested
+        class UpdateMemberColor {
+                @Test
+                void shouldUpdateMemberColorSuccessfully() {
+                        UUID homeId = UUID.randomUUID();
+                        Home home = buildHome(homeId);
+                        HomeMember member = buildMember(home, testUser, HomeRole.MEMBER, HomeMemberStatus.ACTIVE);
+
+                        when(homeMemberRepository.findByHomeIdAndUserId(homeId, testUserId))
+                                        .thenReturn(Optional.of(member));
+                        when(homeMemberRepository.save(any(HomeMember.class))).thenAnswer(inv -> inv.getArgument(0));
+
+                        HomeMemberResponseDto result = homeService.updateMemberColor(homeId, testUserId, "#10B981");
+
+                        assertEquals("#10B981", result.color());
+                        assertEquals("#10B981", member.getColor());
+                        verify(homeMemberRepository).save(member);
+                }
+
+                @Test
+                void shouldThrowWhenMemberNotFound() {
+                        UUID homeId = UUID.randomUUID();
+                        when(homeMemberRepository.findByHomeIdAndUserId(homeId, testUserId))
+                                        .thenReturn(Optional.empty());
+
+                        assertThrows(UnauthorizedActionException.class,
+                                        () -> homeService.updateMemberColor(homeId, testUserId, "#10B981"));
                 }
         }
 }

@@ -8,8 +8,10 @@ import com.vvu981.colivibackend.features.home.domain.HomeMemberStatus;
 import com.vvu981.colivibackend.features.home.domain.HomeRole;
 import com.vvu981.colivibackend.features.home.dto.CreateHomeRequest;
 import com.vvu981.colivibackend.features.home.dto.HomeDetailResponseDto;
+import com.vvu981.colivibackend.features.home.dto.HomeMemberResponseDto;
 import com.vvu981.colivibackend.features.home.dto.HomeResponseDto;
 import com.vvu981.colivibackend.features.home.dto.JoinHomeRequest;
+import com.vvu981.colivibackend.features.home.dto.UpdateMemberColorRequestDto;
 import com.vvu981.colivibackend.features.home.service.HomeService;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -254,5 +256,26 @@ class HomeControllerTest {
                                 .andExpect(status().isNoContent());
 
                 verify(homeService).hardDeleteHome(eq(homeId), any());
+        }
+
+        @Test
+        void updateMyColor() throws Exception {
+                UpdateMemberColorRequestDto request = new UpdateMemberColorRequestDto("#10B981");
+                HomeMemberResponseDto response = new HomeMemberResponseDto(
+                                principal.getId(), "John Doe", "test@test.com", null,
+                                HomeRole.MEMBER, HomeMemberStatus.ACTIVE, LocalDateTime.now(), null, "#10B981");
+
+                when(homeService.updateMemberColor(eq(homeId), any(), eq("#10B981")))
+                                .thenReturn(response);
+
+                mockMvc.perform(patch("/api/v1/homes/{id}/members/me/color", homeId)
+                                .with(user(principal))
+                                .with(csrf())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.color").value("#10B981"));
+
+                verify(homeService).updateMemberColor(eq(homeId), any(), eq("#10B981"));
         }
 }

@@ -1,6 +1,8 @@
-import React from 'react';
-import { Search, X, Receipt, ArrowRightLeft, Layers } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { Search, X, Receipt, ArrowRightLeft, Layers, Users } from 'lucide-react';
+import { Select, type SelectOption } from '../../../components/ui/Select';
 import type { HomeMemberResponseDto } from '../types';
+import { getUserInitial } from '../utils/userDisplay';
 
 interface ExpenseFilterBarProps {
   searchQuery: string;
@@ -31,6 +33,39 @@ export const ExpenseFilterBar: React.FC<ExpenseFilterBarProps> = ({
     onTypeChange?.('ALL');
   };
 
+  const payerOptions: SelectOption[] = useMemo(() => {
+    const allOption: SelectOption = {
+      value: '',
+      label: 'Todos los pagadores',
+      icon: (
+        <span className="w-5 h-5 rounded-full bg-secondary-container text-secondary flex items-center justify-center shrink-0">
+          <Users className="w-3 h-3" />
+        </span>
+      ),
+    };
+
+    const memberOptions: SelectOption[] = activeMembers.map((m) => {
+      const initial = getUserInitial(m.fullName);
+      return {
+        value: m.userId,
+        label: m.fullName,
+        icon: m.profilePicUrl ? (
+          <img
+            src={m.profilePicUrl}
+            alt={m.fullName}
+            className="w-5 h-5 rounded-full object-cover shrink-0"
+          />
+        ) : (
+          <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[10px] font-bold flex items-center justify-center shrink-0">
+            {initial}
+          </span>
+        ),
+      };
+    });
+
+    return [allOption, ...memberOptions];
+  }, [activeMembers]);
+
   return (
     <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-2xl p-3.5 space-y-3 shadow-2xs">
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
@@ -56,21 +91,16 @@ export const ExpenseFilterBar: React.FC<ExpenseFilterBarProps> = ({
           )}
         </div>
 
-        {/* Filtro por pagador */}
-        <div className="sm:w-48 shrink-0">
-          <select
+        {/* Filtro por pagador con componente Select de la aplicación */}
+        <div className="sm:w-52 shrink-0">
+          <Select
             value={payerFilter}
-            onChange={(e) => onPayerChange(e.target.value)}
-            className="w-full px-3 py-2 bg-surface border border-outline-variant/60 rounded-xl text-xs text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary cursor-pointer"
+            onChange={onPayerChange}
+            options={payerOptions}
+            placeholder="Todos los pagadores"
             aria-label="Filtrar por pagador"
-          >
-            <option value="">Todos los pagadores</option>
-            {activeMembers.map((member) => (
-              <option key={member.userId} value={member.userId}>
-                {member.fullName}
-              </option>
-            ))}
-          </select>
+            className="!py-1.5 !text-xs !bg-surface !border-outline-variant/60"
+          />
         </div>
       </div>
 

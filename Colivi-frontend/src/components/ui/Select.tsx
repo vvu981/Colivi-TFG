@@ -5,6 +5,7 @@ export interface SelectOption {
   value: string;
   label: string;
   icon?: React.ReactNode;
+  badge?: React.ReactNode;
 }
 
 export interface SelectProps {
@@ -98,11 +99,12 @@ export const Select: React.FC<SelectProps> = ({
         aria-label={ariaLabel}
         className={`w-full flex items-center justify-between px-3 py-2 rounded-xl border border-outline-variant text-body-md text-on-surface bg-surface-container-lowest focus:outline-none focus:border-on-surface focus:ring-2 focus:ring-secondary-container transition-all cursor-pointer select-none disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
       >
-        <span className="flex items-center gap-2 truncate">
-          {selectedOption?.icon && <span className="flex-shrink-0">{selectedOption.icon}</span>}
-          <span className={selectedOption ? 'text-on-surface' : 'text-on-surface-variant/60'}>
+        <span className="flex items-center gap-2 truncate flex-1 min-w-0">
+          {selectedOption?.icon && <span className="flex items-center justify-center shrink-0">{selectedOption.icon}</span>}
+          <span className={`truncate ${selectedOption ? 'text-on-surface' : 'text-on-surface-variant/60'}`}>
             {selectedOption ? selectedOption.label : placeholder}
           </span>
+          {selectedOption?.badge && <span className="shrink-0 ml-1">{selectedOption.badge}</span>}
         </span>
         <ChevronDown
           size={16}
@@ -134,9 +136,10 @@ export const Select: React.FC<SelectProps> = ({
                     : 'text-on-surface hover:bg-surface-container'
                 }`}
               >
-                <div className="flex items-center gap-2 truncate">
+                <div className="flex items-center gap-2 truncate flex-1 min-w-0">
                   {option.icon && <span className="flex-shrink-0">{option.icon}</span>}
                   <span className="truncate">{option.label}</span>
+                  {option.badge && <span className="flex-shrink-0 ml-auto mr-1">{option.badge}</span>}
                 </div>
                 {isSelected && <Check size={16} className="text-primary flex-shrink-0 ml-2" />}
               </li>
