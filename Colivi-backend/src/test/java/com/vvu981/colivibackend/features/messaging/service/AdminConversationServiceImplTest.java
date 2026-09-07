@@ -5,6 +5,8 @@ import com.vvu981.colivibackend.features.accommodation.domain.Accommodation;
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationImage;
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing;
 import com.vvu981.colivibackend.features.accommodation.domain.RentalType;
+import com.vvu981.colivibackend.features.bookingRequests.domain.BookingRequest;
+import com.vvu981.colivibackend.features.bookingRequests.domain.RequestStatus;
 import com.vvu981.colivibackend.features.messaging.domain.Conversation;
 import com.vvu981.colivibackend.features.messaging.domain.Message;
 import com.vvu981.colivibackend.features.messaging.domain.MessageStatus;
@@ -14,9 +16,10 @@ import com.vvu981.colivibackend.features.messaging.repository.ConversationReposi
 import com.vvu981.colivibackend.features.messaging.repository.MessageRepository;
 import com.vvu981.colivibackend.features.report.domain.ReportTargetType;
 import com.vvu981.colivibackend.features.report.repository.ReportRepository;
-import com.vvu981.colivibackend.features.user.domain.UserRole;
 import com.vvu981.colivibackend.features.user.domain.User;
+import com.vvu981.colivibackend.features.user.domain.UserRole;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -24,7 +27,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -34,6 +39,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("AdminConversationServiceImpl Unit Tests")
 class AdminConversationServiceImplTest {
 
     @Mock
@@ -96,6 +102,7 @@ class AdminConversationServiceImplTest {
     }
 
     @Test
+    @DisplayName("Retorna el dossier completo con listado, inquilino, anfitrión y mensajes")
     void getConversationDossier_shouldReturnDossierSuccessfully() {
         when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
         when(reportRepository.existsByTargetTypeAndTargetId(ReportTargetType.CONVERSATION, conversationId)).thenReturn(true);
@@ -127,6 +134,51 @@ class AdminConversationServiceImplTest {
     }
 
     @Test
+    @DisplayName("Retorna dossier con reserva activa vinculada e información de transacción")
+    void getConversationDossier_withActiveBooking() {
+        BookingRequest booking = BookingRequest.builder()
+                .id(UUID.randomUUID())
+                .status(RequestStatus.CONFIRMED)
+                .startDate(LocalDate.now())
+                .endDate(LocalDate.now().plusMonths(3))
+                .transactionId("tx_stripe_999")
+                .build();
+        conversation.setActiveBookingRequest(booking);
+
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+        when(reportRepository.existsByTargetTypeAndTargetId(ReportTargetType.CONVERSATION, conversationId)).thenReturn(false);
+        when(messageRepository.findAllByConversationIdOrderByCreatedAtAsc(conversationId)).thenReturn(Collections.emptyList());
+
+        AdminConversationDossierDto dossier = adminConversationService.getConversationDossier(conversationId);
+
+        assertThat(dossier).isNotNull();
+        assertThat(dossier.isReported()).isFalse();
+        assertThat(dossier.activeBooking()).isNotNull();
+        assertThat(dossier.activeBooking().status()).isEqualTo("CONFIRMED");
+        assertThat(dossier.activeBooking().transactionId()).isEqualTo("tx_stripe_999");
+    }
+
+    @Test
+    @DisplayName("Retorna dossier con anuncio nulo y usuarios nulos defensivamente")
+    void getConversationDossier_withNullListingAndUsers() {
+        conversation.setListing(null);
+        conversation.setTenant(null);
+        conversation.setHost(null);
+
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+        when(reportRepository.existsByTargetTypeAndTargetId(ReportTargetType.CONVERSATION, conversationId)).thenReturn(false);
+        when(messageRepository.findAllByConversationIdOrderByCreatedAtAsc(conversationId)).thenReturn(Collections.emptyList());
+
+        AdminConversationDossierDto dossier = adminConversationService.getConversationDossier(conversationId);
+
+        assertThat(dossier).isNotNull();
+        assertThat(dossier.listing()).isNull();
+        assertThat(dossier.tenant()).isNull();
+        assertThat(dossier.host()).isNull();
+    }
+
+    @Test
+    @DisplayName("Lanza ResourceNotFoundException si la conversación no existe")
     void getConversationDossier_shouldThrowException_whenNotFound() {
         when(conversationRepository.findById(conversationId)).thenReturn(Optional.empty());
 

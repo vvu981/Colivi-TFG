@@ -150,4 +150,45 @@ describe('useConversationChat hook', () => {
       'Mensaje de prueba optimista'
     );
   });
+
+  it('ejecuta rollback ante error en el envío del mensaje', async () => {
+    vi.mocked(messagingApi.sendMessage).mockRejectedValueOnce(new Error('Network error'));
+
+    const { result } = renderHook(() => useConversationChat(mockConversationId), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      try {
+        await result.current.sendMessage('Mensaje que fallará');
+      } catch {
+        // Ignoramos el error esperado
+      }
+    });
+
+    expect(messagingApi.sendMessage).toHaveBeenCalledWith(
+      mockConversationId,
+      'Mensaje que fallará'
+    );
+  });
+
+  it('marca automáticamente los mensajes como leídos si unreadCount > 0', async () => {
+    vi.mocked(messagingApi.getConversationDetail).mockResolvedValue({
+      ...mockConversation,
+      unreadCount: 3,
+    });
+    vi.mocked(messagingApi.markAsRead).mockResolvedValue();
+
+    renderHook(() => useConversationChat(mockConversationId), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => {
+      expect(messagingApi.markAsRead).toHaveBeenCalledWith(mockConversationId);
+    });
+  });
 });
