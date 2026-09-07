@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, Edit3, Send, CheckCircle2, Lock, Sparkles, CalendarDays, Loader2 } from 'lucide-react';
+import { ShieldCheck, Edit3, Send, CheckCircle2, Lock, Sparkles, CalendarDays, Loader2, MessageSquare } from 'lucide-react';
 import type { AccommodationListingResponse } from '../../types/listing.types';
 import { bookingRequestService } from '../../api/bookingRequestService';
+import { messagingApi } from '../../../messaging/api/messagingApi';
 import type { BookingRequestPayload } from '../../types/booking.types';
 import { MonthPicker } from '../../../../components/ui/MonthPicker';
 import { Select } from '../../../../components/ui/Select';
@@ -74,6 +75,23 @@ export const ListingBookingCard: React.FC<ListingBookingCardProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [messageSent, setMessageSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isStartingChat, setIsStartingChat] = useState(false);
+
+  const handleStartChat = async () => {
+    if (!currentUserId) {
+      navigate('/login');
+      return;
+    }
+    try {
+      setIsStartingChat(true);
+      const conv = await messagingApi.startConsultation(id);
+      navigate(`/messages/${conv.conversationId}`);
+    } catch (err) {
+      console.error('Error opening consultation chat', err);
+    } finally {
+      setIsStartingChat(false);
+    }
+  };
 
   const { id, pricePerMonth, securityDeposit, hostId, hostNickname, accommodation } = listing;
 
@@ -196,14 +214,25 @@ export const ListingBookingCard: React.FC<ListingBookingCardProps> = ({
                <span>Editar este anuncio</span>
             </button>
           ) : (
-            <button
-               type="button"
-               onClick={() => setIsContactModalOpen(true)}
-               className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-primary text-on-primary font-bold text-sm hover:opacity-95 active:scale-98 transition-all cursor-pointer shadow-sm"
-             >
-               <CalendarDays size={18} />
-               <span>Solicitar reserva</span>
-            </button>
+            <>
+              <button
+                 type="button"
+                 onClick={() => setIsContactModalOpen(true)}
+                 className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-primary text-on-primary font-bold text-sm hover:opacity-95 active:scale-98 transition-all cursor-pointer shadow-sm"
+               >
+                 <CalendarDays size={18} />
+                 <span>Solicitar reserva</span>
+              </button>
+              <button
+                 type="button"
+                 onClick={handleStartChat}
+                 disabled={isStartingChat}
+                 className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-surface-container border border-outline-variant text-on-surface font-semibold text-sm hover:bg-surface-container-high active:scale-98 transition-all cursor-pointer disabled:opacity-50"
+               >
+                 <MessageSquare size={17} className="text-primary" />
+                 <span>{isStartingChat ? 'Abriendo chat...' : 'Contactar / Preguntar'}</span>
+              </button>
+            </>
           )}
         </div>
 

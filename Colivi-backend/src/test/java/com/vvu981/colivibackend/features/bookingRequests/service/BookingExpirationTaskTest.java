@@ -26,6 +26,9 @@ class BookingExpirationTaskTest {
     @Mock
     private BookingRequestRepository bookingRequestRepository;
 
+    @Mock
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
+
     @InjectMocks
     private BookingExpirationTask bookingExpirationTask;
 

@@ -91,3 +91,59 @@ export interface PageResponse<T> {
   last?: boolean;
   empty?: boolean;
 }
+
+export interface AdminListingSnippet {
+  id: string;
+  title: string;
+  thumbnailUrl: string | null;
+  pricePerMonth: number;
+  city: string | null;
+  rentalType: string | null;
+  status: string | null;
+}
+
+export interface AdminUserSnippet {
+  id: string;
+  nickname: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  profilePicUrl: string | null;
+  role: string | null;
+  isBanned: boolean;
+  bannedUntil: string | null;
+  banReason: string | null;
+}
+
+export interface AdminBookingSnippet {
+  id: string;
+  status: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  transactionId: string | null;
+}
+
+export interface AdminConversationMessage {
+  id: string;
+  conversationId: string;
+  senderId: string | null;
+  senderName: string;
+  content: string;
+  messageType: 'USER_MESSAGE' | 'SYSTEM_NUDGE' | 'SYSTEM_EVENT';
+  status: 'SENT' | 'DELIVERED' | 'READ';
+  createdAt: string;
+  readAt: string | null;
+  isMine: boolean;
+}
+
+export interface AdminConversationDossier {
+  conversationId: string;
+  listing: AdminListingSnippet | null;
+  tenant: AdminUserSnippet;
+  host: AdminUserSnippet;
+  activeBooking: AdminBookingSnippet | null;
+  messages: AdminConversationMessage[];
+  createdAt: string;
+  lastMessageAt: string | null;
+  isReported: boolean;
+}

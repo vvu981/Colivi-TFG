@@ -18,6 +18,7 @@ import java.util.List;
 public class BookingExpirationTask {
 
     private final BookingRequestRepository bookingRequestRepository;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     /**
      * Tarea programada que se ejecuta cada hora para comprobar si alguna solicitud 
@@ -43,6 +44,17 @@ public class BookingExpirationTask {
             try {
                 request.expire();
                 log.info("Solicitud {} marcada como EXPIRED.", request.getId());
+                if (eventPublisher != null) {
+                    eventPublisher.publishEvent(new com.vvu981.colivibackend.features.bookingRequests.domain.BookingStatusChangedEvent(
+                            request.getId(),
+                            request.getRequester().getEmail(),
+                            request.getAccommodationListing().getTitle(),
+                            RequestStatus.EXPIRED,
+                            false,
+                            null,
+                            false
+                    ));
+                }
             } catch (Exception e) {
                 log.error("Error al expirar la solicitud {}: {}", request.getId(), e.getMessage());
             }

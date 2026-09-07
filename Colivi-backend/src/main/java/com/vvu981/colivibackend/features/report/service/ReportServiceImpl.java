@@ -32,6 +32,7 @@ public class ReportServiceImpl implements ReportService {
 
     private final UserRepository userRepository;
     private final AccommodationListingRepository listingRepository;
+    private final com.vvu981.colivibackend.features.messaging.repository.ConversationRepository conversationRepository;
 
     @Override
     @Transactional
@@ -53,6 +54,21 @@ public class ReportServiceImpl implements ReportService {
             boolean userExists = userRepository.existsById(request.targetId());
             if (!userExists) {
                 throw new BusinessRuleValidationException("El elemento denunciado no existe.");
+            }
+        } else if (request.targetType() == ReportTargetType.CONVERSATION) {
+            com.vvu981.colivibackend.features.messaging.domain.Conversation conversation = conversationRepository.findById(request.targetId())
+                    .orElseThrow(() -> new BusinessRuleValidationException("El elemento denunciado no existe."));
+
+            boolean isParticipant = (conversation.getTenant() != null && conversation.getTenant().getId().equals(reporterId))
+                    || (conversation.getHost() != null && conversation.getHost().getId().equals(reporterId));
+
+            if (!isParticipant) {
+                throw new BusinessRuleValidationException("Solo los participantes de la conversación pueden denunciarla.");
+            }
+
+            boolean alreadyReported = reportRepository.existsByTargetTypeAndTargetId(ReportTargetType.CONVERSATION, request.targetId());
+            if (alreadyReported) {
+                throw new BusinessRuleValidationException("Esta conversación ya ha sido denunciada.");
             }
         }
 

@@ -1,6 +1,4 @@
-// ── Report Enums and Types ─────────────────────────────────────────────
-
-export type ReportTargetType = 'LISTING' | 'USER';
+export type ReportTargetType = 'LISTING' | 'USER' | 'CONVERSATION';
 
 export interface ReportFeedbackResponse {
   id: string;
@@ -119,6 +117,34 @@ export const USER_REPORT_REASONS: ReportReasonOption[] = [
     reason: 'OTHER',
     label: 'Otro motivo',
     description: 'Cualquier otra infracción grave de las normas de convivencia o de la plataforma.',
+  },
+];
+
+export const CONVERSATION_REPORT_REASONS: ReportReasonOption[] = [
+  {
+    reason: 'HARASSMENT',
+    label: 'Acoso, insultos o mensajes hostiles',
+    description: 'El interlocutor utiliza un lenguaje ofensivo, amenazante o intimidatorio en el chat.',
+  },
+  {
+    reason: 'FRAUD',
+    label: 'Intento de estafa o pago externo',
+    description: 'Petición de adelantos o fianzas por fuera de Colivi o información engañosa sobre el acuerdo.',
+  },
+  {
+    reason: 'SPAM',
+    label: 'Spam o publicidad no solicitada',
+    description: 'Difusión de enlaces comerciales ajenos, promociones o mensajes automáticos masivos.',
+  },
+  {
+    reason: 'INAPPROPRIATE_CONTENT',
+    label: 'Contenido inapropiado o discriminatorio',
+    description: 'Comentarios discriminatorios, vejatorios o que vulneran las políticas comunitarias de la plataforma.',
+  },
+  {
+    reason: 'OTHER',
+    label: 'Otro motivo',
+    description: 'Cualquier otra irregularidad grave observada en el transcurso de esta conversación.',
   },
 ];
 

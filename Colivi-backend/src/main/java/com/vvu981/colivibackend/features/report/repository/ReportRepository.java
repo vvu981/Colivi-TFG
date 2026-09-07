@@ -23,6 +23,13 @@ public interface ReportRepository extends JpaRepository<Report, UUID>, JpaSpecif
                         UUID reporterId, ReportTargetType targetType, UUID targetId,
                         List<ReportStatus> statuses);
 
+        boolean existsByTargetTypeAndTargetId(ReportTargetType targetType, UUID targetId);
+
+        @Query("SELECT r.targetId FROM Report r WHERE r.targetType = :targetType AND r.targetId IN :targetIds")
+        List<UUID> findExistingReportedTargetIds(
+                        @Param("targetType") ReportTargetType targetType,
+                        @Param("targetIds") Collection<UUID> targetIds);
+
         List<Report> findByReporterIdAndStatusAndReporterNotifiedFalse(UUID reporterId, ReportStatus status);
 
         @Query(value = "SELECT new com.vvu981.colivibackend.features.report.dto.ReportTargetCountDTO("

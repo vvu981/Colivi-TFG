@@ -132,14 +132,20 @@ public class BookingRequestServiceImpl implements BookingRequestService {
 
         requestRepository.save(request);
 
-        if (oldStatus == RequestStatus.PENDING &&
-                (request.getStatus() == RequestStatus.ACCEPTED || request.getStatus() == RequestStatus.REJECTED)) {
+        boolean isRejected = request.getStatus() == RequestStatus.REJECTED;
+        boolean isAccepted = request.getStatus() == RequestStatus.ACCEPTED;
+        boolean isCancelled = request.getStatus() == RequestStatus.CANCELLED;
+
+        if ((oldStatus == RequestStatus.PENDING && (isAccepted || isRejected)) || isCancelled) {
+            boolean hasDeposit = request.getTransactionId() != null;
             BookingStatusChangedEvent event = new BookingStatusChangedEvent(
+                    request.getId(),
                     request.getRequester().getEmail(),
                     request.getAccommodationListing().getTitle(),
                     request.getStatus(),
-                    request.getStatus() == RequestStatus.ACCEPTED,
-                    request.getExpiresAt());
+                    isAccepted,
+                    request.getExpiresAt(),
+                    hasDeposit);
             eventPublisher.publishEvent(event);
         }
 

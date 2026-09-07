@@ -22,6 +22,7 @@ const targetTypeOptions: SelectOption[] = [
   { value: '', label: 'Todos los tipos' },
   { value: 'LISTING', label: 'Anuncio (Listing)' },
   { value: 'USER', label: 'Usuario (User)' },
+  { value: 'CONVERSATION', label: 'Conversación (Chat)' },
 ];
 
 const reasonOptions: SelectOption[] = [
