@@ -141,7 +141,7 @@ class MessageServiceImplTest {
             assertThat(response.isMine()).isTrue();
 
             verify(conversationRepository).incrementHostUnreadAndSetLastMessage(eq(conversationId), anyString(), any());
-            verify(conversationRepository, never()).claimNudgeAndSetLastMessage(any(), any(), any());
+            verify(conversationRepository, never()).claimNudge(any());
         }
 
         @Test
@@ -175,7 +175,7 @@ class MessageServiceImplTest {
 
             when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
             when(userRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
-            when(conversationRepository.claimNudgeAndSetLastMessage(eq(conversationId), anyString(), any())).thenReturn(1);
+            when(conversationRepository.claimNudge(eq(conversationId))).thenReturn(1);
 
             when(messageRepository.saveAndFlush(any(Message.class))).thenAnswer(inv -> {
                 Message m = inv.getArgument(0);
@@ -188,7 +188,7 @@ class MessageServiceImplTest {
             MessageResponseDto response = messageService.sendMessage(conversationId, tenantId, req);
 
             assertThat(response).isNotNull();
-            verify(conversationRepository).claimNudgeAndSetLastMessage(eq(conversationId), anyString(), any());
+            verify(conversationRepository).claimNudge(eq(conversationId));
             // Se guardan dos mensajes: el del usuario y el system nudge
             verify(messageRepository, times(2)).saveAndFlush(any(Message.class));
         }
@@ -201,7 +201,7 @@ class MessageServiceImplTest {
 
             when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
             when(userRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
-            when(conversationRepository.claimNudgeAndSetLastMessage(eq(conversationId), anyString(), any())).thenReturn(0);
+            when(conversationRepository.claimNudge(eq(conversationId))).thenReturn(0);
 
             when(messageRepository.saveAndFlush(any(Message.class))).thenAnswer(inv -> {
                 Message m = inv.getArgument(0);
@@ -214,7 +214,7 @@ class MessageServiceImplTest {
             MessageResponseDto response = messageService.sendMessage(conversationId, tenantId, req);
 
             assertThat(response).isNotNull();
-            verify(conversationRepository).claimNudgeAndSetLastMessage(eq(conversationId), anyString(), any());
+            verify(conversationRepository).claimNudge(eq(conversationId));
             // Solo se guarda 1 mensaje (el del usuario)
             verify(messageRepository, times(1)).saveAndFlush(any(Message.class));
         }
@@ -239,7 +239,7 @@ class MessageServiceImplTest {
             MessageResponseDto response = messageService.sendMessage(conversationId, tenantId, req);
 
             assertThat(response).isNotNull();
-            verify(conversationRepository, never()).claimNudgeAndSetLastMessage(any(), any(), any());
+            verify(conversationRepository, never()).claimNudge(any());
             verify(messageRepository, times(1)).saveAndFlush(any(Message.class));
         }
 

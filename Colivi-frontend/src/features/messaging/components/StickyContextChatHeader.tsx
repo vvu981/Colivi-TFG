@@ -60,10 +60,7 @@ export const StickyContextChatHeader: React.FC<StickyContextChatHeaderProps> = (
     }
   };
 
-  const showBookingCta = !conversation.isHost && (
-    conversation.bookingStatus === 'CONSULTATION' ||
-    conversation.bookingStatus === 'PENDING'
-  );
+  const showBookingCta = !conversation.isHost && conversation.bookingStatus === 'CONSULTATION';
 
   return (
     <header className="sticky top-0 z-20 w-full bg-surface/95 backdrop-blur-md border-b border-outline-variant shadow-xs transition-all">
@@ -130,21 +127,19 @@ export const StickyContextChatHeader: React.FC<StickyContextChatHeaderProps> = (
             </button>
           )}
 
-          {/* Control del Anfitrión: Archivar Consulta */}
-          {conversation.isHost && (
-            <button
-              type="button"
-              onClick={onArchiveToggle}
-              disabled={isArchiving}
-              title={conversation.isArchived ? 'Desarchivar conversación' : 'Ocultar chat del Inbox'}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-on-surface-variant bg-surface-container hover:bg-surface-container-high rounded-lg border border-outline-variant transition-colors focus:outline-hidden disabled:opacity-50"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3l3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
-              </svg>
-              {conversation.isArchived ? 'Desarchivar' : 'Archivar Consulta'}
-            </button>
-          )}
+          {/* Control de Archivado para Inquilino y Anfitrión */}
+          <button
+            type="button"
+            onClick={onArchiveToggle}
+            disabled={isArchiving}
+            title={conversation.isArchived ? 'Desarchivar conversación' : 'Ocultar chat del Inbox'}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-on-surface-variant bg-surface-container hover:bg-surface-container-high rounded-lg border border-outline-variant transition-colors focus:outline-hidden disabled:opacity-50"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3l3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+            </svg>
+            {conversation.isArchived ? 'Desarchivar' : 'Archivar Consulta'}
+          </button>
 
           {/* Opción de Seguridad: Reportar Conversación o Badge si ya está reportada */}
           {conversation.isReported ? (

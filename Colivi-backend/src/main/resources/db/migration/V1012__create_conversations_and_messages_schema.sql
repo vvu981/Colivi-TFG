@@ -22,11 +22,11 @@ CREATE TABLE conversations (
     CONSTRAINT fk_conversations_tenant 
         FOREIGN KEY (tenant_id) 
         REFERENCES "user" (id) 
-        ON DELETE RESTRICT,
+        ON DELETE CASCADE,
     CONSTRAINT fk_conversations_host 
         FOREIGN KEY (host_id) 
         REFERENCES "user" (id) 
-        ON DELETE RESTRICT,
+        ON DELETE CASCADE,
     CONSTRAINT fk_conversations_booking_request 
         FOREIGN KEY (active_booking_request_id) 
         REFERENCES booking_requests (id) 
@@ -49,7 +49,7 @@ CREATE TABLE messages (
     CONSTRAINT fk_messages_sender 
         FOREIGN KEY (sender_id) 
         REFERENCES "user" (id) 
-        ON DELETE RESTRICT
+        ON DELETE SET NULL
 );
 
 CREATE INDEX idx_conversations_inbox_tenant 
@@ -59,4 +59,4 @@ CREATE INDEX idx_conversations_inbox_host
     ON conversations (host_id, archived_by_host, last_message_at DESC);
 
 CREATE INDEX idx_messages_conversation_ordered 
-    ON messages (conversation_id, created_at ASC);
+    ON messages (conversation_id, created_at DESC);

@@ -18,6 +18,9 @@ export const MessagesPage: React.FC = () => {
     isLoading: isInboxLoading,
     archiveConversation,
     isArchiving,
+    isArchivedTab,
+    setIsArchivedTab,
+    refetch: refetchInbox,
   } = useMessagingInbox();
 
   const {
@@ -29,6 +32,7 @@ export const MessagesPage: React.FC = () => {
     hasNextPage,
     fetchNextPage,
     isFetchingNextPage,
+    refetchConversation,
   } = useConversationChat(conversationId);
 
   const handleSelectConversation = (id: string) => {
@@ -75,6 +79,8 @@ export const MessagesPage: React.FC = () => {
                 archiveConversation(id, !currentArchived)
               }
               isLoading={isInboxLoading}
+              isArchivedTab={isArchivedTab}
+              onTabChange={setIsArchivedTab}
             />
           </div>
 
@@ -252,7 +258,8 @@ export const MessagesPage: React.FC = () => {
           interlocutorName={conversation.interlocutorName}
           listingTitle={conversation.listingTitle}
           onSuccess={() => {
-            conversation.isReported = true;
+            refetchConversation?.();
+            refetchInbox?.();
           }}
         />
       )}

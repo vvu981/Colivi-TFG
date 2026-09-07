@@ -213,4 +213,23 @@ describe('InboxView Component', () => {
 
     expect(screen.getByRole('img', { name: 'Beatriz' })).toBeInTheDocument();
   });
+
+  it('llama a onTabChange al hacer click en las pestañas en modo controlado', async () => {
+    const user = userEvent.setup();
+    const onTabChange = vi.fn();
+
+    render(
+      <InboxView
+        conversations={[activeConversation]}
+        onSelectConversation={vi.fn()}
+        isArchivedTab={false}
+        onTabChange={onTabChange}
+      />
+    );
+
+    const archivedTab = screen.getByRole('button', { name: /archivados/i });
+    await user.click(archivedTab);
+
+    expect(onTabChange).toHaveBeenCalledWith(true);
+  });
 });

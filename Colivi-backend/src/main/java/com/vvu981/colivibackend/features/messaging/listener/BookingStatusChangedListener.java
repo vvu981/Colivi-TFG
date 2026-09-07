@@ -1,8 +1,10 @@
 package com.vvu981.colivibackend.features.messaging.listener;
 
+import com.vvu981.colivibackend.features.bookingRequests.domain.BookingRequestCreatedEvent;
 import com.vvu981.colivibackend.features.bookingRequests.domain.BookingStatusChangedEvent;
 import com.vvu981.colivibackend.features.bookingRequests.domain.RequestStatus;
 import com.vvu981.colivibackend.features.messaging.repository.ConversationRepository;
+import com.vvu981.colivibackend.features.messaging.service.ConversationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
@@ -14,7 +16,23 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class BookingStatusChangedListener {
 
+    private final ConversationService conversationService;
     private final ConversationRepository conversationRepository;
+
+    @EventListener
+    @Transactional
+    public void onBookingRequestCreated(BookingRequestCreatedEvent event) {
+        if (event.requestId() == null || event.requesterId() == null || event.listingId() == null || event.hostId() == null) {
+            return;
+        }
+
+        conversationRepository.findByTenantIdAndHostIdAndListingId(event.requesterId(), event.hostId(), event.listingId())
+                .ifPresent(conversation -> {
+                    log.info("Vinculando automáticamente nueva solicitud de reserva {} a conversación {}",
+                            event.requestId(), conversation.getId());
+                    conversationService.linkBookingRequest(conversation.getId(), event.requestId());
+                });
+    }
 
     @EventListener
     @Transactional
@@ -31,7 +49,8 @@ public class BookingStatusChangedListener {
         if (isRejected || isExpired || isCancelledWithoutDeposit) {
             log.info("Desvinculando reactivamente la reserva {} de cualquier conversación por estado {}", 
                     event.bookingRequestId(), status);
-            conversationRepository.unlinkBookingRequest(event.bookingRequestId());
+            conversationService.unlinkBookingRequest(event.bookingRequestId());
         }
     }
 }
+

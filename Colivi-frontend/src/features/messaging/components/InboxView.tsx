@@ -7,6 +7,8 @@ interface InboxViewProps {
   onSelectConversation: (conversationId: string) => void;
   onArchiveToggle?: (conversationId: string, currentArchived: boolean) => void;
   isLoading?: boolean;
+  isArchivedTab?: boolean;
+  onTabChange?: (isArchived: boolean) => void;
 }
 
 export const InboxView: React.FC<InboxViewProps> = ({
@@ -15,12 +17,25 @@ export const InboxView: React.FC<InboxViewProps> = ({
   onSelectConversation,
   onArchiveToggle,
   isLoading = false,
+  isArchivedTab: controlledIsArchived,
+  onTabChange,
 }) => {
-  const [activeTab, setActiveTab] = useState<'active' | 'archived'>('active');
+  const [internalTab, setInternalTab] = useState<'active' | 'archived'>('active');
+  const isControlled = controlledIsArchived !== undefined;
+  const activeTab = isControlled ? (controlledIsArchived ? 'archived' : 'active') : internalTab;
+
+  const handleTabClick = (tab: 'active' | 'archived') => {
+    if (onTabChange) {
+      onTabChange(tab === 'archived');
+    } else {
+      setInternalTab(tab);
+    }
+  };
+
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredConversations = conversations
-    .filter((c) => (activeTab === 'archived' ? c.isArchived : !c.isArchived))
+    .filter((c) => (isControlled ? true : (activeTab === 'archived' ? c.isArchived : !c.isArchived)))
     .filter((c) => {
       if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase();
@@ -31,8 +46,12 @@ export const InboxView: React.FC<InboxViewProps> = ({
       );
     });
 
-  const activeCount = conversations.filter((c) => !c.isArchived).length;
-  const archivedCount = conversations.filter((c) => c.isArchived).length;
+  const activeCount = isControlled
+    ? (activeTab === 'active' ? conversations.length : 0)
+    : conversations.filter((c) => !c.isArchived).length;
+  const archivedCount = isControlled
+    ? (activeTab === 'archived' ? conversations.length : 0)
+    : conversations.filter((c) => c.isArchived).length;
 
   const formatRelativeTime = (isoString: string) => {
     try {
@@ -140,7 +159,7 @@ export const InboxView: React.FC<InboxViewProps> = ({
         <div className="bg-surface-container-high/80 p-1 rounded-xl flex gap-1">
           <button
             type="button"
-            onClick={() => setActiveTab('active')}
+            onClick={() => handleTabClick('active')}
             className={`flex-1 py-1.5 px-3 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
               activeTab === 'active'
                 ? 'bg-surface text-on-surface shadow-xs'
@@ -158,7 +177,7 @@ export const InboxView: React.FC<InboxViewProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab('archived')}
+            onClick={() => handleTabClick('archived')}
             className={`flex-1 py-1.5 px-3 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
               activeTab === 'archived'
                 ? 'bg-surface text-on-surface shadow-xs'

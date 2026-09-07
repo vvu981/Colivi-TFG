@@ -216,5 +216,6 @@ export const useConversationChat = (conversationId: string | undefined) => {
     hasNextPage: messagesQuery.hasNextPage,
     fetchNextPage: messagesQuery.fetchNextPage,
     isFetchingNextPage: messagesQuery.isFetchingNextPage,
+    refetchConversation: conversationQuery.refetch,
   };
 };

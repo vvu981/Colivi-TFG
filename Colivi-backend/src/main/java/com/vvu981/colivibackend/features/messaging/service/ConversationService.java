@@ -17,7 +17,11 @@ public interface ConversationService {
 
     Page<ConversationSummaryDto> getInbox(UUID userId, boolean archived, Pageable pageable);
 
-    void archiveConversationByHost(UUID conversationId, UUID hostId, boolean archived);
+    void archiveConversation(UUID conversationId, UUID userId, boolean archived);
+
+    default void archiveConversationByHost(UUID conversationId, UUID hostId, boolean archived) {
+        archiveConversation(conversationId, hostId, archived);
+    }
 
     void linkBookingRequest(UUID conversationId, UUID bookingRequestId);
 

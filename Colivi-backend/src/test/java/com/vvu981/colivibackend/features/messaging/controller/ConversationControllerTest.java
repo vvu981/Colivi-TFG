@@ -179,7 +179,7 @@ class ConversationControllerTest {
         @Test
         @DisplayName("PATCH /{id}/archive -> 204 No Content")
         void archiveConversation_shouldReturn204() throws Exception {
-                doNothing().when(conversationService).archiveConversationByHost(conversationId, currentUserId, true);
+                doNothing().when(conversationService).archiveConversation(conversationId, currentUserId, true);
 
                 mockMvc.perform(patch("/api/v1/conversations/{id}/archive", conversationId)
                                 .with(authentication(buildAuth(currentUser)))
@@ -187,7 +187,7 @@ class ConversationControllerTest {
                                 .param("archived", "true"))
                                 .andExpect(status().isNoContent());
 
-                verify(conversationService).archiveConversationByHost(conversationId, currentUserId, true);
+                verify(conversationService).archiveConversation(conversationId, currentUserId, true);
         }
 
         @Test

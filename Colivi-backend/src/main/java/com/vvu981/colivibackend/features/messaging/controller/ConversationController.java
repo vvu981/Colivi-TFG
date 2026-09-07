@@ -52,7 +52,7 @@ public class ConversationController {
             @PathVariable UUID id,
             @RequestParam(defaultValue = "true") boolean archived,
             @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
-        conversationService.archiveConversationByHost(id, currentUserId, archived);
+        conversationService.archiveConversation(id, currentUserId, archived);
         return ResponseEntity.noContent().build();
     }
 

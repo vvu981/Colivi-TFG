@@ -25,6 +25,12 @@ import {
   MessageSquare,
 } from 'lucide-react';
 
+const formatUserFullName = (user?: { firstName?: string; lastName?: string; lastName1?: string; lastName2?: string; nickname?: string } | null, fallback = 'Usuario'): string => {
+  if (!user) return fallback;
+  const parts = [user.firstName, user.lastName || user.lastName1, user.lastName2].filter(Boolean);
+  return parts.join(' ').trim() || user.nickname || fallback;
+};
+
 interface AdminReportDetailModalProps {
   report: ReportItem | null;
   isOpen: boolean;
@@ -589,7 +595,7 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
                           {targetConversation.tenant.profilePicUrl ? (
                             <img
                               src={targetConversation.tenant.profilePicUrl}
-                              alt={`${targetConversation.tenant.firstName} ${targetConversation.tenant.lastName}`}
+                              alt={formatUserFullName(targetConversation.tenant, 'Inquilino')}
                               className="w-10 h-10 rounded-full object-cover border border-outline-variant"
                             />
                           ) : (
@@ -599,7 +605,7 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
                           )}
                           <div className="min-w-0 flex-1">
                             <h5 className="text-xs font-bold text-on-surface truncate">
-                              {`${targetConversation.tenant.firstName} ${targetConversation.tenant.lastName}`.trim() || targetConversation.tenant.nickname}
+                              {formatUserFullName(targetConversation.tenant, 'Inquilino')}
                             </h5>
                             <p className="text-[11px] text-secondary truncate">
                               @{targetConversation.tenant.nickname} • {targetConversation.tenant.email}
@@ -646,7 +652,7 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
                           {targetConversation.host.profilePicUrl ? (
                             <img
                               src={targetConversation.host.profilePicUrl}
-                              alt={`${targetConversation.host.firstName} ${targetConversation.host.lastName}`}
+                              alt={formatUserFullName(targetConversation.host, 'Propietario')}
                               className="w-10 h-10 rounded-full object-cover border border-outline-variant"
                             />
                           ) : (
@@ -656,7 +662,7 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
                           )}
                           <div className="min-w-0 flex-1">
                             <h5 className="text-xs font-bold text-on-surface truncate">
-                              {`${targetConversation.host.firstName} ${targetConversation.host.lastName}`.trim() || targetConversation.host.nickname}
+                              {formatUserFullName(targetConversation.host, 'Propietario')}
                             </h5>
                             <p className="text-[11px] text-secondary truncate">
                               @{targetConversation.host.nickname} • {targetConversation.host.email}
@@ -707,15 +713,15 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
                         targetConversation.messages.map((msg) => {
                           const isTenant = msg.senderId === targetConversation.tenant.id;
                           const isHost = msg.senderId === targetConversation.host.id;
-                          const tenantName = `${targetConversation.tenant.firstName} ${targetConversation.tenant.lastName}`.trim() || targetConversation.tenant.nickname;
-                          const hostName = `${targetConversation.host.firstName} ${targetConversation.host.lastName}`.trim() || targetConversation.host.nickname;
+                          const tenantName = formatUserFullName(targetConversation.tenant, 'Inquilino');
+                          const hostName = formatUserFullName(targetConversation.host, 'Propietario');
                           const senderLabel = isTenant
                             ? `Inquilino (${tenantName})`
                             : isHost
                             ? `Propietario (${hostName})`
                             : msg.senderName || 'Sistema';
 
-                          if (msg.messageType === 'SYSTEM_NUDGE' || msg.messageType === 'SYSTEM_EVENT') {
+                          if (msg.messageType === 'SYSTEM_MESSAGE' || msg.messageType?.startsWith('SYSTEM_')) {
                             return (
                               <div
                                 key={msg.id}

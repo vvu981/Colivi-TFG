@@ -90,6 +90,7 @@ describe('MessagesPage Integration Tests', () => {
       hasNextPage: false,
       fetchNextPage: vi.fn(),
       isFetchingNextPage: false,
+      refetchConversation: vi.fn(),
     });
   });
 
@@ -105,6 +106,7 @@ describe('MessagesPage Integration Tests', () => {
       hasNextPage: false,
       fetchNextPage: vi.fn(),
       isFetchingNextPage: false,
+      refetchConversation: vi.fn(),
     });
 
     render(
@@ -201,6 +203,7 @@ describe('MessagesPage Integration Tests', () => {
       hasNextPage: false,
       fetchNextPage: vi.fn(),
       isFetchingNextPage: false,
+      refetchConversation: vi.fn(),
     });
 
     render(

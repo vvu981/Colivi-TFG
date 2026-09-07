@@ -25,7 +25,13 @@ public interface ReportRepository extends JpaRepository<Report, UUID>, JpaSpecif
 
         boolean existsByTargetTypeAndTargetId(ReportTargetType targetType, UUID targetId);
 
-        @Query("SELECT r.targetId FROM Report r WHERE r.targetType = :targetType AND r.targetId IN :targetIds")
+        boolean existsByTargetTypeAndTargetIdAndStatusIn(
+                        ReportTargetType targetType, UUID targetId,
+                        List<ReportStatus> statuses);
+
+        @Query("SELECT DISTINCT r.targetId FROM Report r " +
+               "WHERE r.targetType = :targetType AND r.targetId IN :targetIds " +
+               "  AND r.status IN (com.vvu981.colivibackend.features.report.domain.ReportStatus.PENDING, com.vvu981.colivibackend.features.report.domain.ReportStatus.INVESTIGATING)")
         List<UUID> findExistingReportedTargetIds(
                         @Param("targetType") ReportTargetType targetType,
                         @Param("targetIds") Collection<UUID> targetIds);

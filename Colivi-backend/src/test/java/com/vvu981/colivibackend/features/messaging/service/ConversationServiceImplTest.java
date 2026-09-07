@@ -4,6 +4,7 @@ import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
 import com.vvu981.colivibackend.core.exception.ResourceNotFoundException;
 import com.vvu981.colivibackend.core.exception.UnauthorizedActionException;
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing;
+import com.vvu981.colivibackend.features.accommodation.domain.ListingStatus;
 import com.vvu981.colivibackend.features.accommodation.repository.AccommodationListingRepository;
 import com.vvu981.colivibackend.features.bookingRequests.domain.BookingRequest;
 import com.vvu981.colivibackend.features.bookingRequests.repository.BookingRequestRepository;
@@ -99,6 +100,7 @@ class ConversationServiceImplTest {
                 .title("Piso Centro")
                 .pricePerMonth(BigDecimal.valueOf(500))
                 .host(host)
+                .status(ListingStatus.AVAILABLE)
                 .build();
 
         conversation = Conversation.builder()
@@ -225,7 +227,7 @@ class ConversationServiceImplTest {
         @DisplayName("Retorna el DTO con el flag de reporte correspondiente")
         void whenGetSummary_thenReturnDtoWithReportedFlag() {
             when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
-            when(reportRepository.existsByTargetTypeAndTargetId(ReportTargetType.CONVERSATION, conversationId))
+            when(reportRepository.existsByTargetTypeAndTargetIdAndStatusIn(eq(ReportTargetType.CONVERSATION), eq(conversationId), anyList()))
                     .thenReturn(true);
 
             ConversationSummaryDto summary = conversationService.getConversationSummary(conversationId, tenantId);
@@ -271,37 +273,48 @@ class ConversationServiceImplTest {
     }
 
     @Nested
-    @DisplayName("archiveConversationByHost tests")
-    class ArchiveConversationByHostTests {
+    @DisplayName("archiveConversation tests")
+    class ArchiveConversationTests {
 
         @Test
         @DisplayName("Lanza ResourceNotFoundException si la conversación no existe")
         void whenNotFound_thenThrowException() {
             when(conversationRepository.findById(conversationId)).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> conversationService.archiveConversationByHost(conversationId, hostId, true))
+            assertThatThrownBy(() -> conversationService.archiveConversation(conversationId, hostId, true))
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Conversación no encontrada");
         }
 
         @Test
-        @DisplayName("Lanza UnauthorizedActionException si el solicitante no es el anfitrión")
-        void whenRequesterNotHost_thenThrowUnauthorized() {
+        @DisplayName("Lanza UnauthorizedActionException si el solicitante no es ni anfitrión ni inquilino")
+        void whenRequesterNeitherHostNorTenant_thenThrowUnauthorized() {
+            UUID strangerId = UUID.randomUUID();
             when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
 
-            assertThatThrownBy(() -> conversationService.archiveConversationByHost(conversationId, tenantId, true))
+            assertThatThrownBy(() -> conversationService.archiveConversation(conversationId, strangerId, true))
                     .isInstanceOf(UnauthorizedActionException.class)
-                    .hasMessageContaining("Únicamente el anfitrión tiene permisos para archivar");
+                    .hasMessageContaining("No tienes permisos para archivar esta conversación");
         }
 
         @Test
         @DisplayName("Actualiza el estado de archivado si el solicitante es el anfitrión")
-        void whenRequesterIsHost_thenUpdateArchived() {
+        void whenRequesterIsHost_thenUpdateArchivedByHost() {
             when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
 
-            conversationService.archiveConversationByHost(conversationId, hostId, true);
+            conversationService.archiveConversation(conversationId, hostId, true);
 
             verify(conversationRepository).updateArchivedByHost(conversationId, true);
+        }
+
+        @Test
+        @DisplayName("Actualiza el estado de archivado si el solicitante es el inquilino")
+        void whenRequesterIsTenant_thenUpdateArchivedByTenant() {
+            when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+
+            conversationService.archiveConversation(conversationId, tenantId, true);
+
+            verify(conversationRepository).updateArchivedByTenant(conversationId, true);
         }
     }
 

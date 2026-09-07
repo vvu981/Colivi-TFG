@@ -96,7 +96,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     isNearBottomRef.current = true;
     setShowScrollBottomBtn(false);
 
-    await onSendMessage(textToSend);
+    try {
+      await onSendMessage(textToSend);
+    } catch {
+      setInputText(textToSend);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

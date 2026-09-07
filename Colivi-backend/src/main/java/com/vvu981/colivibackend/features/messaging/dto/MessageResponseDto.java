@@ -22,7 +22,7 @@ public record MessageResponseDto(
     public static MessageResponseDto fromEntity(Message message, UUID currentUserId) {
         UUID senderId = message.getSender() != null ? message.getSender().getId() : null;
         String senderName = message.getSender() != null 
-                ? message.getSender().getFirstName() + " " + message.getSender().getLastName1() 
+                ? message.getSender().getFullName() 
                 : "Sistema";
         boolean isMine = senderId != null && senderId.equals(currentUserId);
 

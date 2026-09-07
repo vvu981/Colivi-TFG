@@ -28,6 +28,17 @@ public interface BookingRequestRepository
             @org.springframework.data.repository.query.Param("listingId") UUID listingId);
 
     @org.springframework.data.jpa.repository.Query("""
+                SELECT b FROM BookingRequest b
+                WHERE b.accommodationListing.id = :listingId
+                  AND b.requester.id = :requesterId
+                  AND b.status IN ('PENDING', 'ACCEPTED', 'CONFIRMED')
+                ORDER BY b.createdAt DESC
+            """)
+    java.util.List<BookingRequest> findActiveRequestsByUserAndListing(
+            @org.springframework.data.repository.query.Param("requesterId") UUID requesterId,
+            @org.springframework.data.repository.query.Param("listingId") UUID listingId);
+
+    @org.springframework.data.jpa.repository.Query("""
                 SELECT COUNT(b) FROM BookingRequest b
                 WHERE b.accommodationListing.id = :listingId
                   AND b.status IN ('ACCEPTED', 'CONFIRMED')

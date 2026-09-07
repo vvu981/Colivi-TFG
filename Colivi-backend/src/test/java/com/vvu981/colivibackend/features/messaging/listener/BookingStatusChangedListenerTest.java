@@ -1,8 +1,11 @@
 package com.vvu981.colivibackend.features.messaging.listener;
 
+import com.vvu981.colivibackend.features.bookingRequests.domain.BookingRequestCreatedEvent;
 import com.vvu981.colivibackend.features.bookingRequests.domain.BookingStatusChangedEvent;
 import com.vvu981.colivibackend.features.bookingRequests.domain.RequestStatus;
+import com.vvu981.colivibackend.features.messaging.domain.Conversation;
 import com.vvu981.colivibackend.features.messaging.repository.ConversationRepository;
+import com.vvu981.colivibackend.features.messaging.service.ConversationService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,6 +14,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.Mockito.*;
@@ -20,10 +24,45 @@ import static org.mockito.Mockito.*;
 class BookingStatusChangedListenerTest {
 
     @Mock
+    private ConversationService conversationService;
+
+    @Mock
     private ConversationRepository conversationRepository;
 
     @InjectMocks
     private BookingStatusChangedListener listener;
+
+    @Test
+    @DisplayName("Cuando se crea una solicitud y existe conversación previa, vincula la solicitud")
+    void whenBookingRequestCreated_andConversationExists_thenLinkRequest() {
+        UUID requestId = UUID.randomUUID();
+        UUID requesterId = UUID.randomUUID();
+        UUID listingId = UUID.randomUUID();
+        UUID hostId = UUID.randomUUID();
+        UUID conversationId = UUID.randomUUID();
+
+        BookingRequestCreatedEvent event = new BookingRequestCreatedEvent(
+                requestId,
+                requesterId,
+                listingId,
+                hostId,
+                "host@colivi.com",
+                "Juan Pérez",
+                "tenant@colivi.com",
+                "Habitación Centro",
+                java.time.LocalDate.now(),
+                java.time.LocalDate.now().plusMonths(1),
+                "Hola"
+        );
+
+        Conversation conversation = Conversation.builder().id(conversationId).build();
+        when(conversationRepository.findByTenantIdAndHostIdAndListingId(requesterId, hostId, listingId))
+                .thenReturn(Optional.of(conversation));
+
+        listener.onBookingRequestCreated(event);
+
+        verify(conversationService, times(1)).linkBookingRequest(conversationId, requestId);
+    }
 
     @Test
     @DisplayName("Cuando la reserva es rechazada, desvincula la solicitud de la conversación")
@@ -40,7 +79,25 @@ class BookingStatusChangedListenerTest {
 
         listener.onBookingStatusChanged(event);
 
-        verify(conversationRepository, times(1)).unlinkBookingRequest(bookingId);
+        verify(conversationService, times(1)).unlinkBookingRequest(bookingId);
+    }
+
+    @Test
+    @DisplayName("Cuando la reserva expira, desvincula la solicitud de la conversación")
+    void whenBookingIsExpired_thenUnlinkBookingRequest() {
+        UUID bookingId = UUID.randomUUID();
+        BookingStatusChangedEvent event = new BookingStatusChangedEvent(
+                bookingId,
+                "tenant@colivi.com",
+                "Habitación Centro",
+                RequestStatus.EXPIRED,
+                false,
+                null,
+                false);
+
+        listener.onBookingStatusChanged(event);
+
+        verify(conversationService, times(1)).unlinkBookingRequest(bookingId);
     }
 
     @Test
@@ -59,7 +116,7 @@ class BookingStatusChangedListenerTest {
 
         listener.onBookingStatusChanged(event);
 
-        verify(conversationRepository, times(1)).unlinkBookingRequest(bookingId);
+        verify(conversationService, times(1)).unlinkBookingRequest(bookingId);
     }
 
     @Test
@@ -78,7 +135,7 @@ class BookingStatusChangedListenerTest {
 
         listener.onBookingStatusChanged(event);
 
-        verify(conversationRepository, never()).unlinkBookingRequest(any());
+        verify(conversationService, never()).unlinkBookingRequest(any());
     }
 
     @Test
@@ -96,6 +153,6 @@ class BookingStatusChangedListenerTest {
 
         listener.onBookingStatusChanged(event);
 
-        verify(conversationRepository, never()).unlinkBookingRequest(any());
+        verify(conversationService, never()).unlinkBookingRequest(any());
     }
 }

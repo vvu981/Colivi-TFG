@@ -4,6 +4,8 @@ import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
 import com.vvu981.colivibackend.core.exception.ResourceNotFoundException;
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing;
 import com.vvu981.colivibackend.features.accommodation.repository.AccommodationListingRepository;
+import com.vvu981.colivibackend.features.messaging.domain.Conversation;
+import com.vvu981.colivibackend.features.messaging.repository.ConversationRepository;
 import com.vvu981.colivibackend.features.report.domain.Report;
 import com.vvu981.colivibackend.features.report.domain.ReportReason;
 import com.vvu981.colivibackend.features.report.domain.ReportStatus;
@@ -50,7 +52,7 @@ class ReportServiceImplTest {
     @Mock
     private AccommodationListingRepository listingRepository;
     @Mock
-    private com.vvu981.colivibackend.features.messaging.repository.ConversationRepository conversationRepository;
+    private ConversationRepository conversationRepository;
 
     @InjectMocks
     private ReportServiceImpl reportService;
@@ -269,19 +271,19 @@ class ReportServiceImplTest {
         UUID convId = UUID.randomUUID();
         CreateReportRequest request = new CreateReportRequest(ReportTargetType.CONVERSATION, convId, ReportReason.HARASSMENT, "Host is insulting me");
 
-        com.vvu981.colivibackend.features.user.domain.User tenant = new com.vvu981.colivibackend.features.user.domain.User();
+        User tenant = new User();
         tenant.setId(reporterId);
-        com.vvu981.colivibackend.features.user.domain.User host = new com.vvu981.colivibackend.features.user.domain.User();
+        User host = new User();
         host.setId(UUID.randomUUID());
 
-        com.vvu981.colivibackend.features.messaging.domain.Conversation conversation = com.vvu981.colivibackend.features.messaging.domain.Conversation.builder()
+        Conversation conversation = Conversation.builder()
                 .id(convId)
                 .tenant(tenant)
                 .host(host)
                 .build();
 
         when(conversationRepository.findById(convId)).thenReturn(Optional.of(conversation));
-        when(reportRepository.existsByTargetTypeAndTargetId(ReportTargetType.CONVERSATION, convId)).thenReturn(false);
+        when(reportRepository.existsByTargetTypeAndTargetIdAndStatusIn(eq(ReportTargetType.CONVERSATION), eq(convId), anyList())).thenReturn(false);
         when(reportRepository.existsByReporterIdAndTargetTypeAndTargetIdAndStatusIn(any(), any(), any(), any())).thenReturn(false);
 
         Report reportEntity = new Report();
@@ -333,12 +335,12 @@ class ReportServiceImplTest {
         UUID convId = UUID.randomUUID();
         CreateReportRequest request = new CreateReportRequest(ReportTargetType.CONVERSATION, convId, ReportReason.SPAM, "Spam");
 
-        com.vvu981.colivibackend.features.user.domain.User tenant = new com.vvu981.colivibackend.features.user.domain.User();
+        User tenant = new User();
         tenant.setId(UUID.randomUUID());
-        com.vvu981.colivibackend.features.user.domain.User host = new com.vvu981.colivibackend.features.user.domain.User();
+        User host = new User();
         host.setId(UUID.randomUUID());
 
-        com.vvu981.colivibackend.features.messaging.domain.Conversation conversation = com.vvu981.colivibackend.features.messaging.domain.Conversation.builder()
+        Conversation conversation = Conversation.builder()
                 .id(convId)
                 .tenant(tenant)
                 .host(host)
@@ -356,19 +358,19 @@ class ReportServiceImplTest {
         UUID convId = UUID.randomUUID();
         CreateReportRequest request = new CreateReportRequest(ReportTargetType.CONVERSATION, convId, ReportReason.SPAM, "Spam");
 
-        com.vvu981.colivibackend.features.user.domain.User tenant = new com.vvu981.colivibackend.features.user.domain.User();
+        User tenant = new User();
         tenant.setId(reporterId);
-        com.vvu981.colivibackend.features.user.domain.User host = new com.vvu981.colivibackend.features.user.domain.User();
+        User host = new User();
         host.setId(UUID.randomUUID());
 
-        com.vvu981.colivibackend.features.messaging.domain.Conversation conversation = com.vvu981.colivibackend.features.messaging.domain.Conversation.builder()
+        Conversation conversation = Conversation.builder()
                 .id(convId)
                 .tenant(tenant)
                 .host(host)
                 .build();
 
         when(conversationRepository.findById(convId)).thenReturn(Optional.of(conversation));
-        when(reportRepository.existsByTargetTypeAndTargetId(ReportTargetType.CONVERSATION, convId)).thenReturn(true);
+        when(reportRepository.existsByTargetTypeAndTargetIdAndStatusIn(eq(ReportTargetType.CONVERSATION), eq(convId), anyList())).thenReturn(true);
 
         assertThatThrownBy(() -> reportService.createReport(reporterId, request))
                 .isInstanceOf(BusinessRuleValidationException.class)

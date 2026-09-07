@@ -4,6 +4,7 @@ import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
 import com.vvu981.colivibackend.core.exception.ResourceNotFoundException;
 import com.vvu981.colivibackend.core.exception.UnauthorizedActionException;
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing;
+import com.vvu981.colivibackend.features.accommodation.domain.ListingStatus;
 import com.vvu981.colivibackend.features.accommodation.repository.AccommodationListingRepository;
 import com.vvu981.colivibackend.features.bookingRequests.domain.BookingRequest;
 import com.vvu981.colivibackend.features.bookingRequests.repository.BookingRequestRepository;
@@ -13,9 +14,12 @@ import com.vvu981.colivibackend.features.messaging.repository.ConversationReposi
 import com.vvu981.colivibackend.features.messaging.service.validator.MessageAccessPolicyValidator;
 import com.vvu981.colivibackend.features.user.domain.User;
 import com.vvu981.colivibackend.features.user.repository.UserRepository;
+import com.vvu981.colivibackend.features.report.domain.ReportStatus;
 import com.vvu981.colivibackend.features.report.domain.ReportTargetType;
 import com.vvu981.colivibackend.features.report.repository.ReportRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -24,9 +28,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ConversationServiceImpl implements ConversationService {
@@ -44,31 +50,65 @@ public class ConversationServiceImpl implements ConversationService {
         User tenant = userRepository.findById(tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Inquilino no encontrado con ID: " + tenantId));
 
+        if (tenant.isBanned() || tenant.getDeletedAt() != null) {
+            throw new BusinessRuleValidationException("Tu cuenta se encuentra suspendida o dada de baja.");
+        }
+
         AccommodationListing listing = listingRepository.findById(listingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Anuncio no encontrado con ID: " + listingId));
+
+        if (listing.getBannedAt() != null || listing.getDeletedAt() != null) {
+            throw new BusinessRuleValidationException("El anuncio no se encuentra disponible.");
+        }
+
+        if (listing.getStatus() != ListingStatus.AVAILABLE) {
+            throw new BusinessRuleValidationException("El anuncio no está disponible actualmente.");
+        }
 
         User host = listing.getHost();
         if (host.getId().equals(tenantId)) {
             throw new BusinessRuleValidationException("Un anfitrión no puede abrir un canal de consulta sobre su propio anuncio.");
         }
 
-        return conversationRepository.findByTenantIdAndHostIdAndListingId(tenantId, host.getId(), listingId)
-                .orElseGet(() -> {
-                    Conversation newConversation = Conversation.builder()
-                            .listing(listing)
-                            .tenant(tenant)
-                            .host(host)
-                            .lastMessageAt(LocalDateTime.now())
-                            .lastMessagePreview("Consulta iniciada")
-                            .tenantUnreadCount(0)
-                            .hostUnreadCount(0)
-                            .userMessageCount(0)
-                            .nudgeSent(false)
-                            .archivedByHost(false)
-                            .archivedByTenant(false)
-                            .build();
-                    return conversationRepository.save(newConversation);
-                });
+        if (host.isBanned() || host.getDeletedAt() != null) {
+            throw new BusinessRuleValidationException("El anfitrión de este alojamiento no se encuentra disponible.");
+        }
+
+        List<BookingRequest> activeRequests = bookingRequestRepository.findActiveRequestsByUserAndListing(tenantId, listingId);
+        BookingRequest activeBooking = activeRequests.isEmpty() ? null : activeRequests.get(0);
+
+        Optional<Conversation> existing = conversationRepository.findByTenantIdAndHostIdAndListingId(tenantId, host.getId(), listingId);
+        if (existing.isPresent()) {
+            Conversation conv = existing.get();
+            if (conv.getActiveBookingRequest() == null && activeBooking != null) {
+                conversationRepository.linkActiveBookingRequest(conv.getId(), activeBooking);
+                conv.setActiveBookingRequest(activeBooking);
+            }
+            return conv;
+        }
+
+        Conversation newConversation = Conversation.builder()
+                .listing(listing)
+                .tenant(tenant)
+                .host(host)
+                .activeBookingRequest(activeBooking)
+                .lastMessageAt(LocalDateTime.now())
+                .lastMessagePreview("Consulta iniciada")
+                .tenantUnreadCount(0)
+                .hostUnreadCount(0)
+                .userMessageCount(0)
+                .nudgeSent(false)
+                .archivedByHost(false)
+                .archivedByTenant(false)
+                .build();
+
+        try {
+            return conversationRepository.save(newConversation);
+        } catch (DataIntegrityViolationException e) {
+            log.warn("Conversación concurrente detectada para tenant {} y listing {}", tenantId, listingId);
+            return conversationRepository.findByTenantIdAndHostIdAndListingId(tenantId, host.getId(), listingId)
+                    .orElseThrow(() -> e);
+        }
     }
 
     @Override
@@ -85,7 +125,8 @@ public class ConversationServiceImpl implements ConversationService {
     @Transactional(readOnly = true)
     public ConversationSummaryDto getConversationSummary(UUID conversationId, UUID requesterId) {
         Conversation conversation = getConversationById(conversationId, requesterId);
-        boolean isReported = reportRepository.existsByTargetTypeAndTargetId(ReportTargetType.CONVERSATION, conversationId);
+        boolean isReported = reportRepository.existsByTargetTypeAndTargetIdAndStatusIn(
+                ReportTargetType.CONVERSATION, conversationId, List.of(ReportStatus.PENDING, ReportStatus.INVESTIGATING));
         return ConversationSummaryDto.fromEntity(conversation, requesterId, isReported);
     }
 
@@ -103,15 +144,22 @@ public class ConversationServiceImpl implements ConversationService {
 
     @Override
     @Transactional
-    public void archiveConversationByHost(UUID conversationId, UUID hostId, boolean archived) {
+    public void archiveConversation(UUID conversationId, UUID userId, boolean archived) {
         Conversation conversation = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Conversación no encontrada con ID: " + conversationId));
 
-        if (!conversation.getHost().getId().equals(hostId)) {
-            throw new UnauthorizedActionException("Únicamente el anfitrión tiene permisos para archivar esta consulta.");
+        boolean isTenant = conversation.getTenant().getId().equals(userId);
+        boolean isHost = conversation.getHost().getId().equals(userId);
+
+        if (!isTenant && !isHost) {
+            throw new UnauthorizedActionException("No tienes permisos para archivar esta conversación.");
         }
 
-        conversationRepository.updateArchivedByHost(conversationId, archived);
+        if (isHost) {
+            conversationRepository.updateArchivedByHost(conversationId, archived);
+        } else {
+            conversationRepository.updateArchivedByTenant(conversationId, archived);
+        }
     }
 
     @Override
@@ -132,3 +180,4 @@ public class ConversationServiceImpl implements ConversationService {
         conversationRepository.unlinkBookingRequest(bookingRequestId);
     }
 }
+

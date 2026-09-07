@@ -2,7 +2,6 @@ package com.vvu981.colivibackend.features.messaging.repository;
 
 import com.vvu981.colivibackend.features.messaging.domain.Message;
 import com.vvu981.colivibackend.features.messaging.domain.MessageStatus;
-import com.vvu981.colivibackend.features.messaging.domain.MessageType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -31,13 +30,6 @@ public interface MessageRepository extends JpaRepository<Message, UUID> {
            "ORDER BY m.createdAt ASC")
     java.util.List<Message> findAllByConversationIdOrderByCreatedAtAsc(
             @Param("conversationId") UUID conversationId
-    );
-
-    @Query("SELECT COUNT(m) FROM Message m " +
-           "WHERE m.conversation.id = :conversationId AND m.messageType = :messageType")
-    long countByConversationIdAndMessageType(
-            @Param("conversationId") UUID conversationId,
-            @Param("messageType") MessageType messageType
     );
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)

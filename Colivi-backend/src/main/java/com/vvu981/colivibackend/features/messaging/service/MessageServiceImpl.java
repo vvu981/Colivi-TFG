@@ -74,10 +74,7 @@ public class MessageServiceImpl implements MessageService {
 
         if (projectedCount >= NUDGE_USER_MESSAGE_THRESHOLD && conversation.getActiveBookingRequest() == null) {
             // Cerrojo atómico condicional en base de datos: solo una petición concurrente podrá reclamar el Nudge
-            int claimed = conversationRepository.claimNudgeAndSetLastMessage(
-                    conversationId,
-                    NUDGE_CONTENT,
-                    now.plusNanos(1_000_000));
+            int claimed = conversationRepository.claimNudge(conversationId);
 
             if (claimed > 0) {
                 Message systemNudge = Message.builder()

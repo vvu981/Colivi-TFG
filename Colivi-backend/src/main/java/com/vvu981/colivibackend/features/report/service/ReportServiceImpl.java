@@ -4,6 +4,8 @@ import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
 import com.vvu981.colivibackend.core.exception.ResourceNotFoundException;
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing;
 import com.vvu981.colivibackend.features.accommodation.repository.AccommodationListingRepository;
+import com.vvu981.colivibackend.features.messaging.domain.Conversation;
+import com.vvu981.colivibackend.features.messaging.repository.ConversationRepository;
 import com.vvu981.colivibackend.features.report.domain.Report;
 import com.vvu981.colivibackend.features.report.domain.ReportStatus;
 import com.vvu981.colivibackend.features.report.domain.ReportTargetType;
@@ -32,7 +34,7 @@ public class ReportServiceImpl implements ReportService {
 
     private final UserRepository userRepository;
     private final AccommodationListingRepository listingRepository;
-    private final com.vvu981.colivibackend.features.messaging.repository.ConversationRepository conversationRepository;
+    private final ConversationRepository conversationRepository;
 
     @Override
     @Transactional
@@ -56,7 +58,7 @@ public class ReportServiceImpl implements ReportService {
                 throw new BusinessRuleValidationException("El elemento denunciado no existe.");
             }
         } else if (request.targetType() == ReportTargetType.CONVERSATION) {
-            com.vvu981.colivibackend.features.messaging.domain.Conversation conversation = conversationRepository.findById(request.targetId())
+            Conversation conversation = conversationRepository.findById(request.targetId())
                     .orElseThrow(() -> new BusinessRuleValidationException("El elemento denunciado no existe."));
 
             boolean isParticipant = (conversation.getTenant() != null && conversation.getTenant().getId().equals(reporterId))
@@ -66,7 +68,10 @@ public class ReportServiceImpl implements ReportService {
                 throw new BusinessRuleValidationException("Solo los participantes de la conversación pueden denunciarla.");
             }
 
-            boolean alreadyReported = reportRepository.existsByTargetTypeAndTargetId(ReportTargetType.CONVERSATION, request.targetId());
+            boolean alreadyReported = reportRepository.existsByTargetTypeAndTargetIdAndStatusIn(
+                    ReportTargetType.CONVERSATION,
+                    request.targetId(),
+                    List.of(ReportStatus.PENDING, ReportStatus.INVESTIGATING));
             if (alreadyReported) {
                 throw new BusinessRuleValidationException("Esta conversación ya ha sido denunciada.");
             }

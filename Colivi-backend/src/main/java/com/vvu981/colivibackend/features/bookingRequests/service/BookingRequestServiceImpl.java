@@ -24,6 +24,7 @@ import com.vvu981.colivibackend.features.bookingRequests.repository.BookingReque
 import com.vvu981.colivibackend.features.bookingRequests.repository.filters.BookingRequestFilter;
 import com.vvu981.colivibackend.features.bookingRequests.domain.BookingStatusChangedEvent;
 import com.vvu981.colivibackend.features.bookingRequests.domain.BookingConfirmedEvent;
+import com.vvu981.colivibackend.features.bookingRequests.domain.BookingRequestCreatedEvent;
 import com.vvu981.colivibackend.features.bookingRequests.dto.PaymentConfirmationDto;
 import com.vvu981.colivibackend.core.payment.service.PaymentService;
 import org.springframework.context.ApplicationEventPublisher;
@@ -86,8 +87,11 @@ public class BookingRequestServiceImpl implements BookingRequestService {
                 ? currUser.getFirstName() + (currUser.getLastName1() != null ? " " + currUser.getLastName1() : "")
                 : currUser.getNickname();
 
-        eventPublisher.publishEvent(new com.vvu981.colivibackend.features.bookingRequests.domain.BookingRequestCreatedEvent(
+        eventPublisher.publishEvent(new BookingRequestCreatedEvent(
                 savedRequest.getId(),
+                currUser.getId(),
+                listing.getId(),
+                listing.getHost().getId(),
                 listing.getHost().getEmail(),
                 tenantFullName,
                 currUser.getEmail(),

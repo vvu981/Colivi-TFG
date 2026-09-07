@@ -4,6 +4,7 @@ import com.vvu981.colivibackend.features.bookingRequests.domain.BookingRequest;
 import com.vvu981.colivibackend.features.messaging.domain.Conversation;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -26,28 +27,20 @@ public interface ConversationRepository extends JpaRepository<Conversation, UUID
 
         // ─── Consultas de Bandeja de Entrada (Inbox) ────────────────────────────────
 
+        @EntityGraph(attributePaths = {
+                "listing",
+                "listing.accommodation",
+                "listing.accommodation.images",
+                "tenant",
+                "host",
+                "activeBookingRequest"
+        })
         @Query("SELECT c FROM Conversation c " +
                         "WHERE (c.tenant.id = :userId AND c.archivedByTenant = :archived) " +
                         "   OR (c.host.id = :userId AND c.archivedByHost = :archived) " +
                         "ORDER BY c.lastMessageAt DESC")
         Page<Conversation> findInboxByUserId(
                         @Param("userId") UUID userId,
-                        @Param("archived") boolean archived,
-                        Pageable pageable);
-
-        @Query("SELECT c FROM Conversation c " +
-                        "WHERE c.host.id = :hostId AND c.archivedByHost = :archived " +
-                        "ORDER BY c.lastMessageAt DESC")
-        Page<Conversation> findHostInbox(
-                        @Param("hostId") UUID hostId,
-                        @Param("archived") boolean archived,
-                        Pageable pageable);
-
-        @Query("SELECT c FROM Conversation c " +
-                        "WHERE c.tenant.id = :tenantId AND c.archivedByTenant = :archived " +
-                        "ORDER BY c.lastMessageAt DESC")
-        Page<Conversation> findTenantInbox(
-                        @Param("tenantId") UUID tenantId,
                         @Param("archived") boolean archived,
                         Pageable pageable);
 
@@ -58,7 +51,8 @@ public interface ConversationRepository extends JpaRepository<Conversation, UUID
                         "c.lastMessageAt = :now, " +
                         "c.lastMessagePreview = :preview, " +
                         "c.hostUnreadCount = c.hostUnreadCount + 1, " +
-                        "c.userMessageCount = c.userMessageCount + 1 " +
+                        "c.userMessageCount = c.userMessageCount + 1, " +
+                        "c.archivedByHost = false " +
                         "WHERE c.id = :conversationId")
         int incrementHostUnreadAndSetLastMessage(
                         @Param("conversationId") UUID conversationId,
@@ -70,7 +64,8 @@ public interface ConversationRepository extends JpaRepository<Conversation, UUID
                         "c.lastMessageAt = :now, " +
                         "c.lastMessagePreview = :preview, " +
                         "c.tenantUnreadCount = c.tenantUnreadCount + 1, " +
-                        "c.userMessageCount = c.userMessageCount + 1 " +
+                        "c.userMessageCount = c.userMessageCount + 1, " +
+                        "c.archivedByTenant = false " +
                         "WHERE c.id = :conversationId")
         int incrementTenantUnreadAndSetLastMessage(
                         @Param("conversationId") UUID conversationId,
@@ -79,15 +74,10 @@ public interface ConversationRepository extends JpaRepository<Conversation, UUID
 
         @Modifying(flushAutomatically = true, clearAutomatically = true)
         @Query("UPDATE Conversation c SET " +
-                        "c.lastMessageAt = :now, " +
-                        "c.lastMessagePreview = :preview, " +
                         "c.tenantUnreadCount = c.tenantUnreadCount + 1, " +
                         "c.nudgeSent = true " +
                         "WHERE c.id = :conversationId AND c.nudgeSent = false AND c.activeBookingRequest IS NULL")
-        int claimNudgeAndSetLastMessage(
-                        @Param("conversationId") UUID conversationId,
-                        @Param("preview") String preview,
-                        @Param("now") LocalDateTime now);
+        int claimNudge(@Param("conversationId") UUID conversationId);
 
         @Modifying(flushAutomatically = true, clearAutomatically = true)
         @Query("UPDATE Conversation c SET c.tenantUnreadCount = 0 WHERE c.id = :conversationId")
@@ -100,6 +90,12 @@ public interface ConversationRepository extends JpaRepository<Conversation, UUID
         @Modifying(flushAutomatically = true, clearAutomatically = true)
         @Query("UPDATE Conversation c SET c.archivedByHost = :archived WHERE c.id = :conversationId")
         int updateArchivedByHost(
+                        @Param("conversationId") UUID conversationId,
+                        @Param("archived") boolean archived);
+
+        @Modifying(flushAutomatically = true, clearAutomatically = true)
+        @Query("UPDATE Conversation c SET c.archivedByTenant = :archived WHERE c.id = :conversationId")
+        int updateArchivedByTenant(
                         @Param("conversationId") UUID conversationId,
                         @Param("archived") boolean archived);
 

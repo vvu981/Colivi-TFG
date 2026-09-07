@@ -1,10 +1,12 @@
 package com.vvu981.colivibackend.features.bookingRequests.service;
 
 import com.vvu981.colivibackend.features.bookingRequests.domain.BookingRequest;
+import com.vvu981.colivibackend.features.bookingRequests.domain.BookingStatusChangedEvent;
 import com.vvu981.colivibackend.features.bookingRequests.domain.RequestStatus;
 import com.vvu981.colivibackend.features.bookingRequests.repository.BookingRequestRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,7 +20,7 @@ import java.util.List;
 public class BookingExpirationTask {
 
     private final BookingRequestRepository bookingRequestRepository;
-    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * Tarea programada que se ejecuta cada hora para comprobar si alguna solicitud 
@@ -45,7 +47,7 @@ public class BookingExpirationTask {
                 request.expire();
                 log.info("Solicitud {} marcada como EXPIRED.", request.getId());
                 if (eventPublisher != null) {
-                    eventPublisher.publishEvent(new com.vvu981.colivibackend.features.bookingRequests.domain.BookingStatusChangedEvent(
+                    eventPublisher.publishEvent(new BookingStatusChangedEvent(
                             request.getId(),
                             request.getRequester().getEmail(),
                             request.getAccommodationListing().getTitle(),
