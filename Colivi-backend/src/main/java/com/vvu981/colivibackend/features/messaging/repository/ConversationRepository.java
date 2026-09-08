@@ -127,4 +127,10 @@ public interface ConversationRepository extends JpaRepository<Conversation, UUID
         @Modifying(flushAutomatically = true)
         @Query("UPDATE Conversation c SET c.activeBookingRequest = null WHERE c.activeBookingRequest.id IN :bookingRequestIds")
         int unlinkBookingRequests(@Param("bookingRequestIds") java.util.Collection<UUID> bookingRequestIds);
+
+        @Query("SELECT COALESCE(SUM(CASE WHEN c.tenant.id = :userId THEN c.tenantUnreadCount ELSE c.hostUnreadCount END), 0) " +
+               "FROM Conversation c " +
+               "WHERE (c.tenant.id = :userId AND c.archivedByTenant = false) " +
+               "   OR (c.host.id = :userId AND c.archivedByHost = false)")
+        long countUnreadMessagesByUserId(@Param("userId") UUID userId);
 }

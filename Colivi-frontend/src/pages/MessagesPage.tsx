@@ -39,17 +39,7 @@ export const MessagesPage: React.FC = () => {
     refetchConversation,
   } = useConversationChat(conversationId);
 
-  const isReadOnly = React.useMemo(() => {
-    if (!conversation) return false;
-    if (conversation.bookingEndDate) {
-      const end = new Date(conversation.bookingEndDate);
-      const fortyFiveDaysLater = new Date(end.getTime() + 45 * 24 * 60 * 60 * 1000);
-      if (new Date() > fortyFiveDaysLater) {
-        return true;
-      }
-    }
-    return false;
-  }, [conversation]);
+  const isReadOnly = conversation?.isReadOnly ?? false;
 
   const handleSelectConversation = (id: string) => {
     navigate(`/messages/${id}`);

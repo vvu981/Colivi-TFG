@@ -2,6 +2,7 @@ package com.vvu981.colivibackend.features.messaging.controller;
 
 import com.vvu981.colivibackend.features.messaging.domain.Conversation;
 import com.vvu981.colivibackend.features.messaging.dto.ConversationSummaryDto;
+import com.vvu981.colivibackend.features.messaging.dto.UnreadMessagesCountDto;
 import com.vvu981.colivibackend.features.messaging.service.ConversationService;
 import com.vvu981.colivibackend.features.messaging.service.MessageService;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,13 @@ public class ConversationController {
         Conversation conversation = conversationService.getOrCreateConsultation(currentUserId, listingId);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ConversationSummaryDto.fromEntity(conversation, currentUserId));
+    }
+
+    @GetMapping("/unread-count")
+    public ResponseEntity<UnreadMessagesCountDto> getUnreadMessagesCount(
+            @AuthenticationPrincipal(expression = "id") UUID currentUserId) {
+        long count = conversationService.getUnreadMessagesCount(currentUserId);
+        return ResponseEntity.ok(new UnreadMessagesCountDto(count));
     }
 
     @GetMapping

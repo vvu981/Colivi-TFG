@@ -95,11 +95,17 @@ public class AdminConversationServiceImpl implements AdminConversationService {
 
     private AdminUserSnippetDto toUserSnippet(User user) {
         if (user == null) return null;
+        String lastName = user.getLastName1();
+        if (user.getLastName2() != null && !user.getLastName2().isBlank()) {
+            lastName = (lastName != null && !lastName.isBlank())
+                    ? lastName + " " + user.getLastName2()
+                    : user.getLastName2();
+        }
         return new AdminUserSnippetDto(
                 user.getId(),
                 user.getNickname(),
                 user.getFirstName(),
-                user.getLastName1(),
+                lastName,
                 user.getEmail(),
                 user.getProfilePicUrl(),
                 user.getRole() != null ? user.getRole().name() : null,

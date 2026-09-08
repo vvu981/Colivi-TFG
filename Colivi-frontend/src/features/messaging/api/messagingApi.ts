@@ -71,4 +71,12 @@ export const messagingApi = {
   markAsRead: async (conversationId: string): Promise<void> => {
     await api.patch(`/conversations/${conversationId}/read-receipt`);
   },
+
+  /**
+   * Obtiene la suma global de mensajes no leídos del usuario
+   */
+  getUnreadMessagesCount: async (): Promise<{ unreadCount: number }> => {
+    const response = await api.get<{ unreadCount: number }>('/conversations/unread-count');
+    return response.data;
+  },
 };

@@ -29,8 +29,35 @@ public record ConversationSummaryDto(
     Integer interlocutorUnreadCount,
     boolean isArchived,
     boolean isHost,
-    boolean isReported
+    boolean isReported,
+    boolean isReadOnly
 ) {
+    public ConversationSummaryDto(
+            UUID conversationId,
+            UUID listingId,
+            String listingTitle,
+            String listingThumbnailUrl,
+            BigDecimal listingPricePerMonth,
+            UUID interlocutorId,
+            String interlocutorName,
+            String interlocutorProfilePic,
+            UUID activeBookingRequestId,
+            String bookingStatus,
+            LocalDate bookingStartDate,
+            LocalDate bookingEndDate,
+            String lastMessagePreview,
+            LocalDateTime lastMessageAt,
+            Integer unreadCount,
+            Integer interlocutorUnreadCount,
+            boolean isArchived,
+            boolean isHost,
+            boolean isReported) {
+        this(conversationId, listingId, listingTitle, listingThumbnailUrl, listingPricePerMonth,
+             interlocutorId, interlocutorName, interlocutorProfilePic, activeBookingRequestId,
+             bookingStatus, bookingStartDate, bookingEndDate, lastMessagePreview, lastMessageAt,
+             unreadCount, interlocutorUnreadCount, isArchived, isHost, isReported, false);
+    }
+
     public static ConversationSummaryDto fromEntity(Conversation conversation, UUID currentUserId) {
         return fromEntity(conversation, currentUserId, false);
     }
@@ -72,6 +99,29 @@ public record ConversationSummaryDto(
             }
         }
 
+        // Determinar si el canal está en modo solo lectura
+        boolean isReadOnly = false;
+        if (listing != null && (listing.getBannedAt() != null || listing.getDeletedAt() != null)) {
+            isReadOnly = true;
+        } else if (booking != null) {
+            LocalDate now = LocalDate.now();
+            if (booking.getStatus() == com.vvu981.colivibackend.features.bookingRequests.domain.RequestStatus.CONFIRMED) {
+                if (now.isAfter(booking.getEndDate())) {
+                    LocalDate cutoff = booking.getEndDate().plusDays(45);
+                    if (now.isAfter(cutoff)) {
+                        isReadOnly = true;
+                    }
+                }
+            } else if (booking.getStatus() == com.vvu981.colivibackend.features.bookingRequests.domain.RequestStatus.CANCELLED && booking.getTransactionId() != null) {
+                LocalDate cancellationDate = booking.getUpdatedAt() != null
+                        ? booking.getUpdatedAt().toLocalDate()
+                        : (booking.getCreatedAt() != null ? booking.getCreatedAt().toLocalDate() : now);
+                if (now.isAfter(cancellationDate.plusDays(45))) {
+                    isReadOnly = true;
+                }
+            }
+        }
+
         // Extraer primera foto de imagen o placeholder si existe
         String thumbnail = null;
         if (listing.getAccommodation() != null && listing.getAccommodation().getImages() != null && !listing.getAccommodation().getImages().isEmpty()) {
@@ -97,7 +147,8 @@ public record ConversationSummaryDto(
             interlocutorUnread != null ? interlocutorUnread : 0,
             archived,
             isCurrentUserHost,
-            isReported
+            isReported,
+            isReadOnly
         );
     }
 }

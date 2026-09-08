@@ -208,7 +208,7 @@ class ConversationServiceImplTest {
 
             when(userRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
             when(listingRepository.findById(listingId)).thenReturn(Optional.of(listing));
-            when(bookingRequestRepository.findActiveRequestsByUserAndListing(tenantId, listingId))
+            when(bookingRequestRepository.findActiveRequestsByUserAndListing(eq(tenantId), eq(listingId), any(), any()))
                     .thenReturn(List.of(newBooking));
             when(conversationRepository.findByTenantIdAndHostIdAndListingId(tenantId, hostId, listingId))
                     .thenReturn(Optional.of(conversation));
@@ -228,7 +228,7 @@ class ConversationServiceImplTest {
 
             when(userRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
             when(listingRepository.findById(listingId)).thenReturn(Optional.of(listing));
-            when(bookingRequestRepository.findActiveRequestsByUserAndListing(tenantId, listingId))
+            when(bookingRequestRepository.findActiveRequestsByUserAndListing(eq(tenantId), eq(listingId), any(), any()))
                     .thenReturn(Collections.emptyList());
             when(conversationRepository.findByTenantIdAndHostIdAndListingId(tenantId, hostId, listingId))
                     .thenReturn(Optional.of(conversation));
@@ -462,6 +462,17 @@ class ConversationServiceImplTest {
             conversationService.linkBookingRequestIfExists(tenantId, hostId, listingId, bookingId);
 
             verify(conversationRepository, never()).linkActiveBookingRequest(any(), any());
+        }
+
+        @Test
+        @DisplayName("getUnreadMessagesCount: delega en repository y retorna la suma de no leídos")
+        void getUnreadMessagesCount_success() {
+            when(conversationRepository.countUnreadMessagesByUserId(tenantId)).thenReturn(5L);
+
+            long count = conversationService.getUnreadMessagesCount(tenantId);
+
+            assertThat(count).isEqualTo(5L);
+            verify(conversationRepository).countUnreadMessagesByUserId(tenantId);
         }
     }
 }

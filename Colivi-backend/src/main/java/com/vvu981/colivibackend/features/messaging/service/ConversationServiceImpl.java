@@ -27,6 +27,7 @@ import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
@@ -70,7 +71,10 @@ public class ConversationServiceImpl implements ConversationService {
             throw new BusinessRuleValidationException("Un anfitrión no puede abrir un canal de consulta sobre su propio anuncio.");
         }
 
-        List<BookingRequest> activeRequests = bookingRequestRepository.findActiveRequestsByUserAndListing(tenantId, listingId);
+        LocalDate minConfirmedDate = LocalDate.now().minusDays(45);
+        LocalDateTime minCancelledDateTime = LocalDateTime.now().minusDays(45);
+        List<BookingRequest> activeRequests = bookingRequestRepository.findActiveRequestsByUserAndListing(
+                tenantId, listingId, minConfirmedDate, minCancelledDateTime);
         BookingRequest activeBooking = activeRequests.isEmpty() ? null : activeRequests.get(0);
 
         Optional<Conversation> existing = conversationRepository.findByTenantIdAndHostIdAndListingId(tenantId, host.getId(), listingId);
@@ -219,6 +223,12 @@ public class ConversationServiceImpl implements ConversationService {
     @Transactional
     public void unlinkBookingRequest(UUID bookingRequestId) {
         conversationRepository.unlinkBookingRequest(bookingRequestId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long getUnreadMessagesCount(UUID userId) {
+        return conversationRepository.countUnreadMessagesByUserId(userId);
     }
 }
 

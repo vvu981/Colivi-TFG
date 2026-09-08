@@ -47,9 +47,12 @@ export const ListingHostCard: React.FC<ListingHostCardProps> = ({
       setError(null);
       const conv = await messagingApi.startConsultation(listingId);
       navigate(`/messages/${conv.conversationId}`);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error opening consultation chat with host', err);
-      setError(err instanceof Error ? err.message : 'No se pudo abrir el chat con el anfitrión.');
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        (err instanceof Error ? err.message : 'No se pudo abrir el chat con el anfitrión.');
+      setError(msg);
     } finally {
       setIsStartingChat(false);
     }

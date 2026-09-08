@@ -102,4 +102,13 @@ describe('messagingApi Unit Tests', () => {
 
     expect(api.patch).toHaveBeenCalledWith('/conversations/c-1/read-receipt');
   });
+
+  it('getUnreadMessagesCount debe llamar a GET /conversations/unread-count', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: { unreadCount: 5 } });
+
+    const result = await messagingApi.getUnreadMessagesCount();
+
+    expect(api.get).toHaveBeenCalledWith('/conversations/unread-count');
+    expect(result).toEqual({ unreadCount: 5 });
+  });
 });

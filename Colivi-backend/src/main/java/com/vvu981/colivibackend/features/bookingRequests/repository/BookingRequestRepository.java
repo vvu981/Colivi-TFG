@@ -22,7 +22,10 @@ public interface BookingRequestRepository
                 SELECT COUNT(b) > 0 FROM BookingRequest b
                 WHERE b.accommodationListing.id = :listingId
                   AND b.requester.id = :requesterId
-                  AND b.status IN ('PENDING', 'ACCEPTED', 'CONFIRMED')
+                  AND (
+                    b.status IN ('PENDING', 'ACCEPTED')
+                    OR (b.status = 'CONFIRMED' AND b.endDate >= CURRENT_DATE)
+                  )
             """)
     boolean existsActiveRequestByUserAndListing(
             @org.springframework.data.repository.query.Param("requesterId") UUID requesterId,
@@ -32,12 +35,18 @@ public interface BookingRequestRepository
                 SELECT b FROM BookingRequest b
                 WHERE b.accommodationListing.id = :listingId
                   AND b.requester.id = :requesterId
-                  AND b.status IN ('PENDING', 'ACCEPTED', 'CONFIRMED')
+                  AND (
+                    b.status IN ('PENDING', 'ACCEPTED')
+                    OR (b.status = 'CONFIRMED' AND b.endDate >= :minConfirmedDate)
+                    OR (b.status = 'CANCELLED' AND b.transactionId IS NOT NULL AND b.updatedAt >= :minCancelledDateTime)
+                  )
                 ORDER BY b.createdAt DESC
             """)
     java.util.List<BookingRequest> findActiveRequestsByUserAndListing(
             @org.springframework.data.repository.query.Param("requesterId") UUID requesterId,
-            @org.springframework.data.repository.query.Param("listingId") UUID listingId);
+            @org.springframework.data.repository.query.Param("listingId") UUID listingId,
+            @org.springframework.data.repository.query.Param("minConfirmedDate") java.time.LocalDate minConfirmedDate,
+            @org.springframework.data.repository.query.Param("minCancelledDateTime") java.time.LocalDateTime minCancelledDateTime);
 
     @org.springframework.data.jpa.repository.Query("""
                 SELECT COUNT(b) FROM BookingRequest b
@@ -60,6 +69,21 @@ public interface BookingRequestRepository
                   AND b.endDate >= :startDate
             """)
     java.util.List<UUID> findOverlappingRequestIds(
+            @org.springframework.data.repository.query.Param("listingId") UUID listingId,
+            @org.springframework.data.repository.query.Param("confirmedRequestId") UUID confirmedRequestId,
+            @org.springframework.data.repository.query.Param("startDate") java.time.LocalDate startDate,
+            @org.springframework.data.repository.query.Param("endDate") java.time.LocalDate endDate);
+
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = { "requester", "accommodationListing" })
+    @org.springframework.data.jpa.repository.Query("""
+                SELECT b FROM BookingRequest b
+                WHERE b.accommodationListing.id = :listingId
+                  AND b.id != :confirmedRequestId
+                  AND b.status IN ('PENDING', 'ACCEPTED')
+                  AND b.startDate <= :endDate
+                  AND b.endDate >= :startDate
+            """)
+    java.util.List<BookingRequest> findOverlappingRequests(
             @org.springframework.data.repository.query.Param("listingId") UUID listingId,
             @org.springframework.data.repository.query.Param("confirmedRequestId") UUID confirmedRequestId,
             @org.springframework.data.repository.query.Param("startDate") java.time.LocalDate startDate,

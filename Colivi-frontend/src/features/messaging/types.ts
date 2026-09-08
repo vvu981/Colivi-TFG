@@ -35,6 +35,7 @@ export interface ConversationSummary {
   isArchived: boolean;
   isHost: boolean;
   isReported?: boolean;
+  isReadOnly?: boolean;
 }
 
 export interface PageResponse<T> {

@@ -71,6 +71,7 @@ class AdminConversationServiceImplTest {
         tenant.setNickname("tenant1");
         tenant.setFirstName("Juan");
         tenant.setLastName1("Perez");
+        tenant.setLastName2("Gomez");
         tenant.setEmail("tenant@example.com");
         tenant.setRole(UserRole.USER);
 
@@ -132,7 +133,9 @@ class AdminConversationServiceImplTest {
         assertThat(dossier.listing()).isNotNull();
         assertThat(dossier.listing().title()).isEqualTo("Piso céntrico");
         assertThat(dossier.tenant().nickname()).isEqualTo("tenant1");
+        assertThat(dossier.tenant().lastName()).isEqualTo("Perez Gomez");
         assertThat(dossier.host().nickname()).isEqualTo("host1");
+        assertThat(dossier.host().lastName()).isEqualTo("Garcia");
         assertThat(dossier.messages()).hasSize(1);
         assertThat(dossier.messages().get(0).content()).isEqualTo("Hola, me interesa el piso.");
     }

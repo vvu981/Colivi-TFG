@@ -203,4 +203,18 @@ class ConversationControllerTest {
 
                 verify(messageService).markConversationAsRead(conversationId, currentUserId);
         }
+
+        @Test
+        @DisplayName("GET /unread-count -> 200 OK con conteo de no leídos")
+        void getUnreadMessagesCount_shouldReturn200() throws Exception {
+                when(conversationService.getUnreadMessagesCount(currentUserId))
+                                .thenReturn(7L);
+
+                mockMvc.perform(get("/api/v1/conversations/unread-count")
+                                .with(authentication(buildAuth(currentUser))))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.unreadCount").value(7));
+
+                verify(conversationService).getUnreadMessagesCount(currentUserId);
+        }
 }

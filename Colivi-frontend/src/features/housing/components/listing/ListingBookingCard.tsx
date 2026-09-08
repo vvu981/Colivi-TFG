@@ -87,9 +87,12 @@ export const ListingBookingCard: React.FC<ListingBookingCardProps> = ({
       setError(null);
       const conv = await messagingApi.startConsultation(id);
       navigate(`/messages/${conv.conversationId}`);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error opening consultation chat', err);
-      setError(err instanceof Error ? err.message : 'No se pudo abrir el chat de consulta.');
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        (err instanceof Error ? err.message : 'No se pudo abrir el chat de consulta.');
+      setError(msg);
     } finally {
       setIsStartingChat(false);
     }

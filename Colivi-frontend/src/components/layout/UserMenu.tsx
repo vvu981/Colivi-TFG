@@ -2,11 +2,13 @@ import { useRef, useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../features/auth/context/AuthContext';
 import { bookingRequestService } from '../../features/housing/api/bookingRequestService';
+import { messagingApi } from '../../features/messaging/api/messagingApi';
 
 export const UserMenu = () => {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState<number>(0);
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState<number>(0);
   const navigate = useNavigate();
   const location = useLocation();
   const menuRef = useRef<HTMLDivElement>(null);
@@ -21,9 +23,20 @@ export const UserMenu = () => {
     }
   }, [user]);
 
+  const fetchUnreadMessagesCount = useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await messagingApi.getUnreadMessagesCount();
+      setUnreadMessagesCount(res.unreadCount || 0);
+    } catch {
+      // Ignoramos silenciosamente si hay fallo puntual
+    }
+  }, [user]);
+
   useEffect(() => {
     fetchPendingCount();
-  }, [fetchPendingCount, location.pathname]);
+    fetchUnreadMessagesCount();
+  }, [fetchPendingCount, fetchUnreadMessagesCount, location.pathname]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -41,6 +54,7 @@ export const UserMenu = () => {
   };
 
   const isAdmin = user?.role === 'ADMIN';
+  const totalBadgeCount = pendingCount + unreadMessagesCount;
 
   return (
     <div ref={menuRef} className="relative">
@@ -65,12 +79,12 @@ export const UserMenu = () => {
               {user?.nickname?.charAt(0).toUpperCase() ?? '?'}
             </div>
           )}
-          {pendingCount > 0 && !isAdmin && (
+          {totalBadgeCount > 0 && !isAdmin && (
             <span
               className="absolute -top-1 -right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-error text-[10px] font-bold text-on-error shadow-sm ring-2 ring-white animate-pulse"
-              title={`${pendingCount} solicitudes pendientes`}
+              title={`${totalBadgeCount} avisos pendientes`}
             >
-              {pendingCount > 99 ? '99+' : pendingCount}
+              {totalBadgeCount > 99 ? '99+' : totalBadgeCount}
             </span>
           )}
         </div>
@@ -165,12 +179,19 @@ export const UserMenu = () => {
                   <Link
                     to="/messages"
                     onClick={() => setOpen(false)}
-                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-on-surface hover:bg-surface-container transition-colors"
+                    className="flex items-center justify-between px-4 py-2.5 text-sm text-on-surface hover:bg-surface-container transition-colors"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
-                    </svg>
-                    Mensajes
+                    <div className="flex items-center gap-2.5">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+                      </svg>
+                      <span>Mensajes</span>
+                    </div>
+                    {unreadMessagesCount > 0 && (
+                      <span className="flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-on-primary bg-primary rounded-full min-w-5 h-5">
+                        {unreadMessagesCount > 99 ? '99+' : unreadMessagesCount}
+                      </span>
+                    )}
                   </Link>
                   <Link
                     to="/my-requests"

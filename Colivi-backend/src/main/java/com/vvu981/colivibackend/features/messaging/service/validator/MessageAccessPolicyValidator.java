@@ -65,45 +65,55 @@ public class MessageAccessPolicyValidator {
         }
     }
 
-    private void validateBookingLifecycleWindow(BookingRequest booking) {
+    public boolean isBookingLifecycleExpired(BookingRequest booking) {
+        if (booking == null) {
+            return false;
+        }
         RequestStatus status = booking.getStatus();
         LocalDate now = LocalDate.now();
 
-        switch (status) {
-            case PENDING, ACCEPTED -> {
-                // Totalmente abierto y operativo
+        if (status == RequestStatus.CONFIRMED) {
+            if (now.isAfter(booking.getEndDate())) {
+                LocalDate legalCutoff = booking.getEndDate().plusDays(LEGAL_SETTLEMENT_DAYS);
+                return now.isAfter(legalCutoff);
             }
-            case CONFIRMED -> {
-                // Si la estancia ha concluido (now > endDate), aplicar plazo legal de 45 días tras fin de estancia
-                if (now.isAfter(booking.getEndDate())) {
-                    LocalDate legalCutoff = booking.getEndDate().plusDays(LEGAL_SETTLEMENT_DAYS);
-                    if (now.isAfter(legalCutoff)) {
-                        throw new BusinessRuleValidationException(
-                            "El canal de comunicación ha finalizado. Han transcurrido más de " + 
-                            LEGAL_SETTLEMENT_DAYS + " días desde la finalización de la estancia."
-                        );
-                    }
-                }
-                // Si la estancia no ha concluido aún, está totalmente abierto
-            }
-            case CANCELLED -> {
-                // Si hubo fianza/transacción previa, mantener 45 días para liquidaciones contados desde la cancelación
-                if (booking.getTransactionId() != null) {
-                    LocalDate cancellationDate = booking.getUpdatedAt() != null
-                            ? booking.getUpdatedAt().toLocalDate()
-                            : (booking.getCreatedAt() != null ? booking.getCreatedAt().toLocalDate() : now);
-                    LocalDate legalCutoff = cancellationDate.plusDays(LEGAL_SETTLEMENT_DAYS);
-                    if (now.isAfter(legalCutoff)) {
-                        throw new BusinessRuleValidationException(
-                            "El canal de resolución de fianza para esta reserva cancelada ha expirado tras " + 
-                            LEGAL_SETTLEMENT_DAYS + " días desde la cancelación."
-                        );
-                    }
-                }
-                // Si fue cancelada sin transacción económica, el hilo opera como consulta abierta para renegociar
-            }
-            case REJECTED, EXPIRED -> {
-                // Una solicitud rechazada o expirada se desvincula de la conversación, permitiendo renegociar como consulta
+            return false;
+        }
+
+        if (status == RequestStatus.CANCELLED && booking.getTransactionId() != null) {
+            LocalDate cancellationDate = booking.getUpdatedAt() != null
+                    ? booking.getUpdatedAt().toLocalDate()
+                    : (booking.getCreatedAt() != null ? booking.getCreatedAt().toLocalDate() : now);
+            LocalDate legalCutoff = cancellationDate.plusDays(LEGAL_SETTLEMENT_DAYS);
+            return now.isAfter(legalCutoff);
+        }
+
+        return false;
+    }
+
+    public boolean isConversationReadOnly(Conversation conversation) {
+        if (conversation == null) {
+            return false;
+        }
+        AccommodationListing listing = conversation.getListing();
+        if (listing != null && (listing.getBannedAt() != null || listing.getDeletedAt() != null)) {
+            return true;
+        }
+        return isBookingLifecycleExpired(conversation.getActiveBookingRequest());
+    }
+
+    private void validateBookingLifecycleWindow(BookingRequest booking) {
+        if (isBookingLifecycleExpired(booking)) {
+            if (booking.getStatus() == RequestStatus.CONFIRMED) {
+                throw new BusinessRuleValidationException(
+                    "El canal de comunicación ha finalizado. Han transcurrido más de " + 
+                    LEGAL_SETTLEMENT_DAYS + " días desde la finalización de la estancia."
+                );
+            } else if (booking.getStatus() == RequestStatus.CANCELLED) {
+                throw new BusinessRuleValidationException(
+                    "El canal de resolución de fianza para esta reserva cancelada ha expirado tras " + 
+                    LEGAL_SETTLEMENT_DAYS + " días desde la cancelación."
+                );
             }
         }
     }

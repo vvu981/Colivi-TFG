@@ -28,4 +28,6 @@ public interface ConversationService {
     void linkBookingRequestIfExists(UUID tenantId, UUID hostId, UUID listingId, UUID bookingRequestId);
 
     void unlinkBookingRequest(UUID bookingRequestId);
+
+    long getUnreadMessagesCount(UUID userId);
 }

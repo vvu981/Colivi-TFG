@@ -102,7 +102,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       await onSendMessage(textToSend);
     } catch (err: unknown) {
       setInputText(textToSend);
-      const msg = err instanceof Error ? err.message : 'No se pudo enviar el mensaje. Inténtalo de nuevo.';
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        (err instanceof Error ? err.message : 'No se pudo enviar el mensaje. Inténtalo de nuevo.');
       setErrorMessage(msg);
     }
   };
