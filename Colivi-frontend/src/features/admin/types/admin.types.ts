@@ -129,7 +129,7 @@ export interface AdminConversationMessage {
   senderId: string | null;
   senderName: string;
   content: string;
-  messageType: 'USER_MESSAGE' | 'SYSTEM_NUDGE' | 'SYSTEM_EVENT';
+  messageType: 'USER_MESSAGE' | 'SYSTEM_MESSAGE' | 'SYSTEM_NUDGE' | 'SYSTEM_EVENT';
   status: 'SENT' | 'DELIVERED' | 'READ';
   createdAt: string;
   readAt: string | null;

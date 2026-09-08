@@ -721,7 +721,7 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
                             ? `Propietario (${hostName})`
                             : msg.senderName || 'Sistema';
 
-                          if (msg.messageType === 'SYSTEM_MESSAGE' || msg.messageType?.startsWith('SYSTEM_')) {
+                          if (msg.messageType !== 'USER_MESSAGE') {
                             return (
                               <div
                                 key={msg.id}
