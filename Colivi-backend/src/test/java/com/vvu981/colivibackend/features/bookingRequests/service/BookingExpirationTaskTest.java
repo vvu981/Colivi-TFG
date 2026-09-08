@@ -1,8 +1,11 @@
 package com.vvu981.colivibackend.features.bookingRequests.service;
 
+import com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing;
 import com.vvu981.colivibackend.features.bookingRequests.domain.BookingRequest;
+import com.vvu981.colivibackend.features.bookingRequests.domain.BookingStatusChangedEvent;
 import com.vvu981.colivibackend.features.bookingRequests.domain.RequestStatus;
 import com.vvu981.colivibackend.features.bookingRequests.repository.BookingRequestRepository;
+import com.vvu981.colivibackend.features.user.domain.User;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,6 +44,7 @@ class BookingExpirationTaskTest {
         bookingExpirationTask.expireUnpaidRequests();
 
         verify(bookingRequestRepository, never()).saveAll(any());
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
@@ -48,9 +52,19 @@ class BookingExpirationTaskTest {
     void whenExpiredRequestsExist_thenExpireAndSaveAll() {
         BookingRequest request1 = mock(BookingRequest.class);
         BookingRequest request2 = mock(BookingRequest.class);
+        User mockRequester = mock(User.class);
+        AccommodationListing mockListing = mock(AccommodationListing.class);
+
+        when(mockRequester.getEmail()).thenReturn("tenant@example.com");
+        when(mockListing.getTitle()).thenReturn("Habitación Centro");
 
         when(request1.getId()).thenReturn(UUID.randomUUID());
+        when(request1.getRequester()).thenReturn(mockRequester);
+        when(request1.getAccommodationListing()).thenReturn(mockListing);
+
         when(request2.getId()).thenReturn(UUID.randomUUID());
+        when(request2.getRequester()).thenReturn(mockRequester);
+        when(request2.getAccommodationListing()).thenReturn(mockListing);
 
         List<BookingRequest> expiredList = List.of(request1, request2);
 
@@ -62,6 +76,7 @@ class BookingExpirationTaskTest {
         verify(request1).expire();
         verify(request2).expire();
         verify(bookingRequestRepository).saveAll(expiredList);
+        verify(eventPublisher, times(2)).publishEvent(any(BookingStatusChangedEvent.class));
     }
 
     @Test
@@ -69,9 +84,16 @@ class BookingExpirationTaskTest {
     void whenRequestFailsToExpire_thenCatchErrorAndContinue() {
         BookingRequest faultyRequest = mock(BookingRequest.class);
         BookingRequest validRequest = mock(BookingRequest.class);
+        User mockRequester = mock(User.class);
+        AccommodationListing mockListing = mock(AccommodationListing.class);
+
+        when(mockRequester.getEmail()).thenReturn("tenant@example.com");
+        when(mockListing.getTitle()).thenReturn("Habitación Centro");
 
         when(faultyRequest.getId()).thenReturn(UUID.randomUUID());
         when(validRequest.getId()).thenReturn(UUID.randomUUID());
+        when(validRequest.getRequester()).thenReturn(mockRequester);
+        when(validRequest.getAccommodationListing()).thenReturn(mockListing);
 
         doThrow(new IllegalStateException("Invalid status transition")).when(faultyRequest).expire();
 
@@ -85,5 +107,6 @@ class BookingExpirationTaskTest {
         verify(faultyRequest).expire();
         verify(validRequest).expire();
         verify(bookingRequestRepository).saveAll(expiredList);
+        verify(eventPublisher, times(1)).publishEvent(any(BookingStatusChangedEvent.class));
     }
 }

@@ -94,6 +94,7 @@ class ConversationControllerTest {
                                 "Hola mundo",
                                 LocalDateTime.now(),
                                 0,
+                                0,
                                 false,
                                 false,
                                 false);

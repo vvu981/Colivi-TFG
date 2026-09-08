@@ -43,6 +43,11 @@ export const StickyContextChatHeader: React.FC<StickyContextChatHeaderProps> = (
           </span>
         );
       case 'REJECTED':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-error-container text-on-error-container">
+            Reserva Rechazada
+          </span>
+        );
       case 'CANCELLED':
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-error-container text-on-error-container">

@@ -60,3 +60,10 @@ CREATE INDEX idx_conversations_inbox_host
 
 CREATE INDEX idx_messages_conversation_ordered 
     ON messages (conversation_id, created_at DESC);
+
+CREATE INDEX idx_conversations_active_booking 
+    ON conversations (active_booking_request_id);
+
+CREATE INDEX idx_messages_sender 
+    ON messages (sender_id);
+

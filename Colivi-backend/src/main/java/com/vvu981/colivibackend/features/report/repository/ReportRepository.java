@@ -36,6 +36,15 @@ public interface ReportRepository extends JpaRepository<Report, UUID>, JpaSpecif
                         @Param("targetType") ReportTargetType targetType,
                         @Param("targetIds") Collection<UUID> targetIds);
 
+        @Query("SELECT DISTINCT r.targetId FROM Report r " +
+               "WHERE r.reporterId = :reporterId AND r.targetType = :targetType AND r.targetId IN :targetIds " +
+               "  AND r.status IN (com.vvu981.colivibackend.features.report.domain.ReportStatus.PENDING, com.vvu981.colivibackend.features.report.domain.ReportStatus.INVESTIGATING)")
+        List<UUID> findExistingReportedTargetIdsByReporter(
+                        @Param("reporterId") UUID reporterId,
+                        @Param("targetType") ReportTargetType targetType,
+                        @Param("targetIds") Collection<UUID> targetIds);
+
+
         List<Report> findByReporterIdAndStatusAndReporterNotifiedFalse(UUID reporterId, ReportStatus status);
 
         @Query(value = "SELECT new com.vvu981.colivibackend.features.report.dto.ReportTargetCountDTO("

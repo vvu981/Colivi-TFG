@@ -232,4 +232,53 @@ describe('InboxView Component', () => {
 
     expect(onTabChange).toHaveBeenCalledWith(true);
   });
+
+  it('permite al inquilino (isHost: false) archivar conversaciones desde la lista', async () => {
+    const user = userEvent.setup();
+    const onArchiveToggle = vi.fn();
+    const tenantConv: ConversationSummary = {
+      ...activeConversation,
+      isHost: false,
+    };
+
+    render(
+      <InboxView
+        conversations={[tenantConv]}
+        onSelectConversation={vi.fn()}
+        onArchiveToggle={onArchiveToggle}
+      />
+    );
+
+    const archiveBtn = screen.getByRole('button', { name: 'Archivar' });
+    expect(archiveBtn).toBeInTheDocument();
+    await user.click(archiveBtn);
+
+    expect(onArchiveToggle).toHaveBeenCalledWith('c-1', false);
+  });
+
+  it('renderiza la paginación cuando totalPages > 1 y permite navegar', async () => {
+    const user = userEvent.setup();
+    const onPageChange = vi.fn();
+
+    render(
+      <InboxView
+        conversations={[activeConversation]}
+        onSelectConversation={vi.fn()}
+        currentPage={0}
+        totalPages={3}
+        onPageChange={onPageChange}
+        totalElements={25}
+      />
+    );
+
+    expect(screen.getByText('Página 1 de 3')).toBeInTheDocument();
+    const nextBtn = screen.getByRole('button', { name: /siguiente/i });
+    const prevBtn = screen.getByRole('button', { name: /anterior/i });
+
+    expect(prevBtn).toBeDisabled();
+    expect(nextBtn).not.toBeDisabled();
+
+    await user.click(nextBtn);
+    expect(onPageChange).toHaveBeenCalledWith(1);
+  });
 });

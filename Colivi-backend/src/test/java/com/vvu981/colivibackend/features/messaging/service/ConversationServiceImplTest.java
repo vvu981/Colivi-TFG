@@ -155,6 +155,36 @@ class ConversationServiceImplTest {
         }
 
         @Test
+        @DisplayName("Retorna la conversación existente incluso si el anuncio está UNAVAILABLE")
+        void whenConversationExists_andListingUnavailable_thenReturnExisting() {
+            listing.setStatus(ListingStatus.UNAVAILABLE);
+            when(userRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
+            when(listingRepository.findById(listingId)).thenReturn(Optional.of(listing));
+            when(conversationRepository.findByTenantIdAndHostIdAndListingId(tenantId, hostId, listingId))
+                    .thenReturn(Optional.of(conversation));
+
+            Conversation result = conversationService.getOrCreateConsultation(tenantId, listingId);
+
+            assertThat(result).isNotNull();
+            assertThat(result.getId()).isEqualTo(conversationId);
+            verify(conversationRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Lanza BusinessRuleValidationException si se intenta crear una NUEVA conversación y el anuncio está UNAVAILABLE")
+        void whenNewConversation_andListingUnavailable_thenThrowException() {
+            listing.setStatus(ListingStatus.UNAVAILABLE);
+            when(userRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
+            when(listingRepository.findById(listingId)).thenReturn(Optional.of(listing));
+            when(conversationRepository.findByTenantIdAndHostIdAndListingId(tenantId, hostId, listingId))
+                    .thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> conversationService.getOrCreateConsultation(tenantId, listingId))
+                    .isInstanceOf(BusinessRuleValidationException.class)
+                    .hasMessageContaining("El anuncio no está disponible actualmente.");
+        }
+
+        @Test
         @DisplayName("Retorna la conversación existente si ya fue creada previamente")
         void whenConversationExists_thenReturnExisting() {
             when(userRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
@@ -227,7 +257,7 @@ class ConversationServiceImplTest {
         @DisplayName("Retorna el DTO con el flag de reporte correspondiente")
         void whenGetSummary_thenReturnDtoWithReportedFlag() {
             when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
-            when(reportRepository.existsByTargetTypeAndTargetIdAndStatusIn(eq(ReportTargetType.CONVERSATION), eq(conversationId), anyList()))
+            when(reportRepository.existsByReporterIdAndTargetTypeAndTargetIdAndStatusIn(eq(tenantId), eq(ReportTargetType.CONVERSATION), eq(conversationId), anyList()))
                     .thenReturn(true);
 
             ConversationSummaryDto summary = conversationService.getConversationSummary(conversationId, tenantId);
@@ -252,7 +282,7 @@ class ConversationServiceImplTest {
             Page<ConversationSummaryDto> result = conversationService.getInbox(tenantId, false, pageable);
 
             assertThat(result.getContent()).isEmpty();
-            verify(reportRepository, never()).findExistingReportedTargetIds(any(), any());
+            verify(reportRepository, never()).findExistingReportedTargetIdsByReporter(any(), any(), any());
         }
 
         @Test
@@ -261,7 +291,7 @@ class ConversationServiceImplTest {
             Pageable pageable = PageRequest.of(0, 10);
             when(conversationRepository.findInboxByUserId(tenantId, false, pageable))
                     .thenReturn(new PageImpl<>(List.of(conversation), pageable, 1));
-            when(reportRepository.findExistingReportedTargetIds(eq(ReportTargetType.CONVERSATION), anyList()))
+            when(reportRepository.findExistingReportedTargetIdsByReporter(eq(tenantId), eq(ReportTargetType.CONVERSATION), anyList()))
                     .thenReturn(List.of(conversationId));
 
             Page<ConversationSummaryDto> result = conversationService.getInbox(tenantId, false, pageable);
@@ -366,6 +396,32 @@ class ConversationServiceImplTest {
             conversationService.unlinkBookingRequest(bookingId);
 
             verify(conversationRepository).unlinkBookingRequest(bookingId);
+        }
+
+        @Test
+        @DisplayName("linkBookingRequestIfExists: Si existe conversación, delega en linkBookingRequest")
+        void linkBookingRequestIfExists_whenExists_thenLink() {
+            UUID bookingId = UUID.randomUUID();
+            BookingRequest booking = BookingRequest.builder().id(bookingId).build();
+            when(conversationRepository.findByTenantIdAndHostIdAndListingId(tenantId, hostId, listingId))
+                    .thenReturn(Optional.of(conversation));
+            when(bookingRequestRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+
+            conversationService.linkBookingRequestIfExists(tenantId, hostId, listingId, bookingId);
+
+            verify(conversationRepository).linkActiveBookingRequest(conversationId, booking);
+        }
+
+        @Test
+        @DisplayName("linkBookingRequestIfExists: Si no existe conversación, no hace nada")
+        void linkBookingRequestIfExists_whenDoesNotExist_thenDoNothing() {
+            UUID bookingId = UUID.randomUUID();
+            when(conversationRepository.findByTenantIdAndHostIdAndListingId(tenantId, hostId, listingId))
+                    .thenReturn(Optional.empty());
+
+            conversationService.linkBookingRequestIfExists(tenantId, hostId, listingId, bookingId);
+
+            verify(conversationRepository, never()).linkActiveBookingRequest(any(), any());
         }
     }
 }

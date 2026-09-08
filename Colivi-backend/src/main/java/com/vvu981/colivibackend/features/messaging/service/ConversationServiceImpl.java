@@ -61,17 +61,9 @@ public class ConversationServiceImpl implements ConversationService {
             throw new BusinessRuleValidationException("El anuncio no se encuentra disponible.");
         }
 
-        if (listing.getStatus() != ListingStatus.AVAILABLE) {
-            throw new BusinessRuleValidationException("El anuncio no está disponible actualmente.");
-        }
-
         User host = listing.getHost();
         if (host.getId().equals(tenantId)) {
             throw new BusinessRuleValidationException("Un anfitrión no puede abrir un canal de consulta sobre su propio anuncio.");
-        }
-
-        if (host.isBanned() || host.getDeletedAt() != null) {
-            throw new BusinessRuleValidationException("El anfitrión de este alojamiento no se encuentra disponible.");
         }
 
         List<BookingRequest> activeRequests = bookingRequestRepository.findActiveRequestsByUserAndListing(tenantId, listingId);
@@ -85,6 +77,19 @@ public class ConversationServiceImpl implements ConversationService {
                 conv.setActiveBookingRequest(activeBooking);
             }
             return conv;
+        }
+
+        // Si se trata de una NUEVA conversación, validamos disponibilidad del anuncio y del anfitrión
+        if (listing.getBannedAt() != null || listing.getDeletedAt() != null) {
+            throw new BusinessRuleValidationException("El anuncio no se encuentra disponible.");
+        }
+
+        if (listing.getStatus() != ListingStatus.AVAILABLE) {
+            throw new BusinessRuleValidationException("El anuncio no está disponible actualmente.");
+        }
+
+        if (host.isBanned() || host.getDeletedAt() != null) {
+            throw new BusinessRuleValidationException("El anfitrión de este alojamiento no se encuentra disponible.");
         }
 
         Conversation newConversation = Conversation.builder()
@@ -125,8 +130,8 @@ public class ConversationServiceImpl implements ConversationService {
     @Transactional(readOnly = true)
     public ConversationSummaryDto getConversationSummary(UUID conversationId, UUID requesterId) {
         Conversation conversation = getConversationById(conversationId, requesterId);
-        boolean isReported = reportRepository.existsByTargetTypeAndTargetIdAndStatusIn(
-                ReportTargetType.CONVERSATION, conversationId, List.of(ReportStatus.PENDING, ReportStatus.INVESTIGATING));
+        boolean isReported = reportRepository.existsByReporterIdAndTargetTypeAndTargetIdAndStatusIn(
+                requesterId, ReportTargetType.CONVERSATION, conversationId, List.of(ReportStatus.PENDING, ReportStatus.INVESTIGATING));
         return ConversationSummaryDto.fromEntity(conversation, requesterId, isReported);
     }
 
@@ -137,7 +142,7 @@ public class ConversationServiceImpl implements ConversationService {
         List<UUID> conversationIds = page.getContent().stream().map(Conversation::getId).toList();
         Set<UUID> reportedIds = conversationIds.isEmpty()
                 ? Set.of()
-                : new HashSet<>(reportRepository.findExistingReportedTargetIds(ReportTargetType.CONVERSATION, conversationIds));
+                : new HashSet<>(reportRepository.findExistingReportedTargetIdsByReporter(userId, ReportTargetType.CONVERSATION, conversationIds));
 
         return page.map(c -> ConversationSummaryDto.fromEntity(c, userId, reportedIds.contains(c.getId())));
     }
@@ -172,6 +177,21 @@ public class ConversationServiceImpl implements ConversationService {
                 .orElseThrow(() -> new ResourceNotFoundException("Solicitud de reserva no encontrada con ID: " + bookingRequestId));
 
         conversationRepository.linkActiveBookingRequest(conversationId, booking);
+    }
+
+    @Override
+    @Transactional
+    public void linkBookingRequestIfExists(UUID tenantId, UUID hostId, UUID listingId, UUID bookingRequestId) {
+        conversationRepository.findByTenantIdAndHostIdAndListingId(tenantId, hostId, listingId)
+                .ifPresent(conversation -> {
+                    log.info("Vinculando automáticamente nueva solicitud de reserva {} a conversación {}",
+                            bookingRequestId, conversation.getId());
+                    BookingRequest booking = bookingRequestRepository.findById(bookingRequestId)
+                            .orElse(null);
+                    if (booking != null) {
+                        conversationRepository.linkActiveBookingRequest(conversation.getId(), booking);
+                    }
+                });
     }
 
     @Override

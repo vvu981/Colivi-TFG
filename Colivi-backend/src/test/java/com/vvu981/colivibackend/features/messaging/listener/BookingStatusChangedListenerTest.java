@@ -3,8 +3,6 @@ package com.vvu981.colivibackend.features.messaging.listener;
 import com.vvu981.colivibackend.features.bookingRequests.domain.BookingRequestCreatedEvent;
 import com.vvu981.colivibackend.features.bookingRequests.domain.BookingStatusChangedEvent;
 import com.vvu981.colivibackend.features.bookingRequests.domain.RequestStatus;
-import com.vvu981.colivibackend.features.messaging.domain.Conversation;
-import com.vvu981.colivibackend.features.messaging.repository.ConversationRepository;
 import com.vvu981.colivibackend.features.messaging.service.ConversationService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -14,7 +12,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.Mockito.*;
@@ -26,20 +23,16 @@ class BookingStatusChangedListenerTest {
     @Mock
     private ConversationService conversationService;
 
-    @Mock
-    private ConversationRepository conversationRepository;
-
     @InjectMocks
     private BookingStatusChangedListener listener;
 
     @Test
-    @DisplayName("Cuando se crea una solicitud y existe conversación previa, vincula la solicitud")
-    void whenBookingRequestCreated_andConversationExists_thenLinkRequest() {
+    @DisplayName("Cuando se crea una solicitud, delega en conversationService para vincularla si existe conversación")
+    void whenBookingRequestCreated_thenDelegateToConversationService() {
         UUID requestId = UUID.randomUUID();
         UUID requesterId = UUID.randomUUID();
         UUID listingId = UUID.randomUUID();
         UUID hostId = UUID.randomUUID();
-        UUID conversationId = UUID.randomUUID();
 
         BookingRequestCreatedEvent event = new BookingRequestCreatedEvent(
                 requestId,
@@ -55,13 +48,14 @@ class BookingStatusChangedListenerTest {
                 "Hola"
         );
 
-        Conversation conversation = Conversation.builder().id(conversationId).build();
-        when(conversationRepository.findByTenantIdAndHostIdAndListingId(requesterId, hostId, listingId))
-                .thenReturn(Optional.of(conversation));
-
         listener.onBookingRequestCreated(event);
 
-        verify(conversationService, times(1)).linkBookingRequest(conversationId, requestId);
+        verify(conversationService, times(1)).linkBookingRequestIfExists(
+                requesterId,
+                hostId,
+                listingId,
+                requestId
+        );
     }
 
     @Test

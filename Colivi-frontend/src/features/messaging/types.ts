@@ -31,6 +31,7 @@ export interface ConversationSummary {
   lastMessagePreview?: string | null;
   lastMessageAt: string;
   unreadCount: number;
+  interlocutorUnreadCount?: number;
   isArchived: boolean;
   isHost: boolean;
   isReported?: boolean;

@@ -3,7 +3,6 @@ package com.vvu981.colivibackend.features.messaging.listener;
 import com.vvu981.colivibackend.features.bookingRequests.domain.BookingRequestCreatedEvent;
 import com.vvu981.colivibackend.features.bookingRequests.domain.BookingStatusChangedEvent;
 import com.vvu981.colivibackend.features.bookingRequests.domain.RequestStatus;
-import com.vvu981.colivibackend.features.messaging.repository.ConversationRepository;
 import com.vvu981.colivibackend.features.messaging.service.ConversationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,7 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class BookingStatusChangedListener {
 
     private final ConversationService conversationService;
-    private final ConversationRepository conversationRepository;
 
     @EventListener
     @Transactional
@@ -26,12 +24,7 @@ public class BookingStatusChangedListener {
             return;
         }
 
-        conversationRepository.findByTenantIdAndHostIdAndListingId(event.requesterId(), event.hostId(), event.listingId())
-                .ifPresent(conversation -> {
-                    log.info("Vinculando automáticamente nueva solicitud de reserva {} a conversación {}",
-                            event.requestId(), conversation.getId());
-                    conversationService.linkBookingRequest(conversation.getId(), event.requestId());
-                });
+        conversationService.linkBookingRequestIfExists(event.requesterId(), event.hostId(), event.listingId(), event.requestId());
     }
 
     @EventListener

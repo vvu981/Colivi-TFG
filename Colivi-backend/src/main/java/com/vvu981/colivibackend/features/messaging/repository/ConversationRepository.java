@@ -30,7 +30,6 @@ public interface ConversationRepository extends JpaRepository<Conversation, UUID
         @EntityGraph(attributePaths = {
                 "listing",
                 "listing.accommodation",
-                "listing.accommodation.images",
                 "tenant",
                 "host",
                 "activeBookingRequest"
@@ -46,7 +45,7 @@ public interface ConversationRepository extends JpaRepository<Conversation, UUID
 
         // ─── Actualizaciones Atómicas Nativas (Sin @Version) ─────────────────────────
 
-        @Modifying(flushAutomatically = true, clearAutomatically = true)
+        @Modifying(flushAutomatically = true)
         @Query("UPDATE Conversation c SET " +
                         "c.lastMessageAt = :now, " +
                         "c.lastMessagePreview = :preview, " +
@@ -59,7 +58,7 @@ public interface ConversationRepository extends JpaRepository<Conversation, UUID
                         @Param("preview") String preview,
                         @Param("now") LocalDateTime now);
 
-        @Modifying(flushAutomatically = true, clearAutomatically = true)
+        @Modifying(flushAutomatically = true)
         @Query("UPDATE Conversation c SET " +
                         "c.lastMessageAt = :now, " +
                         "c.lastMessagePreview = :preview, " +
@@ -72,40 +71,40 @@ public interface ConversationRepository extends JpaRepository<Conversation, UUID
                         @Param("preview") String preview,
                         @Param("now") LocalDateTime now);
 
-        @Modifying(flushAutomatically = true, clearAutomatically = true)
+        @Modifying(flushAutomatically = true)
         @Query("UPDATE Conversation c SET " +
                         "c.tenantUnreadCount = c.tenantUnreadCount + 1, " +
                         "c.nudgeSent = true " +
                         "WHERE c.id = :conversationId AND c.nudgeSent = false AND c.activeBookingRequest IS NULL")
         int claimNudge(@Param("conversationId") UUID conversationId);
 
-        @Modifying(flushAutomatically = true, clearAutomatically = true)
+        @Modifying(flushAutomatically = true)
         @Query("UPDATE Conversation c SET c.tenantUnreadCount = 0 WHERE c.id = :conversationId")
         int resetTenantUnreadCount(@Param("conversationId") UUID conversationId);
 
-        @Modifying(flushAutomatically = true, clearAutomatically = true)
+        @Modifying(flushAutomatically = true)
         @Query("UPDATE Conversation c SET c.hostUnreadCount = 0 WHERE c.id = :conversationId")
         int resetHostUnreadCount(@Param("conversationId") UUID conversationId);
 
-        @Modifying(flushAutomatically = true, clearAutomatically = true)
+        @Modifying(flushAutomatically = true)
         @Query("UPDATE Conversation c SET c.archivedByHost = :archived WHERE c.id = :conversationId")
         int updateArchivedByHost(
                         @Param("conversationId") UUID conversationId,
                         @Param("archived") boolean archived);
 
-        @Modifying(flushAutomatically = true, clearAutomatically = true)
+        @Modifying(flushAutomatically = true)
         @Query("UPDATE Conversation c SET c.archivedByTenant = :archived WHERE c.id = :conversationId")
         int updateArchivedByTenant(
                         @Param("conversationId") UUID conversationId,
                         @Param("archived") boolean archived);
 
-        @Modifying(flushAutomatically = true, clearAutomatically = true)
+        @Modifying(flushAutomatically = true)
         @Query("UPDATE Conversation c SET c.activeBookingRequest = :bookingRequest WHERE c.id = :conversationId")
         int linkActiveBookingRequest(
                         @Param("conversationId") UUID conversationId,
                         @Param("bookingRequest") BookingRequest bookingRequest);
 
-        @Modifying(flushAutomatically = true, clearAutomatically = true)
+        @Modifying(flushAutomatically = true)
         @Query("UPDATE Conversation c SET c.activeBookingRequest = null WHERE c.activeBookingRequest.id = :bookingRequestId")
         int unlinkBookingRequest(@Param("bookingRequestId") UUID bookingRequestId);
 }

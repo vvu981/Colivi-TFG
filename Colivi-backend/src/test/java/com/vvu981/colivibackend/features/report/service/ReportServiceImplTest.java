@@ -283,7 +283,6 @@ class ReportServiceImplTest {
                 .build();
 
         when(conversationRepository.findById(convId)).thenReturn(Optional.of(conversation));
-        when(reportRepository.existsByTargetTypeAndTargetIdAndStatusIn(eq(ReportTargetType.CONVERSATION), eq(convId), anyList())).thenReturn(false);
         when(reportRepository.existsByReporterIdAndTargetTypeAndTargetIdAndStatusIn(any(), any(), any(), any())).thenReturn(false);
 
         Report reportEntity = new Report();
@@ -354,7 +353,7 @@ class ReportServiceImplTest {
     }
 
     @Test
-    void createReport_shouldThrowException_whenConversationAlreadyReported() {
+    void createReport_shouldThrowException_whenConversationAlreadyReportedBySameUser() {
         UUID convId = UUID.randomUUID();
         CreateReportRequest request = new CreateReportRequest(ReportTargetType.CONVERSATION, convId, ReportReason.SPAM, "Spam");
 
@@ -370,10 +369,10 @@ class ReportServiceImplTest {
                 .build();
 
         when(conversationRepository.findById(convId)).thenReturn(Optional.of(conversation));
-        when(reportRepository.existsByTargetTypeAndTargetIdAndStatusIn(eq(ReportTargetType.CONVERSATION), eq(convId), anyList())).thenReturn(true);
+        when(reportRepository.existsByReporterIdAndTargetTypeAndTargetIdAndStatusIn(eq(reporterId), eq(ReportTargetType.CONVERSATION), eq(convId), anyList())).thenReturn(true);
 
         assertThatThrownBy(() -> reportService.createReport(reporterId, request))
                 .isInstanceOf(BusinessRuleValidationException.class)
-                .hasMessageContaining("Esta conversación ya ha sido denunciada.");
+                .hasMessageContaining("Ya tienes una denuncia activa para este elemento.");
     }
 }

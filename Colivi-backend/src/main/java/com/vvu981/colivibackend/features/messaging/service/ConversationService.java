@@ -25,5 +25,7 @@ public interface ConversationService {
 
     void linkBookingRequest(UUID conversationId, UUID bookingRequestId);
 
+    void linkBookingRequestIfExists(UUID tenantId, UUID hostId, UUID listingId, UUID bookingRequestId);
+
     void unlinkBookingRequest(UUID bookingRequestId);
 }

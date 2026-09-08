@@ -180,6 +180,16 @@ describe('StickyContextChatHeader Component', () => {
 
     rerender(
       <StickyContextChatHeader
+        conversation={{ ...baseConversation, bookingStatus: 'REJECTED' }}
+        onRequestBooking={vi.fn()}
+        onArchiveToggle={vi.fn()}
+        onReportUser={vi.fn()}
+      />
+    );
+    expect(screen.getByText('Reserva Rechazada')).toBeInTheDocument();
+
+    rerender(
+      <StickyContextChatHeader
         conversation={{ ...baseConversation, bookingStatus: 'CANCELLED' }}
         onRequestBooking={vi.fn()}
         onArchiveToggle={vi.fn()}

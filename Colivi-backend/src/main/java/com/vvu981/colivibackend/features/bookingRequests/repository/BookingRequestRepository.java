@@ -15,6 +15,7 @@ public interface BookingRequestRepository
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = { "requester", "accommodationListing" })
     Page<BookingRequest> findByRequesterIdAndStatusNot(UUID currentUserId, RequestStatus status, Pageable page);
 
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = { "requester", "accommodationListing" })
     java.util.List<BookingRequest> findByStatusAndExpiresAtBefore(RequestStatus status, java.time.LocalDateTime expiresAt);
 
     @org.springframework.data.jpa.repository.Query("""

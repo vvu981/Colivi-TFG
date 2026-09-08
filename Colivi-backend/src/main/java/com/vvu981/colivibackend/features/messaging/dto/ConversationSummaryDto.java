@@ -26,6 +26,7 @@ public record ConversationSummaryDto(
     String lastMessagePreview,
     LocalDateTime lastMessageAt,
     Integer unreadCount,
+    Integer interlocutorUnreadCount,
     boolean isArchived,
     boolean isHost,
     boolean isReported
@@ -43,6 +44,10 @@ public record ConversationSummaryDto(
         Integer unread = isCurrentUserHost 
                 ? conversation.getHostUnreadCount() 
                 : conversation.getTenantUnreadCount();
+
+        Integer interlocutorUnread = isCurrentUserHost 
+                ? conversation.getTenantUnreadCount() 
+                : conversation.getHostUnreadCount();
 
         boolean archived = isCurrentUserHost 
                 ? conversation.getArchivedByHost() 
@@ -80,7 +85,7 @@ public record ConversationSummaryDto(
             thumbnail,
             listing.getPricePerMonth(),
             interlocutor.getId(),
-            interlocutor.getFirstName() + " " + interlocutor.getLastName1(),
+            interlocutor.getFullName(),
             interlocutor.getProfilePicUrl(),
             bookingId,
             statusStr,
@@ -89,6 +94,7 @@ public record ConversationSummaryDto(
             conversation.getLastMessagePreview(),
             conversation.getLastMessageAt(),
             unread != null ? unread : 0,
+            interlocutorUnread != null ? interlocutorUnread : 0,
             archived,
             isCurrentUserHost,
             isReported

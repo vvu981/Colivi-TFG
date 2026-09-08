@@ -15,6 +15,10 @@ export const MessagesPage: React.FC = () => {
 
   const {
     conversations,
+    totalElements,
+    totalPages,
+    currentPage,
+    setPage,
     isLoading: isInboxLoading,
     archiveConversation,
     isArchiving,
@@ -34,6 +38,18 @@ export const MessagesPage: React.FC = () => {
     isFetchingNextPage,
     refetchConversation,
   } = useConversationChat(conversationId);
+
+  const isReadOnly = React.useMemo(() => {
+    if (!conversation) return false;
+    if (conversation.bookingEndDate) {
+      const end = new Date(conversation.bookingEndDate);
+      const fortyFiveDaysLater = new Date(end.getTime() + 45 * 24 * 60 * 60 * 1000);
+      if (new Date() > fortyFiveDaysLater) {
+        return true;
+      }
+    }
+    return false;
+  }, [conversation]);
 
   const handleSelectConversation = (id: string) => {
     navigate(`/messages/${id}`);
@@ -81,6 +97,10 @@ export const MessagesPage: React.FC = () => {
               isLoading={isInboxLoading}
               isArchivedTab={isArchivedTab}
               onTabChange={setIsArchivedTab}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              totalElements={totalElements}
             />
           </div>
 
@@ -157,6 +177,7 @@ export const MessagesPage: React.FC = () => {
                       onSendMessage={sendMessage}
                       onRequestBooking={handleRequestBooking}
                       isSending={isSending}
+                      isReadOnly={isReadOnly}
                       hasNextPage={hasNextPage}
                       fetchNextPage={fetchNextPage}
                       isFetchingNextPage={isFetchingNextPage}

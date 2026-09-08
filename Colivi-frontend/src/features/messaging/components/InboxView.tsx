@@ -9,6 +9,10 @@ interface InboxViewProps {
   isLoading?: boolean;
   isArchivedTab?: boolean;
   onTabChange?: (isArchived: boolean) => void;
+  currentPage?: number;
+  totalPages?: number;
+  onPageChange?: (page: number) => void;
+  totalElements?: number;
 }
 
 export const InboxView: React.FC<InboxViewProps> = ({
@@ -19,6 +23,10 @@ export const InboxView: React.FC<InboxViewProps> = ({
   isLoading = false,
   isArchivedTab: controlledIsArchived,
   onTabChange,
+  currentPage,
+  totalPages,
+  onPageChange,
+  totalElements,
 }) => {
   const [internalTab, setInternalTab] = useState<'active' | 'archived'>('active');
   const isControlled = controlledIsArchived !== undefined;
@@ -47,10 +55,10 @@ export const InboxView: React.FC<InboxViewProps> = ({
     });
 
   const activeCount = isControlled
-    ? (activeTab === 'active' ? conversations.length : 0)
+    ? (activeTab === 'active' ? (totalElements !== undefined ? totalElements : conversations.length) : 0)
     : conversations.filter((c) => !c.isArchived).length;
   const archivedCount = isControlled
-    ? (activeTab === 'archived' ? conversations.length : 0)
+    ? (activeTab === 'archived' ? (totalElements !== undefined ? totalElements : conversations.length) : 0)
     : conversations.filter((c) => c.isArchived).length;
 
   const formatRelativeTime = (isoString: string) => {
@@ -305,7 +313,7 @@ export const InboxView: React.FC<InboxViewProps> = ({
                     )}
 
                     {/* Botón de Archivar (disponible en hover) */}
-                    {conv.isHost && onArchiveToggle && (
+                    {onArchiveToggle && (
                       <button
                         type="button"
                         onClick={(e) => {
@@ -325,6 +333,31 @@ export const InboxView: React.FC<InboxViewProps> = ({
           })
         )}
       </div>
+
+      {/* ─── Paginación de Conversaciones ───────────────────────────────── */}
+      {totalPages !== undefined && totalPages > 1 && (
+        <div className="p-3 border-t border-outline-variant/60 bg-surface flex items-center justify-between text-xs text-on-surface-variant">
+          <button
+            type="button"
+            disabled={(currentPage ?? 0) <= 0}
+            onClick={() => onPageChange?.(Math.max(0, (currentPage ?? 0) - 1))}
+            className="px-2.5 py-1 rounded-lg border border-outline-variant/60 disabled:opacity-40 hover:bg-surface-container transition-all"
+          >
+            Anterior
+          </button>
+          <span className="text-[11px] font-medium">
+            Página {(currentPage ?? 0) + 1} de {totalPages}
+          </span>
+          <button
+            type="button"
+            disabled={(currentPage ?? 0) + 1 >= totalPages}
+            onClick={() => onPageChange?.((currentPage ?? 0) + 1)}
+            className="px-2.5 py-1 rounded-lg border border-outline-variant/60 disabled:opacity-40 hover:bg-surface-container transition-all"
+          >
+            Siguiente
+          </button>
+        </div>
+      )}
     </div>
   );
 };

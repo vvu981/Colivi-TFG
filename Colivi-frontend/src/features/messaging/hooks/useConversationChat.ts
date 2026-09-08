@@ -13,6 +13,7 @@ import type { ConversationSummary, Message, PageResponse } from '../types';
 interface HeaderTrackingState {
   lastMessageAt?: string | null;
   unreadCount: number;
+  interlocutorUnreadCount?: number;
 }
 
 export const useConversationChat = (conversationId: string | undefined) => {
@@ -54,10 +55,11 @@ export const useConversationChat = (conversationId: string | undefined) => {
     if (prevState) {
       const hasChanged =
         prevState.lastMessageAt !== current.lastMessageAt ||
-        prevState.unreadCount !== current.unreadCount;
+        prevState.unreadCount !== current.unreadCount ||
+        prevState.interlocutorUnreadCount !== current.interlocutorUnreadCount;
 
       if (hasChanged) {
-        // Disparar refetch del historial solo si la cabecera indica actividad nueva
+        // Disparar refetch del historial si la cabecera indica actividad nueva o confirmación de lectura del interlocutor
         queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
       }
     }
@@ -65,6 +67,7 @@ export const useConversationChat = (conversationId: string | undefined) => {
     lastHeaderStateRef.current = {
       lastMessageAt: current.lastMessageAt,
       unreadCount: current.unreadCount,
+      interlocutorUnreadCount: current.interlocutorUnreadCount,
     };
 
     // Auto-marcado de lectura si existen mensajes no leídos

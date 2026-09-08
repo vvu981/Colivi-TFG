@@ -46,11 +46,13 @@ public class BookingExpirationTask {
             try {
                 request.expire();
                 log.info("Solicitud {} marcada como EXPIRED.", request.getId());
+                String tenantEmail = request.getRequester() != null ? request.getRequester().getEmail() : null;
+                String listingTitle = request.getAccommodationListing() != null ? request.getAccommodationListing().getTitle() : null;
                 if (eventPublisher != null) {
                     eventPublisher.publishEvent(new BookingStatusChangedEvent(
                             request.getId(),
-                            request.getRequester().getEmail(),
-                            request.getAccommodationListing().getTitle(),
+                            tenantEmail,
+                            listingTitle,
                             RequestStatus.EXPIRED,
                             false,
                             null,

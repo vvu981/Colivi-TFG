@@ -67,14 +67,6 @@ public class ReportServiceImpl implements ReportService {
             if (!isParticipant) {
                 throw new BusinessRuleValidationException("Solo los participantes de la conversación pueden denunciarla.");
             }
-
-            boolean alreadyReported = reportRepository.existsByTargetTypeAndTargetIdAndStatusIn(
-                    ReportTargetType.CONVERSATION,
-                    request.targetId(),
-                    List.of(ReportStatus.PENDING, ReportStatus.INVESTIGATING));
-            if (alreadyReported) {
-                throw new BusinessRuleValidationException("Esta conversación ya ha sido denunciada.");
-            }
         }
 
         // 3. Verificar denuncia duplicada activa
