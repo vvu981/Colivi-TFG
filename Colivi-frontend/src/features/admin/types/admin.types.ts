@@ -139,8 +139,8 @@ export interface AdminConversationMessage {
 export interface AdminConversationDossier {
   conversationId: string;
   listing: AdminListingSnippet | null;
-  tenant: AdminUserSnippet;
-  host: AdminUserSnippet;
+  tenant: AdminUserSnippet | null;
+  host: AdminUserSnippet | null;
   activeBooking: AdminBookingSnippet | null;
   messages: AdminConversationMessage[];
   createdAt: string;

@@ -426,5 +426,70 @@ describe('AdminReportDetailModal', () => {
       expect(screen.getByText('Usuario sancionado y baneado con éxito.')).toBeInTheDocument();
     });
   });
+
+  it('safely handles banning when one of the participants is null (deleted user)', async () => {
+    const conversationReport: ReportItem = {
+      id: 'report-conv-2',
+      reporterId: 'user-reporter-1',
+      targetType: 'CONVERSATION',
+      targetId: 'conv-456',
+      reason: 'SPAM',
+      description: 'Conversación con usuario eliminado',
+      status: 'PENDING',
+      createdAt: '2026-09-07T12:00:00Z',
+    };
+
+    vi.mocked(adminConversationService.getConversationDossier).mockResolvedValueOnce({
+      conversationId: 'conv-456',
+      listing: null,
+      tenant: null, // Hard deleted tenant
+      host: {
+        id: 'user-host-2',
+        firstName: 'Carlos',
+        lastName: 'Host',
+        nickname: 'carlosh',
+        email: 'carlos@example.com',
+        profilePicUrl: null,
+        role: 'OWNER',
+        isBanned: false,
+        bannedUntil: null,
+        banReason: null,
+      },
+      messages: [],
+      activeBooking: null,
+      createdAt: '2026-09-07T12:00:00Z',
+      lastMessageAt: null,
+      isReported: true,
+    });
+    vi.mocked(adminUserService.banUser).mockResolvedValueOnce(undefined);
+
+    render(
+      <AdminReportDetailModal
+        report={conversationReport}
+        isOpen={true}
+        onClose={vi.fn()}
+        onStatusUpdate={vi.fn()}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Carlos Host')).toBeInTheDocument();
+      expect(screen.getByText('Inquilino no disponible o cuenta eliminada')).toBeInTheDocument();
+    });
+
+    const banBtn = screen.getByRole('button', { name: /^Banear$/i });
+    fireEvent.click(banBtn);
+
+    const confirmBtn = screen.getByRole('button', { name: /Sí, banear usuario/i });
+    fireEvent.click(confirmBtn);
+
+    await waitFor(() => {
+      expect(adminUserService.banUser).toHaveBeenCalledWith(
+        'user-host-2',
+        expect.objectContaining({ message: expect.any(String) })
+      );
+      expect(screen.getByText('Usuario sancionado y baneado con éxito.')).toBeInTheDocument();
+    });
+  });
 });
 

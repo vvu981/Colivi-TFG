@@ -173,7 +173,9 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
   const isTargetBanned =
     report.targetType === 'LISTING'
       ? targetListing?.status === 'BANNED'
-      : !!targetUser?.bannedAt;
+      : report.targetType === 'USER'
+      ? !!targetUser?.bannedAt
+      : false;
 
   const handleOpenBanConfirm = () => {
     setConfirmModal({
@@ -182,8 +184,6 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
       message:
         report.targetType === 'LISTING'
           ? 'Esta acción sancionará al anuncio ocultándolo inmediatamente de la plataforma y resolverá automáticamente en cascada todas las denuncias abiertas asociadas a este objetivo.'
-          : report.targetType === 'CONVERSATION'
-          ? 'Esta acción bloqueará la conversación y resolverá automáticamente en cascada todas las denuncias abiertas asociadas a este objetivo.'
           : 'Esta acción sancionará al usuario bloqueando su cuenta y resolverá automáticamente en cascada todas las denuncias abiertas asociadas a este objetivo.',
       confirmText: 'Sí, banear y resolver denuncias',
       variant: 'warning',
@@ -207,8 +207,6 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
       message:
         report.targetType === 'LISTING'
           ? 'Esta acción restaurará el anuncio haciéndolo visible de nuevo en la plataforma.'
-          : report.targetType === 'CONVERSATION'
-          ? 'Esta acción restaurará la conversación en la plataforma.'
           : 'Esta acción restaurará al usuario permitiéndole iniciar sesión nuevamente.',
       confirmText: 'Sí, desbanear objetivo',
       variant: 'warning',
@@ -263,8 +261,8 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
             if (!prev) return null;
             return {
               ...prev,
-              tenant: prev.tenant.id === confirmModal.targetUserId ? { ...prev.tenant, isBanned: true } : prev.tenant,
-              host: prev.host.id === confirmModal.targetUserId ? { ...prev.host, isBanned: true } : prev.host,
+              tenant: prev.tenant?.id === confirmModal.targetUserId ? { ...prev.tenant, isBanned: true } : prev.tenant,
+              host: prev.host?.id === confirmModal.targetUserId ? { ...prev.host, isBanned: true } : prev.host,
             };
           });
           setActionSuccess('Usuario sancionado y baneado con éxito.');
@@ -274,8 +272,8 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
             if (!prev) return null;
             return {
               ...prev,
-              tenant: prev.tenant.id === confirmModal.targetUserId ? { ...prev.tenant, isBanned: false } : prev.tenant,
-              host: prev.host.id === confirmModal.targetUserId ? { ...prev.host, isBanned: false } : prev.host,
+              tenant: prev.tenant?.id === confirmModal.targetUserId ? { ...prev.tenant, isBanned: false } : prev.tenant,
+              host: prev.host?.id === confirmModal.targetUserId ? { ...prev.host, isBanned: false } : prev.host,
             };
           });
           setActionSuccess('Usuario desbaneado con éxito.');
@@ -288,7 +286,7 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
         if (report.targetType === 'LISTING') {
           await adminListingService.banListing(report.targetId);
           setTargetListing((prev) => (prev ? { ...prev, status: 'BANNED' } : null));
-        } else {
+        } else if (report.targetType === 'USER') {
           await adminUserService.banUser(report.targetId, {
             message: adminNotes || 'Baneado por infracción de normas tras denuncia.',
           });
@@ -328,7 +326,7 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
           await adminListingService.unbanListing(report.targetId);
           setTargetListing((prev) => (prev ? { ...prev, status: 'AVAILABLE', bannedAt: undefined } : null));
           setActionSuccess('Anuncio desbaneado con éxito.');
-        } else {
+        } else if (report.targetType === 'USER') {
           await adminUserService.unbanUser(report.targetId);
           setTargetUser((prev) =>
             prev
@@ -346,7 +344,7 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
           await adminListingService.hardDeleteListing(report.targetId);
           setTargetListing(null);
           setActionSuccess('Anuncio eliminado permanentemente.');
-        } else {
+        } else if (report.targetType === 'USER') {
           await adminUserService.deleteUserHard(report.targetId);
           setTargetUser(null);
           setActionSuccess('Usuario eliminado permanentemente.');
