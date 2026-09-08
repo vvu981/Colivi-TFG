@@ -1,10 +1,12 @@
 package com.vvu981.colivibackend.features.bookingRequests.service;
 
 import com.vvu981.colivibackend.features.bookingRequests.domain.BookingRequest;
+import com.vvu981.colivibackend.features.bookingRequests.domain.BookingStatusChangedEvent;
 import com.vvu981.colivibackend.features.bookingRequests.domain.RequestStatus;
 import com.vvu981.colivibackend.features.bookingRequests.repository.BookingRequestRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +20,7 @@ import java.util.List;
 public class BookingExpirationTask {
 
     private final BookingRequestRepository bookingRequestRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * Tarea programada que se ejecuta cada hora para comprobar si alguna solicitud 
@@ -43,6 +46,19 @@ public class BookingExpirationTask {
             try {
                 request.expire();
                 log.info("Solicitud {} marcada como EXPIRED.", request.getId());
+                String tenantEmail = request.getRequester() != null ? request.getRequester().getEmail() : null;
+                String listingTitle = request.getAccommodationListing() != null ? request.getAccommodationListing().getTitle() : null;
+                if (eventPublisher != null) {
+                    eventPublisher.publishEvent(new BookingStatusChangedEvent(
+                            request.getId(),
+                            tenantEmail,
+                            listingTitle,
+                            RequestStatus.EXPIRED,
+                            false,
+                            null,
+                            false
+                    ));
+                }
             } catch (Exception e) {
                 log.error("Error al expirar la solicitud {}: {}", request.getId(), e.getMessage());
             }

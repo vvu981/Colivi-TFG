@@ -4,6 +4,8 @@ import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
 import com.vvu981.colivibackend.core.exception.ResourceNotFoundException;
 import com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing;
 import com.vvu981.colivibackend.features.accommodation.repository.AccommodationListingRepository;
+import com.vvu981.colivibackend.features.messaging.domain.Conversation;
+import com.vvu981.colivibackend.features.messaging.repository.ConversationRepository;
 import com.vvu981.colivibackend.features.report.domain.Report;
 import com.vvu981.colivibackend.features.report.domain.ReportStatus;
 import com.vvu981.colivibackend.features.report.domain.ReportTargetType;
@@ -32,6 +34,7 @@ public class ReportServiceImpl implements ReportService {
 
     private final UserRepository userRepository;
     private final AccommodationListingRepository listingRepository;
+    private final ConversationRepository conversationRepository;
 
     @Override
     @Transactional
@@ -53,6 +56,16 @@ public class ReportServiceImpl implements ReportService {
             boolean userExists = userRepository.existsById(request.targetId());
             if (!userExists) {
                 throw new BusinessRuleValidationException("El elemento denunciado no existe.");
+            }
+        } else if (request.targetType() == ReportTargetType.CONVERSATION) {
+            Conversation conversation = conversationRepository.findById(request.targetId())
+                    .orElseThrow(() -> new BusinessRuleValidationException("El elemento denunciado no existe."));
+
+            boolean isParticipant = (conversation.getTenant() != null && conversation.getTenant().getId().equals(reporterId))
+                    || (conversation.getHost() != null && conversation.getHost().getId().equals(reporterId));
+
+            if (!isParticipant) {
+                throw new BusinessRuleValidationException("Solo los participantes de la conversación pueden denunciarla.");
             }
         }
 

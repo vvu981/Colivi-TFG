@@ -23,6 +23,7 @@ import { AdminPage } from "../pages/AdminPage";
 import { HomesPage } from "../pages/HomesPage";
 import { ArchivedHomesPage } from "../pages/ArchivedHomesPage";
 import { HomeDetailPage } from "../pages/HomeDetailPage";
+import { MessagesPage } from "../pages/MessagesPage";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { AdminRoute } from "./AdminRoute";
 
@@ -104,6 +105,22 @@ export const AppRoutes = () => {
         element={
           <ProtectedRoute forbiddenRoles={['ADMIN']}>
             <ReceivedRequestsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/messages"
+        element={
+          <ProtectedRoute forbiddenRoles={['ADMIN']}>
+            <MessagesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/messages/:conversationId"
+        element={
+          <ProtectedRoute forbiddenRoles={['ADMIN']}>
+            <MessagesPage />
           </ProtectedRoute>
         }
       />

@@ -4,8 +4,9 @@ import type { ReportItem, ReportStatus } from '../../types/admin.types';
 import { adminReportService } from '../../services/adminReportService';
 import { adminListingService } from '../../services/adminListingService';
 import { adminUserService } from '../../services/adminUserService';
+import { adminConversationService } from '../../services/adminConversationService';
 import type { AccommodationListing } from '../../../housing/types/listing.types';
-import type { AdminUserProfile } from '../../types/admin.types';
+import type { AdminUserProfile, AdminConversationDossier, AdminUserSnippet } from '../../types/admin.types';
 import { CopyIdButton } from '../common/CopyIdButton';
 import { AdminConfirmModal } from '../common/AdminConfirmModal';
 import {
@@ -21,7 +22,53 @@ import {
   User,
   Home,
   ExternalLink,
+  MessageSquare,
 } from 'lucide-react';
+
+const formatUserFullName = (user?: { firstName?: string; lastName?: string; lastName1?: string; lastName2?: string; nickname?: string } | null, fallback = 'Usuario'): string => {
+  if (!user) return fallback;
+  const parts = [user.firstName, user.lastName || user.lastName1, user.lastName2].filter(Boolean);
+  return parts.join(' ').trim() || user.nickname || fallback;
+};
+
+const getTargetDemonstrative = (type?: string): string => {
+  switch (type) {
+    case 'LISTING':
+      return 'este anuncio';
+    case 'USER':
+      return 'este usuario';
+    case 'CONVERSATION':
+      return 'esta conversación';
+    default:
+      return 'este objetivo';
+  }
+};
+
+const getTargetDefiniteArticle = (type?: string): string => {
+  switch (type) {
+    case 'LISTING':
+      return 'el anuncio';
+    case 'USER':
+      return 'el usuario';
+    case 'CONVERSATION':
+      return 'la conversación';
+    default:
+      return 'el objetivo';
+  }
+};
+
+const getTargetCapitalizedNoun = (type?: string): string => {
+  switch (type) {
+    case 'LISTING':
+      return 'Anuncio';
+    case 'USER':
+      return 'Usuario';
+    case 'CONVERSATION':
+      return 'Conversación';
+    default:
+      return 'Objetivo';
+  }
+};
 
 interface AdminReportDetailModalProps {
   report: ReportItem | null;
@@ -52,12 +99,14 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
     message: string;
     confirmText: string;
     variant: 'warning' | 'danger';
+    targetUserId?: string;
   } | null>(null);
   const [isExecutingAction, setIsExecutingAction] = useState<boolean>(false);
 
   // Target details
   const [targetListing, setTargetListing] = useState<AccommodationListing | null>(null);
   const [targetUser, setTargetUser] = useState<AdminUserProfile | null>(null);
+  const [targetConversation, setTargetConversation] = useState<AdminConversationDossier | null>(null);
   const [isLoadingTarget, setIsLoadingTarget] = useState<boolean>(false);
 
   useEffect(() => {
@@ -66,6 +115,9 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
       setActionSuccess(null);
       setActionError(null);
       setConfirmModal(null);
+      setTargetListing(null);
+      setTargetUser(null);
+      setTargetConversation(null);
 
       // Load target summary preview
       setIsLoadingTarget(true);
@@ -80,6 +132,12 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
           .getAdminUserProfile(report.targetId)
           .then(setTargetUser)
           .catch(() => setTargetUser(null))
+          .finally(() => setIsLoadingTarget(false));
+      } else if (report.targetType === 'CONVERSATION') {
+        adminConversationService
+          .getConversationDossier(report.targetId)
+          .then(setTargetConversation)
+          .catch(() => setTargetConversation(null))
           .finally(() => setIsLoadingTarget(false));
       }
     }
@@ -115,13 +173,18 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
   const isTargetBanned =
     report.targetType === 'LISTING'
       ? targetListing?.status === 'BANNED'
-      : !!targetUser?.bannedAt;
+      : report.targetType === 'USER'
+      ? !!targetUser?.bannedAt
+      : false;
 
   const handleOpenBanConfirm = () => {
     setConfirmModal({
       type: 'BAN',
-      title: `¿Confirmar suspensión y baneo de ${report.targetType === 'LISTING' ? 'este anuncio' : 'este usuario'}?`,
-      message: `Esta acción sancionará al ${report.targetType === 'LISTING' ? 'anuncio ocultándolo inmediatamente de la plataforma' : 'usuario bloqueando su cuenta'} y resolverá automáticamente en cascada todas las denuncias abiertas asociadas a este objetivo.`,
+      title: `¿Confirmar suspensión y baneo de ${getTargetDemonstrative(report.targetType)}?`,
+      message:
+        report.targetType === 'LISTING'
+          ? 'Esta acción sancionará al anuncio ocultándolo inmediatamente de la plataforma y resolverá automáticamente en cascada todas las denuncias abiertas asociadas a este objetivo.'
+          : 'Esta acción sancionará al usuario bloqueando su cuenta y resolverá automáticamente en cascada todas las denuncias abiertas asociadas a este objetivo.',
       confirmText: 'Sí, banear y resolver denuncias',
       variant: 'warning',
     });
@@ -130,7 +193,7 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
   const handleOpenResolveAllConfirm = () => {
     setConfirmModal({
       type: 'RESOLVE_ALL',
-      title: `¿Resolver todas las denuncias abiertas de este ${report.targetType === 'LISTING' ? 'anuncio' : 'usuario'}?`,
+      title: `¿Resolver todas las denuncias abiertas de ${getTargetDemonstrative(report.targetType)}?`,
       message: 'Todas las denuncias pendientes o en investigación vinculadas a este objetivo pasarán al estado RESUELTA.',
       confirmText: 'Sí, resolver todas en bloque',
       variant: 'warning',
@@ -140,8 +203,11 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
   const handleOpenUnbanConfirm = () => {
     setConfirmModal({
       type: 'UNBAN',
-      title: `¿Confirmar desbaneo de ${report.targetType === 'LISTING' ? 'este anuncio' : 'este usuario'}?`,
-      message: `Esta acción restaurará el ${report.targetType === 'LISTING' ? 'anuncio haciéndolo visible de nuevo en la plataforma' : 'usuario permitiéndole iniciar sesión nuevamente'}.`,
+      title: `¿Confirmar desbaneo de ${getTargetDemonstrative(report.targetType)}?`,
+      message:
+        report.targetType === 'LISTING'
+          ? 'Esta acción restaurará el anuncio haciéndolo visible de nuevo en la plataforma.'
+          : 'Esta acción restaurará al usuario permitiéndole iniciar sesión nuevamente.',
       confirmText: 'Sí, desbanear objetivo',
       variant: 'warning',
     });
@@ -150,11 +216,34 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
   const handleOpenDeleteConfirm = () => {
     setConfirmModal({
       type: 'HARD_DELETE',
-      title: `¿Eliminar permanentemente ${report.targetType === 'LISTING' ? 'el anuncio' : 'el usuario'}?`,
+      title: `¿Eliminar permanentemente ${getTargetDefiniteArticle(report.targetType)}?`,
       message: `¡ATENCIÓN! Esta acción ejecutará un borrado físico (Hard Delete) irreversible en la base de datos eliminando todos sus datos asociados.`,
       confirmText: 'Sí, eliminar definitivamente',
       variant: 'danger',
     });
+  };
+
+  const handleOpenUserBanConfirm = (userSnippet: AdminUserSnippet) => {
+    const fullName = formatUserFullName(userSnippet, userSnippet.nickname || 'Usuario');
+    if (userSnippet.isBanned) {
+      setConfirmModal({
+        type: 'UNBAN',
+        title: `¿Confirmar desbaneo de ${fullName}?`,
+        message: 'Esta acción restaurará al usuario permitiéndole iniciar sesión nuevamente.',
+        confirmText: 'Sí, desbanear usuario',
+        variant: 'warning',
+        targetUserId: userSnippet.id,
+      });
+    } else {
+      setConfirmModal({
+        type: 'BAN',
+        title: `¿Confirmar baneo de ${fullName}?`,
+        message: 'Esta acción suspenderá la cuenta del usuario impidiéndole acceder a la plataforma.',
+        confirmText: 'Sí, banear usuario',
+        variant: 'warning',
+        targetUserId: userSnippet.id,
+      });
+    }
   };
 
   const handleConfirmAction = async () => {
@@ -163,11 +252,50 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
     setActionError(null);
     setActionSuccess(null);
     try {
+      if (confirmModal.targetUserId) {
+        const targetUserId = confirmModal.targetUserId;
+        const updateParticipantBanStatus = (
+          user: AdminUserSnippet | null,
+          banned: boolean
+        ): AdminUserSnippet | null => {
+          if (!user) return null;
+          return user.id === targetUserId ? { ...user, isBanned: banned } : user;
+        };
+
+        if (confirmModal.type === 'BAN') {
+          await adminUserService.banUser(targetUserId, {
+            message: adminNotes || 'Baneado tras revisión de conversación denunciada.',
+          });
+          setTargetConversation((prev) => {
+            if (!prev) return null;
+            return {
+              ...prev,
+              tenant: updateParticipantBanStatus(prev.tenant, true),
+              host: updateParticipantBanStatus(prev.host, true),
+            };
+          });
+          setActionSuccess('Usuario sancionado y baneado con éxito.');
+        } else if (confirmModal.type === 'UNBAN') {
+          await adminUserService.unbanUser(targetUserId);
+          setTargetConversation((prev) => {
+            if (!prev) return null;
+            return {
+              ...prev,
+              tenant: updateParticipantBanStatus(prev.tenant, false),
+              host: updateParticipantBanStatus(prev.host, false),
+            };
+          });
+          setActionSuccess('Usuario desbaneado con éxito.');
+        }
+        setConfirmModal(null);
+        return;
+      }
+
       if (confirmModal.type === 'BAN') {
         if (report.targetType === 'LISTING') {
           await adminListingService.banListing(report.targetId);
           setTargetListing((prev) => (prev ? { ...prev, status: 'BANNED' } : null));
-        } else {
+        } else if (report.targetType === 'USER') {
           await adminUserService.banUser(report.targetId, {
             message: adminNotes || 'Baneado por infracción de normas tras denuncia.',
           });
@@ -185,14 +313,14 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
         // Cascada automática: Resolver todas las denuncias abiertas del objetivo
         const resolutionNotes =
           adminNotes ||
-          `Resuelto automáticamente tras sanción y baneo del ${report.targetType === 'LISTING' ? 'anuncio' : 'usuario'}.`;
+          `Resuelto automáticamente tras sanción y baneo de ${getTargetDefiniteArticle(report.targetType)}.`;
         await adminReportService.resolveAllReportsForTarget(report.targetId, {
           status: 'RESOLVED',
           adminNotes: resolutionNotes,
         });
         await onStatusUpdate(report.id, 'RESOLVED', resolutionNotes);
         setActionSuccess(
-          `${report.targetType === 'LISTING' ? 'Anuncio' : 'Usuario'} baneado y todas sus denuncias abiertas resueltas con éxito.`
+          `${getTargetCapitalizedNoun(report.targetType)} sancionado y todas sus denuncias abiertas resueltas con éxito.`
         );
       } else if (confirmModal.type === 'RESOLVE_ALL') {
         const resolutionNotes = adminNotes || 'Resolución masiva de todas las denuncias abiertas del objetivo.';
@@ -207,7 +335,7 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
           await adminListingService.unbanListing(report.targetId);
           setTargetListing((prev) => (prev ? { ...prev, status: 'AVAILABLE', bannedAt: undefined } : null));
           setActionSuccess('Anuncio desbaneado con éxito.');
-        } else {
+        } else if (report.targetType === 'USER') {
           await adminUserService.unbanUser(report.targetId);
           setTargetUser((prev) =>
             prev
@@ -225,7 +353,7 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
           await adminListingService.hardDeleteListing(report.targetId);
           setTargetListing(null);
           setActionSuccess('Anuncio eliminado permanentemente.');
-        } else {
+        } else if (report.targetType === 'USER') {
           await adminUserService.deleteUserHard(report.targetId);
           setTargetUser(null);
           setActionSuccess('Usuario eliminado permanentemente.');
@@ -347,10 +475,15 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
                       <Home size={14} className="text-primary" />
                       Anuncio Denunciado
                     </>
-                  ) : (
+                  ) : report.targetType === 'USER' ? (
                     <>
                       <User size={14} className="text-primary" />
                       Usuario Denunciado
+                    </>
+                  ) : (
+                    <>
+                      <MessageSquare size={14} className="text-primary" />
+                      Conversación Denunciada
                     </>
                   )}
                 </span>
@@ -455,6 +588,254 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
                     </div>
                   </div>
                 </div>
+              ) : targetConversation ? (
+                <div className="space-y-4">
+                  {/* Anuncio en conversación */}
+                  {targetConversation.listing && (
+                    <div className="p-3.5 bg-surface-container-low rounded-xl border border-outline-variant/50 flex flex-col sm:flex-row items-start gap-3">
+                      {targetConversation.listing.thumbnailUrl ? (
+                        <img
+                          src={targetConversation.listing.thumbnailUrl}
+                          alt={targetConversation.listing.title}
+                          className="w-20 h-20 object-cover rounded-xl border border-outline-variant/60 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-20 h-20 bg-surface-container rounded-xl flex items-center justify-center text-secondary shrink-0">
+                          <Home size={24} />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[10px] font-bold text-secondary uppercase tracking-wider block">
+                          Anuncio Asociado
+                        </span>
+                        <h4 className="text-sm font-bold text-on-surface truncate">
+                          {targetConversation.listing.title}
+                        </h4>
+                        <p className="text-xs text-secondary mt-0.5">
+                          {targetConversation.listing.city || 'Sin ciudad'} • {targetConversation.listing.pricePerMonth} €/mes •{' '}
+                          {targetConversation.listing.rentalType === 'ROOM' ? 'Habitación' : 'Piso Completo'}
+                        </p>
+                        {onInspectListing && targetConversation.listing.id && (
+                          <button
+                            onClick={() => onInspectListing(targetConversation.listing!.id)}
+                            className="text-xs text-primary hover:underline font-semibold flex items-center gap-1 mt-2 cursor-pointer"
+                          >
+                            Inspeccionar anuncio <ExternalLink size={12} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Participantes involucrados */}
+                  <div>
+                    <span className="text-xs font-bold text-on-surface uppercase tracking-wider block mb-2">
+                      Usuarios Implicados
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* Inquilino */}
+                      {targetConversation.tenant ? (
+                        <div className="p-3.5 bg-surface-container-low rounded-xl border border-outline-variant/50 space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold text-secondary uppercase tracking-wider">Inquilino</span>
+                            {targetConversation.tenant.isBanned ? (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-error-container text-error">
+                                Baneado
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                                Activo
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2.5">
+                            {targetConversation.tenant.profilePicUrl ? (
+                              <img
+                                src={targetConversation.tenant.profilePicUrl}
+                                alt={formatUserFullName(targetConversation.tenant, 'Inquilino')}
+                                className="w-10 h-10 rounded-full object-cover border border-outline-variant"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
+                                {targetConversation.tenant.firstName?.charAt(0).toUpperCase() || 'I'}
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <h5 className="text-xs font-bold text-on-surface truncate">
+                                {formatUserFullName(targetConversation.tenant, 'Inquilino')}
+                              </h5>
+                              <p className="text-[11px] text-secondary truncate">
+                                @{targetConversation.tenant.nickname} • {targetConversation.tenant.email}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 pt-1.5 border-t border-outline-variant/30">
+                            {onInspectUser && (
+                              <button
+                                onClick={() => onInspectUser(targetConversation.tenant!.id)}
+                                className="text-[11px] text-primary hover:underline font-semibold flex items-center gap-1 cursor-pointer"
+                              >
+                                Inspeccionar <ExternalLink size={11} />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleOpenUserBanConfirm(targetConversation.tenant!)}
+                              className={`text-[11px] font-semibold px-2 py-0.5 rounded-lg ml-auto transition-colors cursor-pointer ${
+                                targetConversation.tenant.isBanned
+                                  ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
+                                  : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+                              }`}
+                            >
+                              {targetConversation.tenant.isBanned ? 'Desbanear' : 'Banear'}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-3.5 bg-surface-container-low rounded-xl border border-outline-variant/50 flex items-center justify-center text-xs text-secondary italic">
+                          Inquilino no disponible o cuenta eliminada
+                        </div>
+                      )}
+
+                      {/* Propietario / Host */}
+                      {targetConversation.host ? (
+                        <div className="p-3.5 bg-surface-container-low rounded-xl border border-outline-variant/50 space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold text-secondary uppercase tracking-wider">Propietario</span>
+                            {targetConversation.host.isBanned ? (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-error-container text-error">
+                                Baneado
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                                Activo
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2.5">
+                            {targetConversation.host.profilePicUrl ? (
+                              <img
+                                src={targetConversation.host.profilePicUrl}
+                                alt={formatUserFullName(targetConversation.host, 'Propietario')}
+                                className="w-10 h-10 rounded-full object-cover border border-outline-variant"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-secondary/10 text-secondary flex items-center justify-center font-bold text-sm shrink-0">
+                                {targetConversation.host.firstName?.charAt(0).toUpperCase() || 'P'}
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <h5 className="text-xs font-bold text-on-surface truncate">
+                                {formatUserFullName(targetConversation.host, 'Propietario')}
+                              </h5>
+                              <p className="text-[11px] text-secondary truncate">
+                                @{targetConversation.host.nickname} • {targetConversation.host.email}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 pt-1.5 border-t border-outline-variant/30">
+                            {onInspectUser && (
+                              <button
+                                onClick={() => onInspectUser(targetConversation.host!.id)}
+                                className="text-[11px] text-primary hover:underline font-semibold flex items-center gap-1 cursor-pointer"
+                              >
+                                Inspeccionar <ExternalLink size={11} />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleOpenUserBanConfirm(targetConversation.host!)}
+                              className={`text-[11px] font-semibold px-2 py-0.5 rounded-lg ml-auto transition-colors cursor-pointer ${
+                                targetConversation.host.isBanned
+                                  ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
+                                  : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+                              }`}
+                            >
+                              {targetConversation.host.isBanned ? 'Desbanear' : 'Banear'}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-3.5 bg-surface-container-low rounded-xl border border-outline-variant/50 flex items-center justify-center text-xs text-secondary italic">
+                          Propietario no disponible o cuenta eliminada
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Transcripción de Mensajes */}
+                  <div className="space-y-2 pt-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-on-surface flex items-center gap-1.5">
+                        <MessageSquare size={14} className="text-primary" />
+                        Transcripción de Mensajes ({targetConversation.messages?.length || 0})
+                      </span>
+                      <span className="text-[11px] text-secondary">
+                        Historial completo
+                      </span>
+                    </div>
+                    <div className="max-h-72 overflow-y-auto rounded-xl bg-surface-container-low border border-outline-variant/50 p-3.5 space-y-3">
+                      {!targetConversation.messages || targetConversation.messages.length === 0 ? (
+                        <p className="text-xs text-secondary text-center py-6">
+                          No hay mensajes registrados en esta conversación.
+                        </p>
+                      ) : (
+                        targetConversation.messages.map((msg) => {
+                          const isTenant = Boolean(targetConversation.tenant && msg.senderId === targetConversation.tenant.id);
+                          const isHost = Boolean(targetConversation.host && msg.senderId === targetConversation.host.id);
+                          const tenantName = formatUserFullName(targetConversation.tenant, 'Inquilino');
+                          const hostName = formatUserFullName(targetConversation.host, 'Propietario');
+                          const senderLabel = isTenant
+                            ? `Inquilino (${tenantName})`
+                            : isHost
+                            ? `Propietario (${hostName})`
+                            : msg.senderName || 'Sistema';
+
+                          if (msg.messageType !== 'USER_MESSAGE') {
+                            return (
+                              <div
+                                key={msg.id}
+                                className="p-2.5 rounded-lg bg-surface-container text-center border border-outline-variant/40 text-xs"
+                              >
+                                <span className="text-[10px] uppercase font-bold text-secondary tracking-wider block">
+                                  Aviso del Sistema
+                                </span>
+                                <p className="text-xs text-secondary mt-0.5">{msg.content}</p>
+                                <span className="text-[10px] text-outline block mt-1">
+                                  {new Date(msg.createdAt).toLocaleString('es-ES')}
+                                </span>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div
+                              key={msg.id}
+                              className={`p-3 rounded-xl border text-xs max-w-[88%] ${
+                                isTenant
+                                  ? 'mr-auto bg-surface-container-lowest border-outline-variant/60 shadow-xs'
+                                  : 'ml-auto bg-primary/5 border-primary/20 shadow-xs'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between gap-3 mb-1">
+                                <span className={`text-[11px] font-bold ${isTenant ? 'text-primary' : 'text-emerald-700'}`}>
+                                  {senderLabel}
+                                </span>
+                                <span className="text-[10px] text-secondary">
+                                  {new Date(msg.createdAt).toLocaleString('es-ES', {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                  })}
+                                </span>
+                              </div>
+                              <p className="text-on-surface whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                </div>
               ) : (
                 <p className="text-xs text-secondary">No se pudo cargar el resumen del objetivo (o fue eliminado).</p>
               )}
@@ -486,40 +867,42 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
             </div>
 
             {/* Acciones Directas de Moderación */}
-            <div className="pt-3 border-t border-outline-variant/40 space-y-3">
-              <span className="text-xs font-bold text-secondary uppercase tracking-wider block">
-                Acciones Disciplinarias sobre el Objetivo
-              </span>
-              <div className="flex flex-wrap items-center gap-2.5">
-                {isTargetBanned ? (
+            {report.targetType !== 'CONVERSATION' && (
+              <div className="pt-3 border-t border-outline-variant/40 space-y-3">
+                <span className="text-xs font-bold text-secondary uppercase tracking-wider block">
+                  Acciones Disciplinarias sobre el Objetivo
+                </span>
+                <div className="flex flex-wrap items-center gap-2.5">
+                  {isTargetBanned ? (
+                    <button
+                      type="button"
+                      onClick={handleOpenUnbanConfirm}
+                      className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-colors shadow-xs cursor-pointer"
+                    >
+                      <RotateCcw size={14} />
+                      <span>Desbanear {report.targetType === 'LISTING' ? 'Anuncio' : 'Usuario'}</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleOpenBanConfirm}
+                      className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold bg-amber-600 hover:bg-amber-700 text-white rounded-xl transition-colors shadow-xs cursor-pointer"
+                    >
+                      <Ban size={14} />
+                      <span>Banear {report.targetType === 'LISTING' ? 'Anuncio' : 'Usuario'}</span>
+                    </button>
+                  )}
                   <button
                     type="button"
-                    onClick={handleOpenUnbanConfirm}
-                    className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-colors shadow-xs cursor-pointer"
+                    onClick={handleOpenDeleteConfirm}
+                    className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold bg-error hover:bg-error/90 text-on-error rounded-xl transition-colors shadow-xs cursor-pointer"
                   >
-                    <RotateCcw size={14} />
-                    <span>Desbanear {report.targetType === 'LISTING' ? 'Anuncio' : 'Usuario'}</span>
+                    <Trash2 size={14} />
+                    <span>Borrado Físico (Hard Delete)</span>
                   </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleOpenBanConfirm}
-                    className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold bg-amber-600 hover:bg-amber-700 text-white rounded-xl transition-colors shadow-xs cursor-pointer"
-                  >
-                    <Ban size={14} />
-                    <span>Banear {report.targetType === 'LISTING' ? 'Anuncio' : 'Usuario'}</span>
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={handleOpenDeleteConfirm}
-                  className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold bg-error hover:bg-error/90 text-on-error rounded-xl transition-colors shadow-xs cursor-pointer"
-                >
-                  <Trash2 size={14} />
-                  <span>Borrado Físico (Hard Delete)</span>
-                </button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Footer (Fijo) */}

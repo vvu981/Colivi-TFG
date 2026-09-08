@@ -27,6 +27,14 @@ vi.mock('../../services/adminUserService', () => ({
   },
 }));
 
+vi.mock('../../services/adminConversationService', () => ({
+  adminConversationService: {
+    getConversationDossier: vi.fn(),
+  },
+}));
+import { adminConversationService } from '../../services/adminConversationService';
+import { adminUserService } from '../../services/adminUserService';
+
 describe('AdminReportDetailModal', () => {
   const mockReport: ReportItem = {
     id: 'report-123',
@@ -227,4 +235,261 @@ describe('AdminReportDetailModal', () => {
       );
     });
   });
+
+  it('renders conversation dossier with listing snippet, tenant, host, and messages when targetType is CONVERSATION', async () => {
+    const conversationReport: ReportItem = {
+      id: 'report-conv-1',
+      reporterId: 'user-tenant-1',
+      targetType: 'CONVERSATION',
+      targetId: 'conv-123',
+      reason: 'HARASSMENT',
+      description: 'El propietario envía mensajes ofensivos',
+      status: 'PENDING',
+      createdAt: '2026-09-07T12:00:00Z',
+    };
+
+    vi.mocked(adminConversationService.getConversationDossier).mockResolvedValueOnce({
+      conversationId: 'conv-123',
+      listing: {
+        id: 'listing-1',
+        title: 'Estudio moderno en Chamberí',
+        thumbnailUrl: null,
+        city: 'Madrid',
+        pricePerMonth: 800,
+        rentalType: 'WHOLE_PLACE',
+        status: 'AVAILABLE',
+      },
+      tenant: {
+        id: 'user-tenant-1',
+        firstName: 'Lucía',
+        lastName: 'Fernández',
+        nickname: 'luciaf',
+        email: 'lucia@example.com',
+        profilePicUrl: null,
+        role: 'TENANT',
+        isBanned: false,
+        bannedUntil: null,
+        banReason: null,
+      },
+      host: {
+        id: 'user-host-1',
+        firstName: 'Marcos',
+        lastName: 'Propietario',
+        nickname: 'marcosh',
+        email: 'marcos@example.com',
+        profilePicUrl: null,
+        role: 'OWNER',
+        isBanned: false,
+        bannedUntil: null,
+        banReason: null,
+      },
+      messages: [
+        {
+          id: 'msg-1',
+          conversationId: 'conv-123',
+          senderId: 'user-tenant-1',
+          senderName: 'Lucía Fernández',
+          content: 'Hola, sigue libre?',
+          messageType: 'USER_MESSAGE',
+          status: 'READ',
+          createdAt: '2026-09-07T12:05:00Z',
+          readAt: '2026-09-07T12:06:00Z',
+          isMine: false,
+        },
+        {
+          id: 'msg-2',
+          conversationId: 'conv-123',
+          senderId: 'user-host-1',
+          senderName: 'Marcos Propietario',
+          content: 'Sí, pero el precio ha subido a 1000.',
+          messageType: 'USER_MESSAGE',
+          status: 'READ',
+          createdAt: '2026-09-07T12:10:00Z',
+          readAt: '2026-09-07T12:11:00Z',
+          isMine: false,
+        },
+      ],
+      activeBooking: null,
+      createdAt: '2026-09-07T12:00:00Z',
+      lastMessageAt: '2026-09-07T12:10:00Z',
+      isReported: true,
+    });
+
+    render(
+      <AdminReportDetailModal
+        report={conversationReport}
+        isOpen={true}
+        onClose={vi.fn()}
+        onStatusUpdate={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Expediente de Denuncia')).toBeInTheDocument();
+    expect(screen.getByText('Conversación Denunciada')).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.getByText('Estudio moderno en Chamberí')).toBeInTheDocument();
+      expect(screen.getByText('Lucía Fernández')).toBeInTheDocument();
+      expect(screen.getByText('Marcos Propietario')).toBeInTheDocument();
+      expect(screen.getByText('Hola, sigue libre?')).toBeInTheDocument();
+      expect(screen.getByText('Sí, pero el precio ha subido a 1000.')).toBeInTheDocument();
+    });
+
+    // Verify disciplinary section on target is hidden for conversation (ban buttons are on user cards)
+    expect(screen.queryByText(/Acciones Disciplinarias sobre el Objetivo/i)).not.toBeInTheDocument();
+  });
+
+  it('allows banning an involved user directly from conversation dossier', async () => {
+    const conversationReport: ReportItem = {
+      id: 'report-conv-1',
+      reporterId: 'user-tenant-1',
+      targetType: 'CONVERSATION',
+      targetId: 'conv-123',
+      reason: 'HARASSMENT',
+      description: 'El propietario envía mensajes ofensivos',
+      status: 'PENDING',
+      createdAt: '2026-09-07T12:00:00Z',
+    };
+
+    vi.mocked(adminConversationService.getConversationDossier).mockResolvedValueOnce({
+      conversationId: 'conv-123',
+      listing: {
+        id: 'listing-1',
+        title: 'Estudio en Chamberí',
+        thumbnailUrl: null,
+        city: 'Madrid',
+        pricePerMonth: 800,
+        rentalType: 'WHOLE_PLACE',
+        status: 'AVAILABLE',
+      },
+      tenant: {
+        id: 'user-tenant-1',
+        firstName: 'Lucía',
+        lastName: 'Fernández',
+        nickname: 'luciaf',
+        email: 'lucia@example.com',
+        profilePicUrl: null,
+        role: 'TENANT',
+        isBanned: false,
+        bannedUntil: null,
+        banReason: null,
+      },
+      host: {
+        id: 'user-host-1',
+        firstName: 'Marcos',
+        lastName: 'Propietario',
+        nickname: 'marcosh',
+        email: 'marcos@example.com',
+        profilePicUrl: null,
+        role: 'OWNER',
+        isBanned: false,
+        bannedUntil: null,
+        banReason: null,
+      },
+      messages: [],
+      activeBooking: null,
+      createdAt: '2026-09-07T12:00:00Z',
+      lastMessageAt: null,
+      isReported: true,
+    });
+    vi.mocked(adminUserService.banUser).mockResolvedValueOnce(undefined);
+
+    render(
+      <AdminReportDetailModal
+        report={conversationReport}
+        isOpen={true}
+        onClose={vi.fn()}
+        onStatusUpdate={vi.fn()}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Marcos Propietario')).toBeInTheDocument();
+    });
+
+    // Find the ban button for Marcos Propietario (there are 2 ban buttons: one for tenant, one for host)
+    const banButtons = screen.getAllByRole('button', { name: /^Banear$/i });
+    expect(banButtons.length).toBe(2);
+    // Click the second one (host)
+    fireEvent.click(banButtons[1]);
+
+    expect(screen.getByText('¿Confirmar baneo de Marcos Propietario?')).toBeInTheDocument();
+
+    const confirmBtn = screen.getByRole('button', { name: /Sí, banear usuario/i });
+    fireEvent.click(confirmBtn);
+
+    await waitFor(() => {
+      expect(adminUserService.banUser).toHaveBeenCalledWith(
+        'user-host-1',
+        expect.objectContaining({ message: expect.any(String) })
+      );
+      expect(screen.getByText('Usuario sancionado y baneado con éxito.')).toBeInTheDocument();
+    });
+  });
+
+  it('safely handles banning when one of the participants is null (deleted user)', async () => {
+    const conversationReport: ReportItem = {
+      id: 'report-conv-2',
+      reporterId: 'user-reporter-1',
+      targetType: 'CONVERSATION',
+      targetId: 'conv-456',
+      reason: 'SPAM',
+      description: 'Conversación con usuario eliminado',
+      status: 'PENDING',
+      createdAt: '2026-09-07T12:00:00Z',
+    };
+
+    vi.mocked(adminConversationService.getConversationDossier).mockResolvedValueOnce({
+      conversationId: 'conv-456',
+      listing: null,
+      tenant: null, // Hard deleted tenant
+      host: {
+        id: 'user-host-2',
+        firstName: 'Carlos',
+        lastName: 'Host',
+        nickname: 'carlosh',
+        email: 'carlos@example.com',
+        profilePicUrl: null,
+        role: 'OWNER',
+        isBanned: false,
+        bannedUntil: null,
+        banReason: null,
+      },
+      messages: [],
+      activeBooking: null,
+      createdAt: '2026-09-07T12:00:00Z',
+      lastMessageAt: null,
+      isReported: true,
+    });
+    vi.mocked(adminUserService.banUser).mockResolvedValueOnce(undefined);
+
+    render(
+      <AdminReportDetailModal
+        report={conversationReport}
+        isOpen={true}
+        onClose={vi.fn()}
+        onStatusUpdate={vi.fn()}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Carlos Host')).toBeInTheDocument();
+      expect(screen.getByText('Inquilino no disponible o cuenta eliminada')).toBeInTheDocument();
+    });
+
+    const banBtn = screen.getByRole('button', { name: /^Banear$/i });
+    fireEvent.click(banBtn);
+
+    const confirmBtn = screen.getByRole('button', { name: /Sí, banear usuario/i });
+    fireEvent.click(confirmBtn);
+
+    await waitFor(() => {
+      expect(adminUserService.banUser).toHaveBeenCalledWith(
+        'user-host-2',
+        expect.objectContaining({ message: expect.any(String) })
+      );
+      expect(screen.getByText('Usuario sancionado y baneado con éxito.')).toBeInTheDocument();
+    });
+  });
 });
+

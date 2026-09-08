@@ -1,7 +1,7 @@
 import React from 'react';
 import type { ReportItem, ReportStatus } from '../../types/admin.types';
 import { CopyIdButton } from '../common/CopyIdButton';
-import { Eye, Home, User } from 'lucide-react';
+import { Eye, Home, User, MessageSquare } from 'lucide-react';
 
 interface AdminReportTableRowProps {
   item: ReportItem;
@@ -101,6 +101,11 @@ export const AdminReportTableRow: React.FC<AdminReportTableRowProps> = React.mem
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-50 text-blue-700 text-[11px] font-semibold border border-blue-200">
                 <Home size={11} />
                 Anuncio
+              </span>
+            ) : item.targetType === 'CONVERSATION' ? (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-50 text-amber-700 text-[11px] font-semibold border border-amber-200">
+                <MessageSquare size={11} />
+                Conversación
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-purple-50 text-purple-700 text-[11px] font-semibold border border-purple-200">

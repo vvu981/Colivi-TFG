@@ -135,6 +135,19 @@ class AdminReportServiceImplTest {
     }
 
     @Test
+    void getMostReportedTargets_withConversationType_shouldReturnPage() {
+        PageRequest pageRequest = PageRequest.of(0, 10);
+        Page<ReportTargetCountDTO> page = new PageImpl<>(List.of());
+
+        when(reportRepository.findMostReportedConversations(pageRequest)).thenReturn(page);
+
+        Page<ReportTargetCountDTO> result = adminReportService.getMostReportedTargets(ReportTargetType.CONVERSATION,
+                pageRequest);
+
+        assertThat(result.getContent()).isEmpty();
+    }
+
+    @Test
     void getMostReportedTargets_withoutType_shouldReturnPage() {
         PageRequest pageRequest = PageRequest.of(0, 10);
         Page<ReportTargetCountDTO> page = new PageImpl<>(List.of());
