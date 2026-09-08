@@ -69,12 +69,15 @@ public class MessageServiceImpl implements MessageService {
             conversationRepository.incrementTenantUnreadAndSetLastMessage(conversationId, preview, now);
         }
 
-        // 4. Estrategia de Conversión (O(1) en memoria + cerrojo atómico SQL con incremento de tenantUnreadCount)
+        // 4. Estrategia de Conversión (O(1) en memoria + cerrojo atómico SQL)
         int projectedCount = conversation.getUserMessageCount() + 1;
 
         if (projectedCount >= NUDGE_USER_MESSAGE_THRESHOLD && conversation.getActiveBookingRequest() == null) {
             // Cerrojo atómico condicional en base de datos: solo una petición concurrente podrá reclamar el Nudge
-            int claimed = conversationRepository.claimNudge(conversationId);
+            // Si quien envía es el anfitrión, incrementamos el unread para el inquilino; si envía el inquilino, no se auto-incrementa
+            int claimed = isTenant
+                    ? conversationRepository.claimNudge(conversationId)
+                    : conversationRepository.claimNudgeWithTenantUnread(conversationId);
 
             if (claimed > 0) {
                 Message systemNudge = Message.builder()
@@ -86,6 +89,9 @@ public class MessageServiceImpl implements MessageService {
                         .build();
 
                 messageRepository.saveAndFlush(systemNudge);
+
+                String nudgePreview = truncate(NUDGE_CONTENT, 140);
+                conversationRepository.updateLastMessage(conversationId, nudgePreview, LocalDateTime.now());
             }
         }
 

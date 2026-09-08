@@ -1,7 +1,24 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { describe, it, expect, vi } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import { ListingHostCard, type ListingHostCardProps } from './ListingHostCard';
+import { messagingApi } from '../../../messaging/api/messagingApi';
+
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
+
+vi.mock('../../../messaging/api/messagingApi', () => ({
+  messagingApi: {
+    startConsultation: vi.fn(),
+  },
+}));
 
 describe('ListingHostCard', () => {
   const defaultProps: ListingHostCardProps = {
@@ -9,6 +26,8 @@ describe('ListingHostCard', () => {
     hostNickname: 'ElenaHost',
     hostProfilePicUrl: 'https://example.com/elena.jpg',
     createdAt: '2024-05-15T12:00:00Z',
+    listingId: 'listing-456',
+    currentUserId: 'tenant-789',
   };
 
   const renderComponent = (props: ListingHostCardProps = defaultProps) => {
@@ -48,4 +67,34 @@ describe('ListingHostCard', () => {
 
     expect(screen.queryByRole('link', { name: /ver perfil/i })).not.toBeInTheDocument();
   });
+
+  it('inicia conversacion de consulta al hacer clic en Contactar y navega', async () => {
+    const user = userEvent.setup();
+    vi.mocked(messagingApi.startConsultation).mockResolvedValueOnce({
+      conversationId: 'conv-999',
+    } as any);
+
+    renderComponent();
+
+    const contactBtn = screen.getByRole('button', { name: /Contactar/i });
+    await user.click(contactBtn);
+
+    expect(messagingApi.startConsultation).toHaveBeenCalledWith('listing-456');
+    expect(mockNavigate).toHaveBeenCalledWith('/messages/conv-999');
+  });
+
+  it('muestra mensaje de alerta si falla al iniciar la consulta', async () => {
+    const user = userEvent.setup();
+    vi.mocked(messagingApi.startConsultation).mockRejectedValueOnce(
+      new Error('Anuncio no disponible o pausado')
+    );
+
+    renderComponent();
+
+    const contactBtn = screen.getByRole('button', { name: /Contactar/i });
+    await user.click(contactBtn);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Anuncio no disponible o pausado');
+  });
 });
+

@@ -57,6 +57,8 @@ public class AdminReportServiceImpl implements AdminReportService {
             return reportRepository.findMostReportedListingsUnbanned(pageable);
         } else if (type == ReportTargetType.USER) {
             return reportRepository.findMostReportedUsersUnbanned(pageable);
+        } else if (type == ReportTargetType.CONVERSATION) {
+            return reportRepository.findMostReportedConversations(pageable);
         }
         return reportRepository.findAllMostReportedUnbanned(pageable);
     }

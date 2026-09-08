@@ -25,6 +25,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Pageable;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -117,7 +121,7 @@ class AdminConversationServiceImplTest {
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        when(messageRepository.findAllByConversationIdOrderByCreatedAtAsc(conversationId))
+        when(messageRepository.findTopMessagesByConversationId(eq(conversationId), any(Pageable.class)))
                 .thenReturn(List.of(message));
 
         AdminConversationDossierDto dossier = adminConversationService.getConversationDossier(conversationId);
@@ -147,7 +151,7 @@ class AdminConversationServiceImplTest {
 
         when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
         when(reportRepository.existsByTargetTypeAndTargetId(ReportTargetType.CONVERSATION, conversationId)).thenReturn(false);
-        when(messageRepository.findAllByConversationIdOrderByCreatedAtAsc(conversationId)).thenReturn(Collections.emptyList());
+        when(messageRepository.findTopMessagesByConversationId(eq(conversationId), any(Pageable.class))).thenReturn(Collections.emptyList());
 
         AdminConversationDossierDto dossier = adminConversationService.getConversationDossier(conversationId);
 
@@ -167,7 +171,7 @@ class AdminConversationServiceImplTest {
 
         when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
         when(reportRepository.existsByTargetTypeAndTargetId(ReportTargetType.CONVERSATION, conversationId)).thenReturn(false);
-        when(messageRepository.findAllByConversationIdOrderByCreatedAtAsc(conversationId)).thenReturn(Collections.emptyList());
+        when(messageRepository.findTopMessagesByConversationId(eq(conversationId), any(Pageable.class))).thenReturn(Collections.emptyList());
 
         AdminConversationDossierDto dossier = adminConversationService.getConversationDossier(conversationId);
 

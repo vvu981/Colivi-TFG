@@ -189,7 +189,34 @@ class MessageServiceImplTest {
 
             assertThat(response).isNotNull();
             verify(conversationRepository).claimNudge(eq(conversationId));
+            verify(conversationRepository).updateLastMessage(eq(conversationId), any(), any());
             // Se guardan dos mensajes: el del usuario y el system nudge
+            verify(messageRepository, times(2)).saveAndFlush(any(Message.class));
+        }
+
+        @Test
+        @DisplayName("Host alcanza umbral de 4 mensajes sin reserva: reclama con claimNudgeWithTenantUnread e inserta SYSTEM_MESSAGE")
+        void whenHostTriggersNudge_withoutBooking_thenClaimWithTenantUnread() {
+            conversation.setUserMessageCount(3);
+            conversation.setActiveBookingRequest(null);
+
+            when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+            when(userRepository.findById(hostId)).thenReturn(Optional.of(host));
+            when(conversationRepository.claimNudgeWithTenantUnread(eq(conversationId))).thenReturn(1);
+
+            when(messageRepository.saveAndFlush(any(Message.class))).thenAnswer(inv -> {
+                Message m = inv.getArgument(0);
+                m.setId(UUID.randomUUID());
+                m.setCreatedAt(LocalDateTime.now());
+                return m;
+            });
+
+            SendMessageRequest req = new SendMessageRequest("Hola, puedes solicitar reserva cuando quieras.");
+            MessageResponseDto response = messageService.sendMessage(conversationId, hostId, req);
+
+            assertThat(response).isNotNull();
+            verify(conversationRepository).claimNudgeWithTenantUnread(eq(conversationId));
+            verify(conversationRepository).updateLastMessage(eq(conversationId), any(), any());
             verify(messageRepository, times(2)).saveAndFlush(any(Message.class));
         }
 

@@ -200,6 +200,46 @@ class ConversationServiceImplTest {
         }
 
         @Test
+        @DisplayName("Actualiza el activeBookingRequest si la conversación existente tenía uno antiguo diferente")
+        void whenConversationExists_withOutdatedBooking_thenUpdateToNewActiveBooking() {
+            BookingRequest oldBooking = BookingRequest.builder().id(UUID.randomUUID()).build();
+            BookingRequest newBooking = BookingRequest.builder().id(UUID.randomUUID()).build();
+            conversation.setActiveBookingRequest(oldBooking);
+
+            when(userRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
+            when(listingRepository.findById(listingId)).thenReturn(Optional.of(listing));
+            when(bookingRequestRepository.findActiveRequestsByUserAndListing(tenantId, listingId))
+                    .thenReturn(List.of(newBooking));
+            when(conversationRepository.findByTenantIdAndHostIdAndListingId(tenantId, hostId, listingId))
+                    .thenReturn(Optional.of(conversation));
+
+            Conversation result = conversationService.getOrCreateConsultation(tenantId, listingId);
+
+            assertThat(result.getActiveBookingRequest()).isEqualTo(newBooking);
+            verify(conversationRepository).linkActiveBookingRequest(conversation.getId(), newBooking);
+        }
+
+        @Test
+        @DisplayName("Desvincula activeBookingRequest si la conversación tenía uno pero ya no hay ninguno activo")
+        void whenConversationExists_withBookingNowInactive_thenUnlinkBooking() {
+            UUID oldBookingId = UUID.randomUUID();
+            BookingRequest oldBooking = BookingRequest.builder().id(oldBookingId).build();
+            conversation.setActiveBookingRequest(oldBooking);
+
+            when(userRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
+            when(listingRepository.findById(listingId)).thenReturn(Optional.of(listing));
+            when(bookingRequestRepository.findActiveRequestsByUserAndListing(tenantId, listingId))
+                    .thenReturn(Collections.emptyList());
+            when(conversationRepository.findByTenantIdAndHostIdAndListingId(tenantId, hostId, listingId))
+                    .thenReturn(Optional.of(conversation));
+
+            Conversation result = conversationService.getOrCreateConsultation(tenantId, listingId);
+
+            assertThat(result.getActiveBookingRequest()).isNull();
+            verify(conversationRepository).unlinkBookingRequest(oldBookingId);
+        }
+
+        @Test
         @DisplayName("Crea y guarda una nueva conversación si no existe")
         void whenConversationDoesNotExist_thenCreateAndSave() {
             when(userRepository.findById(tenantId)).thenReturn(Optional.of(tenant));

@@ -32,6 +32,14 @@ public interface MessageRepository extends JpaRepository<Message, UUID> {
             @Param("conversationId") UUID conversationId
     );
 
+    @Query("SELECT m FROM Message m LEFT JOIN FETCH m.sender " +
+           "WHERE m.conversation.id = :conversationId " +
+           "ORDER BY m.createdAt ASC")
+    java.util.List<Message> findTopMessagesByConversationId(
+            @Param("conversationId") UUID conversationId,
+            Pageable pageable
+    );
+
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("UPDATE Message m SET m.status = :status, m.readAt = :now " +
            "WHERE m.conversation.id = :conversationId " +

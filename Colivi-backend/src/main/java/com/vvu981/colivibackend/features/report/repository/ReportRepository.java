@@ -84,14 +84,32 @@ public interface ReportRepository extends JpaRepository<Report, UUID>, JpaSpecif
                         + "SUM(CASE WHEN r.status IN (com.vvu981.colivibackend.features.report.domain.ReportStatus.PENDING, com.vvu981.colivibackend.features.report.domain.ReportStatus.INVESTIGATING) THEN 1L ELSE 0L END), "
                         + "COUNT(r)) "
                         + "FROM Report r "
+                        + "WHERE r.targetType = com.vvu981.colivibackend.features.report.domain.ReportTargetType.CONVERSATION "
+                        + "AND EXISTS (SELECT 1 FROM com.vvu981.colivibackend.features.messaging.domain.Conversation c WHERE c.id = r.targetId) "
+                        + "GROUP BY r.targetId, r.targetType "
+                        + "HAVING SUM(CASE WHEN r.status IN (com.vvu981.colivibackend.features.report.domain.ReportStatus.PENDING, com.vvu981.colivibackend.features.report.domain.ReportStatus.INVESTIGATING) THEN 1L ELSE 0L END) > 0 "
+                        + "ORDER BY SUM(CASE WHEN r.status IN (com.vvu981.colivibackend.features.report.domain.ReportStatus.PENDING, com.vvu981.colivibackend.features.report.domain.ReportStatus.INVESTIGATING) THEN 1L ELSE 0L END) DESC, COUNT(r) DESC",
+               countQuery = "SELECT COUNT(DISTINCT r.targetId) FROM Report r "
+                                + "WHERE r.targetType = com.vvu981.colivibackend.features.report.domain.ReportTargetType.CONVERSATION "
+                                + "AND r.status IN (com.vvu981.colivibackend.features.report.domain.ReportStatus.PENDING, com.vvu981.colivibackend.features.report.domain.ReportStatus.INVESTIGATING) "
+                                + "AND EXISTS (SELECT 1 FROM com.vvu981.colivibackend.features.messaging.domain.Conversation c WHERE c.id = r.targetId)")
+        Page<ReportTargetCountDTO> findMostReportedConversations(Pageable pageable);
+
+        @Query(value = "SELECT new com.vvu981.colivibackend.features.report.dto.ReportTargetCountDTO("
+                        + "r.targetId, r.targetType, "
+                        + "SUM(CASE WHEN r.status IN (com.vvu981.colivibackend.features.report.domain.ReportStatus.PENDING, com.vvu981.colivibackend.features.report.domain.ReportStatus.INVESTIGATING) THEN 1L ELSE 0L END), "
+                        + "COUNT(r)) "
+                        + "FROM Report r "
                         + "WHERE (r.targetType = com.vvu981.colivibackend.features.report.domain.ReportTargetType.LISTING AND EXISTS (SELECT 1 FROM com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing l WHERE l.id = r.targetId AND l.bannedAt IS NULL AND l.deletedAt IS NULL)) "
                         + "   OR (r.targetType = com.vvu981.colivibackend.features.report.domain.ReportTargetType.USER AND EXISTS (SELECT 1 FROM com.vvu981.colivibackend.features.user.domain.User u WHERE u.id = r.targetId AND u.bannedAt IS NULL AND u.deletedAt IS NULL)) "
+                        + "   OR (r.targetType = com.vvu981.colivibackend.features.report.domain.ReportTargetType.CONVERSATION AND EXISTS (SELECT 1 FROM com.vvu981.colivibackend.features.messaging.domain.Conversation c WHERE c.id = r.targetId)) "
                         + "GROUP BY r.targetId, r.targetType "
                         + "HAVING SUM(CASE WHEN r.status IN (com.vvu981.colivibackend.features.report.domain.ReportStatus.PENDING, com.vvu981.colivibackend.features.report.domain.ReportStatus.INVESTIGATING) THEN 1L ELSE 0L END) > 0 "
                         + "ORDER BY SUM(CASE WHEN r.status IN (com.vvu981.colivibackend.features.report.domain.ReportStatus.PENDING, com.vvu981.colivibackend.features.report.domain.ReportStatus.INVESTIGATING) THEN 1L ELSE 0L END) DESC, COUNT(r) DESC",
                countQuery = "SELECT COUNT(DISTINCT r.targetId) FROM Report r "
                                 + "WHERE ((r.targetType = com.vvu981.colivibackend.features.report.domain.ReportTargetType.LISTING AND EXISTS (SELECT 1 FROM com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing l WHERE l.id = r.targetId AND l.bannedAt IS NULL AND l.deletedAt IS NULL)) "
-                                + "   OR (r.targetType = com.vvu981.colivibackend.features.report.domain.ReportTargetType.USER AND EXISTS (SELECT 1 FROM com.vvu981.colivibackend.features.user.domain.User u WHERE u.id = r.targetId AND u.bannedAt IS NULL AND u.deletedAt IS NULL))) "
+                                + "   OR (r.targetType = com.vvu981.colivibackend.features.report.domain.ReportTargetType.USER AND EXISTS (SELECT 1 FROM com.vvu981.colivibackend.features.user.domain.User u WHERE u.id = r.targetId AND u.bannedAt IS NULL AND u.deletedAt IS NULL)) "
+                                + "   OR (r.targetType = com.vvu981.colivibackend.features.report.domain.ReportTargetType.CONVERSATION AND EXISTS (SELECT 1 FROM com.vvu981.colivibackend.features.messaging.domain.Conversation c WHERE c.id = r.targetId))) "
                                 + "AND r.status IN (com.vvu981.colivibackend.features.report.domain.ReportStatus.PENDING, com.vvu981.colivibackend.features.report.domain.ReportStatus.INVESTIGATING)")
         Page<ReportTargetCountDTO> findAllMostReportedUnbanned(Pageable pageable);
 

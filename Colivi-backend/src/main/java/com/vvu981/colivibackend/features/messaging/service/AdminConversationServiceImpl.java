@@ -16,6 +16,8 @@ import com.vvu981.colivibackend.features.report.domain.ReportTargetType;
 import com.vvu981.colivibackend.features.report.repository.ReportRepository;
 import com.vvu981.colivibackend.features.user.domain.User;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +27,8 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class AdminConversationServiceImpl implements AdminConversationService {
+
+    private static final int MAX_DOSSIER_MESSAGES = 200;
 
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
@@ -70,7 +74,8 @@ public class AdminConversationServiceImpl implements AdminConversationService {
                 booking.getTransactionId()
         ) : null;
 
-        List<Message> messages = messageRepository.findAllByConversationIdOrderByCreatedAtAsc(conversationId);
+        Pageable pageable = PageRequest.of(0, MAX_DOSSIER_MESSAGES);
+        List<Message> messages = messageRepository.findTopMessagesByConversationId(conversationId, pageable);
         List<MessageResponseDto> messageDtos = messages.stream()
                 .map(m -> MessageResponseDto.fromEntity(m, null))
                 .toList();

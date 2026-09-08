@@ -2,6 +2,7 @@ package com.vvu981.colivibackend.features.messaging.service.validator;
 
 import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
 import com.vvu981.colivibackend.core.exception.UnauthorizedActionException;
+import com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing;
 import com.vvu981.colivibackend.features.bookingRequests.domain.BookingRequest;
 import com.vvu981.colivibackend.features.bookingRequests.domain.RequestStatus;
 import com.vvu981.colivibackend.features.messaging.domain.Conversation;
@@ -91,6 +92,64 @@ class MessageAccessPolicyValidatorTest {
             assertThatThrownBy(() -> validator.validateCanSendMessage(conversation, host))
                     .isInstanceOf(BusinessRuleValidationException.class)
                     .hasMessageContaining("El destinatario se encuentra suspendido");
+        }
+
+        @Test
+        @DisplayName("Lanza BusinessRuleValidationException si el remitente está dado de baja (soft deleted)")
+        void whenSenderIsSoftDeleted_thenThrowException() {
+            tenant.setDeletedAt(LocalDateTime.now().minusDays(1));
+
+            assertThatThrownBy(() -> validator.validateCanSendMessage(conversation, tenant))
+                    .isInstanceOf(BusinessRuleValidationException.class)
+                    .hasMessageContaining("Tu cuenta se encuentra dada de baja");
+        }
+
+        @Test
+        @DisplayName("Lanza BusinessRuleValidationException si el destinatario está dado de baja (inquilino a host)")
+        void whenRecipientIsSoftDeleted_tenantToHost_thenThrowException() {
+            host.setDeletedAt(LocalDateTime.now().minusDays(1));
+
+            assertThatThrownBy(() -> validator.validateCanSendMessage(conversation, tenant))
+                    .isInstanceOf(BusinessRuleValidationException.class)
+                    .hasMessageContaining("El destinatario se encuentra dado de baja");
+        }
+
+        @Test
+        @DisplayName("Lanza BusinessRuleValidationException si el destinatario está dado de baja (host a inquilino)")
+        void whenRecipientIsSoftDeleted_hostToTenant_thenThrowException() {
+            tenant.setDeletedAt(LocalDateTime.now().minusDays(1));
+
+            assertThatThrownBy(() -> validator.validateCanSendMessage(conversation, host))
+                    .isInstanceOf(BusinessRuleValidationException.class)
+                    .hasMessageContaining("El destinatario se encuentra dado de baja");
+        }
+
+        @Test
+        @DisplayName("Lanza BusinessRuleValidationException si el anuncio está suspendido (banned)")
+        void whenListingIsBanned_thenThrowException() {
+            AccommodationListing bannedListing = AccommodationListing.builder()
+                    .id(UUID.randomUUID())
+                    .bannedAt(LocalDateTime.now().minusDays(1))
+                    .build();
+            conversation.setListing(bannedListing);
+
+            assertThatThrownBy(() -> validator.validateCanSendMessage(conversation, tenant))
+                    .isInstanceOf(BusinessRuleValidationException.class)
+                    .hasMessageContaining("El anuncio asociado a esta conversación ya no se encuentra disponible");
+        }
+
+        @Test
+        @DisplayName("Lanza BusinessRuleValidationException si el anuncio está eliminado (soft deleted)")
+        void whenListingIsDeleted_thenThrowException() {
+            AccommodationListing deletedListing = AccommodationListing.builder()
+                    .id(UUID.randomUUID())
+                    .deletedAt(LocalDateTime.now().minusDays(1))
+                    .build();
+            conversation.setListing(deletedListing);
+
+            assertThatThrownBy(() -> validator.validateCanSendMessage(conversation, tenant))
+                    .isInstanceOf(BusinessRuleValidationException.class)
+                    .hasMessageContaining("El anuncio asociado a esta conversación ya no se encuentra disponible");
         }
 
         @Test
@@ -184,7 +243,8 @@ class MessageAccessPolicyValidatorTest {
             BookingRequest booking = BookingRequest.builder()
                     .status(RequestStatus.CANCELLED)
                     .transactionId("tx_12345")
-                    .endDate(LocalDate.now().minusDays(20))
+                    .updatedAt(LocalDateTime.now().minusDays(20))
+                    .endDate(LocalDate.now().plusDays(10))
                     .build();
             conversation.setActiveBookingRequest(booking);
 
@@ -198,13 +258,14 @@ class MessageAccessPolicyValidatorTest {
             BookingRequest booking = BookingRequest.builder()
                     .status(RequestStatus.CANCELLED)
                     .transactionId("tx_12345")
-                    .endDate(LocalDate.now().minusDays(46))
+                    .updatedAt(LocalDateTime.now().minusDays(46))
+                    .endDate(LocalDate.now().plusDays(10))
                     .build();
             conversation.setActiveBookingRequest(booking);
 
             assertThatThrownBy(() -> validator.validateCanSendMessage(conversation, tenant))
                     .isInstanceOf(BusinessRuleValidationException.class)
-                    .hasMessageContaining("El canal de resolución de fianza para esta reserva cancelada ha expirado");
+                    .hasMessageContaining("El canal de resolución de fianza para esta reserva cancelada ha expirado tras 45 días desde la cancelación");
         }
 
         @Test

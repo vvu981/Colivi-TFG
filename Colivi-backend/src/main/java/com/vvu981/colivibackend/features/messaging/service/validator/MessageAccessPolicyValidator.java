@@ -2,6 +2,7 @@ package com.vvu981.colivibackend.features.messaging.service.validator;
 
 import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
 import com.vvu981.colivibackend.core.exception.UnauthorizedActionException;
+import com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing;
 import com.vvu981.colivibackend.features.bookingRequests.domain.BookingRequest;
 import com.vvu981.colivibackend.features.bookingRequests.domain.RequestStatus;
 import com.vvu981.colivibackend.features.messaging.domain.Conversation;
@@ -26,17 +27,29 @@ public class MessageAccessPolicyValidator {
             throw new UnauthorizedActionException("No tienes permisos para participar en esta conversación.");
         }
 
-        // 2. Verificación de Sanción (Baneo dinámico)
+        // 2. Verificación de Sanción y Baja (Baneo y Soft Delete)
         if (sender.isBanned()) {
             throw new BusinessRuleValidationException("Tu cuenta se encuentra suspendida temporalmente.");
+        }
+        if (sender.getDeletedAt() != null) {
+            throw new BusinessRuleValidationException("Tu cuenta se encuentra dada de baja.");
         }
 
         User recipient = isTenant ? conversation.getHost() : conversation.getTenant();
         if (recipient.isBanned()) {
             throw new BusinessRuleValidationException("El destinatario se encuentra suspendido.");
         }
+        if (recipient.getDeletedAt() != null) {
+            throw new BusinessRuleValidationException("El destinatario se encuentra dado de baja.");
+        }
 
-        // 3. Verificación de Ciclo de Vida y Ventana Legal de 45 días
+        // 3. Verificación de Estado del Inmueble (Anuncio Baneado o Eliminado)
+        AccommodationListing listing = conversation.getListing();
+        if (listing != null && (listing.getBannedAt() != null || listing.getDeletedAt() != null)) {
+            throw new BusinessRuleValidationException("El anuncio asociado a esta conversación ya no se encuentra disponible.");
+        }
+
+        // 4. Verificación de Ciclo de Vida y Ventana Legal de 45 días
         BookingRequest booking = conversation.getActiveBookingRequest();
         if (booking != null) {
             validateBookingLifecycleWindow(booking);
@@ -74,13 +87,16 @@ public class MessageAccessPolicyValidator {
                 // Si la estancia no ha concluido aún, está totalmente abierto
             }
             case CANCELLED -> {
-                // Si hubo fianza/transacción previa, mantener 45 días para liquidaciones
+                // Si hubo fianza/transacción previa, mantener 45 días para liquidaciones contados desde la cancelación
                 if (booking.getTransactionId() != null) {
-                    LocalDate legalCutoff = booking.getEndDate().plusDays(LEGAL_SETTLEMENT_DAYS);
+                    LocalDate cancellationDate = booking.getUpdatedAt() != null
+                            ? booking.getUpdatedAt().toLocalDate()
+                            : (booking.getCreatedAt() != null ? booking.getCreatedAt().toLocalDate() : now);
+                    LocalDate legalCutoff = cancellationDate.plusDays(LEGAL_SETTLEMENT_DAYS);
                     if (now.isAfter(legalCutoff)) {
                         throw new BusinessRuleValidationException(
                             "El canal de resolución de fianza para esta reserva cancelada ha expirado tras " + 
-                            LEGAL_SETTLEMENT_DAYS + " días."
+                            LEGAL_SETTLEMENT_DAYS + " días desde la cancelación."
                         );
                     }
                 }

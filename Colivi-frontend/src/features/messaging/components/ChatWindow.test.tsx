@@ -142,6 +142,31 @@ describe('ChatWindow Component', () => {
     expect(onSendMessage).toHaveBeenCalledWith('¿Cuándo puedo visitarlo?');
   });
 
+  it('muestra banner de error y restaura el texto cuando onSendMessage falla', async () => {
+    const user = userEvent.setup();
+    const onSendMessage = vi.fn().mockRejectedValue(new Error('Fallo de conexión al enviar'));
+
+    render(
+      <ChatWindow
+        conversation={mockConversation}
+        messages={[userMessageMine]}
+        onSendMessage={onSendMessage}
+        onRequestBooking={vi.fn()}
+      />
+    );
+
+    const textarea = screen.getByPlaceholderText(/escribe un mensaje/i);
+    await user.type(textarea, 'Mensaje que fallará{Enter}');
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(screen.getByText('Fallo de conexión al enviar')).toBeInTheDocument();
+    expect(textarea).toHaveValue('Mensaje que fallará');
+
+    const closeBtn = screen.getByRole('button', { name: /cerrar aviso de error/i });
+    await user.click(closeBtn);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
   it('renderiza banner de modo solo lectura cuando isReadOnly es true', () => {
     render(
       <ChatWindow

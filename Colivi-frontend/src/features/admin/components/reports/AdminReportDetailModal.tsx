@@ -31,6 +31,45 @@ const formatUserFullName = (user?: { firstName?: string; lastName?: string; last
   return parts.join(' ').trim() || user.nickname || fallback;
 };
 
+const getTargetDemonstrative = (type?: string): string => {
+  switch (type) {
+    case 'LISTING':
+      return 'este anuncio';
+    case 'USER':
+      return 'este usuario';
+    case 'CONVERSATION':
+      return 'esta conversación';
+    default:
+      return 'este objetivo';
+  }
+};
+
+const getTargetDefiniteArticle = (type?: string): string => {
+  switch (type) {
+    case 'LISTING':
+      return 'el anuncio';
+    case 'USER':
+      return 'el usuario';
+    case 'CONVERSATION':
+      return 'la conversación';
+    default:
+      return 'el objetivo';
+  }
+};
+
+const getTargetCapitalizedNoun = (type?: string): string => {
+  switch (type) {
+    case 'LISTING':
+      return 'Anuncio';
+    case 'USER':
+      return 'Usuario';
+    case 'CONVERSATION':
+      return 'Conversación';
+    default:
+      return 'Objetivo';
+  }
+};
+
 interface AdminReportDetailModalProps {
   report: ReportItem | null;
   isOpen: boolean;
@@ -139,8 +178,13 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
   const handleOpenBanConfirm = () => {
     setConfirmModal({
       type: 'BAN',
-      title: `¿Confirmar suspensión y baneo de ${report.targetType === 'LISTING' ? 'este anuncio' : 'este usuario'}?`,
-      message: `Esta acción sancionará al ${report.targetType === 'LISTING' ? 'anuncio ocultándolo inmediatamente de la plataforma' : 'usuario bloqueando su cuenta'} y resolverá automáticamente en cascada todas las denuncias abiertas asociadas a este objetivo.`,
+      title: `¿Confirmar suspensión y baneo de ${getTargetDemonstrative(report.targetType)}?`,
+      message:
+        report.targetType === 'LISTING'
+          ? 'Esta acción sancionará al anuncio ocultándolo inmediatamente de la plataforma y resolverá automáticamente en cascada todas las denuncias abiertas asociadas a este objetivo.'
+          : report.targetType === 'CONVERSATION'
+          ? 'Esta acción bloqueará la conversación y resolverá automáticamente en cascada todas las denuncias abiertas asociadas a este objetivo.'
+          : 'Esta acción sancionará al usuario bloqueando su cuenta y resolverá automáticamente en cascada todas las denuncias abiertas asociadas a este objetivo.',
       confirmText: 'Sí, banear y resolver denuncias',
       variant: 'warning',
     });
@@ -149,7 +193,7 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
   const handleOpenResolveAllConfirm = () => {
     setConfirmModal({
       type: 'RESOLVE_ALL',
-      title: `¿Resolver todas las denuncias abiertas de este ${report.targetType === 'LISTING' ? 'anuncio' : 'usuario'}?`,
+      title: `¿Resolver todas las denuncias abiertas de ${getTargetDemonstrative(report.targetType)}?`,
       message: 'Todas las denuncias pendientes o en investigación vinculadas a este objetivo pasarán al estado RESUELTA.',
       confirmText: 'Sí, resolver todas en bloque',
       variant: 'warning',
@@ -159,8 +203,13 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
   const handleOpenUnbanConfirm = () => {
     setConfirmModal({
       type: 'UNBAN',
-      title: `¿Confirmar desbaneo de ${report.targetType === 'LISTING' ? 'este anuncio' : 'este usuario'}?`,
-      message: `Esta acción restaurará el ${report.targetType === 'LISTING' ? 'anuncio haciéndolo visible de nuevo en la plataforma' : 'usuario permitiéndole iniciar sesión nuevamente'}.`,
+      title: `¿Confirmar desbaneo de ${getTargetDemonstrative(report.targetType)}?`,
+      message:
+        report.targetType === 'LISTING'
+          ? 'Esta acción restaurará el anuncio haciéndolo visible de nuevo en la plataforma.'
+          : report.targetType === 'CONVERSATION'
+          ? 'Esta acción restaurará la conversación en la plataforma.'
+          : 'Esta acción restaurará al usuario permitiéndole iniciar sesión nuevamente.',
       confirmText: 'Sí, desbanear objetivo',
       variant: 'warning',
     });
@@ -169,7 +218,7 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
   const handleOpenDeleteConfirm = () => {
     setConfirmModal({
       type: 'HARD_DELETE',
-      title: `¿Eliminar permanentemente ${report.targetType === 'LISTING' ? 'el anuncio' : 'el usuario'}?`,
+      title: `¿Eliminar permanentemente ${getTargetDefiniteArticle(report.targetType)}?`,
       message: `¡ATENCIÓN! Esta acción ejecutará un borrado físico (Hard Delete) irreversible en la base de datos eliminando todos sus datos asociados.`,
       confirmText: 'Sí, eliminar definitivamente',
       variant: 'danger',
@@ -177,7 +226,7 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
   };
 
   const handleOpenUserBanConfirm = (userSnippet: AdminUserSnippet) => {
-    const fullName = `${userSnippet.firstName} ${userSnippet.lastName}`.trim() || userSnippet.nickname;
+    const fullName = formatUserFullName(userSnippet, userSnippet.nickname || 'Usuario');
     if (userSnippet.isBanned) {
       setConfirmModal({
         type: 'UNBAN',
@@ -257,14 +306,14 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
         // Cascada automática: Resolver todas las denuncias abiertas del objetivo
         const resolutionNotes =
           adminNotes ||
-          `Resuelto automáticamente tras sanción y baneo del ${report.targetType === 'LISTING' ? 'anuncio' : 'usuario'}.`;
+          `Resuelto automáticamente tras sanción y baneo de ${getTargetDefiniteArticle(report.targetType)}.`;
         await adminReportService.resolveAllReportsForTarget(report.targetId, {
           status: 'RESOLVED',
           adminNotes: resolutionNotes,
         });
         await onStatusUpdate(report.id, 'RESOLVED', resolutionNotes);
         setActionSuccess(
-          `${report.targetType === 'LISTING' ? 'Anuncio' : 'Usuario'} baneado y todas sus denuncias abiertas resueltas con éxito.`
+          `${getTargetCapitalizedNoun(report.targetType)} sancionado y todas sus denuncias abiertas resueltas con éxito.`
         );
       } else if (confirmModal.type === 'RESOLVE_ALL') {
         const resolutionNotes = adminNotes || 'Resolución masiva de todas las denuncias abiertas del objetivo.';

@@ -8,11 +8,11 @@ export const useMessagingInbox = () => {
   const [isArchivedTab, setIsArchivedTab] = useState(false);
   const [page, setPage] = useState(0);
 
-  // ─── Polling de Bandeja de Entrada (Cada 3s solo metadatos ligeros) ──────────
+  // ─── Polling de Bandeja de Entrada (Cada 8s solo metadatos ligeros) ──────────
   const inboxQuery = useQuery<PageResponse<ConversationSummary>>({
     queryKey: ['inbox', isArchivedTab, page],
     queryFn: () => messagingApi.getInbox(isArchivedTab, page, 20),
-    refetchInterval: 3000,
+    refetchInterval: 8000,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,

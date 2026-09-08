@@ -51,6 +51,20 @@ public interface BookingRequestRepository
             @org.springframework.data.repository.query.Param("startDate") java.time.LocalDate startDate,
             @org.springframework.data.repository.query.Param("endDate") java.time.LocalDate endDate);
 
+    @org.springframework.data.jpa.repository.Query("""
+                SELECT b.id FROM BookingRequest b
+                WHERE b.accommodationListing.id = :listingId
+                  AND b.id != :confirmedRequestId
+                  AND b.status IN ('PENDING', 'ACCEPTED')
+                  AND b.startDate <= :endDate
+                  AND b.endDate >= :startDate
+            """)
+    java.util.List<UUID> findOverlappingRequestIds(
+            @org.springframework.data.repository.query.Param("listingId") UUID listingId,
+            @org.springframework.data.repository.query.Param("confirmedRequestId") UUID confirmedRequestId,
+            @org.springframework.data.repository.query.Param("startDate") java.time.LocalDate startDate,
+            @org.springframework.data.repository.query.Param("endDate") java.time.LocalDate endDate);
+
     @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true, flushAutomatically = true)
     @org.springframework.data.jpa.repository.Query("""
                 UPDATE BookingRequest b

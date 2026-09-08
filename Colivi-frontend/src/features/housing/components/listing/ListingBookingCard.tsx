@@ -84,10 +84,12 @@ export const ListingBookingCard: React.FC<ListingBookingCardProps> = ({
     }
     try {
       setIsStartingChat(true);
+      setError(null);
       const conv = await messagingApi.startConsultation(id);
       navigate(`/messages/${conv.conversationId}`);
     } catch (err) {
       console.error('Error opening consultation chat', err);
+      setError(err instanceof Error ? err.message : 'No se pudo abrir el chat de consulta.');
     } finally {
       setIsStartingChat(false);
     }
@@ -217,7 +219,10 @@ export const ListingBookingCard: React.FC<ListingBookingCardProps> = ({
             <>
               <button
                  type="button"
-                 onClick={() => setIsContactModalOpen(true)}
+                 onClick={() => {
+                   setError(null);
+                   setIsContactModalOpen(true);
+                 }}
                  className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-primary text-on-primary font-bold text-sm hover:opacity-95 active:scale-98 transition-all cursor-pointer shadow-sm"
                >
                  <CalendarDays size={18} />
@@ -232,6 +237,11 @@ export const ListingBookingCard: React.FC<ListingBookingCardProps> = ({
                  <MessageSquare size={17} className="text-primary" />
                  <span>{isStartingChat ? 'Abriendo chat...' : 'Contactar / Preguntar'}</span>
               </button>
+              {error && (
+                <div role="alert" className="p-2.5 rounded-xl bg-error-container text-on-error-container text-xs font-medium">
+                  {error}
+                </div>
+              )}
             </>
           )}
         </div>

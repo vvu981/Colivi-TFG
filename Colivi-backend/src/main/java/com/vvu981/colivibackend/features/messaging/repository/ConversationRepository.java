@@ -73,10 +73,26 @@ public interface ConversationRepository extends JpaRepository<Conversation, UUID
 
         @Modifying(flushAutomatically = true)
         @Query("UPDATE Conversation c SET " +
-                        "c.tenantUnreadCount = c.tenantUnreadCount + 1, " +
                         "c.nudgeSent = true " +
                         "WHERE c.id = :conversationId AND c.nudgeSent = false AND c.activeBookingRequest IS NULL")
         int claimNudge(@Param("conversationId") UUID conversationId);
+
+        @Modifying(flushAutomatically = true)
+        @Query("UPDATE Conversation c SET " +
+                        "c.tenantUnreadCount = c.tenantUnreadCount + 1, " +
+                        "c.nudgeSent = true " +
+                        "WHERE c.id = :conversationId AND c.nudgeSent = false AND c.activeBookingRequest IS NULL")
+        int claimNudgeWithTenantUnread(@Param("conversationId") UUID conversationId);
+
+        @Modifying(flushAutomatically = true)
+        @Query("UPDATE Conversation c SET " +
+                        "c.lastMessageAt = :now, " +
+                        "c.lastMessagePreview = :preview " +
+                        "WHERE c.id = :conversationId")
+        int updateLastMessage(
+                        @Param("conversationId") UUID conversationId,
+                        @Param("preview") String preview,
+                        @Param("now") LocalDateTime now);
 
         @Modifying(flushAutomatically = true)
         @Query("UPDATE Conversation c SET c.tenantUnreadCount = 0 WHERE c.id = :conversationId")
@@ -107,4 +123,8 @@ public interface ConversationRepository extends JpaRepository<Conversation, UUID
         @Modifying(flushAutomatically = true)
         @Query("UPDATE Conversation c SET c.activeBookingRequest = null WHERE c.activeBookingRequest.id = :bookingRequestId")
         int unlinkBookingRequest(@Param("bookingRequestId") UUID bookingRequestId);
+
+        @Modifying(flushAutomatically = true)
+        @Query("UPDATE Conversation c SET c.activeBookingRequest = null WHERE c.activeBookingRequest.id IN :bookingRequestIds")
+        int unlinkBookingRequests(@Param("bookingRequestIds") java.util.Collection<UUID> bookingRequestIds);
 }

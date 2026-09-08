@@ -26,6 +26,7 @@ export const ListingHostCard: React.FC<ListingHostCardProps> = ({
 }) => {
   const navigate = useNavigate();
   const [isStartingChat, setIsStartingChat] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const initial = hostNickname ? hostNickname.charAt(0).toUpperCase() : 'A';
   const formattedDate = new Date(createdAt).toLocaleDateString('es-ES', {
     month: 'long',
@@ -43,10 +44,12 @@ export const ListingHostCard: React.FC<ListingHostCardProps> = ({
 
     try {
       setIsStartingChat(true);
+      setError(null);
       const conv = await messagingApi.startConsultation(listingId);
       navigate(`/messages/${conv.conversationId}`);
     } catch (err) {
       console.error('Error opening consultation chat with host', err);
+      setError(err instanceof Error ? err.message : 'No se pudo abrir el chat con el anfitrión.');
     } finally {
       setIsStartingChat(false);
     }
@@ -115,6 +118,11 @@ export const ListingHostCard: React.FC<ListingHostCardProps> = ({
           )}
         </div>
       </div>
+      {error && (
+        <div role="alert" className="mt-3 p-2.5 rounded-xl bg-error-container text-on-error-container text-xs font-medium">
+          {error}
+        </div>
+      )}
     </section>
   );
 };

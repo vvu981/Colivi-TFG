@@ -23,11 +23,14 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -43,6 +46,7 @@ public class ConversationServiceImpl implements ConversationService {
     private final BookingRequestRepository bookingRequestRepository;
     private final MessageAccessPolicyValidator accessPolicyValidator;
     private final ReportRepository reportRepository;
+    private final TransactionTemplate transactionTemplate;
 
     @Override
     @Transactional
@@ -72,18 +76,11 @@ public class ConversationServiceImpl implements ConversationService {
         Optional<Conversation> existing = conversationRepository.findByTenantIdAndHostIdAndListingId(tenantId, host.getId(), listingId);
         if (existing.isPresent()) {
             Conversation conv = existing.get();
-            if (conv.getActiveBookingRequest() == null && activeBooking != null) {
-                conversationRepository.linkActiveBookingRequest(conv.getId(), activeBooking);
-                conv.setActiveBookingRequest(activeBooking);
-            }
+            syncActiveBookingRequest(conv, activeBooking);
             return conv;
         }
 
         // Si se trata de una NUEVA conversación, validamos disponibilidad del anuncio y del anfitrión
-        if (listing.getBannedAt() != null || listing.getDeletedAt() != null) {
-            throw new BusinessRuleValidationException("El anuncio no se encuentra disponible.");
-        }
-
         if (listing.getStatus() != ListingStatus.AVAILABLE) {
             throw new BusinessRuleValidationException("El anuncio no está disponible actualmente.");
         }
@@ -107,11 +104,35 @@ public class ConversationServiceImpl implements ConversationService {
                 .archivedByTenant(false)
                 .build();
 
+        return saveNewConversationSafely(newConversation, tenantId, host.getId(), listingId);
+    }
+
+    private void syncActiveBookingRequest(Conversation conv, BookingRequest activeBooking) {
+        UUID currentBookingId = conv.getActiveBookingRequest() != null ? conv.getActiveBookingRequest().getId() : null;
+        UUID newBookingId = activeBooking != null ? activeBooking.getId() : null;
+
+        if (!Objects.equals(currentBookingId, newBookingId)) {
+            if (activeBooking != null) {
+                conversationRepository.linkActiveBookingRequest(conv.getId(), activeBooking);
+                conv.setActiveBookingRequest(activeBooking);
+            } else if (currentBookingId != null) {
+                conversationRepository.unlinkBookingRequest(currentBookingId);
+                conv.setActiveBookingRequest(null);
+            }
+        }
+    }
+
+    private Conversation saveNewConversationSafely(Conversation newConversation, UUID tenantId, UUID hostId, UUID listingId) {
         try {
+            if (transactionTemplate != null && transactionTemplate.getTransactionManager() != null) {
+                TransactionTemplate requiresNew = new TransactionTemplate(transactionTemplate.getTransactionManager());
+                requiresNew.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+                return requiresNew.execute(status -> conversationRepository.save(newConversation));
+            }
             return conversationRepository.save(newConversation);
         } catch (DataIntegrityViolationException e) {
             log.warn("Conversación concurrente detectada para tenant {} y listing {}", tenantId, listingId);
-            return conversationRepository.findByTenantIdAndHostIdAndListingId(tenantId, host.getId(), listingId)
+            return conversationRepository.findByTenantIdAndHostIdAndListingId(tenantId, hostId, listingId)
                     .orElseThrow(() -> e);
         }
     }

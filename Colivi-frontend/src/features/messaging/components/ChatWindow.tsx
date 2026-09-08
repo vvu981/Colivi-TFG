@@ -25,6 +25,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   isFetchingNextPage = false,
 }) => {
   const [inputText, setInputText] = useState('');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showScrollBottomBtn, setShowScrollBottomBtn] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -96,10 +97,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     isNearBottomRef.current = true;
     setShowScrollBottomBtn(false);
 
+    setErrorMessage(null);
     try {
       await onSendMessage(textToSend);
-    } catch {
+    } catch (err: unknown) {
       setInputText(textToSend);
+      const msg = err instanceof Error ? err.message : 'No se pudo enviar el mensaje. Inténtalo de nuevo.';
+      setErrorMessage(msg);
     }
   };
 
@@ -279,6 +283,33 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
       {/* ─── Barra de Entrada / Modo Solo Lectura ───────────────────────────────── */}
       <div className="p-4 bg-surface border-t border-outline-variant">
+        {errorMessage && (
+          <div
+            role="alert"
+            className="mb-3 flex items-center justify-between gap-2 p-3 text-sm text-error bg-error-container/20 border border-error/30 rounded-xl"
+          >
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 flex-shrink-0 text-error" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <span>{errorMessage}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setErrorMessage(null)}
+              className="text-error hover:text-error/80 p-1 rounded-lg transition-colors"
+              aria-label="Cerrar aviso de error"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+        )}
+
         {isReadOnly ? (
           <div className="flex items-center justify-center gap-2.5 p-3 rounded-xl bg-surface-container border border-outline-variant text-on-surface-variant text-xs">
             <svg className="w-4 h-4 text-on-surface-variant shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -292,7 +323,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           <form onSubmit={handleSubmit} className="flex items-end gap-2 max-w-7xl mx-auto">
             <textarea
               value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
+              onChange={(e) => {
+                setInputText(e.target.value);
+                if (errorMessage) setErrorMessage(null);
+              }}
               onKeyDown={handleKeyDown}
               placeholder="Escribe un mensaje... (Enter para enviar)"
               rows={1}
