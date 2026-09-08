@@ -253,27 +253,36 @@ export const AdminReportDetailModal: React.FC<AdminReportDetailModalProps> = ({
     setActionSuccess(null);
     try {
       if (confirmModal.targetUserId) {
+        const targetUserId = confirmModal.targetUserId;
+        const updateParticipantBanStatus = (
+          user: AdminUserSnippet | null,
+          banned: boolean
+        ): AdminUserSnippet | null => {
+          if (!user) return null;
+          return user.id === targetUserId ? { ...user, isBanned: banned } : user;
+        };
+
         if (confirmModal.type === 'BAN') {
-          await adminUserService.banUser(confirmModal.targetUserId, {
+          await adminUserService.banUser(targetUserId, {
             message: adminNotes || 'Baneado tras revisión de conversación denunciada.',
           });
           setTargetConversation((prev) => {
             if (!prev) return null;
             return {
               ...prev,
-              tenant: prev.tenant?.id === confirmModal.targetUserId ? { ...prev.tenant, isBanned: true } : prev.tenant,
-              host: prev.host?.id === confirmModal.targetUserId ? { ...prev.host, isBanned: true } : prev.host,
+              tenant: updateParticipantBanStatus(prev.tenant, true),
+              host: updateParticipantBanStatus(prev.host, true),
             };
           });
           setActionSuccess('Usuario sancionado y baneado con éxito.');
         } else if (confirmModal.type === 'UNBAN') {
-          await adminUserService.unbanUser(confirmModal.targetUserId);
+          await adminUserService.unbanUser(targetUserId);
           setTargetConversation((prev) => {
             if (!prev) return null;
             return {
               ...prev,
-              tenant: prev.tenant?.id === confirmModal.targetUserId ? { ...prev.tenant, isBanned: false } : prev.tenant,
-              host: prev.host?.id === confirmModal.targetUserId ? { ...prev.host, isBanned: false } : prev.host,
+              tenant: updateParticipantBanStatus(prev.tenant, false),
+              host: updateParticipantBanStatus(prev.host, false),
             };
           });
           setActionSuccess('Usuario desbaneado con éxito.');
