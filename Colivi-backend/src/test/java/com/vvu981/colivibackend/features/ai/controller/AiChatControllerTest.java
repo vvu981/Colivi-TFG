@@ -107,4 +107,37 @@ class AiChatControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    @DisplayName("Debe procesar el mensaje cuando no se proporciona header Authorization")
+    void chat_WithoutAuthorizationHeader_Success() throws Exception {
+        AiChatRequest request = new AiChatRequest("Consulta anónima", List.of());
+        AiChatResponse response = new AiChatResponse("Respuesta", null, List.of());
+
+        when(orchestratorService.processChat(any(AiChatRequest.class), eq(null)))
+                .thenReturn(response);
+
+        mockMvc.perform(post("/api/v1/ai/chat")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.response").value("Respuesta"));
+    }
+
+    @Test
+    @DisplayName("Debe procesar el mensaje cuando el header Authorization no empieza con Bearer")
+    void chat_WithNonBearerAuthorizationHeader_PassesNullToken() throws Exception {
+        AiChatRequest request = new AiChatRequest("Consulta", List.of());
+        AiChatResponse response = new AiChatResponse("Respuesta", null, List.of());
+
+        when(orchestratorService.processChat(any(AiChatRequest.class), eq(null)))
+                .thenReturn(response);
+
+        mockMvc.perform(post("/api/v1/ai/chat")
+                        .header("Authorization", "Basic dXNlcjpwYXNz")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.response").value("Respuesta"));
+    }
 }

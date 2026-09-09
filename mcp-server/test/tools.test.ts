@@ -262,4 +262,105 @@ describe("MCP Tools & Handlers Suite", () => {
       assert.match(text, /PENDING/);
     });
   });
+
+  it("search_coliving_listings: should return friendly message when no listings found and throw on invalid args", async () => {
+    const mockEmptyClient: IListingClient = {
+      searchCatalog: async () => ({
+        content: [],
+        totalElements: 0,
+        totalPages: 0,
+        size: 20,
+        number: 0
+      })
+    };
+
+    const handler = new SearchColivingListingsHandler(mockEmptyClient);
+    const emptyResult = await handler.execute({ location: "Toledo" });
+    const text = extractText(emptyResult.content[0]);
+    assert.match(text, /No se encontraron anuncios de coliving en "Toledo"/);
+
+    await assert.rejects(
+      async () => handler.execute({ location: "" }),
+      /Invalid search arguments/
+    );
+  });
+
+  it("get_moderation_queue: should return friendly message when queue is empty and reject on invalid args", async () => {
+    const mockEmptyReportClient: IReportClient = {
+      getMostReported: async () => ({
+        content: [],
+        totalElements: 0,
+        totalPages: 0,
+        size: 10,
+        number: 0
+      })
+    };
+
+    const handler = new GetModerationQueueHandler(mockEmptyReportClient);
+    const adminContext = {
+      userId: "admin-1",
+      email: "admin@colivi.com",
+      role: "ADMIN" as const,
+      token: "tok"
+    };
+
+    await SecurityContextHolder.run(adminContext, async () => {
+      const emptyResult = await handler.execute({ targetType: "USER" });
+      const text = extractText(emptyResult.content[0]);
+      assert.match(text, /No hay denuncias pendientes de revision/);
+
+      await assert.rejects(
+        async () => handler.execute({ targetType: "INVALID" as any }),
+        /Invalid moderation arguments/
+      );
+    });
+  });
+
+  it("get_user_chores_status: should return friendly message when user has no active homes", async () => {
+    const mockNoHomeClient: IHomeChoreClient = {
+      getUserHomes: async () => [],
+      getPendingChores: async () => [],
+      getLeaderboard: async () => ({ period: "WEEKLY", scores: [] })
+    };
+
+    const handler = new GetUserChoresStatusHandler(mockNoHomeClient);
+    const userContext = {
+      userId: "lonely-user",
+      email: "lonely@colivi.com",
+      role: "USER" as const,
+      token: "tok"
+    };
+
+    await SecurityContextHolder.run(userContext, async () => {
+      const result = await handler.execute();
+      const text = extractText(result.content[0]);
+      assert.match(text, /no forma parte de ningun hogar activo actualmente/);
+    });
+  });
+
+  it("summarize_host_inbox: should return friendly message when host has no matching conversations", async () => {
+    const mockEmptyInboxClient: IMessagingClient = {
+      getInbox: async () => ({
+        content: [],
+        totalElements: 0,
+        totalPages: 0,
+        size: 50,
+        number: 0
+      })
+    };
+
+    const handler = new SummarizeHostInboxHandler(mockEmptyInboxClient);
+    const hostContext = {
+      userId: "host-2",
+      email: "host2@colivi.com",
+      role: "USER" as const,
+      token: "tok"
+    };
+
+    await SecurityContextHolder.run(hostContext, async () => {
+      const result = await handler.execute({ listingId: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" });
+      const text = extractText(result.content[0]);
+      assert.match(text, /No se encontraron conversaciones activas como anfitrion/);
+    });
+  });
 });

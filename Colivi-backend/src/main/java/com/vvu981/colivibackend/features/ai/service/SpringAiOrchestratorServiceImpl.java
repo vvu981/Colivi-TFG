@@ -4,9 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vvu981.colivibackend.features.ai.dto.AiChatMessageDto;
 import com.vvu981.colivibackend.features.ai.dto.AiChatRequest;
 import com.vvu981.colivibackend.features.ai.dto.AiChatResponse;
-import io.modelcontextprotocol.client.McpClient;
 import io.modelcontextprotocol.client.McpSyncClient;
-import io.modelcontextprotocol.client.transport.HttpClientSseClientTransport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.messages.AssistantMessage;
@@ -24,8 +22,6 @@ import org.springframework.ai.tool.ToolCallback;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.net.http.HttpClient;
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,16 +36,19 @@ public class SpringAiOrchestratorServiceImpl implements AiOrchestratorService {
     private final ObjectMapper objectMapper;
     private final String mcpBaseUrl;
     private final String groqModel;
+    private final McpClientFactory mcpClientFactory;
 
     public SpringAiOrchestratorServiceImpl(
             OpenAiChatModel chatModel,
             ObjectMapper objectMapper,
             @Value("${app.mcp.url:http://localhost:3001}") String mcpBaseUrl,
-            @Value("${spring.ai.openai.chat.options.model:qwen/qwen3.8-27b}") String groqModel) {
+            @Value("${spring.ai.openai.chat.options.model:qwen/qwen3.8-27b}") String groqModel,
+            McpClientFactory mcpClientFactory) {
         this.chatModel = chatModel;
         this.objectMapper = objectMapper;
         this.mcpBaseUrl = mcpBaseUrl;
         this.groqModel = groqModel;
+        this.mcpClientFactory = mcpClientFactory;
     }
 
     @Override
@@ -57,17 +56,8 @@ public class SpringAiOrchestratorServiceImpl implements AiOrchestratorService {
         // Salvaguarda 3: Conexión efímera segura con timeout de 30s
         String cleanMcpUrl = mcpBaseUrl != null ? mcpBaseUrl.replaceAll("/+$", "") : "http://localhost:3001";
         String sseBaseUri = cleanMcpUrl + (jwtToken != null && !jwtToken.isBlank() ? "/token/" + jwtToken : "");
-        HttpClient.Builder httpClientBuilder = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(30));
 
-        HttpClientSseClientTransport transport = new HttpClientSseClientTransport(
-                httpClientBuilder,
-                sseBaseUri,
-                objectMapper);
-
-        try (McpSyncClient mcpClient = McpClient.sync(transport)
-                .requestTimeout(Duration.ofSeconds(35))
-                .build()) {
+        try (McpSyncClient mcpClient = mcpClientFactory.createClient(sseBaseUri)) {
             log.info("Inicializando transporte efímero MCP SSE contra {}", sseBaseUri);
             mcpClient.initialize();
 
@@ -133,9 +123,12 @@ public class SpringAiOrchestratorServiceImpl implements AiOrchestratorService {
             String rawContent = chatResponse.getResult().getOutput().getText();
             log.debug("Contenido estructurado recibido de Groq: {}", rawContent);
 
-            String cleanContent = rawContent != null ? rawContent.trim() : "{}";
+            String cleanContent = (rawContent != null && !rawContent.isBlank()) ? rawContent.trim() : "{\"response\":\"\"}";
             if (cleanContent.startsWith("```")) {
                 cleanContent = cleanContent.replaceFirst("^```(?:json)?\\s*", "").replaceFirst("\\s*```$", "").trim();
+            }
+            if (cleanContent.isBlank()) {
+                cleanContent = "{\"response\":\"\"}";
             }
 
             return outputConverter.convert(cleanContent);
