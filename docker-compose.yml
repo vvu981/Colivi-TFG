@@ -66,6 +66,14 @@ services:
       MAIL_PORT: 1025
       MAIL_FROM: ${MAIL_FROM}
       MAIL_REACTIVATION_URL: ${MAIL_REACTIVATION_URL}
+
+      # ── AI Orchestration & MCP (Configuración delegada al .env) ──
+      AI_BASE_URL: ${AI_BASE_URL}
+      AI_API_KEY: ${AI_API_KEY}
+      AI_MODEL: ${AI_MODEL}
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      GROQ_MODEL: ${GROQ_MODEL}
+      MCP_SERVER_URL: http://mcp-server:3001
     ports:
       - "8080:8080"
     healthcheck:
@@ -74,23 +82,30 @@ services:
       timeout: 10s
       retries: 3
 
-#  # ──────────────────────────────────────────────
-#  # SERVIDOR MCP — Node.js / TypeScript
-#  # ──────────────────────────────────────────────
-#  mcp-server:
-#    build:
-#      context: ./mcp-server
-#      dockerfile: Dockerfile
-#    container_name: tfg_mcp
-#    restart: unless-stopped
-#    depends_on:
-#      backend:
-#        condition: service_healthy
-#    environment:
-#      SPRING_API_BASE_URL: http://backend:8080/api/v1
-#      MCP_PORT: 3001
-#    ports:
-#      - "3001:3001"
+  # ──────────────────────────────────────────────
+  # SERVIDOR MCP — Node.js / TypeScript
+  # ──────────────────────────────────────────────
+  mcp-server:
+    build:
+      context: ./mcp-server
+      dockerfile: Dockerfile
+    container_name: tfg_mcp
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      SPRING_API_BASE_URL: http://backend:8080/api/v1
+      MCP_PORT: 3001
+      JWT_SECRET: ${JWT_SECRET}
+    ports:
+      - "3001:3001"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3001/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
 
   # ──────────────────────────────────────────────
   # FRONTEND — Vite React
@@ -103,8 +118,10 @@ services:
     restart: unless-stopped
     depends_on:
       - backend
+      - mcp-server
     environment:
       BACKEND_URL: ${BACKEND_URL}
+      VITE_MCP_URL: http://localhost:3001
     ports:
       - "5173:5173"
     volumes:

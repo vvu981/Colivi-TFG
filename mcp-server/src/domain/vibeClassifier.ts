@@ -1,0 +1,73 @@
+import { AccommodationListingItem } from "../clients/listingClient.js";
+
+export type VibeType = "TIDY" | "SOCIAL" | "QUIET" | "ANY";
+
+export interface ListingWithVibe extends AccommodationListingItem {
+  computedVibe: VibeType;
+  vibeMatchScore: number;
+}
+
+export class VibeClassifier {
+  /**
+   * Determina el ambiente de convivencia proyectado a partir de amenidades y características.
+   */
+  public static classify(listing: AccommodationListingItem): VibeType {
+    const amenities = listing.accommodation?.amenities?.map((a) => a.toUpperCase()) ?? [];
+    const description = (listing.description + " " + listing.title).toLowerCase();
+
+    if (
+      amenities.includes("CLEANING_SERVICE") ||
+      description.includes("orden") ||
+      description.includes("limpieza") ||
+      description.includes("tidy")
+    ) {
+      return "TIDY";
+    }
+
+    if (
+      amenities.includes("TERRACE") ||
+      amenities.includes("COMMON_ROOM") ||
+      description.includes("social") ||
+      description.includes("vida juntos") ||
+      description.includes("eventos")
+    ) {
+      return "SOCIAL";
+    }
+
+    if (
+      amenities.includes("DESK") ||
+      amenities.includes("SILENT_AREA") ||
+      description.includes("tranquilo") ||
+      description.includes("estudio") ||
+      description.includes("quiet")
+    ) {
+      return "QUIET";
+    }
+
+    // Por defecto clasificamos como equilibrado / TIDY si tiene amenidades organizadas
+    return "TIDY";
+  }
+
+  public static enrichAndFilter(
+    listings: AccommodationListingItem[],
+    requiredVibe?: VibeType
+  ): ListingWithVibe[] {
+    const enriched = listings.map((item) => {
+      const computedVibe = this.classify(item);
+      const vibeMatchScore =
+        !requiredVibe || requiredVibe === "ANY" || computedVibe === requiredVibe ? 1.0 : 0.5;
+
+      return {
+        ...item,
+        computedVibe,
+        vibeMatchScore
+      };
+    });
+
+    if (!requiredVibe || requiredVibe === "ANY") {
+      return enriched;
+    }
+
+    return enriched.filter((item) => item.computedVibe === requiredVibe);
+  }
+}

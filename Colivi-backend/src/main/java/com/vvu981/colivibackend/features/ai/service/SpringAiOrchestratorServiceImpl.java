@@ -1,0 +1,147 @@
+package com.vvu981.colivibackend.features.ai.service;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vvu981.colivibackend.features.ai.dto.AiChatMessageDto;
+import com.vvu981.colivibackend.features.ai.dto.AiChatRequest;
+import com.vvu981.colivibackend.features.ai.dto.AiChatResponse;
+import io.modelcontextprotocol.client.McpClient;
+import io.modelcontextprotocol.client.McpSyncClient;
+import io.modelcontextprotocol.client.transport.HttpClientSseClientTransport;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.SystemMessage;
+import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.converter.BeanOutputConverter;
+import org.springframework.ai.mcp.SyncMcpToolCallbackProvider;
+import org.springframework.ai.openai.OpenAiChatModel;
+import org.springframework.ai.openai.OpenAiChatOptions;
+import org.springframework.ai.openai.api.ResponseFormat;
+import org.springframework.ai.tool.ToolCallback;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.net.http.HttpClient;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+@Service
+public class SpringAiOrchestratorServiceImpl implements AiOrchestratorService {
+
+    private static final Logger log = LoggerFactory.getLogger(SpringAiOrchestratorServiceImpl.class);
+    private static final int MAX_HISTORY_MESSAGES = 6;
+
+    private final OpenAiChatModel chatModel;
+    private final ObjectMapper objectMapper;
+    private final String mcpBaseUrl;
+    private final String groqModel;
+
+    public SpringAiOrchestratorServiceImpl(
+            OpenAiChatModel chatModel,
+            ObjectMapper objectMapper,
+            @Value("${app.mcp.url:http://localhost:3001}") String mcpBaseUrl,
+            @Value("${spring.ai.openai.chat.options.model:qwen/qwen3.8-27b}") String groqModel) {
+        this.chatModel = chatModel;
+        this.objectMapper = objectMapper;
+        this.mcpBaseUrl = mcpBaseUrl;
+        this.groqModel = groqModel;
+    }
+
+    @Override
+    public AiChatResponse processChat(AiChatRequest request, String jwtToken) {
+        // Salvaguarda 3: Conexión efímera segura con timeout de 30s
+        String cleanMcpUrl = mcpBaseUrl != null ? mcpBaseUrl.replaceAll("/+$", "") : "http://localhost:3001";
+        String sseBaseUri = cleanMcpUrl + (jwtToken != null && !jwtToken.isBlank() ? "/token/" + jwtToken : "");
+        HttpClient.Builder httpClientBuilder = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(30));
+
+        HttpClientSseClientTransport transport = new HttpClientSseClientTransport(
+                httpClientBuilder,
+                sseBaseUri,
+                objectMapper);
+
+        try (McpSyncClient mcpClient = McpClient.sync(transport)
+                .requestTimeout(Duration.ofSeconds(35))
+                .build()) {
+            log.info("Inicializando transporte efímero MCP SSE contra {}", sseBaseUri);
+            mcpClient.initialize();
+
+            // Descubrimiento nativo de herramientas MCP con SyncMcpToolCallbackProvider
+            SyncMcpToolCallbackProvider callbackProvider = new SyncMcpToolCallbackProvider(mcpClient);
+            ToolCallback[] toolCallbacks = callbackProvider.getToolCallbacks();
+            log.info("Herramientas MCP registradas en Spring AI: count={}",
+                    toolCallbacks != null ? toolCallbacks.length : 0);
+
+            BeanOutputConverter<AiChatResponse> outputConverter = new BeanOutputConverter<>(AiChatResponse.class);
+
+            String systemPromptText = """
+                    Today is """ + LocalDateTime.now()
+                    + """
+                            .
+                            You are the intelligent copilot assistant for the Colivi coliving platform with access to read-only MCP tools.
+                            Guidelines:
+                            1. READ-ONLY: Never mutate data. Only consult information through tools.
+                            2. HUMAN-IN-THE-LOOP: When asked to draft a message for a candidate or host, output the message strictly in the 'draft' field.
+                            3. LANGUAGE: Communicate with the user in natural Spanish in the 'response' field.
+                            4. OUTPUT FORMAT: You must return ONLY a raw JSON object. No markdown, no wrappers.
+                            5. SCOPE OF CAPABILITIES: When asked about your capabilities, features, or what you can do, explain strictly and only the capabilities provided by your currently active tools and general conversational help. Never describe, mention, or assume administrative tools or capabilities (such as moderation queue or admin reports) unless an administrative tool is explicitly present in your active tools.
+                            Conform strictly to this format:
+                            """
+                    + outputConverter.getFormat();
+
+            List<Message> messages = new ArrayList<>();
+            messages.add(new SystemMessage(systemPromptText));
+
+            // Salvaguarda 2: Truncado de historial (máximo últimos 6 mensajes)
+            if (request.history() != null && !request.history().isEmpty()) {
+                int start = Math.max(0, request.history().size() - MAX_HISTORY_MESSAGES);
+                List<AiChatMessageDto> truncated = request.history().subList(start, request.history().size());
+                for (AiChatMessageDto item : truncated) {
+                    if ("user".equalsIgnoreCase(item.role())) {
+                        messages.add(new UserMessage(item.content()));
+                    } else if ("assistant".equalsIgnoreCase(item.role())) {
+                        messages.add(new AssistantMessage(item.content()));
+                    }
+                }
+            }
+
+            // Mensaje actual del usuario
+            messages.add(new UserMessage(request.message()));
+
+            // Groq prohíbe response_format: json_object en conjunto con tools (HTTP 400).
+            // La restricción se impone mediante System Prompt y sanitización defensiva.
+            OpenAiChatOptions.Builder optionsBuilder = OpenAiChatOptions.builder()
+                    .model(groqModel)
+                    .temperature(0.2)
+                    .toolCallbacks(toolCallbacks);
+
+            if (toolCallbacks == null || toolCallbacks.length == 0) {
+                optionsBuilder.responseFormat(new ResponseFormat(ResponseFormat.Type.JSON_OBJECT, null));
+            }
+
+            OpenAiChatOptions options = optionsBuilder.build();
+
+            Prompt prompt = new Prompt(messages, options);
+            log.info("Invocando OpenAiChatModel con Groq ({})", groqModel);
+            ChatResponse chatResponse = chatModel.call(prompt);
+
+            String rawContent = chatResponse.getResult().getOutput().getText();
+            log.debug("Contenido estructurado recibido de Groq: {}", rawContent);
+
+            String cleanContent = rawContent != null ? rawContent.trim() : "{}";
+            if (cleanContent.startsWith("```")) {
+                cleanContent = cleanContent.replaceFirst("^```(?:json)?\\s*", "").replaceFirst("\\s*```$", "").trim();
+            }
+
+            return outputConverter.convert(cleanContent);
+        } catch (Exception e) {
+            log.error("Error en la orquestación cognitiva Spring AI / MCP", e);
+            throw new RuntimeException("Fallo en la comunicación con el asistente inteligente: " + e.getMessage(), e);
+        }
+    }
+}
