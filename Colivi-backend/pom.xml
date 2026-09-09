@@ -234,6 +234,7 @@
                         <exclude>com/vvu981/colivibackend/features/user/mapper/**Impl.class</exclude>
                         <exclude>com/vvu981/colivibackend/core/storage/**</exclude>
                         <exclude>com/vvu981/colivibackend/features/accommodation/dto/**</exclude>
+                        <exclude>com/vvu981/colivibackend/features/messaging/dto/**</exclude>
                         <exclude>com/vvu981/colivibackend/features/ai/dto/**</exclude>
                     </excludes>
                 </configuration>

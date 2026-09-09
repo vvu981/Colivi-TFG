@@ -173,6 +173,30 @@ class SpringAiOrchestratorServiceImplTest {
     }
 
     @Test
+    @DisplayName("Debe manejar toolCallbacks nulos y respuesta con espacios en blanco devolviendo fallback")
+    void processChat_NullToolCallbacks_AndBlankResponse() {
+        // Retornamos lista vacía de herramientas para tener 0 callbacks
+        when(mcpSyncClient.listTools()).thenReturn(new McpSchema.ListToolsResult(List.of(), null));
+
+        Generation generation = new Generation(new AssistantMessage("   "));
+        ChatResponse chatResponse = new ChatResponse(List.of(generation));
+        when(chatModel.call(any(Prompt.class))).thenReturn(chatResponse);
+
+        SpringAiOrchestratorServiceImpl service = new SpringAiOrchestratorServiceImpl(
+                chatModel,
+                objectMapper,
+                "http://localhost:3001/",
+                "qwen/qwen3.8-27b",
+                uri -> mcpSyncClient);
+
+        AiChatRequest request = new AiChatRequest("Consulta sin herramientas", null);
+        AiChatResponse response = service.processChat(request, null);
+
+        assertThat(response).isNotNull();
+        assertThat(response.response()).isEmpty();
+    }
+
+    @Test
     @DisplayName("Debe capturar fallos de conexión al servidor MCP y lanzar RuntimeException informativa")
     void processChat_McpConnectionFailure_ThrowsInformativeException() {
         SpringAiOrchestratorServiceImpl service = new SpringAiOrchestratorServiceImpl(
