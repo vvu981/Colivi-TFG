@@ -3,12 +3,15 @@ package com.vvu981.colivibackend.features.ai.controller;
 import com.vvu981.colivibackend.features.ai.dto.AiChatRequest;
 import com.vvu981.colivibackend.features.ai.dto.AiChatResponse;
 import com.vvu981.colivibackend.features.ai.service.AiOrchestratorService;
+import com.vvu981.colivibackend.features.user.exception.InvalidTokenException;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -31,8 +34,10 @@ public class AiChatController {
     @PostMapping("/chat")
     @Operation(summary = "Procesar consulta conversacional con el Asistente IA")
     @ApiResponse(responseCode = "200", description = "Respuesta estructurada del asistente con datos de MCP o propuesta de borrador")
-    @ApiResponse(responseCode = "400", description = "Petición inválida o mensaje vacío")
-    @ApiResponse(responseCode = "401", description = "No autorizado - Token JWT ausente o inválido")
+    @ApiResponse(responseCode = "400", description = "Peticion invalida, mensaje vacio o demasiado largo")
+    @ApiResponse(responseCode = "401", description = "No autorizado - Token JWT ausente o invalido")
+    @ApiResponse(responseCode = "429", description = "Demasiadas peticiones - limite de velocidad superado")
+    @RateLimiter(name = "aiChat", fallbackMethod = "rateLimitFallback")
     public ResponseEntity<AiChatResponse> chat(
             @Valid @RequestBody AiChatRequest request,
             @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authHeader
@@ -42,7 +47,38 @@ public class AiChatController {
             jwtToken = authHeader.substring(7).trim();
         }
 
+        if (jwtToken == null || jwtToken.isBlank()) {
+            throw new InvalidTokenException("Token de autenticación JWT ausente o con formato inválido");
+        }
+
+        // F-30: Limitar longitud del mensaje para mitigar prompt injection acumulativo
+        if (request.message() != null && request.message().length() > 2000) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new AiChatResponse(
+                            "El mensaje supera el limite de 2000 caracteres permitidos.", null, java.util.List.of()));
+        }
+
+        // F-30: Limitar el historial a 20 mensajes como maximo
+        if (request.history() != null && request.history().size() > 20) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new AiChatResponse(
+                            "El historial de conversacion supera el maximo de 20 mensajes permitidos.", null, java.util.List.of()));
+        }
+
         AiChatResponse response = orchestratorService.processChat(request, jwtToken);
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Fallback invocado por Resilience4j cuando se supera el rate limit de aiChat.
+     * Devuelve HTTP 429 Too Many Requests con mensaje claro.
+     */
+    public ResponseEntity<AiChatResponse> rateLimitFallback(
+            AiChatRequest request, String authHeader, Throwable ex) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(new AiChatResponse(
+                        "Has superado el limite de consultas al asistente. Por favor, espera un momento antes de volver a intentarlo.",
+                        null,
+                        java.util.List.of()));
     }
 }

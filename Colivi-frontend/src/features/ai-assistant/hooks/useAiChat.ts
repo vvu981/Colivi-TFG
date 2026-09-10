@@ -94,11 +94,7 @@ export const useAiChat = () => {
         timestamp: new Date().toISOString(),
       };
 
-      setMessages((prev) => {
-        const updated = [...prev, userMessage];
-        saveMessagesToStorage(storageKey, updated);
-        return updated;
-      });
+      setMessages((prev) => [...prev, userMessage]);
     },
     onSuccess: (data: AiChatResponse) => {
       const assistantMessage: AiChatMessage = {
@@ -109,11 +105,7 @@ export const useAiChat = () => {
         timestamp: new Date().toISOString(),
       };
 
-      setMessages((prev) => {
-        const updated = [...prev, assistantMessage];
-        saveMessagesToStorage(storageKey, updated);
-        return updated;
-      });
+      setMessages((prev) => [...prev, assistantMessage]);
     },
     onError: (err: Error) => {
       const errorMessage: AiChatMessage = {
@@ -124,11 +116,7 @@ export const useAiChat = () => {
         isError: true,
       };
 
-      setMessages((prev) => {
-        const updated = [...prev, errorMessage];
-        saveMessagesToStorage(storageKey, updated);
-        return updated;
-      });
+      setMessages((prev) => [...prev, errorMessage]);
     },
   });
 
@@ -137,10 +125,14 @@ export const useAiChat = () => {
   const sendMessage = useCallback(
     (text: string) => {
       const trimmed = text.trim();
+      // F-24: Se referencian chatMutation.mutate y chatMutation.isPending directamente
+      // en lugar del objeto chatMutation completo, que es nuevo en cada render de useMutation
+      // e invalidaria la memoizacion del useCallback en cada ciclo de render.
       if (!isAuthenticated || !trimmed || chatMutation.isPending) return;
       chatMutation.mutate(trimmed);
     },
-    [chatMutation, isAuthenticated]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [chatMutation.mutate, chatMutation.isPending, isAuthenticated]
   );
 
   const clearHistory = useCallback(() => {
@@ -154,7 +146,6 @@ export const useAiChat = () => {
       timestamp: new Date().toISOString(),
     };
     setMessages([resetMessage]);
-    saveMessagesToStorage(storageKey, [resetMessage]);
   }, [storageKey]);
 
   return {

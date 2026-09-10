@@ -50,17 +50,22 @@ export class GetModerationQueueHandler implements IMcpToolHandler<ModerationInpu
       };
     }
 
-    const formattedQueue = reportPage.content.map((item, index) => ({
-      prioridad: index + 1,
-      targetId: item.targetId,
-      tipoEntidad: item.targetType,
-      denunciasPendientes: item.pendingCount ?? item.reportCount ?? 0,
-      totalHistoricoDenuncias: item.totalCount ?? item.pendingCount ?? 0,
-      accionRecomendada:
-        item.pendingCount >= 5
-          ? "URGENTE: Umbral preventivo superado. Revisar baneo o suspension inmediata."
-          : "AUDITORIA: Revisar detalles de reportes asociados."
-    }));
+    const formattedQueue = reportPage.content.map((item, index) => {
+      const pendingCount = item.pendingCount ?? item.reportCount ?? 0;
+      const totalCount = item.totalCount ?? pendingCount;
+
+      return {
+        prioridad: index + 1,
+        targetId: item.targetId,
+        tipoEntidad: item.targetType,
+        denunciasPendientes: pendingCount,
+        totalHistoricoDenuncias: totalCount,
+        accionRecomendada:
+          pendingCount >= 5
+            ? "URGENTE: Umbral preventivo superado. Revisar baneo o suspension inmediata."
+            : "AUDITORIA: Revisar detalles de reportes asociados."
+      };
+    });
 
     return {
       content: [

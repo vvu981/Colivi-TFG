@@ -43,11 +43,7 @@ export class VibeClassifier {
       description.includes("concentracion") ||
       description.includes("silencio");
 
-    // 2. Prevalencia de estilos de vida distintivos (DOM-01)
-    if (hasExplicitTidy && !hasSocial && !hasQuiet) {
-      return "TIDY";
-    }
-
+    // 2. Prevalencia de estilos de vida distintivos (DOM-01 y DOM-02)
     if (hasSocial && !hasQuiet) {
       return "SOCIAL";
     }
@@ -56,25 +52,34 @@ export class VibeClassifier {
       return "QUIET";
     }
 
-    if (hasSocial) {
-      return "SOCIAL";
-    }
+    if (hasSocial && hasQuiet) {
+      // Desempate de ambientes híbridos por recuento de amenidades dedicadas
+      const socialAmenitiesCount = amenities.filter((a) =>
+        ["TERRACE", "BALCONY", "SWIMMING_POOL", "COMMON_ROOM"].includes(a)
+      ).length;
+      const quietAmenitiesCount = amenities.filter((a) =>
+        ["WORK_ZONE", "DESK", "SILENT_AREA"].includes(a)
+      ).length;
 
-    if (hasQuiet) {
-      return "QUIET";
+      return socialAmenitiesCount >= quietAmenitiesCount ? "SOCIAL" : "QUIET";
     }
 
     if (hasExplicitTidy) {
       return "TIDY";
     }
 
-    // 3. Electrodomésticos convencionales como indicador secundario de equipamiento
+    // Electrodomesticos convencionales como indicador secundario de hogar ordenado
     if (amenities.includes("DISHWASHER") || amenities.includes("WASHING_MACHINE")) {
       return "TIDY";
     }
 
-    // Fallback por defecto equilibrado
-    return "TIDY";
+    // F-18: Fallback "ANY" para anuncios sin amenidades clasificables.
+    // El fallback anterior era "TIDY" (sesgado), lo que causaba que anuncios
+    // sin datos de amenidades aparecieran como TIDY y fueran excluidos al buscar
+    // QUIET o SOCIAL, generando falsos negativos en la busqueda.
+    // Con "ANY", estos anuncios no se filtran y el LLM puede indicar que la
+    // clasificacion no es determinable para ese anuncio.
+    return "ANY";
   }
 
   public static enrichAndFilter(

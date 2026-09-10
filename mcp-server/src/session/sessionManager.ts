@@ -82,16 +82,18 @@ export class McpSessionManager implements ISessionManager {
 
   public async cleanupStaleSessions(maxAgeMs: number): Promise<number> {
     const now = Date.now();
-    let closedCount = 0;
 
-    for (const [sessionId, session] of this.sessions.entries()) {
-      if (now - session.lastActivityAt.getTime() > maxAgeMs) {
-        await this.closeSession(sessionId);
-        closedCount++;
-      }
-    }
+    // F-10: Recoger los IDs a cerrar ANTES de modificar el Map.
+    // La mutacion del Map (via closeSession) mientras se itera con .entries()
+    // puede provocar que entradas nuevas sean visitadas inesperadamente.
+    const staleIds = Array.from(this.sessions.entries())
+      .filter(([, session]) => now - session.lastActivityAt.getTime() > maxAgeMs)
+      .map(([sessionId]) => sessionId);
 
-    return closedCount;
+    // Cerrar en paralelo y tolerar fallos individuales
+    await Promise.allSettled(staleIds.map((id) => this.closeSession(id)));
+
+    return staleIds.length;
   }
 }
 

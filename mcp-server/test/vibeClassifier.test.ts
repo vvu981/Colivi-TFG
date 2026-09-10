@@ -91,7 +91,7 @@ describe("VibeClassifier Suite", () => {
     assert.equal(VibeClassifier.classify({ ...baseListing, description: "Very quiet neighborhood" }), "QUIET");
   });
 
-  it("should default to TIDY fallback when no specific keywords or amenities match", () => {
+  it("should default to ANY fallback when no specific keywords or amenities match (F-18)", () => {
     const genericListing: AccommodationListingItem = {
       ...baseListing,
       title: "Habitación",
@@ -101,24 +101,24 @@ describe("VibeClassifier Suite", () => {
         amenities: ["WIFI", "HEATING"]
       }
     };
-    assert.equal(VibeClassifier.classify(genericListing), "TIDY");
+    assert.equal(VibeClassifier.classify(genericListing), "ANY");
   });
 
-  it("should handle null/missing accommodation and amenities gracefully", () => {
+  it("should handle null/missing accommodation and amenities gracefully by returning ANY (F-18)", () => {
     const noAccListing: AccommodationListingItem = {
       ...baseListing,
       accommodation: undefined
     };
-    assert.equal(VibeClassifier.classify(noAccListing), "TIDY");
+    assert.equal(VibeClassifier.classify(noAccListing), "ANY");
   });
 
-  it("should handle null or undefined description and title gracefully", () => {
+  it("should handle null or undefined description and title gracefully by returning ANY (F-18)", () => {
     const nullTextListing = {
       ...baseListing,
       title: undefined as unknown as string,
       description: undefined as unknown as string
     };
-    assert.equal(VibeClassifier.classify(nullTextListing), "TIDY");
+    assert.equal(VibeClassifier.classify(nullTextListing), "ANY");
   });
 
   it("should classify as QUIET when official backend WORK_ZONE amenity is present", () => {

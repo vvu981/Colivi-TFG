@@ -5,6 +5,7 @@ import com.vvu981.colivibackend.features.ai.dto.AiChatMessageDto;
 import com.vvu981.colivibackend.features.ai.dto.AiChatRequest;
 import com.vvu981.colivibackend.features.ai.dto.AiChatResponse;
 import com.vvu981.colivibackend.features.ai.service.AiOrchestratorService;
+import com.vvu981.colivibackend.core.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -40,7 +41,9 @@ class AiChatControllerTest {
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(aiChatController).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(aiChatController)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
         objectMapper = new ObjectMapper();
     }
 
@@ -109,35 +112,29 @@ class AiChatControllerTest {
     }
 
     @Test
-    @DisplayName("Debe procesar el mensaje cuando no se proporciona header Authorization")
-    void chat_WithoutAuthorizationHeader_Success() throws Exception {
+    @DisplayName("Debe rechazar con 401 Unauthorized cuando no se proporciona header Authorization")
+    void chat_WithoutAuthorizationHeader_Unauthorized() throws Exception {
         AiChatRequest request = new AiChatRequest("Consulta anónima", List.of());
-        AiChatResponse response = new AiChatResponse("Respuesta", null, List.of());
-
-        when(orchestratorService.processChat(any(AiChatRequest.class), eq(null)))
-                .thenReturn(response);
 
         mockMvc.perform(post("/api/v1/ai/chat")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.response").value("Respuesta"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("Unauthorized"))
+                .andExpect(jsonPath("$.message").value("Token de autenticación JWT ausente o con formato inválido"));
     }
 
     @Test
-    @DisplayName("Debe procesar el mensaje cuando el header Authorization no empieza con Bearer")
-    void chat_WithNonBearerAuthorizationHeader_PassesNullToken() throws Exception {
+    @DisplayName("Debe rechazar con 401 Unauthorized cuando el header Authorization no empieza con Bearer")
+    void chat_WithNonBearerAuthorizationHeader_Unauthorized() throws Exception {
         AiChatRequest request = new AiChatRequest("Consulta", List.of());
-        AiChatResponse response = new AiChatResponse("Respuesta", null, List.of());
-
-        when(orchestratorService.processChat(any(AiChatRequest.class), eq(null)))
-                .thenReturn(response);
 
         mockMvc.perform(post("/api/v1/ai/chat")
                         .header("Authorization", "Basic dXNlcjpwYXNz")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.response").value("Respuesta"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("Unauthorized"))
+                .andExpect(jsonPath("$.message").value("Token de autenticación JWT ausente o con formato inválido"));
     }
 }

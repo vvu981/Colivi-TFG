@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Send, Trash2, X, Sparkles, Loader2 } from 'lucide-react';
 import { useAiChat } from '../hooks/useAiChat';
@@ -18,16 +18,17 @@ export const AiChatWindow: React.FC<AiChatWindowProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-scroll al recibir nuevos mensajes o cambiar estado
-  const scrollToBottom = (smooth = true) => {
+  // F-25: scrollToBottom en useCallback para que sea estable entre renders.
+  // Sin esto, si se incluye como dep de un useEffect en el futuro, se crea un bucle infinito.
+  const scrollToBottom = useCallback((smooth = true) => {
     messagesEndRef.current?.scrollIntoView({
       behavior: smooth ? 'smooth' : 'auto',
     });
-  };
+  }, []);
 
   useEffect(() => {
     scrollToBottom(true);
-  }, [messages, isPending]);
+  }, [messages, isPending, scrollToBottom]);
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -104,8 +105,9 @@ export const AiChatWindow: React.FC<AiChatWindowProps> = ({
         </div>
       </header>
 
-      {/* Sugerencias Rápidas Iniciales (Chips) */}
-      {isAuthenticated && messages.length <= 1 && suggestions.length > 0 && (
+      {/* Sugerencias Rapidas Iniciales (Chips) */}
+      {/* F-26: Las sugerencias se muestran mientras el usuario no haya iniciado el intercambio conversacional */}
+      {isAuthenticated && !messages.some((m) => m.role === 'user') && suggestions.length > 0 && (
         <div className="px-4 py-2.5 bg-surface-container-low/70 border-b border-outline-variant/30 flex flex-wrap gap-1.5">
           {suggestions.map((item) => (
             <button

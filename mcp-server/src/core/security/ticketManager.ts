@@ -31,13 +31,16 @@ export class TicketManager implements ITicketManager {
       return undefined;
     }
 
-    // Un solo uso (single-use)
-    this.tickets.delete(ticketId);
-
+    // F-11: Verificar expiracion ANTES de eliminar el ticket.
+    // Esto evita que tickets expirados sean marcados como "consumidos de un solo uso"
+    // antes de ser validados, impidiendo cualquier reintento de diagnostico.
     if (Date.now() > entry.expiresAt) {
+      this.tickets.delete(ticketId);
       return undefined;
     }
 
+    // Ticket valido: consumir (un solo uso)
+    this.tickets.delete(ticketId);
     return entry.context;
   }
 

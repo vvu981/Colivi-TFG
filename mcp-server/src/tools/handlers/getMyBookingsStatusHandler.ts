@@ -24,8 +24,17 @@ export class GetMyBookingsStatusHandler implements IMcpToolHandler<Record<string
 
   public async execute(): Promise<ToolExecutionResult> {
     const context = SecurityContextHolder.getContext();
-    const pageResponse = await this.client.getMyBookings({ page: 0, size: 50 });
+    const PAGE_SIZE = 50;
+    const pageResponse = await this.client.getMyBookings({ page: 0, size: PAGE_SIZE });
     const bookings = pageResponse.content ?? [];
+    const totalElements = pageResponse.totalElements ?? bookings.length;
+
+    // F-16: Detectar si hay mas resultados de los que se muestran.
+    // La paginacion hardcodeada a 50 puede omitir reservas historicas de usuarios activos.
+    const truncationWarning =
+      totalElements > bookings.length
+        ? `\n[AVISO: Se muestran ${bookings.length} de ${totalElements} solicitudes totales. Puede haber reservas adicionales no incluidas en este resumen.]`
+        : "";
 
     if (bookings.length === 0) {
       return {
@@ -68,7 +77,7 @@ export class GetMyBookingsStatusHandler implements IMcpToolHandler<Record<string
       content: [
         {
           type: "text",
-          text: JSON.stringify(summary, null, 2)
+          text: JSON.stringify(summary, null, 2) + truncationWarning
         }
       ]
     };

@@ -27,11 +27,15 @@ export class SearchColivingListingsHandler implements IMcpToolHandler<SearchInpu
     }
 
     const { location, maxPrice, requiredVibe } = parseResult.data;
+    const PAGE_SIZE = 50;
 
     const catalogPage = await this.client.searchCatalog({
       city: location,
-      maxPrice
+      maxPrice,
+      size: PAGE_SIZE
     });
+
+    const totalElements = catalogPage.totalElements ?? catalogPage.content.length;
 
     const enrichedListings = VibeClassifier.enrichAndFilter(
       catalogPage.content,
@@ -39,15 +43,27 @@ export class SearchColivingListingsHandler implements IMcpToolHandler<SearchInpu
     );
 
     if (enrichedListings.length === 0) {
+      // F-17: Incluir contexto sobre si la busqueda fue truncada para que el LLM
+      // no informe erroneamente que no hay anuncios cuando puede haberlos en otras paginas.
+      const truncationContext =
+        totalElements > catalogPage.content.length
+          ? ` (solo se analizaron ${catalogPage.content.length} de ${totalElements} anuncios disponibles)`
+          : "";
       return {
         content: [
           {
             type: "text",
-            text: `No se encontraron anuncios de coliving en "${location}" con los criterios especificados (precio max: ${maxPrice ?? "sin limite"}, ambiente: ${requiredVibe ?? "cualquiera"}).`
+            text: `No se encontraron anuncios de coliving en "${location}" con los criterios especificados (precio max: ${maxPrice ?? "sin limite"}, ambiente: ${requiredVibe ?? "cualquiera"})${truncationContext}.`
           }
         ]
       };
     }
+
+    // Indicar al LLM si los resultados provienen de un conjunto truncado
+    const resultsTruncationNote =
+      totalElements > catalogPage.content.length
+        ? `\n[AVISO: Se analizaron ${catalogPage.content.length} de ${totalElements} anuncios disponibles en "${location}". Los resultados pueden ser parciales.]`
+        : "";
 
     const formattedListings = enrichedListings.map((item) => ({
       id: item.id,
@@ -64,15 +80,16 @@ export class SearchColivingListingsHandler implements IMcpToolHandler<SearchInpu
       content: [
         {
           type: "text",
-          text: JSON.stringify(
-            {
-              totalEncontrados: enrichedListings.length,
-              filtrosAplicados: { location, maxPrice, requiredVibe: requiredVibe ?? "ANY" },
-              anuncios: formattedListings
-            },
-            null,
-            2
-          )
+          text:
+            JSON.stringify(
+              {
+                totalEncontrados: enrichedListings.length,
+                filtrosAplicados: { location, maxPrice, requiredVibe: requiredVibe ?? "ANY" },
+                anuncios: formattedListings
+              },
+              null,
+              2
+            ) + resultsTruncationNote
         }
       ]
     };

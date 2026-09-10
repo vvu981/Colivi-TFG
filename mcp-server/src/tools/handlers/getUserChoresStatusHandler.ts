@@ -28,6 +28,16 @@ export class GetUserChoresStatusHandler implements IMcpToolHandler<Record<string
 
     const primaryHome = homes[0];
 
+    // F-14: Informar al LLM sobre la situacion real de multi-hogar para evitar
+    // que responda sobre el hogar incorrecto sin saberlo.
+    const multiHomarWarning =
+      homes.length > 1
+        ? `\n[AVISO: El usuario pertenece a ${homes.length} hogares activos. Se muestran los datos del hogar "${primaryHome.name}" (ID: ${primaryHome.id}). Los otros hogares son: ${homes
+            .slice(1)
+            .map((h) => `"${h.name}"`)
+            .join(", ")}.]`
+        : "";
+
     const [pendingChores, leaderboard] = await Promise.all([
       this.client.getPendingChores(primaryHome.id, currentUserId),
       this.client.getLeaderboard(primaryHome.id, "WEEKLY")
@@ -36,6 +46,16 @@ export class GetUserChoresStatusHandler implements IMcpToolHandler<Record<string
     const scoreList = leaderboard?.scores ?? [];
     const userRankIndex = scoreList.findIndex((entry) => entry.userId === currentUserId);
     const userRankEntry = userRankIndex !== -1 ? scoreList[userRankIndex] : undefined;
+
+    // F-15: Detectar posible inconsistencia entre los contadores de tareas pendientes.
+    // pendingChores es la lista real asignada al usuario; pendingCount del leaderboard
+    // puede usar criterios de calculo distintos (tareas sin asignar, etc.).
+    const pendingFromList = pendingChores.length;
+    const pendingFromRank = userRankEntry?.pendingCount ?? 0;
+    const consistencyNote =
+      pendingFromList !== pendingFromRank
+        ? `\n[NOTA: El sistema reporta ${pendingFromList} tareas pendientes asignadas, pero el ranking indica ${pendingFromRank}. Usa la lista de tareas asignadas como fuente de verdad.]`
+        : "";
 
     const choreSummary = {
       hogar: {
@@ -48,7 +68,7 @@ export class GetUserChoresStatusHandler implements IMcpToolHandler<Record<string
         rangoActual: userRankIndex !== -1 ? `#${userRankIndex + 1} de ${scoreList.length}` : "Sin clasificar",
         puntuacionSemanal: userRankEntry?.currentPoints ?? 0,
         tareasCompletadasEstaSemana: userRankEntry?.completedCount ?? 0,
-        tareasPendientes: userRankEntry?.pendingCount ?? 0
+        tareasPendientes: pendingFromList
       },
       tareasPendientesAsignadas: pendingChores.map((c) => ({
         id: c.id,
@@ -69,7 +89,7 @@ export class GetUserChoresStatusHandler implements IMcpToolHandler<Record<string
       content: [
         {
           type: "text",
-          text: JSON.stringify(choreSummary, null, 2)
+          text: JSON.stringify(choreSummary, null, 2) + multiHomarWarning + consistencyNote
         }
       ]
     };

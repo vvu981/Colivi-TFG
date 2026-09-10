@@ -1,5 +1,6 @@
 import express, { Express, Request, Response, NextFunction } from "express";
 import cors from "cors";
+import { env } from "../config/env.js";
 import { ISessionManager } from "../session/types.js";
 import { IToolRegistry } from "../tools/registry.js";
 import { IMcpServerFactory } from "../mcp/types.js";
@@ -20,7 +21,18 @@ export interface AppDependencies {
 export function createApp(deps: AppDependencies): Express {
   const app = express();
 
-  app.use(cors());
+  // F-20: CORS restringido a origenes definidos en ALLOWED_ORIGINS (separados por coma).
+  // Sin la variable, se bloquean todas las peticiones cross-origin.
+  // Correcto para un servidor MCP interno accedido solo desde el backend Spring.
+  const allowedOrigins = env.ALLOWED_ORIGINS?.split(",").map((o) => o.trim()).filter(Boolean);
+  app.use(
+    cors(
+      allowedOrigins && allowedOrigins.length > 0
+        ? { origin: allowedOrigins, credentials: true }
+        : { origin: false }
+    )
+  );
+
   app.use(express.json());
 
   // Rutas de diagnóstico y metadatos

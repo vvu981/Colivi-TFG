@@ -37,8 +37,8 @@ export class ColiviHttpClient implements IHttpClient {
       });
       return response.data;
     } catch (error) {
+      // handleAxiosError es tipo never: siempre lanza. No hay codigo ejecutable despues.
       this.handleAxiosError(path, error);
-      throw error;
     }
   }
 

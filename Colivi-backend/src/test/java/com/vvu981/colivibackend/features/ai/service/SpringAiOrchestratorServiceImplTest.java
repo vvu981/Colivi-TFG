@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vvu981.colivibackend.features.ai.dto.AiChatMessageDto;
 import com.vvu981.colivibackend.features.ai.dto.AiChatRequest;
 import com.vvu981.colivibackend.features.ai.dto.AiChatResponse;
+import com.vvu981.colivibackend.features.user.exception.InvalidTokenException;
 import io.modelcontextprotocol.client.McpSyncClient;
 import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.BeforeEach;
@@ -64,7 +65,6 @@ class SpringAiOrchestratorServiceImplTest {
 
         SpringAiOrchestratorServiceImpl service = new SpringAiOrchestratorServiceImpl(
                 chatModel,
-                objectMapper,
                 "http://localhost:3001/",
                 "qwen/qwen3.8-27b",
                 uri -> mcpSyncClient,
@@ -95,14 +95,13 @@ class SpringAiOrchestratorServiceImplTest {
 
         SpringAiOrchestratorServiceImpl service = new SpringAiOrchestratorServiceImpl(
                 chatModel,
-                objectMapper,
                 "http://localhost:3001",
                 "qwen/qwen3.8-27b",
                 uri -> mcpSyncClient,
                 mockTicketService);
 
         AiChatRequest request = new AiChatRequest("Consulta", null);
-        AiChatResponse response = service.processChat(request, null);
+        AiChatResponse response = service.processChat(request, "valid-token");
 
         assertThat(response).isNotNull();
         assertThat(response.response()).isEqualTo("Respuesta markdown limpia.");
@@ -125,7 +124,6 @@ class SpringAiOrchestratorServiceImplTest {
 
         SpringAiOrchestratorServiceImpl service = new SpringAiOrchestratorServiceImpl(
                 chatModel,
-                objectMapper,
                 "http://localhost:3001",
                 "qwen/qwen3.8-27b",
                 uri -> mcpSyncClient,
@@ -157,7 +155,6 @@ class SpringAiOrchestratorServiceImplTest {
 
         SpringAiOrchestratorServiceImpl service = new SpringAiOrchestratorServiceImpl(
                 chatModel,
-                objectMapper,
                 "http://localhost:3001",
                 "qwen/qwen3.8-27b",
                 uri -> mcpSyncClient,
@@ -189,7 +186,6 @@ class SpringAiOrchestratorServiceImplTest {
 
         SpringAiOrchestratorServiceImpl service = new SpringAiOrchestratorServiceImpl(
                 chatModel,
-                objectMapper,
                 null,
                 "qwen/qwen3.8-27b",
                 uri -> mcpSyncClient,
@@ -200,7 +196,7 @@ class SpringAiOrchestratorServiceImplTest {
                 new AiChatMessageDto("user", "Pregunta válida"));
 
         AiChatRequest request = new AiChatRequest("Mensaje", history);
-        AiChatResponse response = service.processChat(request, " ");
+        AiChatResponse response = service.processChat(request, "mock-token");
 
         assertThat(response).isNotNull();
     }
@@ -216,17 +212,61 @@ class SpringAiOrchestratorServiceImplTest {
 
         SpringAiOrchestratorServiceImpl service = new SpringAiOrchestratorServiceImpl(
                 chatModel,
-                objectMapper,
                 "http://localhost:3001/",
                 "qwen/qwen3.8-27b",
                 uri -> mcpSyncClient,
                 mockTicketService);
 
         AiChatRequest request = new AiChatRequest("Consulta sin herramientas", null);
-        AiChatResponse response = service.processChat(request, null);
+        AiChatResponse response = service.processChat(request, "valid-token");
 
         assertThat(response).isNotNull();
         assertThat(response.response()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Debe lanzar InvalidTokenException cuando el token JWT es nulo o está en blanco (BUG-04)")
+    void processChat_NullOrBlankJwt_ThrowsInvalidTokenException() {
+        SpringAiOrchestratorServiceImpl service = new SpringAiOrchestratorServiceImpl(
+                chatModel,
+                "http://localhost:3001",
+                "qwen/qwen3.8-27b",
+                uri -> mcpSyncClient,
+                mockTicketService);
+
+        AiChatRequest request = new AiChatRequest("Consulta", null);
+
+        assertThatThrownBy(() -> service.processChat(request, null))
+                .isInstanceOf(InvalidTokenException.class)
+                .hasMessageContaining("token de autenticación válido");
+
+        assertThatThrownBy(() -> service.processChat(request, "   "))
+                .isInstanceOf(InvalidTokenException.class)
+                .hasMessageContaining("token de autenticación válido");
+    }
+
+    @Test
+    @DisplayName("Debe preservar el texto conversacional íntegro cuando el LLM emite texto plano con llaves (BUG-03)")
+    void processChat_NaturalLanguageWithBraces_PreservesFullText() {
+        when(mcpSyncClient.listTools()).thenReturn(new McpSchema.ListToolsResult(List.of(), null));
+
+        String textWithBraces = "Para filtrar alojamientos puedes emplear {precio_maximo} en tu consulta. ¿Deseas ver más detalles?";
+        Generation generation = new Generation(new AssistantMessage(textWithBraces));
+        ChatResponse chatResponse = new ChatResponse(List.of(generation));
+        when(chatModel.call(any(Prompt.class))).thenReturn(chatResponse);
+
+        SpringAiOrchestratorServiceImpl service = new SpringAiOrchestratorServiceImpl(
+                chatModel,
+                "http://localhost:3001",
+                "qwen/qwen3.8-27b",
+                uri -> mcpSyncClient,
+                mockTicketService);
+
+        AiChatRequest request = new AiChatRequest("¿Cómo filtro?", null);
+        AiChatResponse response = service.processChat(request, "valid-token");
+
+        assertThat(response).isNotNull();
+        assertThat(response.response()).isEqualTo(textWithBraces);
     }
 
     @Test
@@ -236,7 +276,6 @@ class SpringAiOrchestratorServiceImplTest {
 
         SpringAiOrchestratorServiceImpl service = new SpringAiOrchestratorServiceImpl(
                 chatModel,
-                objectMapper,
                 "http://localhost:3001",
                 "qwen/qwen3.8-27b",
                 uri -> mcpSyncClient,
@@ -254,7 +293,6 @@ class SpringAiOrchestratorServiceImplTest {
     void processChat_McpConnectionFailure_ThrowsInformativeException() {
         SpringAiOrchestratorServiceImpl service = new SpringAiOrchestratorServiceImpl(
                 chatModel,
-                objectMapper,
                 "http://localhost:59999",
                 "qwen/qwen3.8-27b",
                 uri -> {
@@ -283,10 +321,10 @@ class SpringAiOrchestratorServiceImplTest {
 
         SpringAiOrchestratorServiceImpl service = new SpringAiOrchestratorServiceImpl(
                 chatModel,
-                objectMapper,
                 "http://localhost:3001",
                 "qwen/qwen3.8-27b",
-                factory);
+                factory,
+                ticketService);
 
         assertThat(service).isNotNull();
     }
@@ -303,7 +341,6 @@ class SpringAiOrchestratorServiceImplTest {
 
         SpringAiOrchestratorServiceImpl service = new SpringAiOrchestratorServiceImpl(
                 chatModel,
-                objectMapper,
                 "http://localhost:3001",
                 "qwen/qwen3.8-27b",
                 uri -> mcpSyncClient,

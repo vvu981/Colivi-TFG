@@ -1,24 +1,24 @@
 package com.vvu981.colivibackend.features.ai.config;
 
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.web.client.RestClientCustomizer;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 
-import java.time.Duration;
-
+/**
+ * Configuracion del cliente HTTP para Spring AI / Groq.
+ *
+ * F-07: Se elimino el bean RestClientCustomizer global que aplicaba un timeout de 60s
+ * a TODOS los RestClient del contexto Spring (no solo al de OpenAI), afectando
+ * potencialmente a otros clientes HTTP ya existentes.
+ *
+ * El timeout de lectura para las llamadas a Groq se controla directamente
+ * via las propiedades de Spring AI:
+ *   spring.ai.openai.* (ya configurado en application.properties)
+ *
+ * Si en el futuro se necesita ajustar el timeout de forma programatica,
+ * crear un bean OpenAiApi con un RestClient dedicado usando RestClient.builder()
+ * y no RestClientCustomizer (que es global).
+ */
 @Configuration
 public class AiClientConfig {
-
-    @Bean
-    @Qualifier("aiRestClientCustomizer")
-    public RestClientCustomizer aiRestClientCustomizer() {
-        return restClientBuilder -> {
-            SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-            factory.setConnectTimeout(Duration.ofSeconds(30));
-            factory.setReadTimeout(Duration.ofSeconds(60));
-            restClientBuilder.requestFactory(factory);
-        };
-    }
+    // Configuracion delegada a application.properties
+    // spring.ai.openai.base-url y spring.ai.openai.api-key
 }

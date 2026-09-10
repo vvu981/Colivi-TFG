@@ -59,7 +59,10 @@ export function createMcpRouter(deps: McpRouterDependencies): Router {
    * Handshake SSE: Valida ticket efímero o token Bearer y establece el canal de streaming.
    * Se elimina la ruta con JWT en URL (/token/:token/sse) para prevenir fuga en logs (SEC-01).
    */
-  const ssePaths = ["/sse", "/ticket/:ticket/sse", "/:ticket/sse"];
+  // F-12: Se elimina la ruta generica "/:ticket/sse" que capturaria cualquier
+  // path de primer nivel terminado en /sse, colisionando con rutas futuras.
+  // Solo se mantiene "/sse" (Bearer header) y "/ticket/:ticket/sse" (ticket efimero).
+  const ssePaths = ["/sse", "/ticket/:ticket/sse"];
   router.get(ssePaths, async (req: Request, res: Response) => {
     let securityContext: SecurityContext | undefined;
 
@@ -143,7 +146,10 @@ export function createMcpRouter(deps: McpRouterDependencies): Router {
    * Endpoint de mensajes entrantes (JSON-RPC requests desde el cliente MCP).
    * Protegido contra suplantación de sesión mediante verificación de sessionToken o Bearer token (SEC-02).
    */
-  const messagePaths = ["/messages", "/ticket/:ticket/messages", "/:ticket/messages"];
+  // F-28: Se eliminan las rutas "/:ticket/messages" y "/ticket/:ticket/messages"
+  // que son decorativas: el parametro ticket no se usa en el handler de mensajes
+  // (que solo lee sessionId del query param). Aumentaban la superficie de ataque.
+  const messagePaths = ["/messages"];
   router.post(messagePaths, async (req: Request, res: Response) => {
     const sessionId = req.query.sessionId as string | undefined;
 
@@ -172,9 +178,20 @@ export function createMcpRouter(deps: McpRouterDependencies): Router {
       const authHeader = req.headers.authorization;
       const bearerToken = authHeader?.replace(/^Bearer\s+/i, "")?.trim();
 
-      const isAuthorized =
-        (sessionToken && sessionToken === session.sessionSecret) ||
-        (bearerToken && bearerToken === session.securityContext.token);
+      // F-13: Uso de timingSafeEqual para comparar secretos criptograficos.
+      // La comparacion === no es de tiempo constante y puede filtrar informacion
+      // del secreto via timing attacks en mediciones de latencia de respuesta.
+      const isSessionTokenValid =
+        !!sessionToken &&
+        sessionToken.length === session.sessionSecret.length &&
+        crypto.timingSafeEqual(Buffer.from(sessionToken), Buffer.from(session.sessionSecret));
+
+      const isBearerTokenValid =
+        !!bearerToken &&
+        bearerToken.length === session.securityContext.token.length &&
+        crypto.timingSafeEqual(Buffer.from(bearerToken), Buffer.from(session.securityContext.token));
+
+      const isAuthorized = isSessionTokenValid || isBearerTokenValid;
 
       if (!isAuthorized) {
         res.status(403).json({
