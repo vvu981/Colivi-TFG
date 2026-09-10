@@ -4,6 +4,7 @@ import { SecurityContext } from "../core/security/securityContext.js";
 
 export interface McpSession {
   readonly sessionId: string;
+  readonly sessionSecret: string;
   readonly transport: SSEServerTransport;
   readonly server: Server;
   readonly securityContext: SecurityContext;

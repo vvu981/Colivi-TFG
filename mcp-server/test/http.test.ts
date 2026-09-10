@@ -33,7 +33,7 @@ describe("ColiviHttpClient Suite", () => {
     const client = new ColiviHttpClient("http://fake-backend:8080");
     const internalAxios = (client as unknown as { client: any }).client;
 
-    await SecurityContextHolder.run({ userId: "u-1", role: "USER", token: "secret-jwt-token" }, async () => {
+    await SecurityContextHolder.run({ userId: "u-1", email: "user@example.com", role: "USER", token: "secret-jwt-token" }, async () => {
       // Simulate interceptor execution
       const interceptor = internalAxios.interceptors.request.handlers[0];
       const initialConfig = { headers: {} as Record<string, string> };

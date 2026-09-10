@@ -7,11 +7,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -34,12 +35,11 @@ public class AiChatController {
     @ApiResponse(responseCode = "401", description = "No autorizado - Token JWT ausente o inválido")
     public ResponseEntity<AiChatResponse> chat(
             @Valid @RequestBody AiChatRequest request,
-            HttpServletRequest servletRequest
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authHeader
     ) {
-        String authHeader = servletRequest.getHeader("Authorization");
         String jwtToken = null;
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            jwtToken = authHeader.substring(7);
+        if (authHeader != null && authHeader.regionMatches(true, 0, "Bearer ", 0, 7)) {
+            jwtToken = authHeader.substring(7).trim();
         }
 
         AiChatResponse response = orchestratorService.processChat(request, jwtToken);

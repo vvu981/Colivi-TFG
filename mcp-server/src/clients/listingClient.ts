@@ -8,8 +8,16 @@ export interface AccommodationResponse {
   country: string;
   province?: string;
   totalRooms: number;
+  totalBathrooms?: number;
   freeRooms: number;
+  squareMeters?: number;
+  latitude?: number;
+  longitude?: number;
+  createdAt?: string;
+  updatedAt?: string;
   amenities: string[];
+  ownerId?: string;
+  ownerNickname?: string;
 }
 
 export interface AccommodationListingItem {
@@ -20,9 +28,12 @@ export interface AccommodationListingItem {
   securityDeposit?: number;
   rentalType: string;
   status: string;
+  createdAt?: string;
   accommodation?: AccommodationResponse;
   hostId?: string;
   hostNickname?: string;
+  hostProfilePicUrl?: string;
+  isPromoted?: boolean;
 }
 
 export interface PageResponse<T> {
@@ -41,6 +52,7 @@ export interface IListingClient {
     page?: number;
     size?: number;
   }): Promise<PageResponse<AccommodationListingItem>>;
+  getListingById(listingId: string): Promise<AccommodationListingItem>;
 }
 
 export class ListingClient implements IListingClient {
@@ -68,6 +80,10 @@ export class ListingClient implements IListingClient {
     }
 
     return this.http.get<PageResponse<AccommodationListingItem>>("/listings", query);
+  }
+
+  public async getListingById(listingId: string): Promise<AccommodationListingItem> {
+    return this.http.get<AccommodationListingItem>(`/listings/${encodeURIComponent(listingId)}`);
   }
 }
 

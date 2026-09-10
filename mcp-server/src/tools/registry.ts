@@ -4,12 +4,15 @@ import { SearchColivingListingsHandler } from "./handlers/searchColivingListings
 import { GetUserChoresStatusHandler } from "./handlers/getUserChoresStatusHandler.js";
 import { SummarizeHostInboxHandler } from "./handlers/summarizeHostInboxHandler.js";
 import { GetModerationQueueHandler } from "./handlers/getModerationQueueHandler.js";
-import { InvalidArgumentError } from "../core/errors/mcpError.js";
-import { UserRole } from "../core/security/securityContext.js";
+import { GetMyBookingsStatusHandler } from "./handlers/getMyBookingsStatusHandler.js";
+import { GetListingDetailsHandler } from "./handlers/getListingDetailsHandler.js";
+import { InvalidArgumentError, ForbiddenError } from "../core/errors/mcpError.js";
+import { UserRole, SecurityContextHolder } from "../core/security/securityContext.js";
 import { IListingClient } from "../clients/listingClient.js";
 import { IHomeChoreClient } from "../clients/homeChoreClient.js";
 import { IMessagingClient } from "../clients/messagingClient.js";
 import { IReportClient } from "../clients/reportClient.js";
+import { IBookingClient } from "../clients/bookingClient.js";
 
 export interface IToolRegistry {
   register(handler: IMcpToolHandler): void;
@@ -50,6 +53,15 @@ export class ToolRegistry implements IToolRegistry {
       throw new InvalidArgumentError(`Tool [${name}] is not registered on this MCP server`);
     }
 
+    if (handler.requiredRole) {
+      const context = SecurityContextHolder.tryGetContext();
+      if (!context || (handler.requiredRole === "ADMIN" && context.role !== "ADMIN")) {
+        throw new ForbiddenError(
+          `Operation requires ${handler.requiredRole} role. Current caller has ${context?.role ?? "ANONYMOUS"}`
+        );
+      }
+    }
+
     return handler.execute(args);
   }
 }
@@ -59,6 +71,7 @@ export interface DefaultToolRegistryOptions {
   homeChoreClient?: IHomeChoreClient;
   messagingClient?: IMessagingClient;
   reportClient?: IReportClient;
+  bookingClient?: IBookingClient;
 }
 
 export function createDefaultToolRegistry(options?: DefaultToolRegistryOptions): ToolRegistry {
@@ -68,6 +81,8 @@ export function createDefaultToolRegistry(options?: DefaultToolRegistryOptions):
   registry.register(new GetUserChoresStatusHandler(options?.homeChoreClient));
   registry.register(new SummarizeHostInboxHandler(options?.messagingClient));
   registry.register(new GetModerationQueueHandler(options?.reportClient));
+  registry.register(new GetMyBookingsStatusHandler(options?.bookingClient));
+  registry.register(new GetListingDetailsHandler(options?.listingClient));
 
   return registry;
 }

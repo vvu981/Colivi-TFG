@@ -68,11 +68,11 @@ services:
       MAIL_REACTIVATION_URL: ${MAIL_REACTIVATION_URL}
 
       # ── AI Orchestration & MCP (Configuración delegada al .env) ──
-      AI_BASE_URL: ${AI_BASE_URL}
-      AI_API_KEY: ${AI_API_KEY}
-      AI_MODEL: ${AI_MODEL}
-      GROQ_API_KEY: ${GROQ_API_KEY}
-      GROQ_MODEL: ${GROQ_MODEL}
+      AI_BASE_URL: ${AI_BASE_URL:-https://api.groq.com/openai}
+      AI_API_KEY: ${AI_API_KEY:-${GROQ_API_KEY}}
+      AI_MODEL: ${AI_MODEL:-${GROQ_MODEL:-qwen/qwen3.8-27b}}
+      GROQ_API_KEY: ${GROQ_API_KEY:-${AI_API_KEY}}
+      GROQ_MODEL: ${GROQ_MODEL:-${AI_MODEL:-qwen/qwen3.8-27b}}
       MCP_SERVER_URL: http://mcp-server:3001
     ports:
       - "8080:8080"
@@ -121,7 +121,6 @@ services:
       - mcp-server
     environment:
       BACKEND_URL: ${BACKEND_URL}
-      VITE_MCP_URL: http://localhost:3001
     ports:
       - "5173:5173"
     volumes:

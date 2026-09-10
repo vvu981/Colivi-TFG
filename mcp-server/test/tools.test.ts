@@ -7,12 +7,15 @@ import { SearchColivingListingsHandler } from "../src/tools/handlers/searchColiv
 import { GetModerationQueueHandler } from "../src/tools/handlers/getModerationQueueHandler.js";
 import { GetUserChoresStatusHandler } from "../src/tools/handlers/getUserChoresStatusHandler.js";
 import { SummarizeHostInboxHandler } from "../src/tools/handlers/summarizeHostInboxHandler.js";
+import { GetMyBookingsStatusHandler } from "../src/tools/handlers/getMyBookingsStatusHandler.js";
+import { GetListingDetailsHandler } from "../src/tools/handlers/getListingDetailsHandler.js";
 import { SecurityContextHolder } from "../src/core/security/securityContext.js";
 import { ForbiddenError } from "../src/core/errors/mcpError.js";
 import { IListingClient, PageResponse, AccommodationListingItem } from "../src/clients/listingClient.js";
 import { IReportClient, ReportTargetCount } from "../src/clients/reportClient.js";
 import { IHomeChoreClient, HomeSummary, ChoreItem, ChoreLeaderboard } from "../src/clients/homeChoreClient.js";
 import { IMessagingClient, ConversationSummary } from "../src/clients/messagingClient.js";
+import { IBookingClient, BookingRequestItem } from "../src/clients/bookingClient.js";
 
 function extractText(content: CallToolResult["content"][number] | undefined): string {
   assert.ok(content && content.type === "text", "Expected content block to be of type 'text'");
@@ -20,16 +23,18 @@ function extractText(content: CallToolResult["content"][number] | undefined): st
 }
 
 describe("MCP Tools & Handlers Suite", () => {
-  it("should have exactly the 4 required tools registered in schema and registry", () => {
+  it("should have exactly the 6 required tools registered in schema and registry", () => {
     const registry = createDefaultToolRegistry();
     const definitions = registry.getAllDefinitions();
 
-    assert.equal(definitions.length, 4);
-    assert.equal(ALL_MCP_TOOLS.length, 4);
+    assert.equal(definitions.length, 6);
+    assert.equal(ALL_MCP_TOOLS.length, 6);
 
     const names = definitions.map((d) => d.name).sort();
     const expected = [
+      "get_listing_details",
       "get_moderation_queue",
+      "get_my_bookings_status",
       "get_user_chores_status",
       "search_coliving_listings",
       "summarize_host_inbox"
@@ -38,21 +43,40 @@ describe("MCP Tools & Handlers Suite", () => {
     assert.deepEqual(names, expected);
   });
 
-  it("should filter tools by role: USER sees only 3 tools, ADMIN sees all 4", () => {
+  it("should filter tools by role: USER sees only 5 tools, ADMIN sees all 6", () => {
     const registry = createDefaultToolRegistry();
 
     const userTools = registry.getDefinitionsForRole("USER");
-    assert.equal(userTools.length, 3);
+    assert.equal(userTools.length, 5);
     const userToolNames = userTools.map((t) => t.name);
     assert.ok(!userToolNames.includes("get_moderation_queue"), "USER should not see get_moderation_queue");
     assert.ok(userToolNames.includes("search_coliving_listings"));
     assert.ok(userToolNames.includes("get_user_chores_status"));
     assert.ok(userToolNames.includes("summarize_host_inbox"));
+    assert.ok(userToolNames.includes("get_my_bookings_status"));
+    assert.ok(userToolNames.includes("get_listing_details"));
 
     const adminTools = registry.getDefinitionsForRole("ADMIN");
-    assert.equal(adminTools.length, 4);
+    assert.equal(adminTools.length, 6);
     const adminToolNames = adminTools.map((t) => t.name);
     assert.ok(adminToolNames.includes("get_moderation_queue"));
+  });
+
+  it("executeTool: should reject unauthorized execution of ADMIN tool directly from ToolRegistry", async () => {
+    const registry = createDefaultToolRegistry();
+    const userContext = {
+      userId: "user-uuid-1",
+      email: "tenant@colivi.com",
+      role: "USER" as const,
+      token: "tok"
+    };
+
+    await SecurityContextHolder.run(userContext, async () => {
+      await assert.rejects(
+        () => registry.executeTool("get_moderation_queue", { targetType: "USER" }),
+        (err: unknown) => err instanceof ForbiddenError
+      );
+    });
   });
 
   it("search_coliving_listings: should filter and enrich results with vibe classifier", async () => {
@@ -362,5 +386,190 @@ describe("MCP Tools & Handlers Suite", () => {
       const text = extractText(result.content[0]);
       assert.match(text, /No se encontraron conversaciones activas como anfitrion/);
     });
+  });
+
+  it("get_my_bookings_status: should return friendly message when user has no bookings", async () => {
+    const mockEmptyBookingClient: IBookingClient = {
+      getMyBookings: async () => ({
+        content: [],
+        totalElements: 0,
+        totalPages: 0,
+        size: 50,
+        number: 0
+      })
+    };
+
+    const handler = new GetMyBookingsStatusHandler(mockEmptyBookingClient);
+    const userContext = {
+      userId: "tenant-uuid-1",
+      email: "tenant@colivi.com",
+      role: "USER" as const,
+      token: "tok"
+    };
+
+    await SecurityContextHolder.run(userContext, async () => {
+      const result = await handler.execute();
+      assert.equal(result.isError, undefined);
+      const text = extractText(result.content[0]);
+      assert.match(text, /no tiene solicitudes de reserva registradas actualmente/);
+    });
+  });
+
+  it("get_my_bookings_status: should flag immediate action when booking is ACCEPTED (deposit payment needed) and summarize", async () => {
+    const mockBookings: BookingRequestItem[] = [
+      {
+        id: "booking-req-1",
+        requesterId: "tenant-uuid-1",
+        accommodationListingId: "listing-uuid-10",
+        startDate: "2026-10-01",
+        endDate: "2027-06-30",
+        message: "Hola, me gustaria alquilar la habitacion.",
+        status: "ACCEPTED",
+        createdAt: "2026-09-08T10:00:00Z",
+        expiresAt: "2026-09-15T23:59:59Z"
+      },
+      {
+        id: "booking-req-2",
+        requesterId: "tenant-uuid-1",
+        accommodationListingId: "listing-uuid-20",
+        startDate: "2026-11-01",
+        endDate: "2027-02-28",
+        message: "Segunda opcion.",
+        status: "PENDING",
+        createdAt: "2026-09-09T12:00:00Z"
+      },
+      {
+        id: "booking-req-3",
+        requesterId: "tenant-uuid-1",
+        accommodationListingId: "listing-uuid-30",
+        startDate: "2026-08-01",
+        endDate: "2026-08-31",
+        message: "Estancia verano.",
+        status: "CONFIRMED",
+        createdAt: "2026-07-01T10:00:00Z"
+      }
+    ];
+
+    const mockBookingClient: IBookingClient = {
+      getMyBookings: async () => ({
+        content: mockBookings,
+        totalElements: 3,
+        totalPages: 1,
+        size: 50,
+        number: 0
+      })
+    };
+
+    const handler = new GetMyBookingsStatusHandler(mockBookingClient);
+    const userContext = {
+      userId: "tenant-uuid-1",
+      email: "tenant@colivi.com",
+      role: "USER" as const,
+      token: "tok"
+    };
+
+    await SecurityContextHolder.run(userContext, async () => {
+      const result = await handler.execute();
+      assert.equal(result.isError, undefined);
+      const text = extractText(result.content[0]);
+      const data = JSON.parse(text);
+
+      assert.equal(data.metricas.totalSolicitudes, 3);
+      assert.equal(data.metricas.aceptadasRequierenPagoFianza, 1);
+      assert.equal(data.metricas.pendientesDeRespuesta, 1);
+      assert.equal(data.metricas.confirmadas, 1);
+
+      const accepted = data.solicitudes.find((s: any) => s.id === "booking-req-1");
+      assert.ok(accepted);
+      assert.equal(accepted.requiereAccionInmediata, true);
+      assert.match(accepted.accionRequerida, /URGENTE: Tu solicitud ha sido ACEPTADA/);
+      assert.match(accepted.accionRequerida, /2026-09-15T23:59:59Z/);
+
+      const pending = data.solicitudes.find((s: any) => s.id === "booking-req-2");
+      assert.ok(pending);
+      assert.equal(pending.requiereAccionInmediata, false);
+      assert.match(pending.accionRequerida, /En espera de aprobacion/);
+    });
+  });
+
+  it("get_listing_details: should return complete technical sheet with deposit breakdown, amenities, rules, and availability", async () => {
+    const mockListing: AccommodationListingItem = {
+      id: "listing-detail-1",
+      title: "Coliving Chamberi Premium",
+      description: "Piso amplio y reformado en Chamberi.",
+      pricePerMonth: 600,
+      securityDeposit: 600,
+      rentalType: "ROOM",
+      status: "AVAILABLE",
+      createdAt: "2026-09-01T12:00:00Z",
+      hostId: "host-uuid-99",
+      hostNickname: "maria_host",
+      isPromoted: true,
+      accommodation: {
+        id: "acc-uuid-1",
+        address: "Calle de Fuencarral 120",
+        city: "Madrid",
+        country: "Espana",
+        province: "Madrid",
+        totalRooms: 5,
+        totalBathrooms: 2,
+        freeRooms: 2,
+        squareMeters: 140,
+        amenities: ["WIFI", "HEATING", "ELEVATOR", "PETS_ALLOWED"]
+      }
+    };
+
+    const mockListingClient: IListingClient = {
+      searchCatalog: async () => ({ content: [], totalElements: 0, totalPages: 0, size: 10, number: 0 }),
+      getListingById: async (id: string) => {
+        if (id === "listing-detail-1") return mockListing;
+        return {} as AccommodationListingItem;
+      }
+    };
+
+    const handler = new GetListingDetailsHandler(mockListingClient);
+    const result = await handler.execute({ listingId: "listing-detail-1" });
+
+    assert.equal(result.isError, undefined);
+    const text = extractText(result.content[0]);
+    const data = JSON.parse(text);
+
+    assert.equal(data.anuncio.id, "listing-detail-1");
+    assert.equal(data.anuncio.titulo, "Coliving Chamberi Premium");
+    assert.equal(data.desgloseEconomico.precioMensual, "600 EUR");
+    assert.equal(data.desgloseEconomico.fianzaDeposito, "600 EUR");
+    assert.match(data.desgloseEconomico.totalPrimerMesEstimado, /1200 EUR/);
+    assert.equal(data.habitabilidadYDisponibilidad.ratioDisponibilidad, "2 de 5 disponibles");
+    assert.equal(data.habitabilidadYDisponibilidad.banosTotales, 2);
+    assert.equal(data.habitabilidadYDisponibilidad.superficieM2, "140 m²");
+    assert.deepEqual(data.serviciosIncluidos, ["WIFI", "HEATING", "ELEVATOR"]);
+    assert.match(data.normasDeConvivencia.mascotasPermitidas, /PERMITIDO/);
+    assert.match(data.normasDeConvivencia.tabacoPermitido, /NO PERMITIDO/);
+    assert.equal(data.anfitrion.nickname, "maria_host");
+  });
+
+  it("get_listing_details: should reject empty listingId with InvalidArgumentError", async () => {
+    const mockListingClient: IListingClient = {
+      searchCatalog: async () => ({ content: [], totalElements: 0, totalPages: 0, size: 10, number: 0 }),
+      getListingById: async () => ({} as AccommodationListingItem)
+    };
+
+    const handler = new GetListingDetailsHandler(mockListingClient);
+    await assert.rejects(
+      async () => handler.execute({ listingId: "   " }),
+      /Invalid listing arguments/
+    );
+  });
+
+  it("get_listing_details: should return friendly message when listing not found", async () => {
+    const mockListingClient: IListingClient = {
+      searchCatalog: async () => ({ content: [], totalElements: 0, totalPages: 0, size: 10, number: 0 }),
+      getListingById: async () => ({} as AccommodationListingItem)
+    };
+
+    const handler = new GetListingDetailsHandler(mockListingClient);
+    const result = await handler.execute({ listingId: "non-existent-listing" });
+    const text = extractText(result.content[0]);
+    assert.match(text, /No se encontro el anuncio de alojamiento con ID: non-existent-listing/);
   });
 });

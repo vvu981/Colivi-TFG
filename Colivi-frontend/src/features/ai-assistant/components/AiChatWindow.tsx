@@ -12,7 +12,7 @@ export const AiChatWindow: React.FC<AiChatWindowProps> = ({
   onClose,
   title = 'Copiloto Colivi IA',
 }) => {
-  const { messages, sendMessage, isPending, clearHistory, suggestions } = useAiChat();
+  const { messages, sendMessage, isPending, clearHistory, suggestions, isAuthenticated } = useAiChat();
   const [inputText, setInputText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -30,7 +30,7 @@ export const AiChatWindow: React.FC<AiChatWindowProps> = ({
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!inputText.trim() || isPending) return;
+    if (!inputText.trim() || isPending || !isAuthenticated) return;
 
     sendMessage(inputText);
     setInputText('');
@@ -47,6 +47,7 @@ export const AiChatWindow: React.FC<AiChatWindowProps> = ({
   };
 
   const handleSuggestionClick = (prompt: string) => {
+    if (!isAuthenticated) return;
     sendMessage(prompt);
   };
 
@@ -103,7 +104,7 @@ export const AiChatWindow: React.FC<AiChatWindowProps> = ({
       </header>
 
       {/* Sugerencias Rápidas Iniciales (Chips) */}
-      {messages.length <= 1 && suggestions.length > 0 && (
+      {isAuthenticated && messages.length <= 1 && suggestions.length > 0 && (
         <div className="px-4 py-2.5 bg-surface-container-low/70 border-b border-outline-variant/30 flex flex-wrap gap-1.5">
           {suggestions.map((item) => (
             <button
@@ -146,31 +147,45 @@ export const AiChatWindow: React.FC<AiChatWindowProps> = ({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Formulario de Entrada de Mensaje */}
+      {/* Formulario de Entrada de Mensaje o Invitación al Login */}
       <footer className="p-3 bg-surface-container border-t border-outline-variant/40">
-        <form onSubmit={handleSubmit} className="flex items-end gap-2">
-          <div className="flex-1 relative">
-            <textarea
-              ref={inputRef}
-              rows={1}
-              value={inputText}
-              onChange={handleInputChange}
-              onKeyDown={handleKeyDown}
-              placeholder="Pregunta sobre habitaciones, tareas o solicitudes..."
-              className="w-full resize-none max-h-28 px-3.5 py-2.5 text-sm rounded-xl bg-surface text-on-surface border border-outline-variant placeholder:text-secondary focus:outline-none focus:ring-2 focus:ring-primary/40 leading-relaxed transition-all"
-              disabled={isPending}
-            />
+        {!isAuthenticated ? (
+          <div className="flex flex-col items-center justify-center p-3 text-center space-y-2 bg-surface-container-low rounded-xl border border-outline-variant/40">
+            <p className="text-xs text-on-surface-variant font-medium">
+              Inicia sesión en Colivi para interactuar con el Asistente IA y consultar tus tareas o reservas.
+            </p>
+            <a
+              href="/login"
+              className="inline-flex items-center justify-center px-4 py-1.5 text-xs font-semibold rounded-lg bg-primary text-on-primary hover:bg-primary-container transition-colors shadow-xs"
+            >
+              Iniciar sesión
+            </a>
           </div>
-          <button
-            type="submit"
-            disabled={!inputText.trim() || isPending}
-            className="p-2.5 rounded-xl bg-primary text-on-primary hover:bg-primary-container disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shadow-xs flex-shrink-0"
-            title="Enviar mensaje"
-            aria-label="Enviar mensaje"
-          >
-            <Send className="w-4 h-4" />
-          </button>
-        </form>
+        ) : (
+          <form onSubmit={handleSubmit} className="flex items-end gap-2">
+            <div className="flex-1 relative">
+              <textarea
+                ref={inputRef}
+                rows={1}
+                value={inputText}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                placeholder="Pregunta sobre habitaciones, tareas o solicitudes..."
+                className="w-full resize-none max-h-28 px-3.5 py-2.5 text-sm rounded-xl bg-surface text-on-surface border border-outline-variant placeholder:text-secondary focus:outline-none focus:ring-2 focus:ring-primary/40 leading-relaxed transition-all"
+                disabled={isPending}
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={!inputText.trim() || isPending}
+              className="p-2.5 rounded-xl bg-primary text-on-primary hover:bg-primary-container disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shadow-xs flex-shrink-0"
+              title="Enviar mensaje"
+              aria-label="Enviar mensaje"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          </form>
+        )}
         <p className="text-[10px] text-center text-secondary mt-2">
           Respuestas generadas con IA en modo solo lectura sobre el servidor MCP.
         </p>

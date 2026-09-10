@@ -13,33 +13,42 @@ export class VibeClassifier {
    */
   public static classify(listing: AccommodationListingItem): VibeType {
     const amenities = listing.accommodation?.amenities?.map((a) => a.toUpperCase()) ?? [];
-    const description = (listing.description + " " + listing.title).toLowerCase();
+    const description = `${listing.description ?? ""} ${listing.title ?? ""}`.toLowerCase();
 
     if (
+      amenities.includes("DISHWASHER") ||
+      amenities.includes("WASHING_MACHINE") ||
       amenities.includes("CLEANING_SERVICE") ||
       description.includes("orden") ||
       description.includes("limpieza") ||
-      description.includes("tidy")
+      description.includes("tidy") ||
+      description.includes("organizado")
     ) {
       return "TIDY";
     }
 
     if (
       amenities.includes("TERRACE") ||
+      amenities.includes("BALCONY") ||
+      amenities.includes("SWIMMING_POOL") ||
       amenities.includes("COMMON_ROOM") ||
       description.includes("social") ||
       description.includes("vida juntos") ||
-      description.includes("eventos")
+      description.includes("eventos") ||
+      description.includes("comunidad")
     ) {
       return "SOCIAL";
     }
 
     if (
+      amenities.includes("WORK_ZONE") ||
       amenities.includes("DESK") ||
       amenities.includes("SILENT_AREA") ||
       description.includes("tranquilo") ||
       description.includes("estudio") ||
-      description.includes("quiet")
+      description.includes("quiet") ||
+      description.includes("concentracion") ||
+      description.includes("silencio")
     ) {
       return "QUIET";
     }

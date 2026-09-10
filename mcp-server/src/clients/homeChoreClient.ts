@@ -5,6 +5,8 @@ export interface HomeSummary {
   id: string;
   name: string;
   invitationCode?: string;
+  myRole?: string;
+  myStatus?: string;
   role?: string;
   status?: string;
 }
@@ -15,6 +17,8 @@ export interface ChoreItem {
   description?: string;
   status: "PENDING" | "COMPLETED";
   dueDate?: string;
+  assigneeId?: string;
+  assigneeName?: string;
   assignedToUserId?: string;
   assignedToName?: string;
   basePoints?: number;

@@ -35,6 +35,7 @@ describe('AiChatWindow component', () => {
           prompt: '¿Cuáles son mis tareas del hogar?',
         },
       ],
+      isAuthenticated: true,
     });
   });
 
@@ -82,6 +83,7 @@ describe('AiChatWindow component', () => {
       error: null,
       clearHistory: mockClearHistory,
       suggestions: [],
+      isAuthenticated: true,
     });
 
     render(<AiChatWindow onClose={mockOnClose} />);
@@ -89,5 +91,32 @@ describe('AiChatWindow component', () => {
     expect(
       screen.getByText(/El asistente está consultando las herramientas.../i)
     ).toBeInTheDocument();
+  });
+
+  it('muestra aviso de inicio de sesión cuando el usuario no está autenticado (UX-01)', () => {
+    vi.spyOn(useAiChatModule, 'useAiChat').mockReturnValue({
+      messages: [
+        {
+          id: 'greeting-msg',
+          role: 'assistant',
+          content: 'Hola. Soy el Asistente Inteligente.',
+          timestamp: '2026-09-09T10:00:00Z',
+        },
+      ],
+      sendMessage: mockSendMessage,
+      isPending: false,
+      error: null,
+      clearHistory: mockClearHistory,
+      suggestions: [],
+      isAuthenticated: false,
+    });
+
+    render(<AiChatWindow onClose={mockOnClose} />);
+
+    expect(
+      screen.getByText(/Inicia sesión en Colivi para interactuar con el Asistente IA/i)
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /iniciar sesión/i })).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(/Pregunta sobre habitaciones/i)).not.toBeInTheDocument();
   });
 });

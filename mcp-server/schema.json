@@ -77,6 +77,31 @@
           "targetType"
         ]
       }
+    },
+    {
+      "name": "get_my_bookings_status",
+      "description": "Obtiene el historial y estado actual de las solicitudes de reserva del inquilino autenticado (PENDING, ACCEPTED, CONFIRMED, REJECTED) y si requieren acción inmediata como pagar fianza.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "name": "get_listing_details",
+      "description": "Obtiene la ficha técnica completa de un anuncio por su ID: desglose de fianza, servicios incluidos (wifi, calefacción), normas de convivencia y fechas de disponibilidad.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "listingId": {
+            "type": "string",
+            "description": "UUID del anuncio de alojamiento a consultar"
+          }
+        },
+        "required": [
+          "listingId"
+        ]
+      }
     }
   ]
 }

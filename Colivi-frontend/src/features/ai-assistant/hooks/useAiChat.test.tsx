@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AuthContext, type AuthContextType } from '../../auth/context/AuthContext';
 import { useAiChat } from './useAiChat';
 import { aiAssistantApi } from '../api/aiAssistantApi';
 
@@ -11,7 +12,31 @@ vi.mock('../api/aiAssistantApi', () => ({
   },
 }));
 
-const createWrapper = () => {
+const mockAuthContext: AuthContextType = {
+  user: {
+    id: 'user-123',
+    email: 'test@example.com',
+    nickname: 'testuser',
+    firstName: 'Test',
+    lastName1: 'User',
+    lastName2: null,
+    phone: null,
+    role: 'USER',
+    profilePicUrl: null,
+    createdAt: '2026-01-01T00:00:00Z',
+  },
+  token: 'mock-token',
+  isAuthenticated: true,
+  isLoading: false,
+  login: vi.fn(),
+  loginWithGoogle: vi.fn(),
+  register: vi.fn(),
+  reactivateAccount: vi.fn(),
+  updateUserContextData: vi.fn(),
+  logout: vi.fn(),
+};
+
+const createWrapper = (authOverride?: Partial<AuthContextType>) => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -19,8 +44,15 @@ const createWrapper = () => {
     },
   });
 
+  const authValue: AuthContextType = {
+    ...mockAuthContext,
+    ...authOverride,
+  };
+
   return ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <AuthContext.Provider value={authValue}>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    </AuthContext.Provider>
   );
 };
 
@@ -44,7 +76,7 @@ describe('useAiChat hook', () => {
       { id: '1', role: 'user', content: 'Pregunta previa', timestamp: '2026-09-09T10:00:00Z' },
       { id: '2', role: 'assistant', content: 'Respuesta previa', timestamp: '2026-09-09T10:00:05Z' },
     ];
-    sessionStorage.setItem('colivi_ai_chat_anonymous', JSON.stringify(existingMessages));
+    sessionStorage.setItem('colivi_ai_chat_user-123', JSON.stringify(existingMessages));
 
     const { result } = renderHook(() => useAiChat(), { wrapper: createWrapper() });
 
@@ -78,7 +110,7 @@ describe('useAiChat hook', () => {
     expect(result.current.messages[2].draftContent).toBe(mockResponse.draft);
 
     // Comprobar persistencia en sessionStorage
-    const stored = JSON.parse(sessionStorage.getItem('colivi_ai_chat_anonymous') || '[]');
+    const stored = JSON.parse(sessionStorage.getItem('colivi_ai_chat_user-123') || '[]');
     expect(stored).toHaveLength(3);
     expect(stored[1].content).toBe('Búscame colivings en Madrid');
     expect(stored[2].content).toBe(mockResponse.response);
@@ -124,8 +156,60 @@ describe('useAiChat hook', () => {
     expect(result.current.messages).toHaveLength(1);
     expect(result.current.messages[0].role).toBe('assistant');
 
-    const stored = JSON.parse(sessionStorage.getItem('colivi_ai_chat_anonymous') || '[]');
+    const stored = JSON.parse(sessionStorage.getItem('colivi_ai_chat_user-123') || '[]');
     expect(stored).toHaveLength(1);
     expect(stored[0].role).toBe('assistant');
+    expect(stored[0].id).toBe('greeting-msg');
+  });
+
+  it('excluye el mensaje de bienvenida y los mensajes de error del historyPayload enviado a la API', async () => {
+    vi.mocked(aiAssistantApi.sendMessage).mockResolvedValueOnce({ response: 'Primera respuesta' });
+
+    const { result } = renderHook(() => useAiChat(), { wrapper: createWrapper() });
+
+    await act(async () => {
+      result.current.sendMessage('Primer mensaje');
+    });
+
+    await waitFor(() => {
+      expect(result.current.messages).toHaveLength(3);
+    });
+
+    // Simular siguiente envío para inspeccionar qué payload se genera
+    vi.mocked(aiAssistantApi.sendMessage).mockResolvedValueOnce({ response: 'Segunda respuesta' });
+
+    await act(async () => {
+      result.current.sendMessage('Segundo mensaje');
+    });
+
+    await waitFor(() => {
+      expect(aiAssistantApi.sendMessage).toHaveBeenCalledTimes(2);
+    });
+
+    const secondCallPayload = vi.mocked(aiAssistantApi.sendMessage).mock.calls[1][0];
+    expect(secondCallPayload.message).toBe('Segundo mensaje');
+    // Debe excluir 'greeting-msg'
+    expect(secondCallPayload.history?.some((h) => h.content.includes('Soy el Asistente Inteligente'))).toBe(false);
+  });
+
+  it('no envía el mensaje a la API si el usuario no está autenticado', async () => {
+    const unauthenticatedWrapper = createWrapper({
+      user: null,
+      token: null,
+      isAuthenticated: false,
+    });
+
+    const { result } = renderHook(() => useAiChat(), { wrapper: unauthenticatedWrapper });
+
+    expect(result.current.isAuthenticated).toBe(false);
+
+    await act(async () => {
+      result.current.sendMessage('Intento sin auth');
+    });
+
+    expect(aiAssistantApi.sendMessage).not.toHaveBeenCalled();
+    expect(result.current.messages).toHaveLength(1);
+    expect(result.current.messages[0].id).toBe('greeting-msg');
   });
 });
+

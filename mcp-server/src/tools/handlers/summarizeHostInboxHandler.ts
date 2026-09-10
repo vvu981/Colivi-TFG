@@ -13,6 +13,7 @@ type SummarizeInput = z.infer<typeof summarizeInputSchema>;
 
 export class SummarizeHostInboxHandler implements IMcpToolHandler<SummarizeInput> {
   public readonly definition = SUMMARIZE_HOST_INBOX_TOOL;
+  public readonly requiredRole = "USER" as const;
 
   constructor(private readonly client: IMessagingClient = messagingClient) {}
 

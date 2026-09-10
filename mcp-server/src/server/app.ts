@@ -25,7 +25,14 @@ export function createApp(deps: AppDependencies): Express {
 
   // Rutas de diagnóstico y metadatos
   app.use("/health", createHealthRouter(deps.sessionManager));
-  app.use("/schema", createSchemaRouter(deps.toolRegistry));
+  app.use(
+    "/schema",
+    createSchemaRouter({
+      toolRegistry: deps.toolRegistry,
+      tokenExtractor: deps.tokenExtractor,
+      jwtVerifier: deps.jwtVerifier
+    })
+  );
 
   // Rutas del protocolo MCP (SSE y mensajes)
   app.use(

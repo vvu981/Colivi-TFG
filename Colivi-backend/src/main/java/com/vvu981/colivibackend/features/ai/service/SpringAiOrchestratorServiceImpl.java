@@ -22,6 +22,11 @@ import org.springframework.ai.tool.ToolCallback;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -55,7 +60,10 @@ public class SpringAiOrchestratorServiceImpl implements AiOrchestratorService {
     public AiChatResponse processChat(AiChatRequest request, String jwtToken) {
         // Salvaguarda 3: Conexión efímera segura con timeout de 30s
         String cleanMcpUrl = mcpBaseUrl != null ? mcpBaseUrl.replaceAll("/+$", "") : "http://localhost:3001";
-        String sseBaseUri = cleanMcpUrl + (jwtToken != null && !jwtToken.isBlank() ? "/token/" + jwtToken : "");
+
+        // SEC-01: Intercambio de ticket efímero de un solo uso para no exponer el token JWT en la ruta URL
+        String ticket = (jwtToken != null && !jwtToken.isBlank()) ? fetchEphemeralTicket(cleanMcpUrl, jwtToken) : null;
+        String sseBaseUri = ticket != null ? cleanMcpUrl + "/ticket/" + ticket : cleanMcpUrl;
 
         try (McpSyncClient mcpClient = mcpClientFactory.createClient(sseBaseUri)) {
             log.info("Inicializando transporte efímero MCP SSE contra {}", sseBaseUri);
@@ -131,10 +139,43 @@ public class SpringAiOrchestratorServiceImpl implements AiOrchestratorService {
                 cleanContent = "{\"response\":\"\"}";
             }
 
-            return outputConverter.convert(cleanContent);
+            // RES-01: Fallback defensivo ante respuestas en lenguaje natural no estructuradas en JSON
+            try {
+                return outputConverter.convert(cleanContent);
+            } catch (Exception ex) {
+                log.warn("El LLM no devolvió un formato JSON estricto; aplicando fallback a texto plano: {}", cleanContent);
+                return new AiChatResponse(cleanContent, null, List.of());
+            }
         } catch (Exception e) {
             log.error("Error en la orquestación cognitiva Spring AI / MCP", e);
             throw new RuntimeException("Fallo en la comunicación con el asistente inteligente: " + e.getMessage(), e);
         }
+    }
+
+    private String fetchEphemeralTicket(String cleanMcpUrl, String jwtToken) {
+        try {
+            HttpRequest ticketReq = HttpRequest.newBuilder()
+                    .uri(URI.create(cleanMcpUrl + "/auth/ticket"))
+                    .header("Authorization", "Bearer " + jwtToken)
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.noBody())
+                    .timeout(Duration.ofSeconds(5))
+                    .build();
+
+            HttpResponse<String> response = HttpClient.newHttpClient()
+                    .send(ticketReq, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 200 && response.body() != null) {
+                com.fasterxml.jackson.databind.JsonNode root = objectMapper.readTree(response.body());
+                if (root.has("ticket")) {
+                    return root.get("ticket").asText();
+                }
+            } else {
+                log.warn("El servidor MCP no expidió ticket de sesión (HTTP {})", response.statusCode());
+            }
+        } catch (Exception e) {
+            log.debug("No se pudo obtener ticket efímero de autenticación MCP: {}", e.getMessage());
+        }
+        return null;
     }
 }

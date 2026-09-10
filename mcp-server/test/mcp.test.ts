@@ -68,7 +68,7 @@ describe("MCP Server Factory & Error Formatter Suite", () => {
         method: "tools/list",
         params: {}
       });
-      assert.equal(listResult.tools.length, 4);
+      assert.equal(listResult.tools.length, 6);
 
       // Verify CallTool handler execution error formatting
       const callHandler = (server as any)._requestHandlers.get("tools/call");
@@ -98,7 +98,7 @@ describe("MCP Server Factory & Error Formatter Suite", () => {
         method: "tools/list",
         params: {}
       });
-      assert.equal(listResult.tools.length, 3);
+      assert.equal(listResult.tools.length, 5);
     });
   });
 

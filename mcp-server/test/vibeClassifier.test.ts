@@ -112,6 +112,48 @@ describe("VibeClassifier Suite", () => {
     assert.equal(VibeClassifier.classify(noAccListing), "TIDY");
   });
 
+  it("should handle null or undefined description and title gracefully", () => {
+    const nullTextListing = {
+      ...baseListing,
+      title: undefined as unknown as string,
+      description: undefined as unknown as string
+    };
+    assert.equal(VibeClassifier.classify(nullTextListing), "TIDY");
+  });
+
+  it("should classify as QUIET when official backend WORK_ZONE amenity is present", () => {
+    const listingWorkZone: AccommodationListingItem = {
+      ...baseListing,
+      accommodation: {
+        ...baseListing.accommodation!,
+        amenities: ["WORK_ZONE"]
+      }
+    };
+    assert.equal(VibeClassifier.classify(listingWorkZone), "QUIET");
+  });
+
+  it("should classify as SOCIAL when official backend BALCONY or SWIMMING_POOL is present", () => {
+    const listingBalcony: AccommodationListingItem = {
+      ...baseListing,
+      accommodation: {
+        ...baseListing.accommodation!,
+        amenities: ["BALCONY"]
+      }
+    };
+    assert.equal(VibeClassifier.classify(listingBalcony), "SOCIAL");
+  });
+
+  it("should classify as TIDY when official backend DISHWASHER or WASHING_MACHINE is present", () => {
+    const listingDishwasher: AccommodationListingItem = {
+      ...baseListing,
+      accommodation: {
+        ...baseListing.accommodation!,
+        amenities: ["DISHWASHER"]
+      }
+    };
+    assert.equal(VibeClassifier.classify(listingDishwasher), "TIDY");
+  });
+
   it("enrichAndFilter: should score 1.0 when vibe matches or is ANY, and 0.5 when mismatched", () => {
     const listings: AccommodationListingItem[] = [
       {

@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import jwt from "jsonwebtoken";
 import { JwtVerifier } from "../src/core/security/jwtVerifier.js";
 import { AuthorizationGuard } from "../src/core/security/authorizationGuard.js";
-import { SessionStore } from "../src/core/security/sessionStore.js";
 import { SecurityContextHolder } from "../src/core/security/securityContext.js";
 import { ForbiddenError, UnauthorizedError } from "../src/core/errors/mcpError.js";
 import { env } from "../src/config/env.js";
@@ -60,23 +59,6 @@ describe("MCP Security Context & RBAC Suite", () => {
 
     const result = AuthorizationGuard.assertAdmin(adminContext);
     assert.equal(result.role, "ADMIN");
-  });
-
-  it("should manage session store lifecycle linked to sessionId", () => {
-    const sessionId = "sse-session-123";
-    const context = {
-      userId: "33333333-3333-3333-3333-333333333333",
-      email: "test@colivi.com",
-      role: "USER" as const,
-      token: "token-abc"
-    };
-
-    SessionStore.registerSession(sessionId, context);
-    assert.equal(SessionStore.hasSession(sessionId), true);
-    assert.equal(SessionStore.getSession(sessionId).userId, context.userId);
-
-    SessionStore.removeSession(sessionId);
-    assert.equal(SessionStore.hasSession(sessionId), false);
   });
 
   it("should propagate context asynchronously via SecurityContextHolder", async () => {

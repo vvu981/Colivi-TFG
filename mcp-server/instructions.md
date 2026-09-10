@@ -37,31 +37,41 @@ El esquema estático correspondiente se encuentra en [schema.json](file:///c:/Us
 | `get_user_chores_status` | `{}` | `USER` | Estado de tareas asignadas al usuario activo y su posición en el ranking semanal del hogar. |
 | `summarize_host_inbox` | `listingId?` *(string UUID)* | `USER` (Host) | Resumen de mensajes pendientes y estado de los inquilinos candidatos en las conversaciones. |
 | `get_moderation_queue` | `targetType` *("USER" \| "LISTING")* | **`ADMIN`** | Top 10 de entidades con mayor número de reportes pendientes de revisión. |
+| `get_my_bookings_status` | `{}` | `USER` | Estado e historial de reservas del inquilino (PENDING, ACCEPTED, etc.) y pago de fianza requerido. |
+| `get_listing_details` | `listingId` *(string UUID)* | `USER` | Ficha técnica completa de alojamiento: desglose de fianza, servicios, normas y disponibilidad. |
 
 ---
 
 ## 3. Protocolo de Conexión del Cliente (SSE Handshake)
 
-### Paso 1: Handshake SSE
-El cliente (frontend de React / Next.js o proxy de IA) abre un canal SSE enviando el token JWT:
+### Paso 1: Obtención de Ticket Efímero (Recomendado para evitar JWT en URLs)
 ```http
-GET http://localhost:3001/sse?token=eyJhbGciOi...
+POST http://localhost:3001/auth/ticket
+Authorization: Bearer eyJhbGciOi...
+
+Respuesta: { "ticket": "e3f8a91b-..." }
+```
+
+### Paso 2: Handshake SSE
+El cliente abre el canal SSE utilizando el ticket efímero de un solo uso:
+```http
+GET http://localhost:3001/ticket/e3f8a91b-.../sse
 Accept: text/event-stream
 ```
-O mediante cabecera estándar:
+O directamente mediante cabecera en `/sse`:
 ```http
 GET http://localhost:3001/sse
 Authorization: Bearer eyJhbGciOi...
 Accept: text/event-stream
 ```
 
-El servidor responde con un evento `endpoint` indicando la URI para enviar mensajes:
+El servidor responde con un evento `endpoint` indicando la URI protegida para enviar mensajes:
 ```
 event: endpoint
-data: /messages?sessionId=a1b2c3d4-e5f6-7890-...
+data: /messages?sessionToken=s3cr3t...&sessionId=a1b2c3d4-...
 ```
 
-### Paso 2: Listar Herramientas (JSON-RPC)
+### Paso 3: Listar Herramientas (JSON-RPC)
 ```http
 POST http://localhost:3001/messages?sessionId=a1b2c3d4-e5f6-7890-...
 Content-Type: application/json

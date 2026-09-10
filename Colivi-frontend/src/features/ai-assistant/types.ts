@@ -6,6 +6,7 @@ export interface AiChatMessage {
   content: string;
   timestamp: string;
   draftContent?: string;
+  isError?: boolean;
 }
 
 export interface AiChatHistoryItem {

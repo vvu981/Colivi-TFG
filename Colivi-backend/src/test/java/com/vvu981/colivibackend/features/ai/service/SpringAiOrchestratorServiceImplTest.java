@@ -233,4 +233,29 @@ class SpringAiOrchestratorServiceImplTest {
 
         assertThat(service).isNotNull();
     }
+
+    @Test
+    @DisplayName("Debe aplicar fallback a texto libre sin fallar cuando el LLM devuelve una respuesta no-JSON (RES-01)")
+    void processChat_NonJsonOutput_AppliesGracefulFallback() {
+        when(mcpSyncClient.listTools()).thenReturn(new McpSchema.ListToolsResult(List.of(), null));
+
+        String nonJsonFreeText = "¡Hola! Por supuesto, te puedo recomendar colivings en Madrid. No encontré pisos por debajo de 300€.";
+        Generation generation = new Generation(new AssistantMessage(nonJsonFreeText));
+        ChatResponse chatResponse = new ChatResponse(List.of(generation));
+        when(chatModel.call(any(Prompt.class))).thenReturn(chatResponse);
+
+        SpringAiOrchestratorServiceImpl service = new SpringAiOrchestratorServiceImpl(
+                chatModel,
+                objectMapper,
+                "http://localhost:3001",
+                "qwen/qwen3.8-27b",
+                uri -> mcpSyncClient);
+
+        AiChatRequest request = new AiChatRequest("Busco piso barato", null);
+        AiChatResponse response = service.processChat(request, "jwt-token");
+
+        assertThat(response).isNotNull();
+        assertThat(response.response()).isEqualTo(nonJsonFreeText);
+        assertThat(response.draft()).isNull();
+    }
 }

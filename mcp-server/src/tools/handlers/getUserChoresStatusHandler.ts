@@ -5,6 +5,7 @@ import { SecurityContextHolder } from "../../core/security/securityContext.js";
 
 export class GetUserChoresStatusHandler implements IMcpToolHandler<Record<string, never>> {
   public readonly definition = GET_USER_CHORES_STATUS_TOOL;
+  public readonly requiredRole = "USER" as const;
 
   constructor(private readonly client: IHomeChoreClient = homeChoreClient) {}
 

@@ -71,9 +71,9 @@ export const useAiChat = () => {
 
   const chatMutation = useMutation<AiChatResponse, Error, string>({
     mutationFn: async (messageText: string) => {
-      // Prepara el historial reciente excluyendo el mensaje de bienvenida inicial
+      // Prepara el historial reciente excluyendo el mensaje de bienvenida inicial y mensajes de error
       const historyPayload = messages
-        .filter((msg) => msg.id !== 'greeting-msg')
+        .filter((msg) => msg.id !== 'greeting-msg' && !msg.isError)
         .map((msg) => ({
           role: msg.role,
           content: msg.content,
@@ -121,6 +121,7 @@ export const useAiChat = () => {
         role: 'assistant',
         content: `Error al procesar la consulta: ${err.message || 'El servicio de IA no responde en este momento.'}`,
         timestamp: new Date().toISOString(),
+        isError: true,
       };
 
       setMessages((prev) => {
@@ -131,13 +132,15 @@ export const useAiChat = () => {
     },
   });
 
+  const isAuthenticated = !!(auth?.user || auth?.isAuthenticated);
+
   const sendMessage = useCallback(
     (text: string) => {
       const trimmed = text.trim();
-      if (!trimmed || chatMutation.isPending) return;
+      if (!isAuthenticated || !trimmed || chatMutation.isPending) return;
       chatMutation.mutate(trimmed);
     },
-    [chatMutation]
+    [chatMutation, isAuthenticated]
   );
 
   const clearHistory = useCallback(() => {
@@ -148,7 +151,6 @@ export const useAiChat = () => {
     }
     const resetMessage: AiChatMessage = {
       ...INITIAL_GREETING,
-      id: crypto.randomUUID(),
       timestamp: new Date().toISOString(),
     };
     setMessages([resetMessage]);
@@ -162,5 +164,6 @@ export const useAiChat = () => {
     error: chatMutation.error,
     clearHistory,
     suggestions: DEFAULT_SUGGESTIONS,
+    isAuthenticated,
   };
 };

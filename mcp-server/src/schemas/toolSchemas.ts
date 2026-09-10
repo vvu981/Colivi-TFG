@@ -69,9 +69,38 @@ export const GET_MODERATION_QUEUE_TOOL: McpToolDefinition = {
   }
 };
 
+export const GET_MY_BOOKINGS_STATUS_TOOL: McpToolDefinition = {
+  name: "get_my_bookings_status",
+  description:
+    "Obtiene el historial y estado actual de las solicitudes de reserva del inquilino autenticado (PENDING, ACCEPTED, CONFIRMED, REJECTED) y si requieren acción inmediata como pagar fianza.",
+  inputSchema: {
+    type: "object",
+    properties: {},
+    required: []
+  }
+};
+
+export const GET_LISTING_DETAILS_TOOL: McpToolDefinition = {
+  name: "get_listing_details",
+  description:
+    "Obtiene la ficha técnica completa de un anuncio por su ID: desglose de fianza, servicios incluidos (wifi, calefacción), normas de convivencia y fechas de disponibilidad.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      listingId: {
+        type: "string",
+        description: "UUID del anuncio de alojamiento a consultar"
+      }
+    },
+    required: ["listingId"]
+  }
+};
+
 export const ALL_MCP_TOOLS: McpToolDefinition[] = [
   SEARCH_COLIVING_LISTINGS_TOOL,
   GET_USER_CHORES_STATUS_TOOL,
   SUMMARIZE_HOST_INBOX_TOOL,
-  GET_MODERATION_QUEUE_TOOL
+  GET_MODERATION_QUEUE_TOOL,
+  GET_MY_BOOKINGS_STATUS_TOOL,
+  GET_LISTING_DETAILS_TOOL
 ];

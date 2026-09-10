@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { ISessionManager, McpSession } from "./types.js";
 import { SessionNotFoundError } from "../core/errors/mcpError.js";
 
@@ -5,11 +6,14 @@ export class McpSessionManager implements ISessionManager {
   private readonly sessions = new Map<string, McpSession>();
 
   public registerSession(
-    params: Omit<McpSession, "createdAt" | "lastActivityAt">
+    params: Omit<McpSession, "createdAt" | "lastActivityAt" | "sessionSecret"> & {
+      sessionSecret?: string;
+    }
   ): McpSession {
     const now = new Date();
     const session: McpSession = {
       ...params,
+      sessionSecret: params.sessionSecret ?? crypto.randomUUID(),
       createdAt: now,
       lastActivityAt: now
     };

@@ -4,6 +4,7 @@ import { HomeChoreClient, homeChoreClient } from "../src/clients/homeChoreClient
 import { ListingClient, listingClient } from "../src/clients/listingClient.js";
 import { MessagingClient, messagingClient } from "../src/clients/messagingClient.js";
 import { ReportClient, reportClient } from "../src/clients/reportClient.js";
+import { BookingClient, bookingClient } from "../src/clients/bookingClient.js";
 import { IHttpClient } from "../src/core/http/types.js";
 
 describe("Clients Test Suite", () => {
@@ -119,6 +120,22 @@ describe("Clients Test Suite", () => {
         size: 10
       });
     });
+
+    it("should fetch listing by ID with encoded path", async () => {
+      const calls: { path: string; params?: Record<string, unknown> }[] = [];
+      const mockHttp: IHttpClient = {
+        async get<T>(path: string, queryParams?: Record<string, unknown>): Promise<T> {
+          calls.push({ path, params: queryParams });
+          return { id: "listing-abc-123", title: "Habitacion Centro" } as unknown as T;
+        }
+      };
+
+      const client = new ListingClient(mockHttp);
+      const res = await client.getListingById("listing-abc-123");
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0].path, "/listings/listing-abc-123");
+      assert.equal(res.id, "listing-abc-123");
+    });
   });
 
   describe("MessagingClient", () => {
@@ -194,6 +211,45 @@ describe("Clients Test Suite", () => {
       await client.getMostReported({ targetType: "LISTING", page: 3, size: 5 });
       assert.equal(calls.length, 1);
       assert.deepEqual(calls[0].params, { type: "LISTING", page: 3, size: 5 });
+    });
+  });
+
+  describe("BookingClient", () => {
+    it("should instantiate default singleton", () => {
+      assert.ok(bookingClient);
+      assert.ok(bookingClient instanceof BookingClient);
+    });
+
+    it("should fetch tenant bookings with default pagination", async () => {
+      const calls: { path: string; params?: Record<string, unknown> }[] = [];
+      const mockHttp: IHttpClient = {
+        async get<T>(path: string, queryParams?: Record<string, unknown>): Promise<T> {
+          calls.push({ path, params: queryParams });
+          return { content: [], totalElements: 0, totalPages: 0, size: 20, number: 0 } as unknown as T;
+        }
+      };
+
+      const client = new BookingClient(mockHttp);
+      await client.getMyBookings();
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0].path, "/booking-requests/tenant");
+      assert.deepEqual(calls[0].params, { page: 0, size: 20 });
+    });
+
+    it("should fetch tenant bookings with custom pagination", async () => {
+      const calls: { path: string; params?: Record<string, unknown> }[] = [];
+      const mockHttp: IHttpClient = {
+        async get<T>(path: string, queryParams?: Record<string, unknown>): Promise<T> {
+          calls.push({ path, params: queryParams });
+          return { content: [], totalElements: 0, totalPages: 0, size: 10, number: 2 } as unknown as T;
+        }
+      };
+
+      const client = new BookingClient(mockHttp);
+      await client.getMyBookings({ page: 2, size: 10 });
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0].path, "/booking-requests/tenant");
+      assert.deepEqual(calls[0].params, { page: 2, size: 10 });
     });
   });
 });
