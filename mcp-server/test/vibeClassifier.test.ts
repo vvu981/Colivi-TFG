@@ -154,6 +154,28 @@ describe("VibeClassifier Suite", () => {
     assert.equal(VibeClassifier.classify(listingDishwasher), "TIDY");
   });
 
+  it("should prioritize SOCIAL or QUIET over generic WASHING_MACHINE / DISHWASHER (DOM-01)", () => {
+    const socialWithWasher: AccommodationListingItem = {
+      ...baseListing,
+      description: "Piso para compartir con amigos",
+      accommodation: {
+        ...baseListing.accommodation!,
+        amenities: ["WASHING_MACHINE", "SWIMMING_POOL", "TERRACE"]
+      }
+    };
+    assert.equal(VibeClassifier.classify(socialWithWasher), "SOCIAL");
+
+    const quietWithDishwasher: AccommodationListingItem = {
+      ...baseListing,
+      description: "Ambiente silencioso para opositores",
+      accommodation: {
+        ...baseListing.accommodation!,
+        amenities: ["DISHWASHER", "WORK_ZONE", "DESK"]
+      }
+    };
+    assert.equal(VibeClassifier.classify(quietWithDishwasher), "QUIET");
+  });
+
   it("enrichAndFilter: should score 1.0 when vibe matches or is ANY, and 0.5 when mismatched", () => {
     const listings: AccommodationListingItem[] = [
       {

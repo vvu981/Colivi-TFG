@@ -76,35 +76,27 @@ describe("MCP Security Context & RBAC Suite", () => {
     });
   });
 
-  it("should extract tokens using TokenExtractor respecting precedence", async () => {
+  it("should extract tokens strictly from Authorization header and ignore query/params (SEC-03)", async () => {
     const { TokenExtractor } = await import("../src/core/security/tokenExtractor.js");
     const extractor = new TokenExtractor();
 
-    // 1. Authorization header tiene máxima prioridad
+    // 1. Authorization header válida
     const reqHeader = {
       headers: { authorization: "Bearer header-token-123" },
-      query: { token: "query-token" },
-      params: { token: "param-token" }
+      query: {},
+      params: {}
     } as any;
     assert.equal(extractor.extractToken(reqHeader), "header-token-123");
 
-    // 2. Query param si no hay cabecera
+    // 2. Query param y route params son ignorados para evitar fuga en logs (CWE-598)
     const reqQuery = {
       headers: {},
       query: { token: "query-token-456" },
       params: { token: "param-token" }
     } as any;
-    assert.equal(extractor.extractToken(reqQuery), "query-token-456");
+    assert.equal(extractor.extractToken(reqQuery), undefined);
 
-    // 3. Param si no hay cabecera ni query
-    const reqParam = {
-      headers: {},
-      query: {},
-      params: { token: "param-token-789" }
-    } as any;
-    assert.equal(extractor.extractToken(reqParam), "param-token-789");
-
-    // 4. Undefined si ninguno existe
+    // 3. Petición vacía retorna undefined
     const reqEmpty = {
       headers: {},
       query: {},

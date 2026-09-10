@@ -15,19 +15,15 @@ export class VibeClassifier {
     const amenities = listing.accommodation?.amenities?.map((a) => a.toUpperCase()) ?? [];
     const description = `${listing.description ?? ""} ${listing.title ?? ""}`.toLowerCase();
 
-    if (
-      amenities.includes("DISHWASHER") ||
-      amenities.includes("WASHING_MACHINE") ||
+    // 1. Detección de indicadores de estilo de vida y ambiente
+    const hasExplicitTidy =
       amenities.includes("CLEANING_SERVICE") ||
       description.includes("orden") ||
       description.includes("limpieza") ||
       description.includes("tidy") ||
-      description.includes("organizado")
-    ) {
-      return "TIDY";
-    }
+      description.includes("organizado");
 
-    if (
+    const hasSocial =
       amenities.includes("TERRACE") ||
       amenities.includes("BALCONY") ||
       amenities.includes("SWIMMING_POOL") ||
@@ -35,12 +31,9 @@ export class VibeClassifier {
       description.includes("social") ||
       description.includes("vida juntos") ||
       description.includes("eventos") ||
-      description.includes("comunidad")
-    ) {
-      return "SOCIAL";
-    }
+      description.includes("comunidad");
 
-    if (
+    const hasQuiet =
       amenities.includes("WORK_ZONE") ||
       amenities.includes("DESK") ||
       amenities.includes("SILENT_AREA") ||
@@ -48,12 +41,39 @@ export class VibeClassifier {
       description.includes("estudio") ||
       description.includes("quiet") ||
       description.includes("concentracion") ||
-      description.includes("silencio")
-    ) {
+      description.includes("silencio");
+
+    // 2. Prevalencia de estilos de vida distintivos (DOM-01)
+    if (hasExplicitTidy && !hasSocial && !hasQuiet) {
+      return "TIDY";
+    }
+
+    if (hasSocial && !hasQuiet) {
+      return "SOCIAL";
+    }
+
+    if (hasQuiet && !hasSocial) {
       return "QUIET";
     }
 
-    // Por defecto clasificamos como equilibrado / TIDY si tiene amenidades organizadas
+    if (hasSocial) {
+      return "SOCIAL";
+    }
+
+    if (hasQuiet) {
+      return "QUIET";
+    }
+
+    if (hasExplicitTidy) {
+      return "TIDY";
+    }
+
+    // 3. Electrodomésticos convencionales como indicador secundario de equipamiento
+    if (amenities.includes("DISHWASHER") || amenities.includes("WASHING_MACHINE")) {
+      return "TIDY";
+    }
+
+    // Fallback por defecto equilibrado
     return "TIDY";
   }
 

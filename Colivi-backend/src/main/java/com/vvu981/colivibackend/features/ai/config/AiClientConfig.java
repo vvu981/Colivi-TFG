@@ -1,5 +1,6 @@
 package com.vvu981.colivibackend.features.ai.config;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.web.client.RestClientCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,6 +12,7 @@ import java.time.Duration;
 public class AiClientConfig {
 
     @Bean
+    @Qualifier("aiRestClientCustomizer")
     public RestClientCustomizer aiRestClientCustomizer() {
         return restClientBuilder -> {
             SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();

@@ -39,17 +39,17 @@ class SpringAiOrchestratorServiceImplTest {
     private McpSyncClient mcpSyncClient;
 
     private ObjectMapper objectMapper;
+    private McpTicketService mockTicketService;
 
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
+        mockTicketService = (cleanMcpUrl, jwtToken) -> "mock-ticket-123";
     }
 
     @Test
     @DisplayName("Debe procesar chat exitosamente descubriendo herramientas MCP y parseando respuesta limpia")
     void processChat_Success_WithTools() {
-        // Simular listTools desde MCP usando el constructor Tool(String, String,
-        // String)
         McpSchema.Tool tool = new McpSchema.Tool(
                 "search_coliving_listings",
                 "Buscar colivings",
@@ -57,7 +57,6 @@ class SpringAiOrchestratorServiceImplTest {
         McpSchema.ListToolsResult listToolsResult = new McpSchema.ListToolsResult(List.of(tool), null);
         when(mcpSyncClient.listTools()).thenReturn(listToolsResult);
 
-        // Simular respuesta JSON del ChatModel
         String jsonOutput = "{\"response\":\"Encontré 2 colivings en Madrid.\",\"draft\":null,\"toolsUsed\":[\"search_coliving_listings\"]}";
         Generation generation = new Generation(new AssistantMessage(jsonOutput));
         ChatResponse chatResponse = new ChatResponse(List.of(generation));
@@ -68,7 +67,8 @@ class SpringAiOrchestratorServiceImplTest {
                 objectMapper,
                 "http://localhost:3001/",
                 "qwen/qwen3.8-27b",
-                uri -> mcpSyncClient);
+                uri -> mcpSyncClient,
+                mockTicketService);
 
         AiChatRequest request = new AiChatRequest(
                 "Busca colivings en Madrid",
@@ -98,7 +98,8 @@ class SpringAiOrchestratorServiceImplTest {
                 objectMapper,
                 "http://localhost:3001",
                 "qwen/qwen3.8-27b",
-                uri -> mcpSyncClient);
+                uri -> mcpSyncClient,
+                mockTicketService);
 
         AiChatRequest request = new AiChatRequest("Consulta", null);
         AiChatResponse response = service.processChat(request, null);
@@ -106,6 +107,36 @@ class SpringAiOrchestratorServiceImplTest {
         assertThat(response).isNotNull();
         assertThat(response.response()).isEqualTo("Respuesta markdown limpia.");
         assertThat(response.draft()).isEqualTo("Borrador de prueba");
+    }
+
+    @Test
+    @DisplayName("Debe extraer JSON correctamente aunque el LLM incluya texto conversacional antes y después (BUG-01)")
+    void processChat_ExtractsJsonWithSurroundingConversationalText() {
+        when(mcpSyncClient.listTools()).thenReturn(new McpSchema.ListToolsResult(List.of(), null));
+
+        String rawLlmResponse = "Por supuesto, aquí tienes la información solicitada:\n" +
+                "```json\n" +
+                "{\"response\":\"Habitación disponible en Moncloa.\",\"draft\":null,\"toolsUsed\":[\"search_coliving_listings\"]}\n" +
+                "```\n" +
+                "¡Espero que te resulte útil!";
+        Generation generation = new Generation(new AssistantMessage(rawLlmResponse));
+        ChatResponse chatResponse = new ChatResponse(List.of(generation));
+        when(chatModel.call(any(Prompt.class))).thenReturn(chatResponse);
+
+        SpringAiOrchestratorServiceImpl service = new SpringAiOrchestratorServiceImpl(
+                chatModel,
+                objectMapper,
+                "http://localhost:3001",
+                "qwen/qwen3.8-27b",
+                uri -> mcpSyncClient,
+                mockTicketService);
+
+        AiChatRequest request = new AiChatRequest("Busco en Moncloa", null);
+        AiChatResponse response = service.processChat(request, "valid-jwt");
+
+        assertThat(response).isNotNull();
+        assertThat(response.response()).isEqualTo("Habitación disponible en Moncloa.");
+        assertThat(response.toolsUsed()).containsExactly("search_coliving_listings");
     }
 
     @Test
@@ -129,7 +160,8 @@ class SpringAiOrchestratorServiceImplTest {
                 objectMapper,
                 "http://localhost:3001",
                 "qwen/qwen3.8-27b",
-                uri -> mcpSyncClient);
+                uri -> mcpSyncClient,
+                mockTicketService);
 
         AiChatRequest request = new AiChatRequest("Última pregunta", history);
         service.processChat(request, "jwt-token");
@@ -160,7 +192,8 @@ class SpringAiOrchestratorServiceImplTest {
                 objectMapper,
                 null,
                 "qwen/qwen3.8-27b",
-                uri -> mcpSyncClient);
+                uri -> mcpSyncClient,
+                mockTicketService);
 
         List<AiChatMessageDto> history = List.of(
                 new AiChatMessageDto("system_custom", "Ignorar esto"),
@@ -175,7 +208,6 @@ class SpringAiOrchestratorServiceImplTest {
     @Test
     @DisplayName("Debe manejar toolCallbacks nulos y respuesta con espacios en blanco devolviendo fallback")
     void processChat_NullToolCallbacks_AndBlankResponse() {
-        // Retornamos lista vacía de herramientas para tener 0 callbacks
         when(mcpSyncClient.listTools()).thenReturn(new McpSchema.ListToolsResult(List.of(), null));
 
         Generation generation = new Generation(new AssistantMessage("   "));
@@ -187,13 +219,34 @@ class SpringAiOrchestratorServiceImplTest {
                 objectMapper,
                 "http://localhost:3001/",
                 "qwen/qwen3.8-27b",
-                uri -> mcpSyncClient);
+                uri -> mcpSyncClient,
+                mockTicketService);
 
         AiChatRequest request = new AiChatRequest("Consulta sin herramientas", null);
         AiChatResponse response = service.processChat(request, null);
 
         assertThat(response).isNotNull();
         assertThat(response.response()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Debe lanzar excepción informativa cuando falla la obtención del ticket efímero (BUG-02)")
+    void processChat_TicketFailure_ThrowsControlledException() {
+        McpTicketService failingTicketService = (url, token) -> null;
+
+        SpringAiOrchestratorServiceImpl service = new SpringAiOrchestratorServiceImpl(
+                chatModel,
+                objectMapper,
+                "http://localhost:3001",
+                "qwen/qwen3.8-27b",
+                uri -> mcpSyncClient,
+                failingTicketService);
+
+        AiChatRequest request = new AiChatRequest("Hola", List.of());
+
+        assertThatThrownBy(() -> service.processChat(request, "invalid-or-timeout-jwt"))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("No se pudo autenticar la sesión efímera con el servidor MCP");
     }
 
     @Test
@@ -206,7 +259,8 @@ class SpringAiOrchestratorServiceImplTest {
                 "qwen/qwen3.8-27b",
                 uri -> {
                     throw new RuntimeException("Connection refused on port 59999");
-                });
+                },
+                mockTicketService);
 
         AiChatRequest request = new AiChatRequest("Hola", List.of());
 
@@ -216,13 +270,16 @@ class SpringAiOrchestratorServiceImplTest {
     }
 
     @Test
-    @DisplayName("Debe instanciar correctamente SpringAiOrchestratorServiceImpl y DefaultMcpClientFactory")
+    @DisplayName("Debe instanciar correctamente SpringAiOrchestratorServiceImpl, DefaultMcpClientFactory y DefaultMcpTicketService")
     void constructor_InstantiatesCorrectly() {
         DefaultMcpClientFactory factory = new DefaultMcpClientFactory(objectMapper);
         assertThat(factory).isNotNull();
 
         var client = factory.createClient("http://localhost:3001/sse");
         assertThat(client).isNotNull();
+
+        DefaultMcpTicketService ticketService = new DefaultMcpTicketService(objectMapper);
+        assertThat(ticketService).isNotNull();
 
         SpringAiOrchestratorServiceImpl service = new SpringAiOrchestratorServiceImpl(
                 chatModel,
@@ -249,7 +306,8 @@ class SpringAiOrchestratorServiceImplTest {
                 objectMapper,
                 "http://localhost:3001",
                 "qwen/qwen3.8-27b",
-                uri -> mcpSyncClient);
+                uri -> mcpSyncClient,
+                mockTicketService);
 
         AiChatRequest request = new AiChatRequest("Busco piso barato", null);
         AiChatResponse response = service.processChat(request, "jwt-token");

@@ -73,7 +73,7 @@ data: /messages?sessionToken=s3cr3t...&sessionId=a1b2c3d4-...
 
 ### Paso 3: Listar Herramientas (JSON-RPC)
 ```http
-POST http://localhost:3001/messages?sessionId=a1b2c3d4-e5f6-7890-...
+POST http://localhost:3001/messages?sessionId=a1b2c3d4-e5f6-7890-...&sessionToken=s3cr3t...
 Content-Type: application/json
 
 {
@@ -84,9 +84,9 @@ Content-Type: application/json
 }
 ```
 
-### Paso 3: Invocar una Herramienta (JSON-RPC)
+### Paso 4: Invocar una Herramienta (JSON-RPC)
 ```http
-POST http://localhost:3001/messages?sessionId=a1b2c3d4-e5f6-7890-...
+POST http://localhost:3001/messages?sessionId=a1b2c3d4-e5f6-7890-...&sessionToken=s3cr3t...
 Content-Type: application/json
 
 {

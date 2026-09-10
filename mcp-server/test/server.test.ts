@@ -174,9 +174,12 @@ describe("MCP Express Server & Routing Suite", () => {
     );
 
     const controller = new AbortController();
-    const ssePromise = fetch(`${baseUrl}/sse?token=${token}`, {
+    const ssePromise = fetch(`${baseUrl}/sse`, {
       signal: controller.signal,
-      headers: { Accept: "text/event-stream" }
+      headers: {
+        Accept: "text/event-stream",
+        Authorization: `Bearer ${token}`
+      }
     });
 
     // Wait a brief moment for handshake to register session

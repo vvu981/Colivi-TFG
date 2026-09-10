@@ -19,29 +19,30 @@ import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.api.ResponseFormat;
 import org.springframework.ai.tool.ToolCallback;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class SpringAiOrchestratorServiceImpl implements AiOrchestratorService {
 
     private static final Logger log = LoggerFactory.getLogger(SpringAiOrchestratorServiceImpl.class);
     private static final int MAX_HISTORY_MESSAGES = 6;
+    private static final Pattern MARKDOWN_JSON_BLOCK_PATTERN =
+            Pattern.compile("```(?:json)?\\s*(\\{.*?\\})\\s*```", Pattern.DOTALL);
 
     private final OpenAiChatModel chatModel;
     private final ObjectMapper objectMapper;
     private final String mcpBaseUrl;
     private final String groqModel;
     private final McpClientFactory mcpClientFactory;
+    private final McpTicketService mcpTicketService;
 
     public SpringAiOrchestratorServiceImpl(
             OpenAiChatModel chatModel,
@@ -49,11 +50,23 @@ public class SpringAiOrchestratorServiceImpl implements AiOrchestratorService {
             @Value("${app.mcp.url:http://localhost:3001}") String mcpBaseUrl,
             @Value("${spring.ai.openai.chat.options.model:qwen/qwen3.8-27b}") String groqModel,
             McpClientFactory mcpClientFactory) {
+        this(chatModel, objectMapper, mcpBaseUrl, groqModel, mcpClientFactory, new DefaultMcpTicketService(objectMapper));
+    }
+
+    @Autowired
+    public SpringAiOrchestratorServiceImpl(
+            OpenAiChatModel chatModel,
+            ObjectMapper objectMapper,
+            @Value("${app.mcp.url:http://localhost:3001}") String mcpBaseUrl,
+            @Value("${spring.ai.openai.chat.options.model:qwen/qwen3.8-27b}") String groqModel,
+            McpClientFactory mcpClientFactory,
+            McpTicketService mcpTicketService) {
         this.chatModel = chatModel;
         this.objectMapper = objectMapper;
         this.mcpBaseUrl = mcpBaseUrl;
         this.groqModel = groqModel;
         this.mcpClientFactory = mcpClientFactory;
+        this.mcpTicketService = mcpTicketService;
     }
 
     @Override
@@ -61,8 +74,15 @@ public class SpringAiOrchestratorServiceImpl implements AiOrchestratorService {
         // Salvaguarda 3: Conexión efímera segura con timeout de 30s
         String cleanMcpUrl = mcpBaseUrl != null ? mcpBaseUrl.replaceAll("/+$", "") : "http://localhost:3001";
 
-        // SEC-01: Intercambio de ticket efímero de un solo uso para no exponer el token JWT en la ruta URL
-        String ticket = (jwtToken != null && !jwtToken.isBlank()) ? fetchEphemeralTicket(cleanMcpUrl, jwtToken) : null;
+        // SEC-01 & BUG-02: Intercambio de ticket efímero de un solo uso con fallo controlado
+        String ticket = null;
+        if (jwtToken != null && !jwtToken.isBlank()) {
+            ticket = mcpTicketService.fetchTicket(cleanMcpUrl, jwtToken);
+            if (ticket == null) {
+                log.error("Fallo al obtener ticket efímero de autenticación para el servidor MCP en {}", cleanMcpUrl);
+                throw new RuntimeException("Fallo en la comunicación con el asistente inteligente: No se pudo autenticar la sesión efímera con el servidor MCP");
+            }
+        }
         String sseBaseUri = ticket != null ? cleanMcpUrl + "/ticket/" + ticket : cleanMcpUrl;
 
         try (McpSyncClient mcpClient = mcpClientFactory.createClient(sseBaseUri)) {
@@ -100,10 +120,12 @@ public class SpringAiOrchestratorServiceImpl implements AiOrchestratorService {
                 int start = Math.max(0, request.history().size() - MAX_HISTORY_MESSAGES);
                 List<AiChatMessageDto> truncated = request.history().subList(start, request.history().size());
                 for (AiChatMessageDto item : truncated) {
-                    if ("user".equalsIgnoreCase(item.role())) {
-                        messages.add(new UserMessage(item.content()));
-                    } else if ("assistant".equalsIgnoreCase(item.role())) {
-                        messages.add(new AssistantMessage(item.content()));
+                    if (item.content() != null && !item.content().isBlank()) {
+                        if ("user".equalsIgnoreCase(item.role())) {
+                            messages.add(new UserMessage(item.content()));
+                        } else if ("assistant".equalsIgnoreCase(item.role())) {
+                            messages.add(new AssistantMessage(item.content()));
+                        }
                     }
                 }
             }
@@ -131,13 +153,8 @@ public class SpringAiOrchestratorServiceImpl implements AiOrchestratorService {
             String rawContent = chatResponse.getResult().getOutput().getText();
             log.debug("Contenido estructurado recibido de Groq: {}", rawContent);
 
-            String cleanContent = (rawContent != null && !rawContent.isBlank()) ? rawContent.trim() : "{\"response\":\"\"}";
-            if (cleanContent.startsWith("```")) {
-                cleanContent = cleanContent.replaceFirst("^```(?:json)?\\s*", "").replaceFirst("\\s*```$", "").trim();
-            }
-            if (cleanContent.isBlank()) {
-                cleanContent = "{\"response\":\"\"}";
-            }
+            // BUG-01: Extracción robusta de JSON multilínea tolerante a preámbulos y epílogos de LLMs
+            String cleanContent = extractJsonPayload(rawContent);
 
             // RES-01: Fallback defensivo ante respuestas en lenguaje natural no estructuradas en JSON
             try {
@@ -152,30 +169,22 @@ public class SpringAiOrchestratorServiceImpl implements AiOrchestratorService {
         }
     }
 
-    private String fetchEphemeralTicket(String cleanMcpUrl, String jwtToken) {
-        try {
-            HttpRequest ticketReq = HttpRequest.newBuilder()
-                    .uri(URI.create(cleanMcpUrl + "/auth/ticket"))
-                    .header("Authorization", "Bearer " + jwtToken)
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.noBody())
-                    .timeout(Duration.ofSeconds(5))
-                    .build();
-
-            HttpResponse<String> response = HttpClient.newHttpClient()
-                    .send(ticketReq, HttpResponse.BodyHandlers.ofString());
-
-            if (response.statusCode() == 200 && response.body() != null) {
-                com.fasterxml.jackson.databind.JsonNode root = objectMapper.readTree(response.body());
-                if (root.has("ticket")) {
-                    return root.get("ticket").asText();
-                }
-            } else {
-                log.warn("El servidor MCP no expidió ticket de sesión (HTTP {})", response.statusCode());
-            }
-        } catch (Exception e) {
-            log.debug("No se pudo obtener ticket efímero de autenticación MCP: {}", e.getMessage());
+    protected String extractJsonPayload(String rawContent) {
+        if (rawContent == null || rawContent.isBlank()) {
+            return "{\"response\":\"\"}";
         }
-        return null;
+        String trimmed = rawContent.trim();
+        Matcher matcher = MARKDOWN_JSON_BLOCK_PATTERN.matcher(trimmed);
+        if (matcher.find()) {
+            return matcher.group(1).trim();
+        }
+
+        int firstBrace = trimmed.indexOf('{');
+        int lastBrace = trimmed.lastIndexOf('}');
+        if (firstBrace != -1 && lastBrace > firstBrace) {
+            return trimmed.substring(firstBrace, lastBrace + 1).trim();
+        }
+
+        return trimmed;
     }
 }

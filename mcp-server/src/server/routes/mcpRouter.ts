@@ -167,15 +167,14 @@ export function createMcpRouter(deps: McpRouterDependencies): Router {
       const session = sessionManager.getSession(sessionId);
       sessionManager.touchSession(sessionId);
 
-      // Verificación estricta de autorización en /messages (SEC-02)
-      const incomingToken = (req.query.sessionToken ?? req.query.token) as string | undefined;
+      // Verificación estricta de autorización en /messages (SEC-02 / SEC-03)
+      const sessionToken = req.query.sessionToken as string | undefined;
       const authHeader = req.headers.authorization;
       const bearerToken = authHeader?.replace(/^Bearer\s+/i, "")?.trim();
 
       const isAuthorized =
-        (incomingToken && incomingToken === session.sessionSecret) ||
-        (bearerToken && bearerToken === session.securityContext.token) ||
-        (incomingToken && incomingToken === session.securityContext.token);
+        (sessionToken && sessionToken === session.sessionSecret) ||
+        (bearerToken && bearerToken === session.securityContext.token);
 
       if (!isAuthorized) {
         res.status(403).json({

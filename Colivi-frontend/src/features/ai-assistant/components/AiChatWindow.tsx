@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Send, Trash2, X, Sparkles, Loader2 } from 'lucide-react';
 import { useAiChat } from '../hooks/useAiChat';
 import { AiMessageBubble } from './AiMessageBubble';
@@ -47,7 +48,7 @@ export const AiChatWindow: React.FC<AiChatWindowProps> = ({
   };
 
   const handleSuggestionClick = (prompt: string) => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || isPending) return;
     sendMessage(prompt);
   };
 
@@ -110,8 +111,9 @@ export const AiChatWindow: React.FC<AiChatWindowProps> = ({
             <button
               key={item.id}
               type="button"
+              disabled={isPending}
               onClick={() => handleSuggestionClick(item.prompt)}
-              className="text-xs px-2.5 py-1 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface border border-outline-variant/40 transition-colors cursor-pointer"
+              className="text-xs px-2.5 py-1 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface border border-outline-variant/40 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {item.label}
             </button>
@@ -127,16 +129,11 @@ export const AiChatWindow: React.FC<AiChatWindowProps> = ({
 
         {/* Indicador de "Escribiendo..." / Procesando tools */}
         {isPending && (
-          <div className="flex items-center gap-3 text-secondary text-xs animate-fade-in pl-1">
-            <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
-              <Loader2 className="w-4 h-4 animate-spin" />
+          <div className="flex items-start gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20">
+              <Loader2 className="w-4 h-4 animate-spin text-primary" />
             </div>
-            <div className="bg-surface-container-low border border-outline-variant/40 rounded-2xl rounded-tl-xs px-3.5 py-2.5 flex items-center gap-2">
-              <span className="inline-flex gap-1 items-center">
-                <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]" />
-                <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]" />
-                <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" />
-              </span>
+            <div className="bg-surface-container-low text-on-surface border border-outline-variant/40 rounded-2xl rounded-tl-sm px-4 py-2.5 text-xs flex items-center gap-2">
               <span className="font-medium text-on-surface-variant">
                 El asistente está consultando las herramientas...
               </span>
@@ -154,12 +151,12 @@ export const AiChatWindow: React.FC<AiChatWindowProps> = ({
             <p className="text-xs text-on-surface-variant font-medium">
               Inicia sesión en Colivi para interactuar con el Asistente IA y consultar tus tareas o reservas.
             </p>
-            <a
-              href="/login"
+            <Link
+              to="/login"
               className="inline-flex items-center justify-center px-4 py-1.5 text-xs font-semibold rounded-lg bg-primary text-on-primary hover:bg-primary-container transition-colors shadow-xs"
             >
               Iniciar sesión
-            </a>
+            </Link>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="flex items-end gap-2">
