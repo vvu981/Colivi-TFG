@@ -12,7 +12,6 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-import java.util.concurrent.TimeUnit;
 
 @Service
 public class DefaultMcpTicketService implements McpTicketService {
@@ -36,9 +35,9 @@ public class DefaultMcpTicketService implements McpTicketService {
     }
 
     /**
-     * Solicita un ticket efimero al servidor MCP de forma no bloqueante.
-     * Usa sendAsync() para no ocupar el hilo de Tomcat durante la espera de red.
-     * El .get(timeout) bloquea un Virtual Thread de Java 21 (barato), no un hilo de plataforma.
+     * Solicita un ticket efimero al servidor MCP.
+     * Con Spring Boot 3.2 y Java 21 Virtual Threads habilitados, HttpClient.send()
+     * desmonta de forma no bloqueante el Virtual Thread durante el I/O sin bloquear hilos OS.
      */
     @Override
     public String fetchTicket(String cleanMcpUrl, String jwtToken) {
@@ -48,17 +47,13 @@ public class DefaultMcpTicketService implements McpTicketService {
         try {
             HttpRequest ticketReq = HttpRequest.newBuilder()
                     .uri(URI.create(cleanMcpUrl + "/auth/ticket"))
+                    .timeout(Duration.ofSeconds(TICKET_TIMEOUT_SECONDS))
                     .header("Authorization", "Bearer " + jwtToken)
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.noBody())
                     .build();
 
-            // sendAsync() no bloquea el hilo de Tomcat.
-            // Con Spring Boot 3.2 + Java 21 Virtual Threads habilitados, .get(timeout)
-            // bloquea un virtual thread (recurso barato), no un hilo de plataforma del pool.
-            HttpResponse<String> response = httpClient
-                    .sendAsync(ticketReq, HttpResponse.BodyHandlers.ofString())
-                    .get(TICKET_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            HttpResponse<String> response = httpClient.send(ticketReq, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() == 200 && response.body() != null) {
                 JsonNode root = objectMapper.readTree(response.body());
@@ -68,8 +63,11 @@ public class DefaultMcpTicketService implements McpTicketService {
             } else {
                 log.warn("El servidor MCP no expidio ticket de sesion (HTTP {})", response.statusCode());
             }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("Interrupcion al solicitar ticket efimero de autenticacion MCP en {}: {}", cleanMcpUrl, e.getMessage());
         } catch (Exception e) {
-            log.debug("No se pudo obtener ticket efimero de autenticacion MCP: {}", e.getMessage());
+            log.warn("Error al solicitar ticket efimero de autenticacion MCP en {}: {}", cleanMcpUrl, e.getMessage());
         }
         return null;
     }

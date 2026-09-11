@@ -212,6 +212,21 @@ describe("MCP Express Server & Routing Suite", () => {
 
     assert.ok(postRes.status >= 200 && postRes.status < 300);
 
+    // Test POST /ticket/:ticket/messages with valid sessionToken (BUG-01: requerido por Java HttpClientSseClientTransport)
+    const postTicketRes = await fetch(
+      `${baseUrl}/ticket/test-ticket-uuid/messages?sessionId=${sessionId}&sessionToken=${session.sessionSecret}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          method: "ping",
+          id: 2
+        })
+      }
+    );
+    assert.ok(postTicketRes.status >= 200 && postTicketRes.status < 300);
+
     // Terminate SSE stream
     controller.abort();
     await ssePromise.catch(() => {});

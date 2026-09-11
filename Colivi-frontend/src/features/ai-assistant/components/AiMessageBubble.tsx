@@ -76,7 +76,7 @@ export const AiMessageBubble: React.FC<AiMessageBubbleProps> = ({ message }) => 
             </ReactMarkdown>
 
             {/* Módulo de Borrador de Mensaje (Human-in-the-loop) */}
-            {message.draftContent && (
+            {message.draftContent && message.draftContent.trim().length > 0 && (
               <div className="mt-3.5 pt-3 border-t border-outline-variant/40">
                 <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-xl p-3 shadow-xs">
                   <div className="flex items-center justify-between pb-2 mb-2 border-b border-outline-variant/30">
@@ -86,7 +86,7 @@ export const AiMessageBubble: React.FC<AiMessageBubbleProps> = ({ message }) => 
                     </div>
                     <button
                       type="button"
-                      onClick={() => handleCopyDraft(message.draftContent!)}
+                      onClick={() => handleCopyDraft(message.draftContent!.trim())}
                       aria-label="Copiar texto al portapapeles"
                       title="Copiar texto al portapapeles"
                       className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-surface-container hover:bg-surface-container-high text-on-surface transition-colors cursor-pointer"

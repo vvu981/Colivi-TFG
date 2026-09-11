@@ -146,10 +146,10 @@ export function createMcpRouter(deps: McpRouterDependencies): Router {
    * Endpoint de mensajes entrantes (JSON-RPC requests desde el cliente MCP).
    * Protegido contra suplantación de sesión mediante verificación de sessionToken o Bearer token (SEC-02).
    */
-  // F-28: Se eliminan las rutas "/:ticket/messages" y "/ticket/:ticket/messages"
-  // que son decorativas: el parametro ticket no se usa en el handler de mensajes
-  // (que solo lee sessionId del query param). Aumentaban la superficie de ataque.
-  const messagePaths = ["/messages"];
+  // BUG-01: El cliente Java SDK oficial de MCP (HttpClientSseClientTransport) resuelve
+  // la URL del endpoint de mensajes concatenando su URI base (/ticket/{ticket}) con el
+  // endpoint recibido (/messages?...). Por ello, el servidor debe escuchar en ambas rutas.
+  const messagePaths = ["/messages", "/ticket/:ticket/messages"];
   router.post(messagePaths, async (req: Request, res: Response) => {
     const sessionId = req.query.sessionId as string | undefined;
 

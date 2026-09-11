@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useContext } from 'react';
+import { useState, useCallback, useEffect, useContext, useRef } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { AuthContext } from '../../auth/context/AuthContext';
 import { aiAssistantApi } from '../api/aiAssistantApi';
@@ -62,6 +62,11 @@ export const useAiChat = () => {
   const storageKey = getStorageKey(userId);
 
   const [messages, setMessages] = useState<AiChatMessage[]>(() => loadStoredMessages(storageKey));
+  const messagesRef = useRef<AiChatMessage[]>(messages);
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   useEffect(() => {
     setMessages(loadStoredMessages(storageKey));
@@ -74,7 +79,9 @@ export const useAiChat = () => {
   const chatMutation = useMutation<AiChatResponse, Error, string>({
     mutationFn: async (messageText: string) => {
       // Prepara el historial reciente excluyendo el mensaje de bienvenida inicial y mensajes de error
-      const historyPayload = messages
+      // FNT-01: Usar messagesRef.current para evitar desincronización por clausuras obsoletas en React
+      const currentMessages = messagesRef.current;
+      const historyPayload = currentMessages
         .filter((msg) => msg.id !== 'greeting-msg' && !msg.isError)
         .map((msg) => ({
           role: msg.role,

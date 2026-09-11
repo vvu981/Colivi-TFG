@@ -10,7 +10,7 @@ import { SummarizeHostInboxHandler } from "../src/tools/handlers/summarizeHostIn
 import { GetMyBookingsStatusHandler } from "../src/tools/handlers/getMyBookingsStatusHandler.js";
 import { GetListingDetailsHandler } from "../src/tools/handlers/getListingDetailsHandler.js";
 import { SecurityContextHolder } from "../src/core/security/securityContext.js";
-import { ForbiddenError } from "../src/core/errors/mcpError.js";
+import { ForbiddenError, BackendIntegrationError } from "../src/core/errors/mcpError.js";
 import { IListingClient, PageResponse, AccommodationListingItem } from "../src/clients/listingClient.js";
 import { IReportClient, ReportTargetCount } from "../src/clients/reportClient.js";
 import { IHomeChoreClient, HomeSummary, ChoreItem, ChoreLeaderboard } from "../src/clients/homeChoreClient.js";
@@ -652,5 +652,20 @@ describe("MCP Tools & Handlers Suite", () => {
     const result = await handler.execute({ listingId: "non-existent-listing" });
     const text = extractText(result.content[0]);
     assert.match(text, /No se encontro el anuncio de alojamiento con ID: non-existent-listing/);
+  });
+
+  it("get_listing_details: should return friendly message when client throws BackendIntegrationError with status 404 (BUG-02)", async () => {
+    const mockListingClient: IListingClient = {
+      searchCatalog: async () => ({ content: [], totalElements: 0, totalPages: 0, size: 10, number: 0 }),
+      getListingById: async (id: string) => {
+        throw new BackendIntegrationError(`/listings/${id}`, "Listing not found in database", 404);
+      }
+    };
+
+    const handler = new GetListingDetailsHandler(mockListingClient);
+    const result = await handler.execute({ listingId: "listing-404-uuid" });
+    assert.equal(result.isError, undefined);
+    const text = extractText(result.content[0]);
+    assert.match(text, /No se encontro el anuncio de alojamiento con ID: listing-404-uuid/);
   });
 });

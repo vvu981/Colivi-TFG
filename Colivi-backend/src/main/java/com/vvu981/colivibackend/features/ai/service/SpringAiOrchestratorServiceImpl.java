@@ -36,8 +36,8 @@ public class SpringAiOrchestratorServiceImpl implements AiOrchestratorService {
 
     private static final Logger log = LoggerFactory.getLogger(SpringAiOrchestratorServiceImpl.class);
     private static final int MAX_HISTORY_MESSAGES = 6;
-    private static final Pattern MARKDOWN_JSON_BLOCK_PATTERN =
-            Pattern.compile("```(?:json)?\\s*(\\{.*?\\})\\s*```", Pattern.DOTALL);
+    private static final Pattern MARKDOWN_BLOCK_PATTERN =
+            Pattern.compile("```(?:json)?\\s*([\\s\\S]*?)\\s*```", Pattern.DOTALL);
 
     private final OpenAiChatModel chatModel;
     private final String mcpBaseUrl;
@@ -166,9 +166,15 @@ public class SpringAiOrchestratorServiceImpl implements AiOrchestratorService {
             return "{\"response\":\"\"}";
         }
         String trimmed = rawContent.trim();
-        Matcher matcher = MARKDOWN_JSON_BLOCK_PATTERN.matcher(trimmed);
+        Matcher matcher = MARKDOWN_BLOCK_PATTERN.matcher(trimmed);
         if (matcher.find()) {
-            return matcher.group(1).trim();
+            String blockContent = matcher.group(1).trim();
+            int firstBrace = blockContent.indexOf('{');
+            int lastBrace = blockContent.lastIndexOf('}');
+            if (firstBrace != -1 && lastBrace > firstBrace) {
+                return blockContent.substring(firstBrace, lastBrace + 1).trim();
+            }
+            return blockContent;
         }
 
         int firstBrace = trimmed.indexOf('{');

@@ -110,7 +110,42 @@ class AiChatControllerTest {
         mockMvc.perform(post("/api/v1/ai/chat")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.errors.message").value("El mensaje no puede estar vacío"));
+    }
+
+    @Test
+    @DisplayName("Debe rechazar con 400 Bad Request cuando el mensaje supera 2000 caracteres (ARC-01)")
+    void chat_MessageExceedsLimit_BadRequest() throws Exception {
+        String longMessage = "a".repeat(2001);
+        AiChatRequest request = new AiChatRequest(longMessage, List.of());
+
+        mockMvc.perform(post("/api/v1/ai/chat")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.errors.message").value("El mensaje supera el límite de 2000 caracteres permitidos"));
+    }
+
+    @Test
+    @DisplayName("Debe rechazar con 400 Bad Request cuando el historial supera 20 mensajes (ARC-01)")
+    void chat_HistoryExceedsLimit_BadRequest() throws Exception {
+        List<AiChatMessageDto> largeHistory = java.util.stream.IntStream.rangeClosed(1, 21)
+                .mapToObj(i -> new AiChatMessageDto(i % 2 == 0 ? "assistant" : "user", "msg " + i))
+                .toList();
+        AiChatRequest request = new AiChatRequest("Consulta válida", largeHistory);
+
+        mockMvc.perform(post("/api/v1/ai/chat")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.errors.history").value("El historial de conversación supera el máximo de 20 mensajes permitidos"));
     }
 
     @Test

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { IMcpToolHandler, ToolExecutionResult } from "../types.js";
 import { GET_LISTING_DETAILS_TOOL } from "../../schemas/toolSchemas.js";
 import { IListingClient, listingClient, AccommodationListingItem } from "../../clients/listingClient.js";
-import { InvalidArgumentError } from "../../core/errors/mcpError.js";
+import { InvalidArgumentError, BackendIntegrationError } from "../../core/errors/mcpError.js";
 
 const listingDetailsInputSchema = z.object({
   listingId: z.string().trim().min(1, "listingId is required")
@@ -24,7 +24,25 @@ export class GetListingDetailsHandler implements IMcpToolHandler<ListingDetailsI
     }
 
     const { listingId } = parseResult.data;
-    const listing = await this.client.getListingById(listingId);
+
+    // BUG-02: ColiviHttpClient lanza BackendIntegrationError con status 404 si el anuncio no existe.
+    // Se captura controladamente para retornar una respuesta semántica sin fallar la herramienta con isError: true.
+    let listing: AccommodationListingItem | undefined;
+    try {
+      listing = await this.client.getListingById(listingId);
+    } catch (error) {
+      if (error instanceof BackendIntegrationError && error.statusCode === 404) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `No se encontro el anuncio de alojamiento con ID: ${listingId}`
+            }
+          ]
+        };
+      }
+      throw error;
+    }
 
     if (!listing || !listing.id) {
       return {

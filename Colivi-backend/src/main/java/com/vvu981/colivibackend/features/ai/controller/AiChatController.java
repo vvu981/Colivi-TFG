@@ -50,20 +50,9 @@ public class AiChatController {
                 ? authHeader.substring(7).trim()
                 : null;
 
-        // F-30: Limitar longitud del mensaje para mitigar prompt injection acumulativo
-        if (request.message() != null && request.message().length() > 2000) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new AiChatResponse(
-                            "El mensaje supera el limite de 2000 caracteres permitidos.", null, java.util.List.of()));
-        }
-
-        // F-30: Limitar el historial a 20 mensajes como maximo
-        if (request.history() != null && request.history().size() > 20) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new AiChatResponse(
-                            "El historial de conversacion supera el maximo de 20 mensajes permitidos.", null, java.util.List.of()));
-        }
-
+        // ARC-01: La validación de tamaño del mensaje (máx 2000) y del historial (máx 20)
+        // se delega declarativamente a Bean Validation (@Valid + @Size en AiChatRequest),
+        // garantizando consistencia de formato de error en GlobalExceptionHandler y cumpliendo SRP.
         AiChatResponse response = orchestratorService.processChat(request, jwtToken);
         return ResponseEntity.ok(response);
     }
