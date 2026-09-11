@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "colivi-mcp-server",
+  "version": "1.0.0",
+  "description": "Catálogo oficial de herramientas y directrices del servidor MCP para la plataforma Colivi",
+  "instructions": "DIRECTRICES PARA EL LLM:\n1. MODO ESTRICTO DE SOLO LECTURA: Tienes estrictamente prohibido intentar mutaciones de estado en la base de datos (INSERT, UPDATE, DELETE). Tu rol es exclusivamente auditar, consultar y resumir información.\n2. SEGURIDAD MULTI-TENANT: La identidad del usuario (userId y role) se extrae del JWT autenticado en el handshake SSE. Nunca solicites ni aceptes identificadores de usuario arbitrarios para consultar datos ajenos.\n3. DELEGACIÓN HUMANA DE ACCIONES: Si el usuario te pide responder a un candidato o enviar un mensaje, genera el texto en tu respuesta para que el usuario humano lo revise y pulse el botón de confirmación en la interfaz de React.\n4. PRIVILEGIOS ADMINISTRATIVOS: La herramienta 'get_moderation_queue' solo puede ser ejecutada por usuarios con rol 'ADMIN'. Si el usuario no tiene dicho rol, el servidor rechazará la petición.",
+  "tools": [
+    {
+      "name": "search_coliving_listings",
+      "description": "Busca anuncios de coliving cruzando filtros tradicionales (precio, ubicación) con métricas de estilo de vida de los inquilinos actuales (ej. cumplimiento de tareas).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "string",
+            "description": "Ciudad o barrio"
+          },
+          "maxPrice": {
+            "type": "number",
+            "description": "Precio máximo mensual en euros"
+          },
+          "requiredVibe": {
+            "type": "string",
+            "enum": [
+              "TIDY",
+              "SOCIAL",
+              "QUIET",
+              "ANY"
+            ],
+            "description": "Filtro semántico del ambiente basado en el ranking de tareas de la casa"
+          }
+        },
+        "required": [
+          "location"
+        ]
+      }
+    },
+    {
+      "name": "get_user_chores_status",
+      "description": "Obtiene las tareas domésticas pendientes del usuario autenticado y su puntuación actual frente a sus compañeros de piso.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "name": "summarize_host_inbox",
+      "description": "Obtiene un resumen de los mensajes no leídos del propietario y el perfil/estado de los inquilinos candidatos en esas conversaciones.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "listingId": {
+            "type": "string",
+            "description": "UUID opcional del anuncio para filtrar. Si es null, trae todo el inbox."
+          }
+        },
+        "required": []
+      }
+    },
+    {
+      "name": "get_moderation_queue",
+      "description": "Exclusivo para ADMIN. Devuelve el Top 10 de anuncios o usuarios con mayor número de denuncias pendientes de revisión.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "targetType": {
+            "type": "string",
+            "enum": [
+              "USER",
+              "LISTING"
+            ],
+            "description": "Tipo de entidad denunciada a auditar"
+          }
+        },
+        "required": [
+          "targetType"
+        ]
+      }
+    },
+    {
+      "name": "get_my_bookings_status",
+      "description": "Obtiene el historial y estado actual de las solicitudes de reserva del inquilino autenticado (PENDING, ACCEPTED, CONFIRMED, REJECTED) y si requieren acción inmediata como pagar fianza.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "name": "get_listing_details",
+      "description": "Obtiene la ficha técnica completa de un anuncio por su ID: desglose de fianza, servicios incluidos (wifi, calefacción), normas de convivencia y fechas de disponibilidad.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "listingId": {
+            "type": "string",
+            "description": "UUID del anuncio de alojamiento a consultar"
+          }
+        },
+        "required": [
+          "listingId"
+        ]
+      }
+    }
+  ]
+}

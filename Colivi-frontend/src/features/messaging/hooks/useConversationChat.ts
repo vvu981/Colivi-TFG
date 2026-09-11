@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   useInfiniteQuery,
   useMutation,
@@ -16,10 +16,34 @@ interface HeaderTrackingState {
   interlocutorUnreadCount?: number;
 }
 
-export const useConversationChat = (conversationId: string | undefined) => {
+export interface UseConversationChatOptions {
+  onErrorToast?: (message: string) => void;
+}
+
+export interface UseConversationChatResult {
+  conversation: ConversationSummary | undefined;
+  messages: Message[];
+  isLoading: boolean;
+  isError: boolean;
+  error: Error | null;
+  sendMessage: (content: string) => Promise<Message>;
+  isSending: boolean;
+  hasNextPage: boolean;
+  fetchNextPage: () => void;
+  isFetchingNextPage: boolean;
+  refetchConversation: () => void;
+  toastMessage?: string | null;
+  clearToast?: () => void;
+}
+
+export const useConversationChat = (
+  conversationId: string | undefined,
+  options?: UseConversationChatOptions
+): UseConversationChatResult => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const lastHeaderStateRef = useRef<HeaderTrackingState | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // ─── 1. Polling Inteligente de Cabecera (Exclusivo a metadatos ligeros) ───────
   const conversationQuery = useQuery<ConversationSummary>({
@@ -179,7 +203,7 @@ export const useConversationChat = (conversationId: string | undefined) => {
 
       return { previousMessages, previousConversation };
     },
-    onError: (_err, _content, context) => {
+    onError: (err, _content, context) => {
       // Rollback a la foto previa
       if (context?.previousMessages) {
         queryClient.setQueryData(['messages', conversationId], context.previousMessages);
@@ -189,6 +213,13 @@ export const useConversationChat = (conversationId: string | undefined) => {
       }
       // Reconciliación automática ante conflictos (HTTP 409 / 400)
       queryClient.invalidateQueries({ queryKey: ['conversation', conversationId] });
+
+      const errorMsg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        (err instanceof Error ? err.message : 'Error al enviar el mensaje. Inténtalo de nuevo.');
+
+      setToastMessage(errorMsg);
+      options?.onErrorToast?.(errorMsg);
     },
     onSettled: () => {
       // Sincronizar IDs y contadores definitivos del backend
@@ -220,5 +251,8 @@ export const useConversationChat = (conversationId: string | undefined) => {
     fetchNextPage: messagesQuery.fetchNextPage,
     isFetchingNextPage: messagesQuery.isFetchingNextPage,
     refetchConversation: conversationQuery.refetch,
+    // Notificaciones Toast de fallos de envío
+    toastMessage,
+    clearToast: () => setToastMessage(null),
   };
 };

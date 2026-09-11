@@ -150,9 +150,9 @@ export const StickyContextChatHeader: React.FC<StickyContextChatHeaderProps> = (
           {conversation.isReported ? (
             <span
               title="Esta conversación ya ha sido denunciada"
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg cursor-default select-none"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-on-error-container bg-error-container/30 border border-error/40 rounded-lg cursor-default select-none"
             >
-              <svg className="w-3.5 h-3.5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="w-3.5 h-3.5 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m0-10.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.75c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.57-.598-3.75h-.152c-3.196 0-6.1-1.249-8.25-3.286zm0 13.036h.008v.008H12v-.008z" />
               </svg>
               <span className="hidden sm:inline">Denunciada</span>
