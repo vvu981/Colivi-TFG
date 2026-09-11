@@ -108,7 +108,8 @@ describe("MCP Tools & Handlers Suite", () => {
     };
 
     const mockClient: IListingClient = {
-      searchCatalog: async () => mockListings
+      searchCatalog: async () => mockListings,
+      getListingById: async () => ({} as AccommodationListingItem)
     };
 
     const handler = new SearchColivingListingsHandler(mockClient);
@@ -374,7 +375,8 @@ describe("MCP Tools & Handlers Suite", () => {
         totalPages: 0,
         size: 20,
         number: 0
-      })
+      }),
+      getListingById: async () => ({} as AccommodationListingItem)
     };
 
     const handler = new SearchColivingListingsHandler(mockEmptyClient);
