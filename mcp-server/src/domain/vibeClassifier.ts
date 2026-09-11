@@ -15,7 +15,12 @@ export class VibeClassifier {
     const amenities = listing.accommodation?.amenities?.map((a) => a.toUpperCase()) ?? [];
     const description = `${listing.description ?? ""} ${listing.title ?? ""}`.toLowerCase();
 
-    // 1. Detección de indicadores de estilo de vida y ambiente
+    // 1. Detección de indicadores de estilo de vida y ambiente con control de polaridad léxica (BUG-04)
+    const hasSocialNegation =
+      /(?:prohibid[oa]s?|no\s+(?:se\s+)?permiten?|sin|cero)\s+(?:celebrar\s+|organizar\s+)?(?:fiestas?|eventos?|ruidos?|juergas?)/i.test(
+        description
+      );
+
     const hasExplicitTidy =
       amenities.includes("CLEANING_SERVICE") ||
       description.includes("orden") ||
@@ -28,10 +33,11 @@ export class VibeClassifier {
       amenities.includes("BALCONY") ||
       amenities.includes("SWIMMING_POOL") ||
       amenities.includes("COMMON_ROOM") ||
-      description.includes("social") ||
-      description.includes("vida juntos") ||
-      description.includes("eventos") ||
-      description.includes("comunidad");
+      (!hasSocialNegation &&
+        (description.includes("social") ||
+          description.includes("vida juntos") ||
+          description.includes("eventos") ||
+          description.includes("comunidad")));
 
     const hasQuiet =
       amenities.includes("WORK_ZONE") ||
@@ -41,7 +47,8 @@ export class VibeClassifier {
       description.includes("estudio") ||
       description.includes("quiet") ||
       description.includes("concentracion") ||
-      description.includes("silencio");
+      description.includes("silencio") ||
+      hasSocialNegation;
 
     // 2. Prevalencia de estilos de vida distintivos (DOM-01 y DOM-02)
     if (hasSocial && !hasQuiet) {

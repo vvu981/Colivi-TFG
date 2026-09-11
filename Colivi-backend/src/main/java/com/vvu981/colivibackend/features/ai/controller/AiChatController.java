@@ -3,6 +3,7 @@ package com.vvu981.colivibackend.features.ai.controller;
 import com.vvu981.colivibackend.features.ai.dto.AiChatRequest;
 import com.vvu981.colivibackend.features.ai.dto.AiChatResponse;
 import com.vvu981.colivibackend.features.ai.service.AiOrchestratorService;
+import com.vvu981.colivibackend.features.user.exception.InvalidTokenException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.swagger.v3.oas.annotations.Operation;
@@ -77,6 +78,15 @@ public class AiChatController {
      */
     public ResponseEntity<AiChatResponse> circuitBreakerFallback(
             AiChatRequest request, String authHeader, Throwable ex) {
+        // F-BUG-01: Si la excepcion interceptada es un error de autenticacion de cliente (401),
+        // relanzarla inmediatamente para que GlobalExceptionHandler responda con HTTP 401
+        // en lugar de enmascararla con un 503 Service Unavailable.
+        if (ex instanceof InvalidTokenException ite) {
+            throw ite;
+        }
+        if (ex != null && ex.getCause() instanceof InvalidTokenException ite) {
+            throw ite;
+        }
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(new AiChatResponse(
                         "El servicio del asistente inteligente no esta disponible temporalmente por degradacion del sistema. Por favor, intentalo de nuevo en unos minutos.",

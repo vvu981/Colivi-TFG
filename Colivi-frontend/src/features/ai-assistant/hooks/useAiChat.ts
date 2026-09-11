@@ -63,23 +63,52 @@ export const useAiChat = () => {
 
   const [messages, setMessages] = useState<AiChatMessage[]>(() => loadStoredMessages(storageKey));
   const messagesRef = useRef<AiChatMessage[]>(messages);
+  // BUG-02: Referencia que registra la clave bajo la cual se cargaron los mensajes activos en memoria.
+  const currentLoadedKeyRef = useRef<string>(storageKey);
 
   useEffect(() => {
     messagesRef.current = messages;
   }, [messages]);
 
   useEffect(() => {
-    setMessages(loadStoredMessages(storageKey));
+    const loaded = loadStoredMessages(storageKey);
+    currentLoadedKeyRef.current = storageKey;
+    messagesRef.current = loaded;
+    setMessages(loaded);
   }, [storageKey]);
 
   useEffect(() => {
-    saveMessagesToStorage(storageKey, messages);
+    // BUG-02: Solo guardar si los mensajes actuales corresponden a la clave activa actual,
+    // evitando que en transiciones de autenticación los mensajes de la sesión anónima
+    // sobrescriban destructivamente el historial del usuario autenticado.
+    if (currentLoadedKeyRef.current === storageKey) {
+      saveMessagesToStorage(storageKey, messages);
+    }
   }, [messages, storageKey]);
+
+  // F-23: Sincronización real del historial entre múltiples pestañas del navegador
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === storageKey && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            messagesRef.current = parsed;
+            setMessages(parsed);
+          }
+        } catch {
+          // Ignorar parseos defectuosos externos
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [storageKey]);
 
   const chatMutation = useMutation<AiChatResponse, Error, string>({
     mutationFn: async (messageText: string) => {
       // Prepara el historial reciente excluyendo el mensaje de bienvenida inicial y mensajes de error
-      // FNT-01: Usar messagesRef.current para evitar desincronización por clausuras obsoletas en React
+      // FNT-01: Usar messagesRef.current sincronizado de forma segura
       const currentMessages = messagesRef.current;
       const historyPayload = currentMessages
         .filter((msg) => msg.id !== 'greeting-msg' && !msg.isError)
@@ -103,7 +132,11 @@ export const useAiChat = () => {
         timestamp: new Date().toISOString(),
       };
 
-      setMessages((prev) => [...prev, userMessage]);
+      setMessages((prev) => {
+        const next = [...prev, userMessage];
+        messagesRef.current = next;
+        return next;
+      });
     },
     onSuccess: (data: AiChatResponse) => {
       const assistantMessage: AiChatMessage = {
@@ -114,7 +147,11 @@ export const useAiChat = () => {
         timestamp: new Date().toISOString(),
       };
 
-      setMessages((prev) => [...prev, assistantMessage]);
+      setMessages((prev) => {
+        const next = [...prev, assistantMessage];
+        messagesRef.current = next;
+        return next;
+      });
     },
     onError: (err: Error) => {
       const errorMessage: AiChatMessage = {
@@ -125,7 +162,11 @@ export const useAiChat = () => {
         isError: true,
       };
 
-      setMessages((prev) => [...prev, errorMessage]);
+      setMessages((prev) => {
+        const next = [...prev, errorMessage];
+        messagesRef.current = next;
+        return next;
+      });
     },
   });
 
@@ -155,6 +196,7 @@ export const useAiChat = () => {
       ...INITIAL_GREETING,
       timestamp: new Date().toISOString(),
     };
+    messagesRef.current = [resetMessage];
     setMessages([resetMessage]);
   }, [storageKey]);
 

@@ -210,4 +210,27 @@ describe("VibeClassifier Suite", () => {
     const defaultEnriched = VibeClassifier.enrichAndFilter(listings);
     assert.ok(defaultEnriched.every((l) => l.vibeMatchScore === 1.0));
   });
+
+  it("should classify as QUIET and not SOCIAL when description contains event/party prohibitions (BUG-04)", () => {
+    const listingWithProhibition: AccommodationListingItem = {
+      id: "no-party-1",
+      title: "Habitación céntrica para opositores",
+      description: "Piso de estudio silencioso. Prohibido organizar eventos o fiestas.",
+      pricePerMonth: 500,
+      rentalType: "ROOM",
+      status: "ACTIVE",
+      accommodation: {
+        id: "acc-np",
+        address: "Calle Mayor 1",
+        city: "Madrid",
+        country: "Spain",
+        totalRooms: 3,
+        freeRooms: 1,
+        amenities: []
+      }
+    };
+
+    const vibe = VibeClassifier.classify(listingWithProhibition);
+    assert.equal(vibe, "QUIET");
+  });
 });

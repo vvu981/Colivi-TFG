@@ -231,4 +231,42 @@ describe("MCP Express Server & Routing Suite", () => {
     controller.abort();
     await ssePromise.catch(() => {});
   });
+
+  it("POST /messages with multibyte unicode token should return 403 FORBIDDEN instead of 500 (BUG-03)", async () => {
+    const secretBuffer = Buffer.from(process.env.JWT_SECRET || "dGVzdC1zZWNyZXQta2V5LWNvbGl2aS10Zmc=", "base64");
+    const jwtMod = await import("jsonwebtoken");
+    const token = jwtMod.default.sign(
+      { id: "usr-multibyte-test", role: "USER", sub: "mb@colivi.com" },
+      secretBuffer,
+      { algorithm: "HS256", expiresIn: "1h" }
+    );
+
+    const controller = new AbortController();
+    const ssePromise = fetch(`${baseUrl}/sse`, {
+      signal: controller.signal,
+      headers: {
+        Accept: "text/event-stream",
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    await new Promise((r) => setTimeout(r, 100));
+    const sessionId = sessionManager.getAllSessionIds().slice(-1)[0];
+
+    // String de 36 caracteres pero con caracteres multibyte (longitud en bytes = 72)
+    const multibyteToken = "ñ".repeat(36);
+
+    const res = await fetch(`${baseUrl}/messages?sessionId=${sessionId}&sessionToken=${encodeURIComponent(multibyteToken)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", method: "ping", id: 99 })
+    });
+
+    assert.equal(res.status, 403);
+    const body = (await res.json()) as { error: string };
+    assert.equal(body.error, "FORBIDDEN");
+
+    controller.abort();
+    await ssePromise.catch(() => {});
+  });
 });

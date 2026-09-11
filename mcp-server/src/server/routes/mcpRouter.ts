@@ -178,18 +178,22 @@ export function createMcpRouter(deps: McpRouterDependencies): Router {
       const authHeader = req.headers.authorization;
       const bearerToken = authHeader?.replace(/^Bearer\s+/i, "")?.trim();
 
-      // F-13: Uso de timingSafeEqual para comparar secretos criptograficos.
-      // La comparacion === no es de tiempo constante y puede filtrar informacion
-      // del secreto via timing attacks en mediciones de latencia de respuesta.
+      // F-13 & BUG-03: Uso de timingSafeEqual comparando longitudes de Buffer en bytes.
+      // Comparar string.length evalua caracteres UTF-16, lo que causa que timingSafeEqual
+      // lance un TypeError (500) si el atacante o cliente envia caracteres multibyte UTF-8.
+      const secretBuf = Buffer.from(session.sessionSecret, "utf-8");
+      const tokenBuf = sessionToken ? Buffer.from(sessionToken, "utf-8") : undefined;
       const isSessionTokenValid =
-        !!sessionToken &&
-        sessionToken.length === session.sessionSecret.length &&
-        crypto.timingSafeEqual(Buffer.from(sessionToken), Buffer.from(session.sessionSecret));
+        !!tokenBuf &&
+        tokenBuf.length === secretBuf.length &&
+        crypto.timingSafeEqual(tokenBuf, secretBuf);
 
+      const jwtBuf = Buffer.from(session.securityContext.token, "utf-8");
+      const bearerBuf = bearerToken ? Buffer.from(bearerToken, "utf-8") : undefined;
       const isBearerTokenValid =
-        !!bearerToken &&
-        bearerToken.length === session.securityContext.token.length &&
-        crypto.timingSafeEqual(Buffer.from(bearerToken), Buffer.from(session.securityContext.token));
+        !!bearerBuf &&
+        bearerBuf.length === jwtBuf.length &&
+        crypto.timingSafeEqual(bearerBuf, jwtBuf);
 
       const isAuthorized = isSessionTokenValid || isBearerTokenValid;
 

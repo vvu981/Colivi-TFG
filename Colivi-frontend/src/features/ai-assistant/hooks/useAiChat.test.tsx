@@ -224,5 +224,89 @@ describe('useAiChat hook', () => {
     expect(result.current.messages).toHaveLength(1);
     expect(result.current.messages[0].id).toBe('greeting-msg');
   });
+
+  it('no sobrescribe el historial previo del usuario autenticado durante la transición de sesión (BUG-02)', async () => {
+    // 1. Pre-poblar el historial del usuario
+    const userSavedMessages = [
+      { id: 'u1', role: 'user', content: 'Pregunta guardada del usuario', timestamp: '2026-09-08T10:00:00Z' },
+      { id: 'u2', role: 'assistant', content: 'Respuesta guardada del usuario', timestamp: '2026-09-08T10:00:05Z' },
+    ];
+    localStorage.setItem('colivi_ai_chat_user-123', JSON.stringify(userSavedMessages));
+
+    // 2. Renderizar inicialmente como usuario anónimo (sin sesión)
+    let authContextValue: AuthContextType = {
+      ...mockAuthContext,
+      user: null,
+      token: null,
+      isAuthenticated: false,
+    };
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+
+    const DynamicWrapper = ({ children }: { children: ReactNode }) => (
+      <AuthContext.Provider value={authContextValue}>
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      </AuthContext.Provider>
+    );
+
+    const { result, rerender } = renderHook(() => useAiChat(), { wrapper: DynamicWrapper });
+
+    expect(result.current.isAuthenticated).toBe(false);
+    expect(result.current.messages[0].id).toBe('greeting-msg');
+
+    // 3. Simular que el contexto de autenticación carga al usuario
+    authContextValue = {
+      ...mockAuthContext,
+      user: {
+        id: 'user-123',
+        email: 'test@example.com',
+        nickname: 'testuser',
+        firstName: 'Test',
+        lastName1: 'User',
+        lastName2: null,
+        phone: null,
+        role: 'USER',
+        profilePicUrl: null,
+        createdAt: '2026-01-01T00:00:00Z',
+      },
+      isAuthenticated: true,
+    };
+
+    rerender();
+
+    // 4. Verificar que se cargaron los mensajes del usuario y no se sobrescribieron con los anónimos
+    await waitFor(() => {
+      expect(result.current.messages).toHaveLength(2);
+      expect(result.current.messages[0].content).toBe('Pregunta guardada del usuario');
+    });
+
+    const storedInLocal = JSON.parse(localStorage.getItem('colivi_ai_chat_user-123') || '[]');
+    expect(storedInLocal).toHaveLength(2);
+    expect(storedInLocal[0].content).toBe('Pregunta guardada del usuario');
+  });
+
+  it('sincroniza el historial cuando otra pestaña emite un evento de storage (F-23)', async () => {
+    const { result } = renderHook(() => useAiChat(), { wrapper: createWrapper() });
+
+    const externalTabMessages = [
+      { id: 'ext-1', role: 'user', content: 'Mensaje desde otra pestaña', timestamp: '2026-09-11T12:00:00Z' },
+      { id: 'ext-2', role: 'assistant', content: 'Respuesta en otra pestaña', timestamp: '2026-09-11T12:00:05Z' },
+    ];
+
+    await act(async () => {
+      window.dispatchEvent(
+        new StorageEvent('storage', {
+          key: 'colivi_ai_chat_user-123',
+          newValue: JSON.stringify(externalTabMessages),
+        })
+      );
+    });
+
+    expect(result.current.messages).toHaveLength(2);
+    expect(result.current.messages[0].content).toBe('Mensaje desde otra pestaña');
+    expect(result.current.messages[1].content).toBe('Respuesta en otra pestaña');
+  });
 });
 

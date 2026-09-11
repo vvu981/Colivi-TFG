@@ -193,4 +193,22 @@ class AiChatControllerTest {
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().response()).contains("no esta disponible temporalmente por degradacion");
     }
+
+    @Test
+    @DisplayName("Debe relanzar InvalidTokenException en circuitBreakerFallback para evitar enmascarar 401 con 503 (BUG-01)")
+    void circuitBreakerFallback_RethrowsInvalidTokenException() {
+        AiChatRequest request = new AiChatRequest("Consulta", List.of());
+        var invalidTokenEx = new com.vvu981.colivibackend.features.user.exception.InvalidTokenException("Token expirado");
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                aiChatController.circuitBreakerFallback(request, null, invalidTokenEx)
+        ).isInstanceOf(com.vvu981.colivibackend.features.user.exception.InvalidTokenException.class)
+         .hasMessage("Token expirado");
+
+        var wrappedEx = new RuntimeException("Wrapped", invalidTokenEx);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                aiChatController.circuitBreakerFallback(request, null, wrappedEx)
+        ).isInstanceOf(com.vvu981.colivibackend.features.user.exception.InvalidTokenException.class)
+         .hasMessage("Token expirado");
+    }
 }
