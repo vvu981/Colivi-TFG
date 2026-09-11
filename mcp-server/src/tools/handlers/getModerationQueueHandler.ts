@@ -20,7 +20,9 @@ export class GetModerationQueueHandler implements IMcpToolHandler<ModerationInpu
   constructor(private readonly client: IReportClient = reportClient) {}
 
   public async execute(rawArgs: ModerationInput): Promise<ToolExecutionResult> {
-    // 1. Verificación estricta de privilegios de Administrador (RBAC)
+    // F-19 (Defense-in-Depth): ToolRegistry verifica requiredRole durante el despacho de herramientas.
+    // assertAdmin() actua como salvaguarda en el handler para asegurar que nunca se ejecute
+    // fuera de contexto y suministra un AdminContext fuertemente tipado (id, email) para la auditoria.
     const adminContext = AuthorizationGuard.assertAdmin();
 
     // 2. Validación de argumentos de entrada

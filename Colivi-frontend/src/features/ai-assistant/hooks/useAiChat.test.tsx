@@ -59,6 +59,7 @@ const createWrapper = (authOverride?: Partial<AuthContextType>) => {
 describe('useAiChat hook', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
     sessionStorage.clear();
   });
 
@@ -71,18 +72,30 @@ describe('useAiChat hook', () => {
     expect(result.current.isPending).toBe(false);
   });
 
-  it('restablece la conversación previa desde sessionStorage si ya existía', () => {
+  it('restablece la conversación previa desde localStorage si ya existía (F-23)', () => {
     const existingMessages = [
       { id: '1', role: 'user', content: 'Pregunta previa', timestamp: '2026-09-09T10:00:00Z' },
       { id: '2', role: 'assistant', content: 'Respuesta previa', timestamp: '2026-09-09T10:00:05Z' },
     ];
-    sessionStorage.setItem('colivi_ai_chat_user-123', JSON.stringify(existingMessages));
+    localStorage.setItem('colivi_ai_chat_user-123', JSON.stringify(existingMessages));
 
     const { result } = renderHook(() => useAiChat(), { wrapper: createWrapper() });
 
     expect(result.current.messages).toHaveLength(2);
     expect(result.current.messages[0].content).toBe('Pregunta previa');
     expect(result.current.messages[1].content).toBe('Respuesta previa');
+  });
+
+  it('migra transparentemente historial previo desde sessionStorage si localStorage estaba vacío (F-23)', () => {
+    const existingMessages = [
+      { id: '1', role: 'user', content: 'Pregunta previa en session', timestamp: '2026-09-09T10:00:00Z' },
+    ];
+    sessionStorage.setItem('colivi_ai_chat_user-123', JSON.stringify(existingMessages));
+
+    const { result } = renderHook(() => useAiChat(), { wrapper: createWrapper() });
+
+    expect(result.current.messages).toHaveLength(1);
+    expect(result.current.messages[0].content).toBe('Pregunta previa en session');
   });
 
   it('envía un mensaje del usuario y actualiza el historial tras la respuesta del asistente persistiendo en storage', async () => {
@@ -109,8 +122,8 @@ describe('useAiChat hook', () => {
     expect(result.current.messages[2].content).toBe(mockResponse.response);
     expect(result.current.messages[2].draftContent).toBe(mockResponse.draft);
 
-    // Comprobar persistencia en sessionStorage
-    const stored = JSON.parse(sessionStorage.getItem('colivi_ai_chat_user-123') || '[]');
+    // Comprobar persistencia en localStorage
+    const stored = JSON.parse(localStorage.getItem('colivi_ai_chat_user-123') || '[]');
     expect(stored).toHaveLength(3);
     expect(stored[1].content).toBe('Búscame colivings en Madrid');
     expect(stored[2].content).toBe(mockResponse.response);
@@ -156,7 +169,7 @@ describe('useAiChat hook', () => {
     expect(result.current.messages).toHaveLength(1);
     expect(result.current.messages[0].role).toBe('assistant');
 
-    const stored = JSON.parse(sessionStorage.getItem('colivi_ai_chat_user-123') || '[]');
+    const stored = JSON.parse(localStorage.getItem('colivi_ai_chat_user-123') || '[]');
     expect(stored).toHaveLength(1);
     expect(stored[0].role).toBe('assistant');
     expect(stored[0].id).toBe('greeting-msg');

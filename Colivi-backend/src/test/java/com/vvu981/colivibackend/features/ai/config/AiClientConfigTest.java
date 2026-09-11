@@ -20,5 +20,14 @@ class AiClientConfigTest {
     void aiClientConfig_IsInstantiable() {
         AiClientConfig config = new AiClientConfig();
         assertThat(config).isNotNull();
+        config.validateApiKeyOnStartup();
+    }
+
+    @Test
+    @DisplayName("AiClientConfig debe validar correctamente en startup cuando la key es valida (F-08)")
+    void aiClientConfig_ValidKey_ValidatesCorrectly() {
+        AiClientConfig config = new AiClientConfig("gsk_valid_live_api_key_for_testing");
+        assertThat(config).isNotNull();
+        config.validateApiKeyOnStartup();
     }
 }

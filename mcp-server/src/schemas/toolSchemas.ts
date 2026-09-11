@@ -31,7 +31,13 @@ export const GET_USER_CHORES_STATUS_TOOL: McpToolDefinition = {
     "Obtiene las tareas domésticas pendientes del usuario autenticado y su puntuación actual frente a sus compañeros de piso.",
   inputSchema: {
     type: "object",
-    properties: {},
+    properties: {
+      homeId: {
+        type: "string",
+        description:
+          "UUID opcional del hogar a consultar si el usuario pertenece a más de uno. Si se omite, se consulta el primer hogar activo."
+      }
+    },
     required: []
   }
 };

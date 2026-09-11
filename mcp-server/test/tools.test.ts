@@ -239,6 +239,85 @@ describe("MCP Tools & Handlers Suite", () => {
     });
   });
 
+  it("get_user_chores_status: should select requested homeId when user belongs to multiple homes (F-14)", async () => {
+    const mockHomes: HomeSummary[] = [
+      { id: "home-1", name: "Piso Sol" },
+      { id: "home-2", name: "Piso Retiro" }
+    ];
+    const mockChoresHome2: ChoreItem[] = [
+      {
+        id: "chore-ret",
+        title: "Regar plantas",
+        status: "PENDING",
+        points: 5
+      }
+    ];
+    const mockLeaderboard: ChoreLeaderboard = {
+      period: "WEEKLY",
+      scores: [
+        {
+          userId: "tenant-uuid-1",
+          nickname: "victor",
+          fullName: "Victor V",
+          completedCount: 1,
+          currentPoints: 10,
+          expectedPoints: 15,
+          rescuedCount: 0,
+          penalizedCount: 0,
+          pendingCount: 1
+        }
+      ]
+    };
+
+    const mockHomeClient: IHomeChoreClient = {
+      getUserHomes: async () => mockHomes,
+      getPendingChores: async (homeId) => (homeId === "home-2" ? mockChoresHome2 : []),
+      getLeaderboard: async () => mockLeaderboard
+    };
+
+    const handler = new GetUserChoresStatusHandler(mockHomeClient);
+    const userContext = {
+      userId: "tenant-uuid-1",
+      email: "victor@colivi.com",
+      role: "USER" as const,
+      token: "tok"
+    };
+
+    await SecurityContextHolder.run(userContext, async () => {
+      const result = await handler.execute({ homeId: "home-2" });
+      assert.equal(result.isError, undefined);
+      const text = extractText(result.content[0]);
+      assert.match(text, /Piso Retiro/);
+      assert.match(text, /Regar plantas/);
+      assert.match(text, /Piso Sol/); // Aviso de otros hogares activos
+    });
+  });
+
+  it("get_user_chores_status: should inform user if requested homeId does not exist in their active homes (F-14)", async () => {
+    const mockHomes: HomeSummary[] = [{ id: "home-1", name: "Piso Sol" }];
+    const mockHomeClient: IHomeChoreClient = {
+      getUserHomes: async () => mockHomes,
+      getPendingChores: async () => [],
+      getLeaderboard: async () => ({ period: "WEEKLY", scores: [] })
+    };
+
+    const handler = new GetUserChoresStatusHandler(mockHomeClient);
+    const userContext = {
+      userId: "tenant-uuid-1",
+      email: "victor@colivi.com",
+      role: "USER" as const,
+      token: "tok"
+    };
+
+    await SecurityContextHolder.run(userContext, async () => {
+      const result = await handler.execute({ homeId: "home-non-existent" });
+      assert.equal(result.isError, undefined);
+      const text = extractText(result.content[0]);
+      assert.match(text, /No se encontró ningún hogar activo con ID "home-non-existent"/);
+      assert.match(text, /Piso Sol/);
+    });
+  });
+
   it("summarize_host_inbox: should summarize unread messages and candidate profiles", async () => {
     const mockInbox: PageResponse<ConversationSummary> = {
       content: [

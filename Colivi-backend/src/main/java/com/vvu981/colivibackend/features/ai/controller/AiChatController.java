@@ -3,7 +3,7 @@ package com.vvu981.colivibackend.features.ai.controller;
 import com.vvu981.colivibackend.features.ai.dto.AiChatRequest;
 import com.vvu981.colivibackend.features.ai.dto.AiChatResponse;
 import com.vvu981.colivibackend.features.ai.service.AiOrchestratorService;
-import com.vvu981.colivibackend.features.user.exception.InvalidTokenException;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -37,19 +37,18 @@ public class AiChatController {
     @ApiResponse(responseCode = "400", description = "Peticion invalida, mensaje vacio o demasiado largo")
     @ApiResponse(responseCode = "401", description = "No autorizado - Token JWT ausente o invalido")
     @ApiResponse(responseCode = "429", description = "Demasiadas peticiones - limite de velocidad superado")
+    @ApiResponse(responseCode = "503", description = "Servicio no disponible - circuit breaker abierto")
     @RateLimiter(name = "aiChat", fallbackMethod = "rateLimitFallback")
+    @CircuitBreaker(name = "aiChat", fallbackMethod = "circuitBreakerFallback")
     public ResponseEntity<AiChatResponse> chat(
             @Valid @RequestBody AiChatRequest request,
             @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authHeader
     ) {
-        String jwtToken = null;
-        if (authHeader != null && authHeader.regionMatches(true, 0, "Bearer ", 0, 7)) {
-            jwtToken = authHeader.substring(7).trim();
-        }
-
-        if (jwtToken == null || jwtToken.isBlank()) {
-            throw new InvalidTokenException("Token de autenticación JWT ausente o con formato inválido");
-        }
+        // F-04: El controlador desacopla la extraccion del protocolo HTTP de la validacion.
+        // La validacion de presencia y validez del token se delega exclusivamente al servicio (SRP / DRY).
+        String jwtToken = (authHeader != null && authHeader.regionMatches(true, 0, "Bearer ", 0, 7))
+                ? authHeader.substring(7).trim()
+                : null;
 
         // F-30: Limitar longitud del mensaje para mitigar prompt injection acumulativo
         if (request.message() != null && request.message().length() > 2000) {
@@ -78,6 +77,20 @@ public class AiChatController {
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                 .body(new AiChatResponse(
                         "Has superado el limite de consultas al asistente. Por favor, espera un momento antes de volver a intentarlo.",
+                        null,
+                        java.util.List.of()));
+    }
+
+    /**
+     * Fallback invocado por Resilience4j cuando el Circuit Breaker esta abierto
+     * debido a fallos reiterados en la comunicacion con Groq o el servidor MCP (F-06).
+     * Devuelve HTTP 503 Service Unavailable con mensaje claro.
+     */
+    public ResponseEntity<AiChatResponse> circuitBreakerFallback(
+            AiChatRequest request, String authHeader, Throwable ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(new AiChatResponse(
+                        "El servicio del asistente inteligente no esta disponible temporalmente por degradacion del sistema. Por favor, intentalo de nuevo en unos minutos.",
                         null,
                         java.util.List.of()));
     }

@@ -19,8 +19,10 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -112,9 +114,13 @@ class AiChatControllerTest {
     }
 
     @Test
-    @DisplayName("Debe rechazar con 401 Unauthorized cuando no se proporciona header Authorization")
+    @DisplayName("Debe rechazar con 401 Unauthorized cuando no se proporciona header Authorization (F-04)")
     void chat_WithoutAuthorizationHeader_Unauthorized() throws Exception {
         AiChatRequest request = new AiChatRequest("Consulta anónima", List.of());
+
+        when(orchestratorService.processChat(any(AiChatRequest.class), isNull()))
+                .thenThrow(new com.vvu981.colivibackend.features.user.exception.InvalidTokenException(
+                        "Token de autenticación JWT ausente o con formato inválido"));
 
         mockMvc.perform(post("/api/v1/ai/chat")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -125,9 +131,13 @@ class AiChatControllerTest {
     }
 
     @Test
-    @DisplayName("Debe rechazar con 401 Unauthorized cuando el header Authorization no empieza con Bearer")
+    @DisplayName("Debe rechazar con 401 Unauthorized cuando el header Authorization no empieza con Bearer (F-04)")
     void chat_WithNonBearerAuthorizationHeader_Unauthorized() throws Exception {
         AiChatRequest request = new AiChatRequest("Consulta", List.of());
+
+        when(orchestratorService.processChat(any(AiChatRequest.class), isNull()))
+                .thenThrow(new com.vvu981.colivibackend.features.user.exception.InvalidTokenException(
+                        "Token de autenticación JWT ausente o con formato inválido"));
 
         mockMvc.perform(post("/api/v1/ai/chat")
                         .header("Authorization", "Basic dXNlcjpwYXNz")
@@ -136,5 +146,16 @@ class AiChatControllerTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("Unauthorized"))
                 .andExpect(jsonPath("$.message").value("Token de autenticación JWT ausente o con formato inválido"));
+    }
+
+    @Test
+    @DisplayName("Debe responder 503 cuando el circuit breaker de aiChat se activa por degradacion del servicio (F-06)")
+    void circuitBreakerFallback_ReturnsServiceUnavailable() {
+        AiChatRequest request = new AiChatRequest("Consulta", List.of());
+        var response = aiChatController.circuitBreakerFallback(request, null, new RuntimeException("Downstream timeout"));
+
+        assertThat(response.getStatusCode()).isEqualTo(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().response()).contains("no esta disponible temporalmente por degradacion");
     }
 }

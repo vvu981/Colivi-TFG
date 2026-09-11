@@ -31,9 +31,11 @@ export const DEFAULT_SUGGESTIONS: QuickPromptSuggestion[] = [
 
 const getStorageKey = (userId?: string) => `colivi_ai_chat_${userId || 'anonymous'}`;
 
+// F-23: Persistencia en localStorage para garantizar sincronizacion del historial entre
+// multiples pestanas del navegador (ej. comparando habitaciones o revisando tareas)
 const loadStoredMessages = (storageKey: string): AiChatMessage[] => {
   try {
-    const raw = sessionStorage.getItem(storageKey);
+    const raw = localStorage.getItem(storageKey) ?? sessionStorage.getItem(storageKey);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
@@ -48,7 +50,7 @@ const loadStoredMessages = (storageKey: string): AiChatMessage[] => {
 
 const saveMessagesToStorage = (storageKey: string, messages: AiChatMessage[]) => {
   try {
-    sessionStorage.setItem(storageKey, JSON.stringify(messages));
+    localStorage.setItem(storageKey, JSON.stringify(messages));
   } catch {
     // Manejo defensivo ante cuotas excedidas o restricciones de storage
   }
@@ -137,6 +139,7 @@ export const useAiChat = () => {
 
   const clearHistory = useCallback(() => {
     try {
+      localStorage.removeItem(storageKey);
       sessionStorage.removeItem(storageKey);
     } catch {
       // Ignorar excepciones al limpiar

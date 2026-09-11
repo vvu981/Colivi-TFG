@@ -3,13 +3,17 @@ import { GET_USER_CHORES_STATUS_TOOL } from "../../schemas/toolSchemas.js";
 import { IHomeChoreClient, homeChoreClient } from "../../clients/homeChoreClient.js";
 import { SecurityContextHolder } from "../../core/security/securityContext.js";
 
-export class GetUserChoresStatusHandler implements IMcpToolHandler<Record<string, never>> {
+export interface UserChoresStatusArgs {
+  homeId?: string;
+}
+
+export class GetUserChoresStatusHandler implements IMcpToolHandler<UserChoresStatusArgs> {
   public readonly definition = GET_USER_CHORES_STATUS_TOOL;
   public readonly requiredRole = "USER" as const;
 
   constructor(private readonly client: IHomeChoreClient = homeChoreClient) {}
 
-  public async execute(): Promise<ToolExecutionResult> {
+  public async execute(rawArgs?: UserChoresStatusArgs): Promise<ToolExecutionResult> {
     const context = SecurityContextHolder.getContext();
     const currentUserId = context.userId;
 
@@ -26,21 +30,40 @@ export class GetUserChoresStatusHandler implements IMcpToolHandler<Record<string
       };
     }
 
-    const primaryHome = homes[0];
+    // F-14: Si se proporciona homeId opcional, validar que pertenezca a los hogares activos del usuario
+    const requestedHomeId = rawArgs?.homeId?.trim();
+    let selectedHome = homes[0];
+
+    if (requestedHomeId) {
+      const found = homes.find((h) => h.id === requestedHomeId);
+      if (!found) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `No se encontró ningún hogar activo con ID "${requestedHomeId}" para el usuario autenticado (${context.email}). Los hogares activos disponibles son: ${homes
+                .map((h) => `"${h.name}" (ID: ${h.id})`)
+                .join(", ")}.`
+            }
+          ]
+        };
+      }
+      selectedHome = found;
+    }
 
     // F-14: Informar al LLM sobre la situacion real de multi-hogar para evitar
     // que responda sobre el hogar incorrecto sin saberlo.
+    const otherHomes = homes.filter((h) => h.id !== selectedHome.id);
     const multiHomarWarning =
-      homes.length > 1
-        ? `\n[AVISO: El usuario pertenece a ${homes.length} hogares activos. Se muestran los datos del hogar "${primaryHome.name}" (ID: ${primaryHome.id}). Los otros hogares son: ${homes
-            .slice(1)
-            .map((h) => `"${h.name}"`)
+      otherHomes.length > 0
+        ? `\n[AVISO: El usuario pertenece a ${homes.length} hogares activos. Se muestran los datos del hogar "${selectedHome.name}" (ID: ${selectedHome.id}). Los otros hogares son: ${otherHomes
+            .map((h) => `"${h.name}" (ID: ${h.id})`)
             .join(", ")}.]`
         : "";
 
     const [pendingChores, leaderboard] = await Promise.all([
-      this.client.getPendingChores(primaryHome.id, currentUserId),
-      this.client.getLeaderboard(primaryHome.id, "WEEKLY")
+      this.client.getPendingChores(selectedHome.id, currentUserId),
+      this.client.getLeaderboard(selectedHome.id, "WEEKLY")
     ]);
 
     const scoreList = leaderboard?.scores ?? [];
@@ -59,8 +82,8 @@ export class GetUserChoresStatusHandler implements IMcpToolHandler<Record<string
 
     const choreSummary = {
       hogar: {
-        id: primaryHome.id,
-        nombre: primaryHome.name
+        id: selectedHome.id,
+        nombre: selectedHome.name
       },
       usuario: {
         id: currentUserId,
