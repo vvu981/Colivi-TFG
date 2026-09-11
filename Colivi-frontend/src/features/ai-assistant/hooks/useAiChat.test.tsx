@@ -308,5 +308,60 @@ describe('useAiChat hook', () => {
     expect(result.current.messages[0].content).toBe('Mensaje desde otra pestaña');
     expect(result.current.messages[1].content).toBe('Respuesta en otra pestaña');
   });
+
+  it('trunca historyPayload a un máximo de 20 mensajes cuando el historial supera el límite (BUG-01)', async () => {
+    // Generar 25 mensajes previos en el almacenamiento
+    const largeHistory = Array.from({ length: 25 }, (_, i) => ({
+      id: `msg-${i + 1}`,
+      role: (i % 2 === 0 ? 'user' : 'assistant') as 'user' | 'assistant',
+      content: `Mensaje previo ${i + 1}`,
+      timestamp: new Date().toISOString(),
+    }));
+    localStorage.setItem('colivi_ai_chat_user-123', JSON.stringify(largeHistory));
+
+    vi.mocked(aiAssistantApi.sendMessage).mockResolvedValueOnce({
+      response: 'Respuesta del modelo',
+      draft: null,
+      toolsUsed: [],
+    });
+
+    const { result } = renderHook(() => useAiChat(), { wrapper: createWrapper() });
+
+    await act(async () => {
+      result.current.sendMessage('Consulta número 26');
+    });
+
+    expect(aiAssistantApi.sendMessage).toHaveBeenCalledTimes(1);
+    const calledPayload = vi.mocked(aiAssistantApi.sendMessage).mock.calls[0][0];
+
+    // history no debe exceder 20 mensajes para respetar @Size(max=20) de AiChatRequest
+    expect(calledPayload.history).toHaveLength(20);
+    expect(calledPayload.history[0].content).toBe('Mensaje previo 6');
+    expect(calledPayload.history[19].content).toBe('Mensaje previo 25');
+    expect(calledPayload.message).toBe('Consulta número 26');
+  });
+
+  it('restablece los mensajes al saludo inicial si otra pestaña elimina el historial emitiendo newValue null (UX-02)', async () => {
+    const existingMessages = [
+      { id: '1', role: 'user', content: 'Mensaje activo', timestamp: '2026-09-11T12:00:00Z' },
+    ];
+    localStorage.setItem('colivi_ai_chat_user-123', JSON.stringify(existingMessages));
+
+    const { result } = renderHook(() => useAiChat(), { wrapper: createWrapper() });
+    expect(result.current.messages).toHaveLength(1);
+    expect(result.current.messages[0].content).toBe('Mensaje activo');
+
+    await act(async () => {
+      window.dispatchEvent(
+        new StorageEvent('storage', {
+          key: 'colivi_ai_chat_user-123',
+          newValue: null,
+        })
+      );
+    });
+
+    expect(result.current.messages).toHaveLength(1);
+    expect(result.current.messages[0].id).toBe('greeting-msg');
+  });
 });
 

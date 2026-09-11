@@ -155,6 +155,8 @@ public class SpringAiOrchestratorServiceImpl implements AiOrchestratorService {
                 String fallbackText = (rawContent != null && !rawContent.isBlank()) ? rawContent.trim() : cleanContent;
                 return new AiChatResponse(fallbackText, null, List.of());
             }
+        } catch (InvalidTokenException ite) {
+            throw ite;
         } catch (Exception e) {
             log.error("Error en la orquestacion cognitiva Spring AI / MCP", e);
             throw new AiOrchestratorException("Fallo en la comunicación con el asistente inteligente", e);
@@ -166,8 +168,19 @@ public class SpringAiOrchestratorServiceImpl implements AiOrchestratorService {
             return "{\"response\":\"\"}";
         }
         String trimmed = rawContent.trim();
+        int globalFirstBrace = trimmed.indexOf('{');
+        int globalLastBrace = trimmed.lastIndexOf('}');
+
         Matcher matcher = MARKDOWN_BLOCK_PATTERN.matcher(trimmed);
         if (matcher.find()) {
+            // ROB-01: Si el bloque markdown comienza DESPUÉS de la primera llave y antes de la última llave,
+            // significa que el bloque markdown está anidado dentro del JSON (p. ej. dentro del texto de "response").
+            if (globalFirstBrace != -1 && globalLastBrace > globalFirstBrace
+                    && globalFirstBrace < matcher.start() && matcher.end() <= globalLastBrace) {
+                return trimmed.substring(globalFirstBrace, globalLastBrace + 1).trim();
+            }
+
+            // El bloque markdown envuelve el JSON (con o sin texto conversacional previo)
             String blockContent = matcher.group(1).trim();
             int firstBrace = blockContent.indexOf('{');
             int lastBrace = blockContent.lastIndexOf('}');
@@ -177,10 +190,8 @@ public class SpringAiOrchestratorServiceImpl implements AiOrchestratorService {
             return blockContent;
         }
 
-        int firstBrace = trimmed.indexOf('{');
-        int lastBrace = trimmed.lastIndexOf('}');
-        if (firstBrace != -1 && lastBrace > firstBrace) {
-            return trimmed.substring(firstBrace, lastBrace + 1).trim();
+        if (globalFirstBrace != -1 && globalLastBrace > globalFirstBrace) {
+            return trimmed.substring(globalFirstBrace, globalLastBrace + 1).trim();
         }
 
         return trimmed;

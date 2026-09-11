@@ -29,6 +29,13 @@ export class SummarizeHostInboxHandler implements IMcpToolHandler<SummarizeInput
     const context = SecurityContextHolder.getContext();
 
     const inboxPage = await this.client.getInbox({ archived: false, size: 100 });
+    const totalElements = inboxPage.totalElements ?? inboxPage.content.length;
+
+    // BUG-03: Informar al LLM si la consulta fue truncada a las primeras 100 conversaciones (consistencia con F-16 y F-17)
+    const truncationWarning =
+      totalElements > inboxPage.content.length
+        ? `\n[AVISO: Se analizaron ${inboxPage.content.length} de ${totalElements} conversaciones totales en la bandeja de entrada. Puede haber mensajes o candidatos adicionales en páginas posteriores no incluidos en este resumen.]`
+        : "";
 
     // Filtrar solo conversaciones donde el usuario activo actúa como anfitrión (isHost === true)
     let hostConversations = inboxPage.content.filter((c) => c.isHost);
@@ -44,7 +51,7 @@ export class SummarizeHostInboxHandler implements IMcpToolHandler<SummarizeInput
             type: "text",
             text: `No se encontraron conversaciones activas como anfitrion para el usuario (${context.email})${
               listingId ? ` en el anuncio ${listingId}` : ""
-            }.`
+            }.${truncationWarning}`
           }
         ]
       };
@@ -79,18 +86,19 @@ export class SummarizeHostInboxHandler implements IMcpToolHandler<SummarizeInput
       content: [
         {
           type: "text",
-          text: JSON.stringify(
-            {
-              resumen: {
-                totalConversacionesAnfitrion: hostConversations.length,
-                totalConversacionesConNoLeidos: unreadConversations.length,
-                totalMensajesNoLeidos: unreadConversations.reduce((acc, c) => acc + c.unreadCount, 0)
+          text:
+            JSON.stringify(
+              {
+                resumen: {
+                  totalConversacionesAnfitrion: hostConversations.length,
+                  totalConversacionesConNoLeidos: unreadConversations.length,
+                  totalMensajesNoLeidos: unreadConversations.reduce((acc, c) => acc + c.unreadCount, 0)
+                },
+                candidatos: candidatesSummary
               },
-              candidatos: candidatesSummary
-            },
-            null,
-            2
-          )
+              null,
+              2
+            ) + truncationWarning
         }
       ]
     };

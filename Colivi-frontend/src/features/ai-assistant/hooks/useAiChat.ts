@@ -89,15 +89,25 @@ export const useAiChat = () => {
   // F-23: Sincronización real del historial entre múltiples pestañas del navegador
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === storageKey && e.newValue) {
-        try {
-          const parsed = JSON.parse(e.newValue);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            messagesRef.current = parsed;
-            setMessages(parsed);
+      if (e.key === storageKey) {
+        if (e.newValue) {
+          try {
+            const parsed = JSON.parse(e.newValue);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              messagesRef.current = parsed;
+              setMessages(parsed);
+            }
+          } catch {
+            // Ignorar parseos defectuosos externos
           }
-        } catch {
-          // Ignorar parseos defectuosos externos
+        } else {
+          // UX-02: Si otra pestaña limpió el historial (removeItem), sincronizar y restablecer saludo inicial
+          const resetMessage: AiChatMessage = {
+            ...INITIAL_GREETING,
+            timestamp: new Date().toISOString(),
+          };
+          messagesRef.current = [resetMessage];
+          setMessages([resetMessage]);
         }
       }
     };
@@ -109,9 +119,12 @@ export const useAiChat = () => {
     mutationFn: async (messageText: string) => {
       // Prepara el historial reciente excluyendo el mensaje de bienvenida inicial y mensajes de error
       // FNT-01: Usar messagesRef.current sincronizado de forma segura
+      // BUG-01: Truncar la ventana deslizante del historial a un máximo de 20 mensajes
+      // para respetar estrictamente la restricción @Size(max = 20) de AiChatRequest del backend.
       const currentMessages = messagesRef.current;
       const historyPayload = currentMessages
         .filter((msg) => msg.id !== 'greeting-msg' && !msg.isError)
+        .slice(-20)
         .map((msg) => ({
           role: msg.role,
           content: msg.content,

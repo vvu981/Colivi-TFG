@@ -169,6 +169,7 @@ export const AiChatWindow: React.FC<AiChatWindowProps> = ({
                 value={inputText}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
+                maxLength={2000}
                 placeholder="Pregunta sobre habitaciones, tareas o solicitudes..."
                 className="w-full resize-none max-h-28 px-3.5 py-2.5 text-sm rounded-xl bg-surface text-on-surface border border-outline-variant placeholder:text-secondary focus:outline-none focus:ring-2 focus:ring-primary/40 leading-relaxed transition-all"
                 disabled={isPending}

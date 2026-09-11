@@ -289,6 +289,52 @@ class SpringAiOrchestratorServiceImplTest {
     }
 
     @Test
+    @DisplayName("Debe propagar InvalidTokenException directamente sin envolverla en AiOrchestratorException (BUG-02)")
+    void processChat_InvalidTokenFromTicketService_PropagatesDirectly() {
+        McpTicketService unauthorizedTicketService = (url, token) -> {
+            throw new InvalidTokenException("Token de autenticación expirado o inválido ante el servidor MCP");
+        };
+
+        SpringAiOrchestratorServiceImpl service = new SpringAiOrchestratorServiceImpl(
+                chatModel,
+                "http://localhost:3001",
+                "qwen/qwen3.8-27b",
+                uri -> mcpSyncClient,
+                unauthorizedTicketService);
+
+        AiChatRequest request = new AiChatRequest("Consulta con token caducado", List.of());
+
+        assertThatThrownBy(() -> service.processChat(request, "expired-jwt"))
+                .isInstanceOf(InvalidTokenException.class)
+                .hasMessageContaining("Token de autenticación expirado o inválido");
+    }
+
+    @Test
+    @DisplayName("Debe extraer JSON correctamente cuando el campo response contiene bloques de código markdown anidados (ROB-01)")
+    void processChat_ExtractsJsonWithNestedMarkdownCodeBlock() {
+        when(mcpSyncClient.listTools()).thenReturn(new McpSchema.ListToolsResult(List.of(), null));
+
+        String jsonWithNestedMarkdown = "{\"response\":\"Para listar tus tareas usa este comando:\\n```bash\\ncurl http://localhost:8080/homes/1/chores\\n```\\n¡Listo!\",\"draft\":null,\"toolsUsed\":[]}";
+        Generation generation = new Generation(new AssistantMessage(jsonWithNestedMarkdown));
+        ChatResponse chatResponse = new ChatResponse(List.of(generation));
+        when(chatModel.call(any(Prompt.class))).thenReturn(chatResponse);
+
+        SpringAiOrchestratorServiceImpl service = new SpringAiOrchestratorServiceImpl(
+                chatModel,
+                "http://localhost:3001",
+                "qwen/qwen3.8-27b",
+                uri -> mcpSyncClient,
+                mockTicketService);
+
+        AiChatRequest request = new AiChatRequest("¿Cómo listo mis tareas por curl?", null);
+        AiChatResponse response = service.processChat(request, "valid-jwt");
+
+        assertThat(response).isNotNull();
+        assertThat(response.response()).contains("```bash");
+        assertThat(response.response()).contains("curl http://localhost:8080/homes/1/chores");
+    }
+
+    @Test
     @DisplayName("Debe capturar fallos de conexión al servidor MCP y lanzar RuntimeException informativa")
     void processChat_McpConnectionFailure_ThrowsInformativeException() {
         SpringAiOrchestratorServiceImpl service = new SpringAiOrchestratorServiceImpl(

@@ -2,6 +2,7 @@ package com.vvu981.colivibackend.features.ai.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vvu981.colivibackend.features.user.exception.InvalidTokenException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -60,9 +61,17 @@ public class DefaultMcpTicketService implements McpTicketService {
                 if (root.has("ticket")) {
                     return root.get("ticket").asText();
                 }
+            } else if (response.statusCode() == 401) {
+                // BUG-02: El servidor MCP rechazó el token JWT por expirado o inválido.
+                // Lanzar InvalidTokenException directamente para evitar enmascarar con 502
+                // y prevenir que se dispare falsamente el Circuit Breaker de Resilience4j.
+                log.warn("El servidor MCP rechazó la autenticación con HTTP 401 para {}", cleanMcpUrl);
+                throw new InvalidTokenException("Token de autenticación expirado o inválido ante el servidor MCP");
             } else {
                 log.warn("El servidor MCP no expidio ticket de sesion (HTTP {})", response.statusCode());
             }
+        } catch (InvalidTokenException e) {
+            throw e;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             log.warn("Interrupcion al solicitar ticket efimero de autenticacion MCP en {}: {}", cleanMcpUrl, e.getMessage());

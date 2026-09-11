@@ -12,9 +12,18 @@ export const AiMessageBubble: React.FC<AiMessageBubbleProps> = ({ message }) => 
   const isAssistant = message.role === 'assistant';
 
   const handleCopyDraft = (textToCopy: string) => {
-    navigator.clipboard.writeText(textToCopy);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    // ROB-02: Manejo seguro ante navegadores o contextos restringidos que rechacen el portapapeles
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard
+        .writeText(textToCopy)
+        .then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        })
+        .catch((err) => {
+          console.warn('No se pudo copiar el texto al portapapeles:', err);
+        });
+    }
   };
 
   return (

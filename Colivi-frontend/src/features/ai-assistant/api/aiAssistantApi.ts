@@ -30,6 +30,21 @@ export const aiAssistantApi = {
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
         const status = error.response.status;
+
+        // UX-01: Si el backend devuelve errores de validación específicos (@Valid), mostrarlos con prioridad
+        if (status === 400 && error.response.data) {
+          const data = error.response.data as { message?: string; errors?: Record<string, string> };
+          if (data.errors && typeof data.errors === 'object') {
+            const firstError = Object.values(data.errors)[0];
+            if (firstError) {
+              throw new Error(firstError);
+            }
+          }
+          if (data.message && typeof data.message === 'string' && data.message !== 'Validation failed') {
+            throw new Error(data.message);
+          }
+        }
+
         const friendlyMessage =
           HTTP_ERROR_MESSAGES[status] ??
           `Error inesperado del servidor (${status}). Por favor, intentalo de nuevo.`;

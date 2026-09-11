@@ -233,4 +233,28 @@ describe("VibeClassifier Suite", () => {
     const vibe = VibeClassifier.classify(listingWithProhibition);
     assert.equal(vibe, "QUIET");
   });
+
+  it("should not classify dwelling type 'estudio' as QUIET when no study context is present (DOM-01)", () => {
+    const studioApartment: AccommodationListingItem = {
+      id: "studio-1",
+      title: "Estudio moderno en alquiler",
+      description: "Acogedor estudio recién reformado con baño privado y cocina equipada.",
+      pricePerMonth: 650,
+      rentalType: "STUDIO",
+      status: "ACTIVE",
+      accommodation: {
+        id: "acc-studio",
+        address: "Calle Atocha 10",
+        city: "Madrid",
+        country: "Spain",
+        totalRooms: 1,
+        freeRooms: 1,
+        amenities: ["WIFI", "AIR_CONDITIONING"]
+      }
+    };
+
+    const vibe = VibeClassifier.classify(studioApartment);
+    assert.notEqual(vibe, "QUIET");
+    assert.equal(vibe, "ANY");
+  });
 });

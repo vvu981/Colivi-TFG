@@ -367,6 +367,46 @@ describe("MCP Tools & Handlers Suite", () => {
     });
   });
 
+  it("summarize_host_inbox: should append truncation warning when totalElements exceeds page size (BUG-03)", async () => {
+    const mockInboxTruncated: PageResponse<ConversationSummary> = {
+      content: [
+        {
+          conversationId: "conv-1",
+          listingId: "listing-uuid-1",
+          listingTitle: "Habitacion Luminosa",
+          interlocutorId: "candidate-uuid-1",
+          interlocutorName: "Ana Gomez",
+          unreadCount: 1,
+          isHost: true,
+          isArchived: false
+        }
+      ],
+      totalElements: 150,
+      totalPages: 2,
+      size: 100,
+      number: 0
+    };
+
+    const mockMessagingClient: IMessagingClient = {
+      getInbox: async () => mockInboxTruncated
+    };
+
+    const handler = new SummarizeHostInboxHandler(mockMessagingClient);
+    const hostContext = {
+      userId: "host-uuid-1",
+      email: "host@colivi.com",
+      role: "USER" as const,
+      token: "tok"
+    };
+
+    await SecurityContextHolder.run(hostContext, async () => {
+      const result = await handler.execute({});
+      assert.equal(result.isError, undefined);
+      const text = extractText(result.content[0]);
+      assert.match(text, /AVISO: Se analizaron 1 de 150 conversaciones totales/);
+    });
+  });
+
   it("search_coliving_listings: should return friendly message when no listings found and throw on invalid args", async () => {
     const mockEmptyClient: IListingClient = {
       searchCatalog: async () => ({

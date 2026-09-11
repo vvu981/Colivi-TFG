@@ -39,14 +39,21 @@ export class VibeClassifier {
           description.includes("eventos") ||
           description.includes("comunidad")));
 
+    // DOM-01: Evitar falsos positivos con la palabra "estudio" referida al tipo de vivienda (ej. "estudio de 30m2")
+    const hasStudyArea =
+      /(?:zona|espacio|sala|habitaci[oó]n|mesa|ambiente|lugar)\s+de\s+estudio|para\s+estudi(?:o|ar)/i.test(
+        description
+      );
+
     const hasQuiet =
       amenities.includes("WORK_ZONE") ||
       amenities.includes("DESK") ||
       amenities.includes("SILENT_AREA") ||
       description.includes("tranquilo") ||
-      description.includes("estudio") ||
+      hasStudyArea ||
       description.includes("quiet") ||
       description.includes("concentracion") ||
+      description.includes("concentración") ||
       description.includes("silencio") ||
       hasSocialNegation;
 

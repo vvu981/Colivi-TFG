@@ -158,4 +158,11 @@ describe('AiChatWindow component', () => {
     expect(screen.getByRole('link', { name: /iniciar sesión/i })).toBeInTheDocument();
     expect(screen.queryByPlaceholderText(/Pregunta sobre habitaciones/i)).not.toBeInTheDocument();
   });
+
+  it('configura el límite maxLength en 2000 caracteres en el textarea (UX-01)', () => {
+    renderComponent();
+
+    const textarea = screen.getByPlaceholderText(/Pregunta sobre habitaciones/i);
+    expect(textarea).toHaveAttribute('maxLength', '2000');
+  });
 });
