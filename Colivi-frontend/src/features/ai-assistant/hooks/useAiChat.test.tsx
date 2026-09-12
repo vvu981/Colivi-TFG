@@ -321,7 +321,7 @@ describe('useAiChat hook', () => {
 
     vi.mocked(aiAssistantApi.sendMessage).mockResolvedValueOnce({
       response: 'Respuesta del modelo',
-      draft: null,
+      draft: undefined,
       toolsUsed: [],
     });
 
@@ -336,8 +336,8 @@ describe('useAiChat hook', () => {
 
     // history no debe exceder 20 mensajes para respetar @Size(max=20) de AiChatRequest
     expect(calledPayload.history).toHaveLength(20);
-    expect(calledPayload.history[0].content).toBe('Mensaje previo 6');
-    expect(calledPayload.history[19].content).toBe('Mensaje previo 25');
+    expect(calledPayload.history![0].content).toBe('Mensaje previo 6');
+    expect(calledPayload.history![19].content).toBe('Mensaje previo 25');
     expect(calledPayload.message).toBe('Consulta número 26');
   });
 
