@@ -1,5 +1,6 @@
 import { Header } from "../components/layout/Header";
 import { Footer } from "../components/layout/Footer";
+import { AiAssistantWidget } from "../features/ai-assistant";
 
 export const MainLayout = ({ children }: { children: React.ReactNode }) => (
   <div className="flex flex-col min-h-screen">
@@ -8,5 +9,6 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => (
       {children}
     </main>
     <Footer />
+    <AiAssistantWidget />
   </div>
 );

@@ -1,5 +1,6 @@
 package com.vvu981.colivibackend.core.exception;
 
+import com.vvu981.colivibackend.features.ai.exception.AiOrchestratorException;
 import com.vvu981.colivibackend.features.user.exception.AccountAlreadyActiveException;
 import com.vvu981.colivibackend.features.user.exception.AccountBannedException;
 import com.vvu981.colivibackend.features.user.exception.AccountDeletedException;
@@ -66,6 +67,14 @@ public class GlobalExceptionHandler {
     })
     public ResponseEntity<Map<String, Object>> handleBadRequest(RuntimeException ex) {
         return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    // Fallos de infraestructura del asistente IA (502 Bad Gateway)
+    // Nunca exponemos el detalle interno (mensaje del MCP o Groq) al cliente.
+    @ExceptionHandler(AiOrchestratorException.class)
+    public ResponseEntity<Map<String, Object>> handleAiOrchestrator(AiOrchestratorException ex) {
+        return buildErrorResponse(HttpStatus.BAD_GATEWAY,
+                "El asistente inteligente no esta disponible en este momento. Por favor, intentalo de nuevo mas tarde.");
     }
 
     // Errores de validación de campos (@Valid en los controladores) → 400 Bad Request
