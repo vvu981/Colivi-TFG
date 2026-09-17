@@ -22,25 +22,25 @@ skinparam usecase {
 ' ==========================================================
 ' ACTORES Y SISTEMAS EXTERNOS
 ' ==========================================================
-actor "Usuario Invitado" as Guest
-actor "Usuario Autenticado" as User
-actor "Inquilino (Tenant)" as Tenant
-actor "Anfitrión (Host)" as Host
-actor "Compañero de Piso (Home Member)" as Member
-actor "Administrador del Hogar (Home Admin)" as HomeAdmin
-actor "Administrador Global (Platform Admin)" as SysAdmin
+actor "Usuario Invitado" as Invitado
+actor "Usuario Autenticado" as Usuario
+actor "Inquilino" as Inquilino
+actor "Anfitrión" as Anfitrion
+actor "Compañero de Piso" as Companero
+actor "Administrador del Hogar" as AdministradorHogar
+actor "Administrador del Sistema" as AdministradorSistema
 
-actor "Google OAuth" as ExtGoogle << System >>
-actor "Cloudinary CDN" as ExtCloudinary << System >>
-actor "OpenStreetMap / Nominatim" as ExtOSM << System >>
+actor "Google OAuth" as ExtGoogle << Sistema >>
+actor "Cloudinary CDN" as ExtCloudinary << Sistema >>
+actor "OpenStreetMap / Nominatim" as ExtOSM << Sistema >>
 
 ' Jerarquía y especialización de actores
-Guest <|-- User
-User <|-- Tenant
-User <|-- Host
-User <|-- Member
-Member <|-- HomeAdmin
-User <|-- SysAdmin
+Invitado <|-- Usuario
+Usuario <|-- Inquilino
+Usuario <|-- Anfitrion
+Usuario <|-- Companero
+Companero <|-- AdministradorHogar
+Usuario <|-- AdministradorSistema
 
 ' ==========================================================
 ' SISTEMA COLIVI
@@ -49,10 +49,10 @@ rectangle "Plataforma Colivi" {
 
   ' --- CUENTA Y AUTENTICACIÓN ---
   package "Gestión de Identidad, Sesión y Perfil" {
-    usecase "Registrarse con Email/Password" as UC_Reg
+    usecase "Registrarse con Correo y Contraseña" as UC_Reg
     usecase "Autenticarse con Credenciales" as UC_LoginLocal
-    usecase "Autenticarse vía Google OAuth" as UC_LoginGoogle
-    usecase "Renovar Token de Acceso (Refresh Token)" as UC_RefreshToken
+    usecase "Autenticarse mediante Google OAuth" as UC_LoginGoogle
+    usecase "Renovar Token de Acceso" as UC_RefreshToken
     usecase "Cerrar Sesión Activa" as UC_Logout
     usecase "Solicitar Restablecimiento de Contraseña" as UC_ForgotPass
     usecase "Restablecer Contraseña con Token Seguro" as UC_ResetPass
@@ -60,25 +60,25 @@ rectangle "Plataforma Colivi" {
     usecase "Confirmar Reactivación con Token" as UC_ConfirmReactivation
     usecase "Consultar Perfil Propio" as UC_GetMyProfile
     usecase "Actualizar Información Personal (No Sensible)" as UC_UpdateNonSensible
-    usecase "Actualizar Credenciales/Email (Sensible)" as UC_UpdateSensible
-    usecase "Subir/Actualizar Avatar de Perfil" as UC_UploadAvatar
+    usecase "Actualizar Credenciales o Correo (Sensible)" as UC_UpdateSensible
+    usecase "Subir o Actualizar Imagen de Perfil" as UC_UploadAvatar
     usecase "Consultar Perfil Público de Terceros" as UC_ViewPublicProfile
-    usecase "Dar de Baja Propia Cuenta (Soft Delete)" as UC_DeleteAccount
+    usecase "Dar de Baja Cuenta Propia (Borrado Lógico)" as UC_DeleteAccount
   }
 
   ' --- ALOJAMIENTOS Y ANUNCIOS ---
-  package "Gestión de Inmuebles y Publicaciones (Housing)" {
+  package "Gestión de Inmuebles y Publicaciones" {
     usecase "Buscar Anuncios con Filtros Combinados" as UC_SearchListings
-    usecase "Explorar Anuncios en Mapa Interactivo (Leaflet)" as UC_MapBrowse
-    usecase "Consultar Detalle de Anuncio y Habitaciones Hermanas" as UC_ViewListingDetail
-    usecase "Registrar Inmueble Base (Accommodation)" as UC_CreateAccom
+    usecase "Explorar Anuncios en Mapa Interactivo" as UC_MapBrowse
+    usecase "Consultar Detalle de Anuncio y Habitaciones Vinculadas" as UC_ViewListingDetail
+    usecase "Registrar Inmueble Base" as UC_CreateAccom
     usecase "Modificar Datos del Inmueble Base" as UC_UpdateAccom
     usecase "Subir Galería Fotográfica a CDN" as UC_UploadAccomImages
     usecase "Geolocalizar Dirección en Mapa" as UC_GeocodeAccom
-    usecase "Publicar Nuevo Anuncio (Listing: Habitación/Piso)" as UC_CreateListing
-    usecase "Actualizar Precios, Depósito y Condiciones de Anuncio" as UC_UpdateListing
+    usecase "Publicar Nuevo Anuncio (Habitación o Piso Completo)" as UC_CreateListing
+    usecase "Actualizar Precios, Depósito y Condiciones" as UC_UpdateListing
     usecase "Seleccionar y Ordenar Imágenes para el Anuncio" as UC_ManageListingPhotos
-    usecase "Cambiar Visibilidad de Anuncio (Disponible/No Disponible)" as UC_ToggleListingStatus
+    usecase "Cambiar Visibilidad de Anuncio (Disponible o Pausado)" as UC_ToggleListingStatus
     usecase "Consultar Historial de Búsquedas Recientes" as UC_SearchHistory
     usecase "Obtener Recomendaciones Personalizadas" as UC_GetRecommendations
   }
@@ -91,50 +91,50 @@ rectangle "Plataforma Colivi" {
   }
 
   ' --- RESERVAS Y DEPÓSITOS ---
-  package "Ciclo de Vida de Reservas (Bookings)" {
+  package "Ciclo de Vida de Reservas" {
     usecase "Enviar Solicitud de Reserva con Rango de Fechas" as UC_SubmitBooking
     usecase "Consultar Historial de Mis Solicitudes (Inquilino)" as UC_ViewMyBookings
     usecase "Cancelar Solicitud de Reserva Pendiente" as UC_CancelBooking
     usecase "Consultar Solicitudes Recibidas (Anfitrión)" as UC_ViewHostBookings
     usecase "Aceptar Solicitud de Reserva" as UC_AcceptBooking
     usecase "Rechazar Solicitud de Reserva" as UC_RejectBooking
-    usecase "Confirmar y Registrar Pago de Reserva" as UC_ConfirmDepositPayment
+    usecase "Confirmar y Registrar Pago de Fianza" as UC_ConfirmDepositPayment
   }
 
-  ' --- CONVIVENCIA: COMUNIDAD HOGAR (HOMES) ---
-  package "Comunidad de Convivencia (Homes)" {
-    usecase "Crear Espacio de Convivencia (Home)" as UC_CreateHome
+  ' --- CONVIVENCIA: COMUNIDAD HOGAR ---
+  package "Comunidad de Convivencia y Hogar" {
+    usecase "Crear Espacio de Convivencia" as UC_CreateHome
     usecase "Consultar Panel y Detalle de Convivencia" as UC_GetHomeDetail
-    usecase "Generar/Regenerar Código de Invitación Alfanumérico" as UC_GenInviteCode
-    usecase "Unirse a un Hogar Mediante Código de Invitación" as UC_JoinHomeByCode
+    usecase "Generar o Regenerar Código de Invitación" as UC_GenInviteCode
+    usecase "Unirse a un Hogar Mediante Código" as UC_JoinHomeByCode
     usecase "Personalizar Color de Identificación en el Hogar" as UC_SetMemberColor
-    usecase "Consultar Registro Cronológico de Actividad (Feed)" as UC_ViewActivityFeed
+    usecase "Consultar Registro Cronológico de Actividad" as UC_ViewActivityFeed
     usecase "Transferir Privilegios de Administrador del Hogar" as UC_TransferHomeAdmin
     usecase "Expulsar Miembro del Hogar" as UC_ExpelMember
-    usecase "Abandonar Convivencia (Leave Home)" as UC_LeaveHome
-    usecase "Archivar / Desarchivar Vista de Hogar" as UC_ArchiveHome
+    usecase "Abandonar Convivencia" as UC_LeaveHome
+    usecase "Archivar o Desarchivar Vista de Hogar" as UC_ArchiveHome
     usecase "Consultar Historial de Hogares Pasados" as UC_ViewArchivedHomes
   }
 
   ' --- CONVIVENCIA: GASTOS Y BALANCES ---
-  package "Gestión Financiera Compartida (Expenses)" {
+  package "Gestión Financiera Compartida" {
     usecase "Registrar Nuevo Gasto con Reparto" as UC_CreateExpense
     usecase "Modificar Detalles o Reparto de Gasto" as UC_UpdateExpense
     usecase "Eliminar Gasto del Registro" as UC_DeleteExpense
     usecase "Filtrar Gastos por Fechas y Participantes" as UC_FilterExpenses
     usecase "Consultar Balances y Transferencias Sugeridas" as UC_ViewDebtTransfers
-    usecase "Registrar Liquidación / Pago Directo entre Miembros" as UC_RecordSettlement
-    usecase "Comprobar Saldo Cero Antes de Salida/Expulsión" as UC_ValidateZeroBalance
+    usecase "Registrar Liquidación o Pago Directo entre Miembros" as UC_RecordSettlement
+    usecase "Comprobar Saldo Cero Antes de Salida o Expulsión" as UC_ValidateZeroBalance
   }
 
-  ' --- CONVIVENCIA: TAREAS DOMÉSTICAS (CHORES) ---
+  ' --- CONVIVENCIA: TAREAS DOMÉSTICAS ---
   package "Motor de Tareas Domésticas y Puntos" {
     usecase "Crear Tarea Única o Serie Recurrente" as UC_CreateChoreSeries
-    usecase "Configurar Estrategia de Asignación (Fija / Round Robin)" as UC_SetAssignmentStrategy
+    usecase "Configurar Estrategia de Asignación (Fija o Rotativa)" as UC_SetAssignmentStrategy
     usecase "Visualizar Tareas en Calendario y Cuadrante" as UC_ViewChoresBoard
     usecase "Completar Tarea Asignada" as UC_CompleteMyChore
     usecase "Rescatar Tarea Vencida de Otro Miembro" as UC_RescueChore
-    usecase "Eliminar Tarea o Serie" as UC_DeleteChore
+    usecase "Eliminar Tarea o Serie Recurrente" as UC_DeleteChore
     usecase "Reasignar Tareas al Salir un Miembro" as UC_RebalanceChores
   }
 
@@ -147,136 +147,136 @@ rectangle "Plataforma Colivi" {
     usecase "Marcar Conversación como Leída" as UC_MarkChatAsRead
   }
 
-  ' --- ASISTENTE IA & MCP ORCHESTRATOR ---
-  package "Asistente Inteligente (Spring AI & Model Context Protocol)" {
+  ' --- ASISTENTE INTELIGENTE ---
+  package "Asistente Inteligente y Orquestación de Herramientas" {
     usecase "Dialogar con el Asistente en Lenguaje Natural" as UC_AiChatWidget
-    usecase "Obtener Ticket Efímero de Autenticación MCP" as UC_IssueMcpTicket
-    usecase "Herramienta MCP: Búsqueda Semántica por Vibe" as UC_ToolSearchVibe
-    usecase "Herramienta MCP: Consulta de Estado de Reservas" as UC_ToolCheckBookings
-    usecase "Herramienta MCP: Resumen Inteligente de Mensajes" as UC_ToolSummarizeInbox
-    usecase "Herramienta MCP: Estado de Tareas del Hogar" as UC_ToolChoresOverview
-    usecase "Herramienta MCP: Inspección de Cola de Moderación" as UC_ToolAdminModQueue
+    usecase "Obtener Ticket Temporal de Autenticación de Herramientas" as UC_IssueMcpTicket
+    usecase "Herramienta: Búsqueda Semántica por Preferencias" as UC_ToolSearchVibe
+    usecase "Herramienta: Consulta de Estado de Reservas" as UC_ToolCheckBookings
+    usecase "Herramienta: Resumen Inteligente de Mensajes" as UC_ToolSummarizeInbox
+    usecase "Herramienta: Estado de Tareas del Hogar" as UC_ToolChoresOverview
+    usecase "Herramienta: Inspección de Cola de Moderación" as UC_ToolAdminModQueue
   }
 
   ' --- MODERACIÓN Y GOBERNANZA GLOBAL ---
-  package "Panel de Administración y Moderación (Platform Admin)" {
-    usecase "Reportar Anuncio, Usuario o Conversación" as UC_SubmitReport
-    usecase "Recibir Feedback de Resolución de Reporte" as UC_ReceiveReportFeedback
-    usecase "Listar y Filtrar Cola Global de Reportes" as UC_ListAdminReports
-    usecase "Revisar Historial de Conversación Reportada" as UC_AdminInspectChat
-    usecase "Resolver Reporte Individual con Veredicto" as UC_ResolveSingleReport
-    usecase "Procesar Reportes en Lote (Bulk Action)" as UC_ResolveBulkReports
-    usecase "Consultar Ranking de Elementos Más Reportados" as UC_MostReportedRanking
+  package "Panel de Administración y Moderación" {
+    usecase "Denunciar Anuncio, Usuario o Conversación" as UC_SubmitReport
+    usecase "Recibir Notificación de Resolución de Denuncia" as UC_ReceiveReportFeedback
+    usecase "Listar y Filtrar Cola Global de Denuncias" as UC_ListAdminReports
+    usecase "Revisar Historial de Conversación Denunciada" as UC_AdminInspectChat
+    usecase "Resolver Denuncia Individual con Veredicto" as UC_ResolveSingleReport
+    usecase "Procesar Denuncias en Lote" as UC_ResolveBulkReports
+    usecase "Consultar Ranking de Elementos Más Denunciados" as UC_MostReportedRanking
     usecase "Listar Usuarios Registrados con Filtros" as UC_AdminListUsers
-    usecase "Suspender / Banear Usuario de la Plataforma" as UC_AdminBanUser
+    usecase "Suspender o Bloquear Usuario de la Plataforma" as UC_AdminBanUser
     usecase "Listar Catálogo Global de Anuncios" as UC_AdminListListings
-    usecase "Bloquear / Despublicar Anuncio Infractor" as UC_AdminBanListing
+    usecase "Bloquear o Despublicar Anuncio Infractor" as UC_AdminBanListing
   }
 }
 
 ' ==========================================================
-' ASOCIACIONES DE INVITADOS (GUEST)
+' ASOCIACIONES DE INVITADOS
 ' ==========================================================
-Guest --> UC_Reg
-Guest --> UC_LoginLocal
-Guest --> UC_LoginGoogle
-Guest --> UC_ForgotPass
-Guest --> UC_ResetPass
-Guest --> UC_ReqReactivation
-Guest --> UC_ConfirmReactivation
-Guest --> UC_SearchListings
-Guest --> UC_MapBrowse
-Guest --> UC_ViewListingDetail
-Guest --> UC_ViewReviews
-Guest --> UC_ViewPublicProfile
+Invitado --> UC_Reg
+Invitado --> UC_LoginLocal
+Invitado --> UC_LoginGoogle
+Invitado --> UC_ForgotPass
+Invitado --> UC_ResetPass
+Invitado --> UC_ReqReactivation
+Invitado --> UC_ConfirmReactivation
+Invitado --> UC_SearchListings
+Invitado --> UC_MapBrowse
+Invitado --> UC_ViewListingDetail
+Invitado --> UC_ViewReviews
+Invitado --> UC_ViewPublicProfile
 
 ' ==========================================================
-' ASOCIACIONES DE USUARIO REGISTRADO (USER)
+' ASOCIACIONES DE USUARIO REGISTRADO
 ' ==========================================================
-User --> UC_Logout
-User --> UC_RefreshToken
-User --> UC_GetMyProfile
-User --> UC_UpdateNonSensible
-User --> UC_UpdateSensible
-User --> UC_UploadAvatar
-User --> UC_DeleteAccount
-User --> UC_SearchHistory
-User --> UC_GetRecommendations
-User --> UC_StartConversation
-User --> UC_ViewInbox
-User --> UC_ViewChatMessages
-User --> UC_SendChatMessage
-User --> UC_MarkChatAsRead
-User --> UC_SubmitReport
-User --> UC_ReceiveReportFeedback
-User --> UC_AiChatWidget
+Usuario --> UC_Logout
+Usuario --> UC_RefreshToken
+Usuario --> UC_GetMyProfile
+Usuario --> UC_UpdateNonSensible
+Usuario --> UC_UpdateSensible
+Usuario --> UC_UploadAvatar
+Usuario --> UC_DeleteAccount
+Usuario --> UC_SearchHistory
+Usuario --> UC_GetRecommendations
+Usuario --> UC_StartConversation
+Usuario --> UC_ViewInbox
+Usuario --> UC_ViewChatMessages
+Usuario --> UC_SendChatMessage
+Usuario --> UC_MarkChatAsRead
+Usuario --> UC_SubmitReport
+Usuario --> UC_ReceiveReportFeedback
+Usuario --> UC_AiChatWidget
 
 ' ==========================================================
-' ASOCIACIONES DE INQUILINO (TENANT)
+' ASOCIACIONES DE INQUILINO
 ' ==========================================================
-Tenant --> UC_SubmitBooking
-Tenant --> UC_ViewMyBookings
-Tenant --> UC_CancelBooking
-Tenant --> UC_ConfirmDepositPayment
-Tenant --> UC_WriteReview
+Inquilino --> UC_SubmitBooking
+Inquilino --> UC_ViewMyBookings
+Inquilino --> UC_CancelBooking
+Inquilino --> UC_ConfirmDepositPayment
+Inquilino --> UC_WriteReview
 
 ' ==========================================================
-' ASOCIACIONES DE ANFITRIÓN (HOST)
+' ASOCIACIONES DE ANFITRIÓN
 ' ==========================================================
-Host --> UC_CreateAccom
-Host --> UC_UpdateAccom
-Host --> UC_UploadAccomImages
-Host --> UC_GeocodeAccom
-Host --> UC_CreateListing
-Host --> UC_UpdateListing
-Host --> UC_ManageListingPhotos
-Host --> UC_ToggleListingStatus
-Host --> UC_ViewHostBookings
-Host --> UC_AcceptBooking
-Host --> UC_RejectBooking
+Anfitrion --> UC_CreateAccom
+Anfitrion --> UC_UpdateAccom
+Anfitrion --> UC_UploadAccomImages
+Anfitrion --> UC_GeocodeAccom
+Anfitrion --> UC_CreateListing
+Anfitrion --> UC_UpdateListing
+Anfitrion --> UC_ManageListingPhotos
+Anfitrion --> UC_ToggleListingStatus
+Anfitrion --> UC_ViewHostBookings
+Anfitrion --> UC_AcceptBooking
+Anfitrion --> UC_RejectBooking
 
 ' ==========================================================
-' ASOCIACIONES DE MIEMBRO DEL HOGAR (HOME MEMBER)
+' ASOCIACIONES DE COMPAÑERO DE PISO
 ' ==========================================================
-Member --> UC_GetHomeDetail
-Member --> UC_JoinHomeByCode
-Member --> UC_SetMemberColor
-Member --> UC_ViewActivityFeed
-Member --> UC_LeaveHome
-Member --> UC_CreateExpense
-Member --> UC_UpdateExpense
-Member --> UC_DeleteExpense
-Member --> UC_FilterExpenses
-Member --> UC_ViewDebtTransfers
-Member --> UC_RecordSettlement
-Member --> UC_ViewChoresBoard
-Member --> UC_CompleteMyChore
-Member --> UC_RescueChore
+Companero --> UC_GetHomeDetail
+Companero --> UC_JoinHomeByCode
+Companero --> UC_SetMemberColor
+Companero --> UC_ViewActivityFeed
+Companero --> UC_LeaveHome
+Companero --> UC_CreateExpense
+Companero --> UC_UpdateExpense
+Companero --> UC_DeleteExpense
+Companero --> UC_FilterExpenses
+Companero --> UC_ViewDebtTransfers
+Companero --> UC_RecordSettlement
+Companero --> UC_ViewChoresBoard
+Companero --> UC_CompleteMyChore
+Companero --> UC_RescueChore
 
 ' ==========================================================
-' ASOCIACIONES DE ADMINISTRADOR DEL HOGAR (HOME ADMIN)
+' ASOCIACIONES DE ADMINISTRADOR DEL HOGAR
 ' ==========================================================
-HomeAdmin --> UC_CreateHome
-HomeAdmin --> UC_GenInviteCode
-HomeAdmin --> UC_TransferHomeAdmin
-HomeAdmin --> UC_ExpelMember
-HomeAdmin --> UC_ArchiveHome
-HomeAdmin --> UC_ViewArchivedHomes
-HomeAdmin --> UC_CreateChoreSeries
-HomeAdmin --> UC_DeleteChore
+AdministradorHogar --> UC_CreateHome
+AdministradorHogar --> UC_GenInviteCode
+AdministradorHogar --> UC_TransferHomeAdmin
+AdministradorHogar --> UC_ExpelMember
+AdministradorHogar --> UC_ArchiveHome
+AdministradorHogar --> UC_ViewArchivedHomes
+AdministradorHogar --> UC_CreateChoreSeries
+AdministradorHogar --> UC_DeleteChore
 
 ' ==========================================================
-' ASOCIACIONES DE ADMINISTRADOR GLOBAL (PLATFORM ADMIN)
+' ASOCIACIONES DE ADMINISTRADOR DEL SISTEMA
 ' ==========================================================
-SysAdmin --> UC_ListAdminReports
-SysAdmin --> UC_AdminInspectChat
-SysAdmin --> UC_ResolveSingleReport
-SysAdmin --> UC_ResolveBulkReports
-SysAdmin --> UC_MostReportedRanking
-SysAdmin --> UC_AdminListUsers
-SysAdmin --> UC_AdminBanUser
-SysAdmin --> UC_AdminListListings
-SysAdmin --> UC_AdminBanListing
+AdministradorSistema --> UC_ListAdminReports
+AdministradorSistema --> UC_AdminInspectChat
+AdministradorSistema --> UC_ResolveSingleReport
+AdministradorSistema --> UC_ResolveBulkReports
+AdministradorSistema --> UC_MostReportedRanking
+AdministradorSistema --> UC_AdminListUsers
+AdministradorSistema --> UC_AdminBanUser
+AdministradorSistema --> UC_AdminListListings
+AdministradorSistema --> UC_AdminBanListing
 
 ' ==========================================================
 ' DEPENDENCIAS EXTERNAS
@@ -300,7 +300,7 @@ UC_WriteReview ..> UC_CheckReviewEligibility : <<include>>
 ' Reservas
 UC_ConfirmDepositPayment ..> UC_AcceptBooking : <<extend>>
 
-' Convivencia / Hogar
+' Convivencia y Hogar
 UC_LeaveHome ..> UC_ValidateZeroBalance : <<include>>
 UC_ExpelMember ..> UC_ValidateZeroBalance : <<include>>
 UC_LeaveHome ..> UC_RebalanceChores : <<include>>
@@ -313,7 +313,7 @@ UC_RescueChore ..> UC_CompleteMyChore : <<extend>>
 ' Gastos
 UC_RecordSettlement ..> UC_ViewDebtTransfers : <<include>>
 
-' Asistente IA y MCP Tools
+' Asistente Inteligente
 UC_AiChatWidget ..> UC_IssueMcpTicket : <<include>>
 UC_ToolSearchVibe ..> UC_AiChatWidget : <<extend>>
 UC_ToolCheckBookings ..> UC_AiChatWidget : <<extend>>
@@ -321,7 +321,7 @@ UC_ToolSummarizeInbox ..> UC_AiChatWidget : <<extend>>
 UC_ToolChoresOverview ..> UC_AiChatWidget : <<extend>>
 UC_ToolAdminModQueue ..> UC_AiChatWidget : <<extend>>
 
-' Moderación Admin
+' Moderación y Administración
 UC_ResolveBulkReports ..> UC_ResolveSingleReport : <<extend>>
 UC_AdminBanUser ..> UC_ResolveSingleReport : <<extend>>
 UC_AdminBanListing ..> UC_ResolveSingleReport : <<extend>>
@@ -334,37 +334,38 @@ UC_ResolveSingleReport ..> UC_ReceiveReportFeedback : <<include>>
 
 ## 2. Descripción de Actores del Sistema
 
-| Actor | Estereotipo / Tipo | Justificación en Arquitectura y Código Fuente |
+| Actor | Estereotipo o Tipo | Justificación en Arquitectura y Código Fuente |
 | :--- | :--- | :--- |
-| **Usuario Invitado** (`Guest`) | Humano | Usuario no autenticado que interactúa con endpoints públicos: catálogo de anuncios (`/api/v1/listings/search`), mapa interactivo, registro e inicio de sesión (`/api/v1/auth/**`). |
-| **Usuario Autenticado** (`User`) | Humano | Usuario autenticado portador de JWT válido (`UserRole.USER`). Accede a perfil propio, cambio de contraseña, borrado de cuenta, denuncias y asistente IA. |
-| **Inquilino** (`Tenant`) | Rol Contextual | Especialización de `User`. Interactúa como demandante de alojamiento: envía solicitudes de reserva, confirma depósitos, chatea con anfitriones y publica reseñas de estancias completadas. |
-| **Anfitrión** (`Host`) | Rol Contextual | Especialización de `User`. Interactúa como propietario/gestor de alojamiento: da de alta inmuebles base (`Accommodation`), publica anuncios (`AccommodationListing`), gestiona fotos y acepta/rechaza reservas. |
-| **Compañero de Piso** (`Member`) | Rol de Convivencia | Especialización de `User`. Miembro activo de un hogar (`HomeMemberStatus.ACTIVE`). Registra gastos, abona liquidaciones, consulta balances simplificados (`DebtTransfer`) y completa tareas asignadas. |
-| **Administrador del Hogar** (`HomeAdmin`) | Rol de Convivencia | Especialización de `Member` (`HomeRole.ADMIN`). Creador o administrador delegado del piso. Gestiona códigos de invitación, expulsa compañeros, transfiere la administración y define series de tareas. |
-| **Administrador Global** (`SysAdmin`) | Humano / Rol Sistema | Especialización de `User` con autoridad `UserRole.ADMIN`. Accede al panel de moderación (`/api/v1/admin/**`), resolución individual o masiva de denuncias (`bulk-status`), ranking de infractores y suspensión de cuentas/anuncios. |
-| **Google OAuth** (`ExtGoogle`) | `<<System>>` | Servicio externo de identidad validado en backend mediante [GoogleTokenValidator.java](file:///c:/Users/vicva/Documents/universidad/Colivi-TFG/Colivi-backend/src/main/java/com/vvu981/colivibackend/features/user/service/GoogleTokenValidator.java). |
-| **Cloudinary CDN** (`ExtCloudinary`) | `<<System>>` | Servicio externo de almacenamiento y entrega de imágenes implementado en [CloudinaryImageStorageService.java](file:///c:/Users/vicva/Documents/universidad/Colivi-TFG/Colivi-backend/src/main/java/com/vvu981/colivibackend/core/storage/service/impl/CloudinaryImageStorageService.java). |
-| **OpenStreetMap / Nominatim** (`ExtOSM`) | `<<System>>` | Servicio externo de geocodificación cartográfica consumido por el cliente Leaflet en [MapPicker.tsx](file:///c:/Users/vicva/Documents/universidad/Colivi-TFG/Colivi-frontend/src/features/housing/components/accommodation/MapPicker.tsx). |
+| **Usuario Invitado** (`Invitado`) | Humano | Usuario no autenticado que interactúa con las funciones públicas: catálogo de anuncios (`/api/v1/listings/search`), mapa interactivo, registro e inicio de sesión (`/api/v1/auth/**`). |
+| **Usuario Autenticado** (`Usuario`) | Humano | Usuario autenticado titular de credenciales y sesión válida (`UserRole.USER`). Accede a perfil propio, cambio de contraseña, solicitud de baja de cuenta, emisión de denuncias y diálogo con el asistente inteligente. |
+| **Inquilino** (`Inquilino`) | Rol Contextual | Especialización de `Usuario`. Interactúa como demandante de alojamiento: envía solicitudes de reserva, confirma depósitos o fianzas, chatea con anfitriones y publica reseñas de estancias completadas. |
+| **Anfitrión** (`Anfitrion`) | Rol Contextual | Especialización de `Usuario`. Interactúa como propietario o gestor de alojamiento: da de alta inmuebles físicos base (`Accommodation`), publica anuncios (`AccommodationListing`), gestiona fotografías y acepta o rechaza solicitudes de reserva. |
+| **Compañero de Piso** (`Companero`) | Rol de Convivencia | Especialización de `Usuario`. Miembro activo de un hogar (`HomeMemberStatus.ACTIVE`). Registra gastos, abona liquidaciones, consulta balances simplificados (`DebtTransfer`) y completa tareas asignadas. |
+| **Administrador del Hogar** (`AdministradorHogar`) | Rol de Convivencia | Especialización de `Companero` (`HomeRole.ADMIN`). Creador o administrador delegado del piso. Gestiona códigos de invitación, expulsa compañeros, transfiere la administración y define series de tareas recurrentes. |
+| **Administrador del Sistema** (`AdministradorSistema`) | Humano o Rol Sistema | Especialización de `Usuario` con rol de administración (`UserRole.ADMIN`). Accede al panel de moderación (`/api/v1/admin/**`), resolución individual o masiva de denuncias, ranking de infractores y suspensión de cuentas o anuncios. |
+| **Google OAuth** (`ExtGoogle`) | `<<Sistema>>` | Servicio externo de verificación de identidad validado en el servidor backend mediante [GoogleTokenValidator.java](file:///c:/Users/vicva/Documents/universidad/Colivi-TFG/Colivi-backend/src/main/java/com/vvu981/colivibackend/features/user/service/GoogleTokenValidator.java). |
+| **Cloudinary CDN** (`ExtCloudinary`) | `<<Sistema>>` | Servicio externo de almacenamiento y distribución de imágenes implementado en [CloudinaryImageStorageService.java](file:///c:/Users/vicva/Documents/universidad/Colivi-TFG/Colivi-backend/src/main/java/com/vvu981/colivibackend/core/storage/service/impl/CloudinaryImageStorageService.java). |
+| **OpenStreetMap / Nominatim** (`ExtOSM`) | `<<Sistema>>` | Servicio externo de geocodificación cartográfica consumido por el cliente de mapas interactivos en [MapPicker.tsx](file:///c:/Users/vicva/Documents/universidad/Colivi-TFG/Colivi-frontend/src/features/housing/components/accommodation/MapPicker.tsx). |
 
 ---
 
 ## 3. Justificación de Relaciones de Inclusión y Extensión
 
 ### Relaciones `<<include>>` (Dependencia Obligatoria)
-1. **`UC_CreateListing` $\rightarrow$ `UC_ManageListingPhotos`**: Un anuncio requiere asociar y ordenar las imágenes del inmueble base para su presentación en el catálogo.
-2. **`UC_WriteReview` $\rightarrow$ `UC_CheckReviewEligibility`**: En [AccommodationReviewController.java](file:///c:/Users/vicva/Documents/universidad/Colivi-TFG/Colivi-backend/src/main/java/com/vvu981/colivibackend/features/accommodation/controller/AccommodationReviewController.java), no es posible persistir una reseña sin verificar previamente que el usuario ha completado una estancia con reserva confirmada.
-3. **`UC_LeaveHome` / `UC_ExpelMember` $\rightarrow$ `UC_ValidateZeroBalance`**: Regla de negocio en [HomeServiceImpl.java](file:///c:/Users/vicva/Documents/universidad/Colivi-TFG/Colivi-backend/src/main/java/com/vvu981/colivibackend/features/home/service/impl/HomeServiceImpl.java): ningún miembro puede salir o ser expulsado si su saldo neto consolidado en [Balance.java](file:///c:/Users/vicva/Documents/universidad/Colivi-TFG/Colivi-backend/src/main/java/com/vvu981/colivibackend/features/home/domain/Balance.java) difiere de cero.
-4. **`UC_LeaveHome` / `UC_ExpelMember` $\rightarrow$ `UC_RebalanceChores`**: La baja de un miembro activa la redistribución de tareas pendientes huérfanas en el hogar.
-5. **`UC_CreateChoreSeries` $\rightarrow$ `UC_SetAssignmentStrategy`**: Crear una serie recurrente exige definir su política de reparto (`RotationType.FIXED` o `RotationType.ROUND_ROBIN`).
-6. **`UC_RecordSettlement` $\rightarrow$ `UC_ViewDebtTransfers`**: El registro de un pago directo entre dos usuarios consume la sugerencia del algoritmo de liquidación de [DebtTransfer.java](file:///c:/Users/vicva/Documents/universidad/Colivi-TFG/Colivi-backend/src/main/java/com/vvu981/colivibackend/features/home/domain/DebtTransfer.java).
-7. **`UC_AiChatWidget` $\rightarrow$ `UC_IssueMcpTicket`**: La interacción con el asistente inteligente orquestado por Spring AI requiere emitir un ticket de sesión efímero a través de [DefaultMcpTicketService.java](file:///c:/Users/vicva/Documents/universidad/Colivi-TFG/Colivi-backend/src/main/java/com/vvu981/colivibackend/features/ai/service/DefaultMcpTicketService.java).
-8. **`UC_ResolveSingleReport` $\rightarrow$ `UC_ReceiveReportFeedback`**: Al dictaminar una denuncia, el sistema notifica el veredicto al usuario denunciante (`Report.reporterNotified = true`).
+1. **`UC_CreateListing` $\rightarrow$ `UC_ManageListingPhotos`**: La publicación de un anuncio requiere asociar y ordenar las fotografías del inmueble para su adecuada presentación en catálogo.
+2. **`UC_WriteReview` $\rightarrow$ `UC_CheckReviewEligibility`**: En [AccommodationReviewController.java](file:///c:/Users/vicva/Documents/universidad/Colivi-TFG/Colivi-backend/src/main/java/com/vvu981/colivibackend/features/accommodation/controller/AccommodationReviewController.java), no es posible registrar una reseña sin verificar previamente que el usuario ha finalizado una estancia con reserva formalmente confirmada.
+3. **`UC_LeaveHome` o `UC_ExpelMember` $\rightarrow$ `UC_ValidateZeroBalance`**: Regla de negocio en [HomeServiceImpl.java](file:///c:/Users/vicva/Documents/universidad/Colivi-TFG/Colivi-backend/src/main/java/com/vvu981/colivibackend/features/home/service/impl/HomeServiceImpl.java): ningún miembro puede salir ni ser expulsado si su saldo neto consolidado en [Balance.java](file:///c:/Users/vicva/Documents/universidad/Colivi-TFG/Colivi-backend/src/main/java/com/vvu981/colivibackend/features/home/domain/Balance.java) difiere de cero.
+4. **`UC_LeaveHome` o `UC_ExpelMember` $\rightarrow$ `UC_RebalanceChores`**: La baja o expulsión de un miembro activa automáticamente la redistribución de tareas domésticas pendientes que habían quedado sin asignatario.
+5. **`UC_CreateChoreSeries` $\rightarrow$ `UC_SetAssignmentStrategy`**: Crear una serie recurrente exige especificar su política de asignación (asignación fija o asignación rotativa equitativa).
+6. **`UC_RecordSettlement` $\rightarrow$ `UC_ViewDebtTransfers`**: El registro de una liquidación directa entre dos compañeros consume las sugerencias óptimas del algoritmo de compensación de deudas en [DebtTransfer.java](file:///c:/Users/vicva/Documents/universidad/Colivi-TFG/Colivi-backend/src/main/java/com/vvu981/colivibackend/features/home/domain/DebtTransfer.java).
+7. **`UC_AiChatWidget` $\rightarrow$ `UC_IssueMcpTicket`**: La interacción con el asistente inteligente orquestado por Spring AI requiere la generación de un ticket temporal de autorización a través de [DefaultMcpTicketService.java](file:///c:/Users/vicva/Documents/universidad/Colivi-TFG/Colivi-backend/src/main/java/com/vvu981/colivibackend/features/ai/service/DefaultMcpTicketService.java).
+8. **`UC_ResolveSingleReport` $\rightarrow$ `UC_ReceiveReportFeedback`**: Al dictaminar una denuncia, el sistema registra el veredicto y habilita la consulta del resultado por parte del usuario denunciante (`Report.reporterNotified = true`).
 
 ### Relaciones `<<extend>>` (Ampliación Condicional)
-1. **`UC_GetRecommendations` $\rightarrow$ `UC_SearchListings`**: El motor de recomendaciones amplía la búsqueda estándar incorporando el historial del usuario ([UserSearchHistory](file:///c:/Users/vicva/Documents/universidad/Colivi-TFG/Colivi-backend/src/main/java/com/vvu981/colivibackend/features/recommendation/domain/UserSearchHistory.java)) cuando existen datos previos.
-2. **`UC_ConfirmDepositPayment` $\rightarrow$ `UC_AcceptBooking`**: El pago del depósito sólo se habilita cuando el anfitrión ha realizado previamente la transición a `RequestStatus.ACCEPTED`.
-3. **`UC_RescueChore` $\rightarrow$ `UC_CompleteMyChore`**: El rescate de una tarea es una variación condicional que se produce únicamente si la tarea ha vencido (`isLate() == true`) y la ejecuta un compañero distinto al titular asignado.
-4. **Herramientas MCP (`ToolSearchVibe`, `ToolCheckBookings`, `ToolSummarizeInbox`, `ToolChoresOverview`, `ToolAdminModQueue`) $\rightarrow$ `UC_AiChatWidget`**: El asistente sólo invoca una herramienta específica de forma condicional según la intención detectada por el modelo de lenguaje (Tool Calling).
-5. **`UC_AdminBanUser` / `UC_AdminBanListing` $\rightarrow$ `UC_ResolveSingleReport`**: La sanción directa sobre el usuario o el anuncio se activa de manera opcional según la gravedad del veredicto del reporte.
-6. **`UC_ResolveBulkReports` $\rightarrow$ `UC_ResolveSingleReport`**: La acción en lote es una extensión masiva para resolver múltiples denuncias agrupadas sobre un mismo objetivo (`resolve-all`).
+1. **`UC_GetRecommendations` $\rightarrow$ `UC_SearchListings`**: El motor de recomendaciones complementa la búsqueda ordinaria incorporando el historial del usuario ([UserSearchHistory](file:///c:/Users/vicva/Documents/universidad/Colivi-TFG/Colivi-backend/src/main/java/com/vvu981/colivibackend/features/recommendation/domain/UserSearchHistory.java)) cuando existen datos previos.
+2. **`UC_ConfirmDepositPayment` $\rightarrow$ `UC_AcceptBooking`**: El registro de pago del depósito o fianza solo se activa si la solicitud ha transitado previamente al estado de aceptada por el anfitrión.
+3. **`UC_RescueChore` $\rightarrow$ `UC_CompleteMyChore`**: El rescate de una tarea es una variación condicional que ocurre únicamente cuando una tarea asignada a otro compañero se encuentra vencida y otro miembro decide asumirla para sumar puntos.
+4. **Herramientas de Consulta (`UC_ToolSearchVibe`, `UC_ToolCheckBookings`, etc.) $\rightarrow$ `UC_AiChatWidget`**: El asistente inteligente solo invoca herramientas especializadas de forma condicional cuando identifica la intención pertinente en la consulta del usuario.
+5. **`UC_AdminBanUser` o `UC_AdminBanListing` $\rightarrow$ `UC_ResolveSingleReport`**: La sanción directa sobre una cuenta o una publicación se ejecuta condicionalmente según la gravedad del veredicto del reporte.
+6. **`UC_ResolveBulkReports` $\rightarrow$ `UC_ResolveSingleReport`**: La resolución en lote es una extensión para dictaminar conjuntamente múltiples denuncias asociadas a un mismo elemento denunciado.
+

@@ -2,470 +2,470 @@ classDiagram
     direction TB
 
     %% ---------------------------------------------------------
-    %% 1. USER DOMAIN
+    %% 1. DOMINIO DE USUARIO E IDENTIDAD
     %% ---------------------------------------------------------
-    class UserRole {
+    class RolUsuario {
         <<enumeration>>
-        ADMIN
-        USER
+        ADMINISTRADOR
+        USUARIO
     }
 
-    class User {
+    class Usuario {
         -UUID id
-        -String nickname
-        -String email
-        -String passwordHash
-        -String firstName
-        -String lastName1
-        -String lastName2
-        -String phone
-        -String profilePicUrl
-        -UserRole role
-        -LocalDateTime deletedAt
-        -LocalDateTime bannedAt
-        -LocalDateTime createdAt
-        -Integer tokenVersion
-        -LocalDateTime bannedUntil
-        -String banReason
-        -String reactivationToken
-        -LocalDateTime reactivationTokenExpiresAt
-        -String passwordResetToken
-        -LocalDateTime passwordResetTokenExpiresAt
-        +isBanned() boolean
-        +getFullName() String
+        -String apodo
+        -String correoElectronico
+        -String hashContrasena
+        -String nombre
+        -String primerApellido
+        -String segundoApellido
+        -String telefono
+        -String urlFotoPerfil
+        -RolUsuario rol
+        -LocalDateTime fechaEliminacion
+        -LocalDateTime fechaSuspension
+        -LocalDateTime fechaCreacion
+        -Integer versionToken
+        -LocalDateTime suspendidoHasta
+        -String motivoSuspension
+        -String tokenReactivacion
+        -LocalDateTime expiracionTokenReactivacion
+        -String tokenRestablecimientoContrasena
+        -LocalDateTime expiracionTokenRestablecimiento
+        +estaSuspendido() boolean
+        +obtenerNombreCompleto() String
     }
-    User --> "1" UserRole : role
+    Usuario --> "1" RolUsuario : rol
 
     %% ---------------------------------------------------------
-    %% 2. ACCOMMODATION DOMAIN
+    %% 2. DOMINIO DE ALOJAMIENTOS Y ANUNCIOS
     %% ---------------------------------------------------------
-    class ListingStatus {
+    class EstadoAnuncio {
         <<enumeration>>
-        AVAILABLE
-        UNAVAILABLE
-        BANNED
+        DISPONIBLE
+        NO_DISPONIBLE
+        BLOQUEADO
     }
 
-    class RentalType {
+    class TipoAlquiler {
         <<enumeration>>
-        ENTIRE_PLACE
-        ROOM
+        VIVIENDA_COMPLETA
+        HABITACION
     }
 
-    class AmenityType {
+    class TipoComodidad {
         <<enumeration>>
-        HEATING
+        CALEFACCION
         WIFI
-        AIR_CONDITIONING
-        PETS_ALLOWED
-        ELEVATOR
-        BALCONY
-        PARKING
-        WASHING_MACHINE
-        DISHWASHER
-        TERRACE
-        SWIMMING_POOL
-        WORK_ZONE
-        SMOKING_ALLOWED
+        AIRE_ACONDICIONADO
+        MASCOTAS_PERMITIDAS
+        ASCENSOR
+        BALCON
+        ESTACIONAMIENTO
+        LAVADORA
+        LAVAVAJILLAS
+        TERRAZA
+        PISCINA
+        ZONA_TRABAJO
+        FUMADORES_PERMITIDOS
     }
 
-    class Accommodation {
+    class Alojamiento {
         -UUID id
-        -String address
-        -Integer totalRooms
-        -Integer totalBathrooms
-        -Integer freeRooms
-        -Integer squareMeters
-        -String city
-        -String country
-        -String province
-        -Double latitude
-        -Double longitude
+        -String direccion
+        -Integer habitacionesTotales
+        -Integer banosTotales
+        -Integer habitacionesLibres
+        -Integer metrosCuadrados
+        -String ciudad
+        -String pais
+        -String provincia
+        -Double latitud
+        -Double longitud
         -Integer version
-        -LocalDateTime deletedAt
-        -LocalDateTime createdAt
-        -LocalDateTime updatedAt
+        -LocalDateTime fechaEliminacion
+        -LocalDateTime fechaCreacion
+        -LocalDateTime fechaActualizacion
     }
 
-    class AccommodationImage {
+    class FotoAlojamiento {
         -UUID id
-        -String imageUrl
-        -Integer displayOrder
+        -String urlImagen
+        -Integer ordenVisualizacion
     }
 
-    class AccommodationListing {
+    class AnuncioAlojamiento {
         -UUID id
-        -String title
-        -String description
-        -BigDecimal pricePerMonth
-        -BigDecimal securityDeposit
-        -ListingStatus status
-        -ListingStatus previousStatus
+        -String titulo
+        -String descripcion
+        -BigDecimal precioMensual
+        -BigDecimal fianza
+        -EstadoAnuncio estado
+        -EstadoAnuncio estadoAnterior
         -Integer version
-        -Boolean isPromoted
-        -RentalType rentalType
-        -LocalDateTime deletedAt
-        -LocalDateTime createdAt
-        -LocalDateTime updatedAt
-        -LocalDateTime bannedAt
-        +ban() void
-        +unBan() void
-        +updateImages(List newImages) void
-        +updateInformation(String title, String description, BigDecimal price, BigDecimal deposit) void
+        -Boolean estaPromocionado
+        -TipoAlquiler tipoAlquiler
+        -LocalDateTime fechaEliminacion
+        -LocalDateTime fechaCreacion
+        -LocalDateTime fechaActualizacion
+        -LocalDateTime fechaBloqueo
+        +bloquear() void
+        +desbloquear() void
+        +actualizarFotos(List nuevasFotos) void
+        +actualizarInformacion(String titulo, String descripcion, BigDecimal precio, BigDecimal fianza) void
     }
 
-    class ListingImageSelection {
+    class SeleccionFotoAnuncio {
         -UUID id
-        -Integer displayOrder
+        -Integer ordenVisualizacion
     }
 
-    class AccommodationReview {
+    class ResenaAlojamiento {
         -UUID id
-        -Integer rating
-        -String comment
-        -LocalDateTime createdAt
-        -LocalDateTime updatedAt
+        -Integer puntuacion
+        -String comentario
+        -LocalDateTime fechaCreacion
+        -LocalDateTime fechaActualizacion
     }
 
-    Accommodation --> "0..*" AmenityType : amenities
-    Accommodation "1" *-- "0..*" AccommodationImage : images
-    AccommodationListing "1" *-- "0..*" ListingImageSelection : images
-    ListingImageSelection --> "1" AccommodationImage : image
-    AccommodationListing --> "1" Accommodation : accommodation
-    AccommodationListing --> "1" ListingStatus : status
-    AccommodationListing --> "1" ListingStatus : previousStatus
-    AccommodationListing --> "1" RentalType : rentalType
-    AccommodationReview --> "1" AccommodationListing : listing
+    Alojamiento --> "0..*" TipoComodidad : comodidades
+    Alojamiento "1" *-- "0..*" FotoAlojamiento : fotos
+    AnuncioAlojamiento "1" *-- "0..*" SeleccionFotoAnuncio : fotosSeleccionadas
+    SeleccionFotoAnuncio --> "1" FotoAlojamiento : foto
+    AnuncioAlojamiento --> "1" Alojamiento : alojamiento
+    AnuncioAlojamiento --> "1" EstadoAnuncio : estado
+    AnuncioAlojamiento --> "1" EstadoAnuncio : estadoAnterior
+    AnuncioAlojamiento --> "1" TipoAlquiler : tipoAlquiler
+    ResenaAlojamiento --> "1" AnuncioAlojamiento : anuncio
 
     %% ---------------------------------------------------------
-    %% 3. BOOKING REQUESTS DOMAIN
+    %% 3. DOMINIO DE SOLICITUDES DE RESERVA
     %% ---------------------------------------------------------
-    class RequestStatus {
+    class EstadoSolicitudReserva {
         <<enumeration>>
-        PENDING
-        REJECTED
-        ACCEPTED
-        CONFIRMED
-        CANCELLED
-        EXPIRED
+        PENDIENTE
+        RECHAZADA
+        ACEPTADA
+        CONFIRMADA
+        CANCELADA
+        EXPIRADA
     }
 
-    class BookingRequest {
+    class SolicitudReserva {
         -UUID id
-        -LocalDate startDate
-        -LocalDate endDate
-        -String message
-        -RequestStatus status
-        -LocalDateTime createdAt
-        -LocalDateTime updatedAt
-        -LocalDateTime expiresAt
+        -LocalDate fechaInicio
+        -LocalDate fechaFin
+        -String mensaje
+        -EstadoSolicitudReserva estado
+        -LocalDateTime fechaCreacion
+        -LocalDateTime fechaActualizacion
+        -LocalDateTime fechaExpiracion
         -Integer version
-        -String transactionId
-        -String paymentMethod
-        +accept() void
-        +reject() void
-        +cancel() void
-        +confirm(String transactionId, String paymentMethod) void
-        +expire() void
+        -String idTransaccion
+        -String metodoPago
+        +aceptar() void
+        +rechazar() void
+        +cancelar() void
+        +confirmar(String idTransaccion, String metodoPago) void
+        +expirar() void
     }
-    BookingRequest --> "1" RequestStatus : status
+    SolicitudReserva --> "1" EstadoSolicitudReserva : estado
 
     %% ---------------------------------------------------------
-    %% 4. HOME & CHORES DOMAIN
+    %% 4. DOMINIO DE CONVIVENCIA, HOGAR Y TAREAS
     %% ---------------------------------------------------------
-    class HomeRole {
+    class RolHogar {
         <<enumeration>>
-        ADMIN
-        MEMBER
+        ADMINISTRADOR
+        MIEMBRO
     }
 
-    class HomeMemberStatus {
+    class EstadoMiembroHogar {
         <<enumeration>>
-        ACTIVE
-        LEFT
-        ARCHIVED
+        ACTIVO
+        SALIDO
+        ARCHIVADO
     }
 
-    class ActivityType {
+    class TipoActividad {
         <<enumeration>>
-        HOME_CREATED
-        HOME_DELETED
-        MEMBER_JOINED
-        MEMBER_LEFT
-        MEMBER_EXPELLED
-        ADMIN_TRANSFERRED
-        EXPENSE_CREATED
-        EXPENSE_UPDATED
-        EXPENSE_DELETED
-        PAYMENT_RECORDED
-        CHORE_SERIES_CREATED
-        CHORE_COMPLETED
-        CHORE_RESCUED
-        CHORE_DELETED
+        HOGAR_CREADO
+        HOGAR_ELIMINADO
+        MIEMBRO_UNIDO
+        MIEMBRO_SALIDO
+        MIEMBRO_EXPULSADO
+        ADMINISTRACION_TRANSFERIDA
+        GASTO_CREADO
+        GASTO_ACTUALIZADO
+        GASTO_ELIMINADO
+        PAGO_REGISTRADO
+        SERIE_TAREAS_CREADA
+        TAREA_COMPLETADA
+        TAREA_RESCATADA
+        TAREA_ELIMINADA
     }
 
-    class Home {
+    class Hogar {
         -UUID id
-        -String name
-        -String invitationCode
-        -LocalDateTime createdAt
-        -LocalDateTime deletedAt
-        +addMember(HomeMember member) void
-        +removeMember(HomeMember member) void
-        +softDelete() void
+        -String nombre
+        -String codigoInvitacion
+        -LocalDateTime fechaCreacion
+        -LocalDateTime fechaEliminacion
+        +anadirMiembro(MiembroHogar miembro) void
+        +eliminarMiembro(MiembroHogar miembro) void
+        +borradoLogico() void
     }
 
-    class HomeMember {
+    class MiembroHogar {
         -UUID id
-        -HomeRole role
-        -LocalDateTime joinedAt
-        -LocalDateTime leftAt
-        -HomeMemberStatus status
+        -RolHogar rol
+        -LocalDateTime fechaUnion
+        -LocalDateTime fechaSalida
+        -EstadoMiembroHogar estado
         -String color
-        +leave() void
-        +archive() void
-        +reactivate() void
-        +unarchive() void
+        +abandonar() void
+        +archivar() void
+        +reactivar() void
+        +desarchivar() void
     }
 
-    class HomeExpense {
+    class GastoHogar {
         -UUID id
-        -String description
-        -BigDecimal totalAmount
-        -LocalDateTime createdAt
-        -LocalDateTime deletedAt
-        -boolean isPayment
-        +addParticipant(HomeExpenseParticipant participant) void
-        +removeParticipant(HomeExpenseParticipant participant) void
-        +softDelete() void
+        -String descripcion
+        -BigDecimal importeTotal
+        -LocalDateTime fechaCreacion
+        -LocalDateTime fechaEliminacion
+        -boolean esPagoLiquidacion
+        +anadirParticipante(ParticipanteGastoHogar participante) void
+        +eliminarParticipante(ParticipanteGastoHogar participante) void
+        +borradoLogico() void
     }
 
-    class HomeExpenseParticipant {
+    class ParticipanteGastoHogar {
         -UUID id
-        -BigDecimal owedAmount
+        -BigDecimal importeAdeudado
     }
 
-    class ActivityLog {
+    class RegistroActividad {
         -UUID id
-        -ActivityType activityType
-        -String description
-        -Map metadata
-        -LocalDateTime createdAt
+        -TipoActividad tipoActividad
+        -String descripcion
+        -Map metadatos
+        -LocalDateTime fechaCreacion
     }
 
     class Balance {
         <<record>>
-        +UUID userId
-        +BigDecimal amount
+        +UUID idUsuario
+        +BigDecimal saldoNeto
     }
 
-    class DebtTransfer {
+    class TransferenciaDeuda {
         <<record>>
-        +UUID fromUserId
-        +UUID toUserId
-        +BigDecimal amount
+        +UUID idDeudor
+        +UUID idAcreedor
+        +BigDecimal importe
     }
 
-    class ChoreStatus {
+    class EstadoTarea {
         <<enumeration>>
-        PENDING
-        COMPLETED
-        LATE_COMPLETED
+        PENDIENTE
+        COMPLETADA
+        COMPLETADA_TARDE
     }
 
-    class RecurrenceType {
+    class TipoRecurrencia {
         <<enumeration>>
-        NONE
-        DAILY
-        WEEKLY
-        MONTHLY
-        CUSTOM
+        NINGUNA
+        DIARIA
+        SEMANAL
+        MENSUAL
+        PERSONALIZADA
     }
 
-    class RotationType {
+    class TipoRotacion {
         <<enumeration>>
-        FIXED
-        ROUND_ROBIN
+        FIJA
+        ROTATIVA_EQUITATIVA
     }
 
-    class ChoreSeries {
+    class SerieTareas {
         -UUID id
-        -String title
-        -String description
-        -Integer basePoints
-        -RecurrenceType recurrenceType
-        -Integer occurrences
-        -String customDaysOfWeek
-        -RotationType rotationType
-        -Integer lastAssigneeIndex
-        -List participantOrder
+        -String titulo
+        -String descripcion
+        -Integer puntosBase
+        -TipoRecurrencia tipoRecurrencia
+        -Integer repeticiones
+        -String diasSemanaPersonalizados
+        -TipoRotacion tipoRotacion
+        -Integer ultimoIndiceAsignado
+        -List ordenParticipantes
         -Integer version
-        -LocalDateTime createdAt
-        -LocalDateTime updatedAt
-        +removeParticipant(UUID userId) boolean
-        +addParticipant(UUID userId) void
-        +hasParticipants() boolean
+        -LocalDateTime fechaCreacion
+        -LocalDateTime fechaActualizacion
+        +eliminarParticipante(UUID idUsuario) boolean
+        +anadirParticipante(UUID idUsuario) void
+        +tieneParticipantes() boolean
     }
 
-    class Chore {
+    class TareaDomestica {
         -UUID id
-        -String title
-        -String description
-        -Integer basePoints
-        -LocalDate dueDate
-        -ChoreStatus status
-        -LocalDateTime completedAt
-        -LocalDateTime createdAt
+        -String titulo
+        -String descripcion
+        -Integer puntosBase
+        -LocalDate fechaLimite
+        -EstadoTarea estado
+        -LocalDateTime fechaCompletada
+        -LocalDateTime fechaCreacion
         -Integer version
-        +isLate(LocalDate referenceDate) boolean
-        +isPending() boolean
-        +isCompleted() boolean
-        +getSeriesId() UUID
-        +setSeriesId(UUID seriesId) void
+        +estaVencida(LocalDate fechaReferencia) boolean
+        +estaPendiente() boolean
+        +estaCompletada() boolean
+        +obtenerIdSerie() UUID
+        +asignarIdSerie(UUID idSerie) void
     }
 
-    Home "1" *-- "0..*" HomeMember : members
-    HomeMember --> "1" HomeRole : role
-    HomeMember --> "1" HomeMemberStatus : status
-    Home "1" *-- "0..*" HomeExpense : expenses
-    HomeExpense "1" *-- "0..*" HomeExpenseParticipant : participants
-    Home "1" *-- "0..*" ActivityLog : activityLogs
-    ActivityLog --> "1" ActivityType : activityType
+    Hogar "1" *-- "0..*" MiembroHogar : miembros
+    MiembroHogar --> "1" RolHogar : rol
+    MiembroHogar --> "1" EstadoMiembroHogar : estado
+    Hogar "1" *-- "0..*" GastoHogar : gastos
+    GastoHogar "1" *-- "0..*" ParticipanteGastoHogar : participantes
+    Hogar "1" *-- "0..*" RegistroActividad : registrosActividad
+    RegistroActividad --> "1" TipoActividad : tipoActividad
 
-    Home "1" *-- "0..*" ChoreSeries : choreSeries
-    ChoreSeries "0..1" <-- "0..*" Chore : series
-    Home "1" *-- "0..*" Chore : chores
-    ChoreSeries --> "1" RecurrenceType : recurrenceType
-    ChoreSeries --> "1" RotationType : rotationType
-    Chore --> "1" ChoreStatus : status
+    Hogar "1" *-- "0..*" SerieTareas : seriesTareas
+    SerieTareas "0..1" <-- "0..*" TareaDomestica : serie
+    Hogar "1" *-- "0..*" TareaDomestica : tareas
+    SerieTareas --> "1" TipoRecurrencia : tipoRecurrencia
+    SerieTareas --> "1" TipoRotacion : tipoRotacion
+    TareaDomestica --> "1" EstadoTarea : estado
 
     %% ---------------------------------------------------------
-    %% 5. MESSAGING DOMAIN
+    %% 5. DOMINIO DE MENSAJERÍA
     %% ---------------------------------------------------------
-    class MessageType {
+    class TipoMensaje {
         <<enumeration>>
-        USER_MESSAGE
-        SYSTEM_MESSAGE
+        MENSAJE_USUARIO
+        MENSAJE_SISTEMA
     }
 
-    class MessageStatus {
+    class EstadoMensaje {
         <<enumeration>>
-        SENT
-        DELIVERED
-        READ
+        ENVIADO
+        ENTREGADO
+        LEIDO
     }
 
-    class Conversation {
+    class Conversacion {
         -UUID id
-        -Integer tenantUnreadCount
-        -Integer hostUnreadCount
-        -Integer userMessageCount
-        -Boolean nudgeSent
-        -Boolean archivedByHost
-        -Boolean archivedByTenant
-        -LocalDateTime lastMessageAt
-        -String lastMessagePreview
-        -LocalDateTime createdAt
+        -Integer noLeidosInquilino
+        -Integer noLeidosAnfitrion
+        -Integer totalMensajesUsuario
+        -Boolean recordatorioEnviado
+        -Boolean archivadoPorAnfitrion
+        -Boolean archivadoPorInquilino
+        -LocalDateTime fechaUltimoMensaje
+        -String vistaPreviaUltimoMensaje
+        -LocalDateTime fechaCreacion
     }
 
-    class Message {
+    class Mensaje {
         -UUID id
-        -String content
-        -MessageType messageType
-        -MessageStatus status
-        -LocalDateTime createdAt
-        -LocalDateTime readAt
+        -String contenido
+        -TipoMensaje tipoMensaje
+        -EstadoMensaje estado
+        -LocalDateTime fechaCreacion
+        -LocalDateTime fechaLectura
     }
 
-    Conversation "1" *-- "0..*" Message : messages
-    Message --> "1" MessageType : messageType
-    Message --> "1" MessageStatus : status
+    Conversacion "1" *-- "0..*" Mensaje : mensajes
+    Mensaje --> "1" TipoMensaje : tipoMensaje
+    Mensaje --> "1" EstadoMensaje : estado
 
     %% ---------------------------------------------------------
-    %% 6. REPORT DOMAIN
+    %% 6. DOMINIO DE MODERACIÓN Y DENUNCIAS
     %% ---------------------------------------------------------
-    class ReportTargetType {
+    class TipoObjetivoDenuncia {
         <<enumeration>>
-        LISTING
-        USER
-        CONVERSATION
+        ANUNCIO
+        USUARIO
+        CONVERSACION
     }
 
-    class ReportReason {
+    class MotivoDenuncia {
         <<enumeration>>
         SPAM
-        FRAUD
-        HARASSMENT
-        INAPPROPRIATE_CONTENT
-        OTHER
+        FRAUDE
+        ACOSO
+        CONTENIDO_INAPROPIADO
+        OTRO
     }
 
-    class ReportStatus {
+    class EstadoDenuncia {
         <<enumeration>>
-        PENDING
-        INVESTIGATING
-        RESOLVED
-        DISMISSED
-        CANCELLED
+        PENDIENTE
+        EN_INVESTIGACION
+        RESUELTA
+        DESESTIMADA
+        CANCELADA
     }
 
-    class Report {
+    class Denuncia {
         -UUID id
-        -UUID reporterId
-        -ReportTargetType targetType
-        -UUID targetId
-        -ReportReason reason
-        -String description
-        -ReportStatus status
-        -String adminNotes
-        -UUID resolverId
-        -boolean reporterNotified
-        -LocalDateTime createdAt
-        -LocalDateTime updatedAt
-        -LocalDateTime resolvedAt
-        +markFeedbackAcknowledged() void
-        +investigate(UUID adminId) void
-        +resolve(String adminNotes, UUID resolverId) void
-        +dismiss(String adminNotes, UUID resolverId) void
+        -UUID idDenunciante
+        -TipoObjetivoDenuncia tipoObjetivo
+        -UUID idObjetivo
+        -MotivoDenuncia motivo
+        -String descripcion
+        -EstadoDenuncia estado
+        -String notasAdministracion
+        -UUID idModerador
+        -boolean denuncianteNotificado
+        -LocalDateTime fechaCreacion
+        -LocalDateTime fechaActualizacion
+        -LocalDateTime fechaResolucion
+        +marcarNotificacionLeida() void
+        +investigar(UUID idAdmin) void
+        +resolver(String notas, UUID idAdmin) void
+        +desestimar(String notas, UUID idAdmin) void
     }
 
-    Report --> "1" ReportTargetType : targetType
-    Report --> "1" ReportReason : reason
-    Report --> "1" ReportStatus : status
+    Denuncia --> "1" TipoObjetivoDenuncia : tipoObjetivo
+    Denuncia --> "1" MotivoDenuncia : motivo
+    Denuncia --> "1" EstadoDenuncia : estado
 
     %% ---------------------------------------------------------
-    %% 7. RECOMMENDATION DOMAIN
+    %% 7. DOMINIO DE RECOMENDACIONES
     %% ---------------------------------------------------------
-    class UserSearchHistory {
+    class HistorialBusquedaUsuario {
         -UUID id
-        -UUID userId
-        -String city
-        -BigDecimal maxPrice
-        -String accommodationType
-        -LocalDateTime createdAt
+        -UUID idUsuario
+        -String ciudad
+        -BigDecimal precioMaximo
+        -String tipoAlojamiento
+        -LocalDateTime fechaCreacion
     }
 
     %% ---------------------------------------------------------
-    %% CROSS-DOMAIN ASSOCIATIONS
+    %% ASOCIACIONES INTERDOMINIO
     %% ---------------------------------------------------------
-    Accommodation --> "1" User : owner
-    AccommodationListing --> "1" User : host
-    AccommodationReview "1" --> "1" BookingRequest : bookingRequest
-    AccommodationReview --> "1" User : author
+    Alojamiento --> "1" Usuario : propietario
+    AnuncioAlojamiento --> "1" Usuario : anfitrion
+    ResenaAlojamiento "1" --> "1" SolicitudReserva : solicitudReserva
+    ResenaAlojamiento --> "1" Usuario : autor
 
-    BookingRequest --> "1" User : requester
-    BookingRequest --> "1" AccommodationListing : accommodationListing
+    SolicitudReserva --> "1" Usuario : solicitante
+    SolicitudReserva --> "1" AnuncioAlojamiento : anuncio
 
-    HomeMember --> "1" User : user
-    HomeExpense --> "1" User : payer
-    HomeExpenseParticipant --> "1" User : user
-    ActivityLog --> "0..1" User : actor
+    MiembroHogar --> "1" Usuario : usuario
+    GastoHogar --> "1" Usuario : pagador
+    ParticipanteGastoHogar --> "1" Usuario : usuario
+    RegistroActividad --> "0..1" Usuario : actor
 
-    Chore --> "1" User : assignee
-    Chore --> "0..1" User : completedBy
+    TareaDomestica --> "1" Usuario : asignatario
+    TareaDomestica --> "0..1" Usuario : completadaPor
 
-    Conversation --> "1" AccommodationListing : listing
-    Conversation --> "1" User : tenant
-    Conversation --> "1" User : host
-    Conversation --> "0..1" BookingRequest : activeBookingRequest
-    Message --> "0..1" User : sender
+    Conversacion --> "1" AnuncioAlojamiento : anuncio
+    Conversacion --> "1" Usuario : inquilino
+    Conversacion --> "1" Usuario : anfitrion
+    Conversacion --> "0..1" SolicitudReserva : solicitudActiva
+    Mensaje --> "0..1" Usuario : remitente

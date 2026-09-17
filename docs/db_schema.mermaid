@@ -1,142 +1,294 @@
 erDiagram
-    USER ||--o{ ACCOMMODATION : "owns"
-    ACCOMMODATION ||--o{ ACCOMMODATION_LISTING : "has"
-    USER ||--o{ ACCOMMODATION_LISTING : "hosts"
-    ACCOMMODATION_LISTING ||--o{ ACCOMMODATION_REVIEW : "receives"
-    USER ||--o{ ACCOMMODATION_REVIEW : "writes"
-    ACCOMMODATION ||--o{ ACCOMMODATION_IMAGE : "contains"
-    ACCOMMODATION_LISTING ||--o{ ACCOMMODATION_REPORT : "reported_in"
-    USER |o--o{ ACCOMMODATION_REPORT : "reports"
-    USER ||--o{ MESSAGE : "sends"
-    ACCOMMODATION_LISTING |o--o{ MESSAGE : "related_to"
-    USER ||--o{ HOGAR_MEMBER : "belongs_to"
-    HOGAR ||--o{ HOGAR_MEMBER : "has_members"
-    HOGAR ||--o{ EXPENSE : "registers"
-    USER ||--o{ EXPENSE : "pays"
-    EXPENSE ||--o{ EXPENSE_AFFECTED : "affects"
-    USER ||--o{ EXPENSE_AFFECTED : "owes"
-    HOGAR ||--o{ TASK : "has"
-    USER |o--o{ TASK : "assigned_to"
-    USER ||--o{ AUDIT_SNAPSHOT_LOG : "generates"
+    USUARIO ||--o{ ALOJAMIENTO : "posee"
+    ALOJAMIENTO ||--o{ FOTO_ALOJAMIENTO : "contiene"
+    ALOJAMIENTO ||--o{ ANUNCIO_ALOJAMIENTO : "publica_en"
+    USUARIO ||--o{ ANUNCIO_ALOJAMIENTO : "gestiona"
+    ANUNCIO_ALOJAMIENTO ||--o{ FOTO_SELECCIONADA_ANUNCIO : "selecciona"
+    FOTO_ALOJAMIENTO ||--o{ FOTO_SELECCIONADA_ANUNCIO : "referencia"
+    ANUNCIO_ALOJAMIENTO ||--o{ RESENA_ALOJAMIENTO : "recibe"
+    USUARIO ||--o{ RESENA_ALOJAMIENTO : "escribe"
+    SOLICITUD_RESERVA ||--o| RESENA_ALOJAMIENTO : "valida_estancia"
+    USUARIO ||--o{ SOLICITUD_RESERVA : "solicita"
+    ANUNCIO_ALOJAMIENTO ||--o{ SOLICITUD_RESERVA : "recibe_peticion"
+    USUARIO ||--o{ MIEMBRO_HOGAR : "pertenece_a"
+    HOGAR ||--o{ MIEMBRO_HOGAR : "agrupa"
+    HOGAR ||--o{ GASTO : "registra"
+    USUARIO ||--o{ GASTO : "paga"
+    GASTO ||--o{ REPARTO_GASTO : "se_divide_en"
+    USUARIO ||--o{ REPARTO_GASTO : "adeuda"
+    HOGAR ||--o{ PAGO_LIQUIDACION : "contiene_pagos"
+    USUARIO ||--o{ PAGO_LIQUIDACION : "abona"
+    USUARIO ||--o{ PAGO_LIQUIDACION : "percibe"
+    HOGAR ||--o{ REGISTRO_ACTIVIDAD : "audita"
+    USUARIO |o--o{ REGISTRO_ACTIVIDAD : "origina"
+    HOGAR ||--o{ SERIE_TAREAS : "define"
+    SERIE_TAREAS ||--o{ ROTACION_SERIE_TAREAS : "configura_orden"
+    USUARIO ||--o{ ROTACION_SERIE_TAREAS : "participa"
+    HOGAR ||--o{ TAREA_DOMESTICA : "planifica"
+    SERIE_TAREAS |o--o{ TAREA_DOMESTICA : "instancia"
+    USUARIO |o--o{ TAREA_DOMESTICA : "tiene_asignada"
+    USUARIO |o--o{ TAREA_DOMESTICA : "completa"
+    USUARIO ||--o{ CONVERSACION : "inicia_inquilino"
+    USUARIO ||--o{ CONVERSACION : "recibe_anfitrion"
+    ANUNCIO_ALOJAMIENTO ||--o{ CONVERSACION : "contextualiza"
+    SOLICITUD_RESERVA |o--o{ CONVERSACION : "vincula_reserva"
+    CONVERSACION ||--o{ MENSAJE : "contiene"
+    USUARIO |o--o{ MENSAJE : "envia"
+    USUARIO ||--o{ DENUNCIA : "interpone"
+    USUARIO |o--o{ DENUNCIA : "dictamina"
+    USUARIO ||--o{ HISTORIAL_BUSQUEDA : "registra_busquedas"
 
-    USER {
+    USUARIO {
         UUID id PK
-        VARCHAR nickname
-        VARCHAR email
-        TEXT password_hash
-        VARCHAR first_name
-        VARCHAR last_name_1
-        VARCHAR last_name_2
-        VARCHAR phone
-        TEXT profile_pic_url
-        ENUM role
-        TIMESTAMP created_at
-        TIMESTAMP bannedUntil
-        TEXT banReason
+        VARCHAR apodo
+        VARCHAR correo_electronico UK
+        TEXT hash_contrasena
+        VARCHAR nombre
+        VARCHAR primer_apellido
+        VARCHAR segundo_apellido
+        VARCHAR telefono
+        TEXT url_foto_perfil
+        VARCHAR rol
+        TIMESTAMP fecha_creacion
+        TIMESTAMP fecha_eliminacion
+        TIMESTAMP fecha_suspension
+        TIMESTAMP suspendido_hasta
+        TEXT motivo_suspension
+        INT version_token
+        VARCHAR token_reactivacion
+        TIMESTAMP expiracion_token_reactivacion
+        VARCHAR token_restablecimiento_contrasena
+        TIMESTAMP expiracion_token_restablecimiento
     }
-    ACCOMMODATION {
+
+    ALOJAMIENTO {
         UUID id PK
-        UUID owner_id FK
-        VARCHAR address
-        VARCHAR city
-        VARCHAR province
-        VARCHAR country
-        INT total_rooms
-        INT free_rooms
-        INT bathrooms
-        NUMERIC square_meters
-        NUMERIC latitude
-        NUMERIC longitude
-        VARCHAR_ARRAY amenities
-        TIMESTAMP created_at
-    }
-    ACCOMMODATION_LISTING {
-        UUID id PK
-        UUID accommodation_id FK
-        UUID host_id FK
-        VARCHAR title
-        TEXT description
-        NUMERIC price_per_month
-        ENUM status
+        UUID id_propietario FK
+        VARCHAR direccion
+        VARCHAR ciudad
+        VARCHAR provincia
+        VARCHAR pais
+        INT habitaciones_totales
+        INT habitaciones_libres
+        INT banos_totales
+        NUMERIC metros_cuadrados
+        NUMERIC latitud
+        NUMERIC longitud
+        VARCHAR_ARRAY comodidades
         INT version
-        TIMESTAMP created_at
+        TIMESTAMP fecha_creacion
+        TIMESTAMP fecha_actualizacion
+        TIMESTAMP fecha_eliminacion
     }
-    ACCOMMODATION_IMAGE {
+
+    FOTO_ALOJAMIENTO {
         UUID id PK
-        UUID accommodation_id FK
-        TEXT image_url
-        INT display_order
+        UUID id_alojamiento FK
+        TEXT url_imagen
+        INT orden_visualizacion
+        TIMESTAMP fecha_creacion
     }
-    ACCOMMODATION_REVIEW {
+
+    ANUNCIO_ALOJAMIENTO {
         UUID id PK
-        UUID author_id FK
-        UUID listing_id FK
-        INT rating
-        TEXT comment
-        TIMESTAMP created_at
+        UUID id_alojamiento FK
+        UUID id_anfitrion FK
+        VARCHAR titulo
+        TEXT descripcion
+        NUMERIC precio_mensual
+        NUMERIC fianza
+        VARCHAR tipo_alquiler
+        VARCHAR estado
+        VARCHAR estado_anterior
+        BOOLEAN esta_promocionado
+        INT version
+        TIMESTAMP fecha_creacion
+        TIMESTAMP fecha_actualizacion
+        TIMESTAMP fecha_eliminacion
+        TIMESTAMP fecha_bloqueo
     }
-    ACCOMMODATION_REPORT {
+
+    FOTO_SELECCIONADA_ANUNCIO {
         UUID id PK
-        UUID listing_id FK
-        UUID reporter_id FK
-        ENUM reason
-        TEXT description
-        ENUM status
-        TIMESTAMP created_at
+        UUID id_anuncio FK
+        UUID id_foto_alojamiento FK
+        INT orden_visualizacion
     }
-    MESSAGE {
+
+    RESENA_ALOJAMIENTO {
         UUID id PK
-        UUID sender_id FK
-        UUID receiver_id FK
-        UUID listing_id FK
-        TEXT content
-        NUMERIC offer_amount
-        BOOLEAN is_offer
-        TIMESTAMP created_at
+        UUID id_anuncio FK
+        UUID id_autor FK
+        UUID id_solicitud_reserva FK
+        INT puntuacion
+        TEXT comentario
+        TIMESTAMP fecha_creacion
+        TIMESTAMP fecha_actualizacion
     }
+
+    SOLICITUD_RESERVA {
+        UUID id PK
+        UUID id_anuncio FK
+        UUID id_solicitante FK
+        DATE fecha_inicio
+        DATE fecha_fin
+        TEXT mensaje
+        VARCHAR estado
+        INT version
+        VARCHAR id_transaccion
+        VARCHAR metodo_pago
+        TIMESTAMP fecha_expiracion
+        TIMESTAMP fecha_creacion
+        TIMESTAMP fecha_actualizacion
+    }
+
     HOGAR {
         UUID id PK
-        VARCHAR name
+        VARCHAR nombre
+        VARCHAR codigo_invitacion UK
         INT version
-        TIMESTAMP created_at
+        TIMESTAMP fecha_creacion
+        TIMESTAMP fecha_eliminacion
     }
-    HOGAR_MEMBER {
-        UUID hogar_id FK
-        UUID user_id FK
-        BOOLEAN is_admin
-        TIMESTAMP joined_at
-    }
-    EXPENSE {
+
+    MIEMBRO_HOGAR {
         UUID id PK
-        UUID hogar_id FK
-        UUID payer_id FK
-        NUMERIC amount
-        VARCHAR description
+        UUID id_hogar FK
+        UUID id_usuario FK
+        VARCHAR rol
+        VARCHAR estado
+        VARCHAR color
+        TIMESTAMP fecha_union
+        TIMESTAMP fecha_salida
+    }
+
+    GASTO {
+        UUID id PK
+        UUID id_hogar FK
+        UUID id_pagador FK
+        NUMERIC importe_total
+        VARCHAR descripcion
+        BOOLEAN es_pago_liquidacion
         INT version
-        TIMESTAMP created_at
+        TIMESTAMP fecha_creacion
+        TIMESTAMP fecha_eliminacion
     }
-    EXPENSE_AFFECTED {
-        UUID expense_id FK
-        UUID user_id FK
-        NUMERIC percentage
-    }
-    TASK {
+
+    REPARTO_GASTO {
         UUID id PK
-        UUID hogar_id FK
-        UUID assigned_to FK
-        VARCHAR title
-        TEXT description
-        BOOLEAN is_completed
+        UUID id_gasto FK
+        UUID id_usuario FK
+        NUMERIC importe_adeudado
+    }
+
+    PAGO_LIQUIDACION {
+        UUID id PK
+        UUID id_hogar FK
+        UUID id_pagador FK
+        UUID id_receptor FK
+        NUMERIC importe
+        VARCHAR notas
+        TIMESTAMP fecha_creacion
+    }
+
+    REGISTRO_ACTIVIDAD {
+        UUID id PK
+        UUID id_hogar FK
+        UUID id_actor FK
+        VARCHAR tipo_actividad
+        TEXT descripcion
+        JSONB metadatos
+        TIMESTAMP fecha_creacion
+    }
+
+    SERIE_TAREAS {
+        UUID id PK
+        UUID id_hogar FK
+        VARCHAR titulo
+        TEXT descripcion
+        INT puntos_base
+        VARCHAR tipo_recurrencia
+        INT repeticiones
+        VARCHAR dias_semana_personalizados
+        VARCHAR tipo_rotacion
+        INT ultimo_indice_asignado
         INT version
-        TIMESTAMP created_at
+        TIMESTAMP fecha_creacion
+        TIMESTAMP fecha_actualizacion
     }
-    AUDIT_SNAPSHOT_LOG {
+
+    ROTACION_SERIE_TAREAS {
         UUID id PK
-        UUID user_id FK
-        VARCHAR entity_type
-        UUID entity_id
-        ENUM action_type
-        JSONB snapshot_before
-        JSONB snapshot_after
-        TIMESTAMP server_timestamp
+        UUID id_serie_tareas FK
+        UUID id_usuario FK
+        INT posicion_orden
+    }
+
+    TAREA_DOMESTICA {
+        UUID id PK
+        UUID id_hogar FK
+        UUID id_serie_tareas FK
+        UUID id_asignatario FK
+        UUID id_completada_por FK
+        VARCHAR titulo
+        TEXT descripcion
+        INT puntos_base
+        DATE fecha_limite
+        VARCHAR estado
+        TIMESTAMP fecha_completada
+        INT version
+        TIMESTAMP fecha_creacion
+    }
+
+    CONVERSACION {
+        UUID id PK
+        UUID id_anuncio FK
+        UUID id_inquilino FK
+        UUID id_anfitrion FK
+        UUID id_solicitud_reserva_activa FK
+        INT no_leidos_inquilino
+        INT no_leidos_anfitrion
+        INT total_mensajes_usuario
+        BOOLEAN recordatorio_enviado
+        BOOLEAN archivado_por_anfitrion
+        BOOLEAN archivado_por_inquilino
+        TIMESTAMP fecha_ultimo_mensaje
+        TEXT vista_previa_ultimo_mensaje
+        TIMESTAMP fecha_creacion
+    }
+
+    MENSAJE {
+        UUID id PK
+        UUID id_conversacion FK
+        UUID id_remitente FK
+        TEXT contenido
+        VARCHAR tipo_mensaje
+        VARCHAR estado
+        TIMESTAMP fecha_creacion
+        TIMESTAMP fecha_lectura
+    }
+
+    DENUNCIA {
+        UUID id PK
+        UUID id_denunciante FK
+        VARCHAR tipo_objetivo
+        UUID id_objetivo
+        VARCHAR motivo
+        TEXT descripcion
+        VARCHAR estado
+        TEXT notas_administracion
+        UUID id_moderador FK
+        BOOLEAN denunciante_notificado
+        TIMESTAMP fecha_creacion
+        TIMESTAMP fecha_actualizacion
+        TIMESTAMP fecha_resolucion
+    }
+
+    HISTORIAL_BUSQUEDA {
+        UUID id PK
+        UUID id_usuario FK
+        VARCHAR ciudad
+        NUMERIC precio_maximo
+        VARCHAR tipo_alquiler
+        TIMESTAMP fecha_creacion
     }
