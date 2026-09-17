@@ -51,7 +51,7 @@ export const SUMMARIZE_HOST_INBOX_TOOL: McpToolDefinition = {
     properties: {
       listingId: {
         type: "string",
-        description: "UUID opcional del anuncio para filtrar. Si es null, trae todo el inbox."
+        description: "UUID opcional del anuncio para filtrar. Omitir este parámetro para consultar todo el inbox."
       }
     },
     required: []
