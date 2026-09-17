@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Sparkles, ChevronDown } from 'lucide-react';
 import { AiChatWindow } from './AiChatWindow';
 
 export const AiAssistantWidget: React.FC = () => {
+  const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
+
+  const isListingDetail = location.pathname.startsWith('/listings/');
 
   const toggleOpen = () => {
     setIsOpen((prev) => !prev);
@@ -25,12 +29,14 @@ export const AiAssistantWidget: React.FC = () => {
   return (
     <aside
       aria-label="Asistente de inteligencia artificial de Colivi"
-      className="fixed bottom-3 right-3 sm:bottom-6 sm:right-6 z-50 flex flex-col items-end pointer-events-none"
+      className={`fixed right-3 sm:bottom-6 sm:right-6 z-50 flex flex-col items-end pointer-events-none ${
+        isListingDetail ? 'bottom-36' : 'bottom-20'
+      }`}
     >
       {/* Ventana Flotante / Side-Panel del Asistente */}
       {isOpen && (
         <div
-          className="pointer-events-auto mb-3 sm:mb-4 w-[420px] h-[620px] max-w-[calc(100vw-1.5rem)] sm:max-w-[calc(100vw-2rem)] max-h-[calc(100vh-5.5rem)] sm:max-h-[calc(100vh-6.5rem)] animate-in fade-in slide-in-from-bottom-5 duration-200"
+          className="pointer-events-auto mb-3 sm:mb-4 w-[420px] h-[620px] max-w-[calc(100vw-1.5rem)] sm:max-w-[calc(100vw-2rem)] max-h-[calc(100dvh-5.5rem)] sm:max-h-[calc(100dvh-6.5rem)] animate-in fade-in slide-in-from-bottom-5 duration-200"
           role="dialog"
           aria-modal="false"
           aria-label="Panel conversacional con IA"

@@ -1,11 +1,30 @@
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FileText, PlusCircle, Loader2, MapPin, Euro, Pencil, Home, DoorOpen } from 'lucide-react';
+import { FileText, PlusCircle, Loader2, MapPin, Euro, Pencil, Home, DoorOpen, Trash2, CheckCircle2 } from 'lucide-react';
 import { MainLayout } from '../layouts/MainLayout';
 import { useMyListings } from '../features/housing/hooks/useMyListings';
+import { useDeleteListing } from '../features/housing/hooks/useDeleteListing';
+import { ConfirmDeleteListingModal } from '../features/housing/components/listing/ConfirmDeleteListingModal';
+import type { AccommodationListingResponse } from '../features/housing/types/listing.types';
 import clsx from 'clsx';
 
-export const MyListingsPage = () => {
-  const { listings, isLoading, error } = useMyListings(0, 50);
+export const MyListingsPage: React.FC = () => {
+  const { listings, isLoading, error, refetch } = useMyListings(0, 50);
+  const { deleteListing, isLoading: isDeleting, error: deleteError, setError: setDeleteError } = useDeleteListing();
+  const [listingToDelete, setListingToDelete] = useState<AccommodationListingResponse | null>(null);
+  const [successBanner, setSuccessBanner] = useState<string | null>(null);
+
+  const handleConfirmDelete = async () => {
+    if (!listingToDelete) return;
+    const ok = await deleteListing(listingToDelete.id);
+    if (ok) {
+      const deletedTitle = listingToDelete.title;
+      setListingToDelete(null);
+      setSuccessBanner(`El anuncio "${deletedTitle}" ha sido retirado del catálogo.`);
+      refetch();
+      setTimeout(() => setSuccessBanner(null), 4000);
+    }
+  };
 
   return (
     <MainLayout>
@@ -27,6 +46,13 @@ export const MyListingsPage = () => {
             Publicar anuncio
           </Link>
         </div>
+
+        {successBanner && (
+          <div className="mb-6 p-4 rounded-xl bg-green-50 border border-green-200 text-green-800 text-body-md flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+            <CheckCircle2 size={20} className="text-green-600 flex-shrink-0" />
+            <span>{successBanner}</span>
+          </div>
+        )}
 
         {isLoading ? (
           <div className="flex justify-center py-20">
@@ -118,7 +144,7 @@ export const MyListingsPage = () => {
                       {listing.description}
                     </p>
                     
-                    <div className="mt-auto flex justify-end gap-3 pt-4 border-t border-outline-variant">
+                    <div className="mt-auto flex justify-end gap-2 sm:gap-3 pt-4 border-t border-outline-variant flex-wrap">
                       <Link
                         to={`/listings/${listing.id}`}
                         className="px-4 py-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-label-md font-label-md transition-colors flex items-center justify-center"
@@ -133,6 +159,18 @@ export const MyListingsPage = () => {
                         <Pencil size={18} />
                         Editar
                       </Link>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDeleteError(null);
+                          setListingToDelete(listing);
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-error/30 text-error hover:bg-error-container/20 text-label-md font-label-md transition-colors cursor-pointer"
+                        title="Eliminar anuncio"
+                      >
+                        <Trash2 size={16} />
+                        <span>Eliminar</span>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -140,6 +178,17 @@ export const MyListingsPage = () => {
             })}
           </div>
         )}
+
+        <ConfirmDeleteListingModal
+          isOpen={Boolean(listingToDelete)}
+          onClose={() => {
+            if (!isDeleting) setListingToDelete(null);
+          }}
+          listingTitle={listingToDelete?.title ?? ''}
+          onConfirmDelete={handleConfirmDelete}
+          isLoading={isDeleting}
+          error={deleteError}
+        />
       </div>
     </MainLayout>
   );

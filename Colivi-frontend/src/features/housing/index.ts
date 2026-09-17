@@ -18,6 +18,7 @@ export { useCreateAccommodation } from './hooks/useCreateAccommodation';
 export { useMyAccommodations } from './hooks/useMyAccommodations';
 export { useCreateListing } from './hooks/useCreateListing';
 export { useGetListing } from './hooks/useGetListing';
+export { useDeleteListing } from './hooks/useDeleteListing';
 export { useMapListings } from './hooks/useMapListings';
 
 // Components — Accommodation
@@ -36,6 +37,7 @@ export { ListingAmenitiesView } from './components/listing/ListingAmenitiesView'
 export { ListingLocationMap } from './components/listing/ListingLocationMap';
 export { ListingBookingCard } from './components/listing/ListingBookingCard';
 export { SiblingRoomsSection } from './components/listing/SiblingRoomsSection';
+export { ConfirmDeleteListingModal } from './components/listing/ConfirmDeleteListingModal';
 
 // Components — Map
 export { ClusterFan } from './components/map/ClusterFan';

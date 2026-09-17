@@ -66,10 +66,10 @@ export const MessagesPage: React.FC = () => {
   };
 
   return (
-    <MainLayout>
-      <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 md:px-6 py-4 md:py-6 flex-1 flex flex-col">
+    <MainLayout hideFooter>
+      <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 md:px-6 py-2 sm:py-4 md:py-6 flex-1 flex flex-col">
         {/* Contenedor Principal Estilo Tarjeta Elevada con Bordes Redondeados */}
-        <div className="flex-1 bg-surface rounded-3xl border border-outline-variant/80 shadow-md flex overflow-hidden h-[calc(100vh-10.5rem)] min-h-[580px]">
+        <div className="flex-1 bg-surface rounded-2xl sm:rounded-3xl border border-outline-variant/80 shadow-md flex overflow-hidden h-[calc(100dvh-8.5rem)] md:h-[calc(100dvh-10.5rem)]">
           
           {/* ─── Panel Izquierdo: Bandeja de Entrada (Inbox) ─────────────────── */}
           <div

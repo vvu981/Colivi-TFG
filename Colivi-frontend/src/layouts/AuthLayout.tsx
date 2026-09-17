@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Link } from "react-router-dom";
 
 interface AuthLayoutProps {
   children: ReactNode;
@@ -8,59 +9,26 @@ interface AuthLayoutProps {
 
 export const AuthLayout = ({ children, title, subtitle }: AuthLayoutProps) => {
   return (
-    <main
-      className="antialiased"
-      style={{
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr",
-        minHeight: "100vh",
-        width: "100%",
-      }}
-    >
-      {/* ── Columna Izquierda ── */}
-      <div
-        className="flex flex-col justify-center bg-[#FAF8F5]"
-        style={{ padding: "3rem 4rem" }}
-      >
-        <div style={{ maxWidth: "28rem", width: "100%", margin: "0 auto" }}>
+    <main className="antialiased min-h-screen w-full grid grid-cols-1 lg:grid-cols-2 bg-[#FAF8F5]">
+      {/* ── Columna Izquierda (Formulario) ── */}
+      <div className="flex flex-col justify-center px-4 sm:px-8 md:px-12 lg:px-16 py-8 sm:py-12 max-w-xl mx-auto w-full">
+        <div className="max-w-md w-full mx-auto">
           {/* Logo */}
-          <div style={{ marginBottom: "2.5rem" }}>
-            <span
-              style={{
-                fontSize: "1.5rem",
-                fontWeight: 700,
-                letterSpacing: "-0.02em",
-                color: "#9f3c16",
-                fontFamily: "Inter, sans-serif",
-              }}
-            >
-              Colivi
-            </span>
+          <div className="mb-6 sm:mb-8">
+            <Link to="/" className="inline-flex items-center gap-2.5 hover:opacity-90 transition-opacity">
+              <img src="/favicon.png" alt="Colivi" className="h-7 w-7 sm:h-8 sm:w-8 object-contain" />
+              <span className="text-xl sm:text-2xl font-bold tracking-tight text-primary font-sans">
+                Colivi
+              </span>
+            </Link>
           </div>
 
           {/* Títulos */}
-          <div style={{ marginBottom: "2rem" }}>
-            <h1
-              style={{
-                fontSize: "2.25rem",
-                fontWeight: 700,
-                color: "#0b1c30",
-                letterSpacing: "-0.02em",
-                lineHeight: 1.2,
-                marginBottom: "0.75rem",
-                fontFamily: "Inter, sans-serif",
-              }}
-            >
+          <div className="mb-6 sm:mb-8">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#0b1c30] tracking-tight leading-tight mb-2 font-sans">
               {title}
             </h1>
-            <p
-              style={{
-                fontSize: "1rem",
-                color: "#565e74",
-                lineHeight: 1.6,
-                fontFamily: "Inter, sans-serif",
-              }}
-            >
+            <p className="text-sm sm:text-base text-[#565e74] leading-relaxed font-sans">
               {subtitle}
             </p>
           </div>
@@ -70,62 +38,22 @@ export const AuthLayout = ({ children, title, subtitle }: AuthLayoutProps) => {
         </div>
       </div>
 
-      {/* ── Columna Derecha (imagen) ── */}
-      <div style={{ position: "relative", overflow: "hidden" }}>
+      {/* ── Columna Derecha (imagen destacada, solo desktop) ── */}
+      <div className="hidden lg:block relative overflow-hidden h-full min-h-screen">
         <img
           alt="Sala de estar moderna de un coliving"
           src="/img/high_quality_background_Auth.png"
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            borderRadius: "1.5rem 0 0 1.5rem",
-          }}
+          className="absolute inset-0 w-full h-full object-cover rounded-l-3xl"
         />
         {/* Tarjeta flotante */}
-        <div
-          style={{
-            position: "absolute",
-            bottom: "3rem",
-            left: "3rem",
-            right: "3rem",
-            maxWidth: "22rem",
-            background: "rgba(255,255,255,0.95)",
-            backdropFilter: "blur(12px)",
-            border: "1px solid rgba(255,255,255,0.6)",
-            borderRadius: "0.75rem",
-            padding: "1.5rem",
-            boxShadow: "0 4px 20px rgba(15,23,42,0.10)",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "flex-start", gap: "1rem" }}>
-            <div
-              style={{
-                padding: "0.625rem",
-                background: "#eff4ff",
-                borderRadius: "9999px",
-                color: "#9f3c16",
-                flexShrink: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: "22px" }}>
+        <div className="absolute bottom-12 left-12 right-12 max-w-sm bg-white/95 backdrop-blur-md border border-white/60 rounded-2xl p-6 shadow-[0_4px_20px_rgba(15,23,42,0.10)]">
+          <div className="flex items-start gap-4">
+            <div className="p-2.5 bg-[#eff4ff] rounded-full text-primary shrink-0 flex items-center justify-center">
+              <span className="material-symbols-outlined text-[22px]">
                 groups
               </span>
             </div>
-            <p
-              style={{
-                fontSize: "0.9375rem",
-                color: "#0b1c30",
-                fontWeight: 500,
-                lineHeight: 1.6,
-                fontFamily: "Inter, sans-serif",
-              }}
-            >
+            <p className="text-[15px] text-[#0b1c30] font-medium leading-relaxed font-sans">
               "Más de 2.000 inquilinos ya han encontrado su hogar ideal sin papeleos"
             </p>
           </div>

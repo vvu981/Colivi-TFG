@@ -77,8 +77,8 @@ export const AdminPage: React.FC = () => {
           </div>
 
           {/* Quick Dashboard Stat Pills */}
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3.5 py-2 bg-surface-container-lowest rounded-xl border border-outline-variant shadow-xs">
+          <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
+            <div className="flex items-center gap-2 px-3 py-2 bg-surface-container-lowest rounded-xl border border-outline-variant shadow-xs flex-1 min-w-[110px]">
               <FileText size={16} className="text-primary" />
               <div className="text-xs">
                 <span className="text-secondary block">Total Denuncias</span>
@@ -88,7 +88,7 @@ export const AdminPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 px-3.5 py-2 bg-surface-container-lowest rounded-xl border border-outline-variant shadow-xs">
+            <div className="flex items-center gap-2 px-3 py-2 bg-surface-container-lowest rounded-xl border border-outline-variant shadow-xs flex-1 min-w-[110px]">
               <Home size={16} className="text-blue-600" />
               <div className="text-xs">
                 <span className="text-secondary block">Anuncios</span>
@@ -98,7 +98,7 @@ export const AdminPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 px-3.5 py-2 bg-surface-container-lowest rounded-xl border border-outline-variant shadow-xs">
+            <div className="flex items-center gap-2 px-3 py-2 bg-surface-container-lowest rounded-xl border border-outline-variant shadow-xs flex-1 min-w-[110px]">
               <Users size={16} className="text-purple-600" />
               <div className="text-xs">
                 <span className="text-secondary block">Usuarios</span>

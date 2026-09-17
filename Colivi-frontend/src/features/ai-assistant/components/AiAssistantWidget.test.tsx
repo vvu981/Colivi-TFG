@@ -12,20 +12,30 @@ vi.mock('./AiChatWindow', () => ({
   ),
 }));
 
+import { MemoryRouter } from 'react-router-dom';
+
 describe('AiAssistantWidget component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('inicia en estado colapsado mostrando el botón flotante (FAB)', () => {
-    render(<AiAssistantWidget />);
+    render(
+      <MemoryRouter>
+        <AiAssistantWidget />
+      </MemoryRouter>
+    );
 
     expect(screen.getByRole('button', { name: /abrir asistente colivi ia/i })).toBeInTheDocument();
     expect(screen.queryByTestId('mock-chat-window')).not.toBeInTheDocument();
   });
 
   it('despliega el panel de chat al hacer clic en el FAB', async () => {
-    render(<AiAssistantWidget />);
+    render(
+      <MemoryRouter>
+        <AiAssistantWidget />
+      </MemoryRouter>
+    );
 
     const fabButton = screen.getByRole('button', { name: /abrir asistente colivi ia/i });
     await userEvent.click(fabButton);
@@ -34,7 +44,11 @@ describe('AiAssistantWidget component', () => {
   });
 
   it('permite cerrar el panel pulsando la tecla Escape', async () => {
-    render(<AiAssistantWidget />);
+    render(
+      <MemoryRouter>
+        <AiAssistantWidget />
+      </MemoryRouter>
+    );
 
     const fabButton = screen.getByRole('button', { name: /abrir asistente colivi ia/i });
     await userEvent.click(fabButton);
@@ -44,5 +58,27 @@ describe('AiAssistantWidget component', () => {
     fireEvent.keyDown(window, { key: 'Escape', code: 'Escape' });
 
     expect(screen.queryByTestId('mock-chat-window')).not.toBeInTheDocument();
+  });
+
+  it('aplica clase bottom-36 en móvil cuando está en /listings/:id para evitar colisión', () => {
+    const { container } = render(
+      <MemoryRouter initialEntries={['/listings/abc-123']}>
+        <AiAssistantWidget />
+      </MemoryRouter>
+    );
+
+    const aside = container.querySelector('aside');
+    expect(aside).toHaveClass('bottom-36');
+  });
+
+  it('aplica clase bottom-20 en móvil cuando está en cualquier otra página', () => {
+    const { container } = render(
+      <MemoryRouter initialEntries={['/']}>
+        <AiAssistantWidget />
+      </MemoryRouter>
+    );
+
+    const aside = container.querySelector('aside');
+    expect(aside).toHaveClass('bottom-20');
   });
 });
