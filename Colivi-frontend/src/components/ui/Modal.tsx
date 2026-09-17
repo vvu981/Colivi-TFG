@@ -13,7 +13,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
 
   return (
     <div className={`fixed inset-0 ${zIndex} flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150`}>
-      <div className="bg-surface w-full max-w-[450px] min-w-[300px] rounded-2xl shadow-xl overflow-hidden">
+      <div className="bg-surface w-full max-w-[450px] rounded-2xl shadow-xl overflow-hidden mx-auto">
         <div className="p-6 border-b border-surface-container flex items-center justify-between">
           <h2 className="font-headline-sm text-headline-sm text-on-surface">{title}</h2>
           {onClose && (

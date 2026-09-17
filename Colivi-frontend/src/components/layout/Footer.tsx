@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 
 export const Footer: React.FC = () => {
   return (
-    <footer className="bg-surface-container-lowest border-t border-outline-variant font-label-sm text-label-sm w-full py-6 px-margin-desktop flex flex-col md:flex-row justify-between items-center">
+    <footer className="bg-surface-container-lowest border-t border-outline-variant font-label-sm text-label-sm w-full pt-6 pb-24 md:pb-6 px-4 sm:px-6 md:px-margin-desktop flex flex-col md:flex-row justify-between items-center gap-4">
       <div className="mb-4 md:mb-0">
         <span className="font-headline-sm text-headline-sm font-bold text-on-surface block mb-1">Colivi</span>
         <span className="text-on-surface-variant">© {new Date().getFullYear()} Colivi. All rights reserved.</span>

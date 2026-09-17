@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { SlidersHorizontal, X, Loader2, SearchX } from 'lucide-react';
+import { SlidersHorizontal, X, Loader2, SearchX, List, Map as MapIcon } from 'lucide-react';
 
 import { useMapListings } from '../features/housing/hooks/useMapListings';
 import { useMapClusters, type MapViewport } from '../features/housing/hooks/useMapClusters';
@@ -99,6 +99,27 @@ export const MapSearchPage: React.FC = () => {
     rentalType: '',
     amenities: [],
   });
+
+  // ── Mobile / Responsive State ──────────────────────────────────────
+  const [mobileView, setMobileView] = useState<'map' | 'list'>('map');
+  const [isDesktop, setIsDesktop] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (mobileView === 'map' && mapRef.current) {
+      const timer = setTimeout(() => {
+        mapRef.current?.invalidateSize();
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [mobileView]);
 
   // ── Preservar el precio máximo global y distribución del catálogo sin filtrar ──
   const { globalMaxPrice, globalHistogramData } = usePriceHistogram(listings, filters);
@@ -483,11 +504,11 @@ export const MapSearchPage: React.FC = () => {
 
   // ── Render ─────────────────────────────────────────────────────────
   return (
-    <MainLayout>
-      <div className={`flex h-[calc(100vh-80px)] overflow-hidden ${isResizing ? 'cursor-col-resize select-none' : ''}`}>
+    <MainLayout noBottomPadding hideFooter>
+      <div className={`flex flex-col md:flex-row h-[calc(100dvh-128px)] md:h-[calc(100dvh-80px)] overflow-hidden ${isResizing ? 'cursor-col-resize select-none' : ''}`}>
 
         {/* ── Left: Map panel ────────────────────────────────────── */}
-        <div className="relative flex-1 min-w-0">
+        <div className={`relative flex-1 min-w-0 h-full ${mobileView === 'list' ? 'hidden md:block' : 'block'}`}>
           {/* Leaflet container — `isolate` scopes internal z-indexes */}
           <div
             ref={mapContainerRef}
@@ -526,7 +547,7 @@ export const MapSearchPage: React.FC = () => {
           onPointerMove={handleResizeMove}
           onPointerUp={handleResizeEnd}
           onPointerCancel={handleResizeEnd}
-          className={`relative group flex items-center justify-center w-2 -ml-1 -mr-1 z-30 cursor-col-resize select-none transition-colors ${
+          className={`hidden md:flex relative group items-center justify-center w-2 -ml-1 -mr-1 z-30 cursor-col-resize select-none transition-colors ${
             isResizing ? 'bg-primary/20 cursor-col-resize' : 'hover:bg-primary/10'
           }`}
         >
@@ -541,8 +562,10 @@ export const MapSearchPage: React.FC = () => {
         {/* ── Right: Sidebar ─────────────────────────────────────── */}
         <aside
           ref={sidebarRef}
-          style={{ width: `${sidebarWidth}px` }}
-          className="flex-shrink-0 flex flex-col border-l border-outline-variant bg-surface-container-lowest overflow-hidden"
+          style={isDesktop ? { width: `${sidebarWidth}px` } : undefined}
+          className={`flex-shrink-0 flex flex-col border-l border-outline-variant bg-surface-container-lowest overflow-hidden w-full md:w-auto h-full ${
+            mobileView === 'map' ? 'hidden md:flex' : 'flex'
+          }`}
         >
           <div className="px-4 py-3.5 border-b border-outline-variant flex-shrink-0 flex items-center justify-between gap-3">
             <div className="min-w-0">
@@ -642,6 +665,30 @@ export const MapSearchPage: React.FC = () => {
             ))}
           </div>
         </aside>
+      </div>
+
+      {/* Floating Mobile View Toggle (Ver lista / Ver mapa) */}
+      <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-30 md:hidden">
+        <button
+          type="button"
+          id="mobile-map-view-toggle"
+          onClick={() => {
+            setMobileView((prev) => (prev === 'map' ? 'list' : 'map'));
+          }}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-on-surface text-surface shadow-xl font-bold text-xs tracking-wide active:scale-95 transition-all cursor-pointer border border-outline-variant/40"
+        >
+          {mobileView === 'map' ? (
+            <>
+              <List size={16} />
+              <span>Ver lista ({filteredListings ? filteredListings.length : listings.length})</span>
+            </>
+          ) : (
+            <>
+              <MapIcon size={16} />
+              <span>Ver mapa</span>
+            </>
+          )}
+        </button>
       </div>
     </MainLayout>
   );

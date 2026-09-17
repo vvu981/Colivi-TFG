@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../features/auth/context/AuthContext';
 import { bookingRequestService } from '../../features/housing/api/bookingRequestService';
 import { messagingApi } from '../../features/messaging/api/messagingApi';
+import { Search, Map } from 'lucide-react';
 
 export const UserMenu = () => {
   const { user, logout } = useAuth();
@@ -161,6 +162,26 @@ export const UserMenu = () => {
               /* MENU PARA USUARIOS ESTANDAR */
               <>
                 <div className="py-1">
+                  <div className="md:hidden">
+                    <Link
+                      to="/"
+                      onClick={() => setOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-2 text-sm text-on-surface hover:bg-surface-container transition-colors"
+                    >
+                      <Search size={15} className="text-secondary" />
+                      <span>Explorar</span>
+                    </Link>
+                    <Link
+                      to="/map"
+                      onClick={() => setOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-2 text-sm text-on-surface hover:bg-surface-container transition-colors"
+                    >
+                      <Map size={15} className="text-secondary" />
+                      <span>Mapa</span>
+                    </Link>
+                    <div className="border-t border-outline-variant/40 my-1"></div>
+                  </div>
+
                   <Link
                     to="/profile"
                     onClick={() => setOpen(false)}

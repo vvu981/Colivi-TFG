@@ -82,7 +82,7 @@ export const ListingDetailPage: React.FC = () => {
 
   return (
     <MainLayout>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 flex flex-col gap-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 flex flex-col gap-8 pb-24 lg:pb-8">
         {/* Header (Breadcrumbs, title, location, share, report, admin ID badge) */}
         <ListingHeader
           listing={listing}
@@ -142,7 +142,7 @@ export const ListingDetailPage: React.FC = () => {
           </div>
 
           {/* Right Column: Sticky Pricing Card (4 cols) */}
-          <div className="lg:col-span-5 xl:col-span-4 w-full">
+          <div id="booking-section" className="lg:col-span-5 xl:col-span-4 w-full scroll-mt-24">
             <ListingBookingCard listing={listing} currentUserId={user?.id} />
           </div>
         </div>
@@ -154,6 +154,29 @@ export const ListingDetailPage: React.FC = () => {
             currentListingId={listing.id}
           />
         )}
+
+        {/* Sticky Mobile Booking Bar */}
+        <div className="lg:hidden fixed bottom-16 inset-x-0 bg-surface/95 backdrop-blur-md border-t border-outline-variant p-3.5 z-30 shadow-lg flex items-center justify-between px-4 sm:px-6">
+          <div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-xl font-black text-on-surface">{listing.pricePerMonth} €</span>
+              <span className="text-xs text-secondary font-medium">/ mes</span>
+            </div>
+            <span className="text-[11px] text-secondary">
+              Fianza: {listing.securityDeposit} €
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              const el = document.getElementById('booking-section');
+              el?.scrollIntoView({ behavior: 'smooth' });
+            }}
+            className="px-5 py-2.5 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary-container transition-all shadow-xs cursor-pointer active:scale-95"
+          >
+            Solicitar reserva
+          </button>
+        </div>
 
         {/* Report Listing Modal */}
         <ReportListingModal

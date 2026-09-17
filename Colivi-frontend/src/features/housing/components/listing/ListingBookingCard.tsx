@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, Edit3, Send, CheckCircle2, Lock, Sparkles, CalendarDays, Loader2, MessageSquare } from 'lucide-react';
+import { ShieldCheck, Edit3, Send, CheckCircle2, Lock, Sparkles, CalendarDays, Loader2, MessageSquare, Trash2 } from 'lucide-react';
 import type { AccommodationListingResponse } from '../../types/listing.types';
 import { bookingRequestService } from '../../api/bookingRequestService';
 import { messagingApi } from '../../../messaging/api/messagingApi';
 import type { BookingRequestPayload } from '../../types/booking.types';
+import { useDeleteListing } from '../../hooks/useDeleteListing';
+import { ConfirmDeleteListingModal } from './ConfirmDeleteListingModal';
 import { MonthPicker } from '../../../../components/ui/MonthPicker';
 import { Select } from '../../../../components/ui/Select';
 
@@ -77,6 +79,20 @@ export const ListingBookingCard: React.FC<ListingBookingCardProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isStartingChat, setIsStartingChat] = useState(false);
 
+  // Soft delete state
+  const { deleteListing, isLoading: isDeleting, error: deleteError, setError: setDeleteError } = useDeleteListing();
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+  const { id, pricePerMonth, securityDeposit, hostId, hostNickname, accommodation } = listing;
+
+  const handleDeleteListing = async () => {
+    const ok = await deleteListing(id);
+    if (ok) {
+      setIsDeleteModalOpen(false);
+      navigate('/my-listings', { replace: true });
+    }
+  };
+
   const handleStartChat = async () => {
     if (!currentUserId) {
       navigate('/login');
@@ -97,8 +113,6 @@ export const ListingBookingCard: React.FC<ListingBookingCardProps> = ({
       setIsStartingChat(false);
     }
   };
-
-  const { id, pricePerMonth, securityDeposit, hostId, hostNickname, accommodation } = listing;
 
   const isOwner = Boolean(
     (currentUserId && hostId && currentUserId === hostId) ||
@@ -210,14 +224,27 @@ export const ListingBookingCard: React.FC<ListingBookingCardProps> = ({
         {/* Action Buttons */}
         <div className="flex flex-col gap-2.5">
           {isOwner ? (
-            <button
-               type="button"
-               onClick={() => navigate(`/edit-listing/${id}`)}
-               className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-primary text-on-primary font-bold text-sm hover:opacity-95 active:scale-98 transition-all cursor-pointer shadow-sm"
-             >
-               <Edit3 size={18} />
-               <span>Editar este anuncio</span>
-            </button>
+            <div className="flex flex-col gap-2">
+              <button
+                 type="button"
+                 onClick={() => navigate(`/edit-listing/${id}`)}
+                 className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-primary text-on-primary font-bold text-sm hover:opacity-95 active:scale-98 transition-all cursor-pointer shadow-sm"
+               >
+                 <Edit3 size={18} />
+                 <span>Editar este anuncio</span>
+              </button>
+              <button
+                 type="button"
+                 onClick={() => {
+                   setDeleteError(null);
+                   setIsDeleteModalOpen(true);
+                 }}
+                 className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl border border-error/30 text-error hover:bg-error-container/20 font-semibold text-sm transition-all cursor-pointer"
+               >
+                 <Trash2 size={17} />
+                 <span>Eliminar este anuncio</span>
+              </button>
+            </div>
           ) : (
             <>
               <button
@@ -365,6 +392,17 @@ export const ListingBookingCard: React.FC<ListingBookingCardProps> = ({
           </div>
         </div>
       , document.body)}
+
+      <ConfirmDeleteListingModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          if (!isDeleting) setIsDeleteModalOpen(false);
+        }}
+        listingTitle={listing.title}
+        onConfirmDelete={handleDeleteListing}
+        isLoading={isDeleting}
+        error={deleteError}
+      />
     </>
   );
 };
