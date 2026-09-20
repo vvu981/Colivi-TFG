@@ -659,15 +659,55 @@ GOOGLE_CLIENT_ID=107294184753-qo7cnr52fmvavskavnhugpekb2nsge6n.apps.googleuserco
 <h2 id="_cuentas_prueba">5. Cuentas y Datos de Prueba</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>La base de datos se inicializa automáticamente con la migración Flyway <code>V999__insert_dev_seed_data.sql</code>, incorporando usuarios, piso y gastos ya calculados.</p>
+<p>La base de datos contiene un conjunto de datos realistas de prueba (50 usuarios con perfiles completos, 10 hogares de convivencia compartida y más de 35 alojamientos en 11 ciudades):</p>
 </div>
+
+<div class="sect2">
+<h3 id="_cuentas_admin">5.1. Cuentas de Administración</h3>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 35%;">
+<col style="width: 20%;">
+<col style="width: 20%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Rol</th>
+<th class="tableblock halign-left valign-top">Correo Electrónico</th>
+<th class="tableblock halign-left valign-top">Contraseña</th>
+<th class="tableblock halign-left valign-top">Permisos</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Administrador</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>admin@gmail.com</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>AdminContrasena1</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Control total, moderación de anuncios y gestión de denuncias</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Moderador</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>moderador@colivi.es</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>Moderador123!</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Panel administrativo y revisión de reportes</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<div class="sect2">
+<h3 id="_cuentas_usuarios">5.2. Usuarios y Miembros de Convivencia</h3>
 <div class="admonitionblock important">
 <table>
 <tr>
 <td class="icon"><div class="title">Importante</div></td>
-<td class="content">La contraseña para todas las cuentas precargadas es: <strong><code>password123</code></strong></td>
+<td class="content">La contraseña para <strong>todos los usuarios regulares</strong> de prueba es: <strong><code>UsuarioContrasena1</code></strong></td>
 </tr>
 </table>
+</div>
+<div class="paragraph">
+<p>Para evaluar la gestión de convivencia y el motor de gastos compartidos, se recomienda utilizar las cuentas del hogar <strong>Piso Moncloa - Los 4 Fantásticos</strong> (código: <code>8OSCV0LT</code>):</p>
 </div>
 <table class="tableblock frame-all grid-all stretch">
 <colgroup>
@@ -677,34 +717,36 @@ GOOGLE_CLIENT_ID=107294184753-qo7cnr52fmvavskavnhugpekb2nsge6n.apps.googleuserco
 </colgroup>
 <thead>
 <tr>
-<th class="tableblock halign-left valign-top">Rol</th>
+<th class="tableblock halign-left valign-top">Usuario</th>
 <th class="tableblock halign-left valign-top">Correo de Acceso</th>
-<th class="tableblock halign-left valign-top">Descripción</th>
+<th class="tableblock halign-left valign-top">Rol en el Hogar</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Administrador</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>victor@colivi.com</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Acceso global a moderación de anuncios, reportes y administración de piso</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Carlos Gómez</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>carlos.gomez@gmail.com</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Administrador del piso. Ha registrado gastos colectivos</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Inquilino A</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ana@colivi.com</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Miembro de 'Piso Estudiantes Centro'. Pagadora de la factura de luz</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Sofía Morales</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>sofia.morales@gmail.com</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Miembro activo con balances y deudas calculadas</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Inquilino B</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>carlos@colivi.com</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Miembro del piso. Pagador de la cena compartida</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Alejandro Romero</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>alejandro.romero@gmail.com</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Miembro activo</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Inquilino C</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>laura@colivi.com</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Miembro del piso con balances pendientes de liquidación</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Mario Campos</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>mario.campos@gmail.com</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Miembro activo</p></td>
 </tr>
 </tbody>
 </table>
+</div>
+
 </div>
 </div>
 
@@ -717,8 +759,9 @@ GOOGLE_CLIENT_ID=107294184753-qo7cnr52fmvavskavnhugpekb2nsge6n.apps.googleuserco
 <div class="olist arabic">
 <ol class="arabic">
 <li><p>Acceda a <a href="http://localhost:5173" target="_blank">http://localhost:5173</a> en modo anónimo para probar la experiencia de búsqueda como visitante.</p></li>
-<li><p>Aplique filtros por rango de precio, número de habitaciones y ciudad.</p></li>
-<li><p>Inicie sesión con <code>victor@colivi.com</code> para crear un alojamiento y comprobar la regla de negocio que exige un mínimo de 2 imágenes registradas para publicar.</p></li>
+<li><p>Compruebe los alojamientos precargados en Madrid, Barcelona, Valencia, Sevilla, Granada y Bilbao.</p></li>
+<li><p>Aplique filtros por rango de precio, número de habitaciones y mapa interactivo.</p></li>
+<li><p>Inicie sesión con <code>admin@gmail.com</code> (contraseña: <code>AdminContrasena1</code>) para explorar las opciones administrativas de moderación.</p></li>
 </ol>
 </div>
 </div>
@@ -727,10 +770,10 @@ GOOGLE_CLIENT_ID=107294184753-qo7cnr52fmvavskavnhugpekb2nsge6n.apps.googleuserco
 <h3 id="_flujo2_gastos">6.2. Módulo de Hogar y Gastos Compartidos</h3>
 <div class="olist arabic">
 <ol class="arabic">
-<li><p>Inicie sesión con <code>ana@colivi.com</code> (contraseña: <code>password123</code>).</p></li>
-<li><p>Acceda al espacio privado del piso <strong>Piso Estudiantes Centro</strong> (código: <code>PISO-CENTRO-2024</code>).</p></li>
-<li><p>Verifique en la pestaña de <strong>Balances</strong> cómo el algoritmo de simplificación de deudas resuelve las transacciones óptimas en memoria sin reescribir el histórico.</p></li>
-<li><p>Añada un gasto nuevo y observe la actualización reactiva de los saldos de cada miembro.</p></li>
+<li><p>Inicie sesión con <code>carlos.gomez@gmail.com</code> o <code>sofia.morales@gmail.com</code> (contraseña: <code>UsuarioContrasena1</code>).</p></li>
+<li><p>Acceda al espacio privado del piso <strong>Piso Moncloa - Los 4 Fantásticos</strong> (código: <code>8OSCV0LT</code>).</p></li>
+<li><p>Verifique en la pestaña de <strong>Balances</strong> cómo el algoritmo de simplificación de deudas calcula las compensaciones óptimas sin alterar los registros históricos.</p></li>
+<li><p>Añada un nuevo gasto compartido indicando importe y miembros afectados para verificar la actualización de los balances.</p></li>
 </ol>
 </div>
 </div>
@@ -739,8 +782,8 @@ GOOGLE_CLIENT_ID=107294184753-qo7cnr52fmvavskavnhugpekb2nsge6n.apps.googleuserco
 <h3 id="_flujo3_correos">6.3. Interceptación de Correos en Mailpit</h3>
 <div class="olist arabic">
 <ol class="arabic">
-<li><p>Realice cualquier acción que dispare notificaciones transaccionales (por ejemplo, registro de usuario o reactivación de cuenta).</p></li>
-<li><p>Abra <a href="http://localhost:8025" target="_blank">http://localhost:8025</a> para inspeccionar los correos generados por el backend en tiempo real.</p></li>
+<li><p>Realice cualquier acción que dispare notificaciones transaccionales (por ejemplo, registro de nuevo usuario o solicitud de reserva).</p></li>
+<li><p>Abra <a href="http://localhost:8025" target="_blank">http://localhost:8025</a> para inspeccionar los correos generados por el backend en tiempo real sin requerir servicios de correo externos.</p></li>
 </ol>
 </div>
 </div>

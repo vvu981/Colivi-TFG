@@ -53,9 +53,8 @@ public class EmailServiceImpl implements EmailService {
     private String reactivationSubject;
 
     /**
-     * URL base del frontend de Next.js donde el usuario completará la reactivación.
-     * Resuelto desde la variable de entorno {@code MAIL_REACTIVATION_URL},
-     * con fallback a {@code http://localhost:3000/reactivate?token=} para dev local.
+     * URL base del frontend donde el usuario completará la reactivación.
+     * Resuelto desde {@code app.mail.reactivation-url}, configurable mediante variables de entorno.
      */
     @Value("${app.mail.reactivation-url}")
     private String reactivationUrlBase;

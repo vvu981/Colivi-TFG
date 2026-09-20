@@ -46,7 +46,7 @@ public class SpringAiOrchestratorServiceImpl implements AiOrchestratorService {
     @Autowired
     public SpringAiOrchestratorServiceImpl(
             OpenAiChatModel chatModel,
-            @Value("${app.mcp.url:http://localhost:3001}") String mcpBaseUrl,
+            @Value("${app.mcp.url}") String mcpBaseUrl,
             @Value("${spring.ai.openai.chat.options.model:qwen/qwen3.8-27b}") String groqModel,
             McpClientFactory mcpClientFactory,
             McpTicketService mcpTicketService,
@@ -76,7 +76,9 @@ public class SpringAiOrchestratorServiceImpl implements AiOrchestratorService {
         }
 
         // Salvaguarda 3: Conexión efímera segura con timeout de 30s
-        String cleanMcpUrl = mcpBaseUrl != null ? mcpBaseUrl.replaceAll("/+$", "") : "http://localhost:3001";
+        String cleanMcpUrl = (mcpBaseUrl != null && !mcpBaseUrl.isBlank())
+                ? mcpBaseUrl.replaceAll("/+$", "")
+                : "http://localhost:3001";
 
         // SEC-01 & BUG-02: Intercambio de ticket efimero de un solo uso con fallo
         // controlado

@@ -17,6 +17,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 import java.util.List;
@@ -29,6 +30,9 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final UserStatusEnforcerFilter userStatusEnforcerFilter;
+
+    @Value("${app.cors.allowed-origin-patterns:http://localhost:*,http://127.0.0.1:*}")
+    private List<String> allowedOriginPatterns;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -69,8 +73,10 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // Permite cualquier puerto de localhost (ej. 3000, 5173, etc.)
-        configuration.setAllowedOriginPatterns(List.of("http://localhost:*")); 
+        // Permite los orígenes configurados (por defecto localhost/127.0.0.1, ampliable via CORS_ALLOWED_ORIGINS)
+        configuration.setAllowedOriginPatterns(allowedOriginPatterns != null && !allowedOriginPatterns.isEmpty() 
+                ? allowedOriginPatterns 
+                : List.of("http://localhost:*", "http://127.0.0.1:*")); 
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
