@@ -31,7 +31,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, onReset }) => {
 
   useEffect(() => {
     let cancelled = false;
-    listingService.search({ size: 100, page: 0 })
+    listingService.search({ size: 20, page: 0 })
       .then((page) => {
         if (!cancelled && page.content) {
           setCatalogListings(page.content);
