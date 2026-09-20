@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Colivi TFG — Guía de Ejecución y Evaluación Local</title>
+  <meta name="description" content="Guía técnica paso a paso para la evaluación en local del Trabajo de Fin de Grado Colivi: Plataforma Integral de Búsqueda de Alojamiento, Gestión de Gastos Compartidos y Auditoría Inteligente mediante MCP.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090d16;
+      --bg-surface: #111827;
+      --bg-card: #182234;
+      --bg-card-hover: #1e2c42;
+      --border: #243247;
+      --border-accent: #3b82f6;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --primary: #3b82f6;
+      --primary-light: #60a5fa;
+      --primary-bg: rgba(59, 130, 246, 0.1);
+      --success: #10b981;
+      --success-bg: rgba(16, 185, 129, 0.1);
+      --warning: #f59e0b;
+      --warning-bg: rgba(245, 158, 11, 0.1);
+      --code-bg: #0d121d;
+      --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* HEADER */
+    header {
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(17, 24, 39, 0.95) 0%, rgba(9, 13, 22, 0.98) 100%);
+      padding: 48px 0 40px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: var(--primary-bg);
+      color: var(--primary-light);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      font-size: 2.25rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.2;
+      margin-bottom: 12px;
+      color: #ffffff;
+    }
+
+    .subtitle {
+      font-size: 1.125rem;
+      color: var(--text-muted);
+      max-width: 800px;
+      margin-bottom: 24px;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 16px 20px;
+    }
+
+    .meta-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .meta-label {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      margin-bottom: 2px;
+    }
+
+    .meta-value {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    /* MAIN CONTENT */
+    main {
+      padding: 48px 0 80px;
+    }
+
+    section {
+      margin-bottom: 56px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+    }
+
+    .section-icon {
+      width: 28px;
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary-light);
+    }
+
+    h2 {
+      font-size: 1.45rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #ffffff;
+    }
+
+    p {
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    /* CARDS */
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ARCHITECTURE GRID */
+    .arch-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .arch-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      transition: border-color 0.2s;
+    }
+
+    .arch-box:hover {
+      border-color: var(--primary);
+    }
+
+    .arch-tag {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--primary-light);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+      display: block;
+    }
+
+    .arch-name {
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 4px;
+    }
+
+    .arch-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin: 0;
+    }
+
+    /* CODE BLOCKS */
+    .code-wrapper {
+      position: relative;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      margin: 16px 0;
+      overflow: hidden;
+    }
+
+    .code-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #090e17;
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-dim);
+    }
+
+    pre {
+      padding: 16px;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 0.88rem;
+      color: #e2e8f0;
+      line-height: 1.5;
+    }
+
+    .copy-btn {
+      background: var(--bg-card);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+      font-family: var(--font-sans);
+    }
+
+    .copy-btn:hover {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+    }
+
+    /* TABLES */
+    .table-container {
+      overflow-x: auto;
+      margin: 16px 0;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+
+    th {
+      background: var(--bg-card);
+      padding: 12px 16px;
+      font-weight: 600;
+      color: var(--text);
+      border-bottom: 1px solid var(--border);
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+
+    td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: var(--primary-bg);
+      color: var(--primary-light);
+    }
+
+    .status-pill.success {
+      background: var(--success-bg);
+      color: var(--success);
+    }
+
+    .url-link {
+      color: var(--primary-light);
+      text-decoration: none;
+      font-family: var(--font-mono);
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .url-link:hover {
+      text-decoration: underline;
+    }
+
+    /* STEP LIST */
+    .steps-container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    .step-item {
+      display: flex;
+      gap: 16px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+    }
+
+    .step-number {
+      width: 36px;
+      height: 36px;
+      background: var(--primary-bg);
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      color: var(--primary-light);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+
+    .step-content {
+      flex: 1;
+    }
+
+    .step-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 6px;
+    }
+
+    /* ALERTS */
+    .alert {
+      display: flex;
+      gap: 12px;
+      padding: 16px;
+      border-radius: var(--radius-md);
+      margin: 16px 0;
+      border: 1px solid transparent;
+      font-size: 0.88rem;
+    }
+
+    .alert-info {
+      background: var(--primary-bg);
+      border-color: rgba(59, 130, 246, 0.3);
+      color: #bfdbfe;
+    }
+
+    .alert-warning {
+      background: var(--warning-bg);
+      border-color: rgba(245, 158, 11, 0.3);
+      color: #fde68a;
+    }
+
+    .alert-icon {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    /* FOOTER */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 0;
+      color: var(--text-dim);
+      font-size: 0.85rem;
+      text-align: center;
+    }
+
+    /* SVG ICONS INLINE HELPERS */
+    .icon {
+      width: 16px;
+      height: 16px;
+      stroke-width: 2;
+      stroke: currentColor;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    @media (max-width: 768px) {
+      h1 { font-size: 1.75rem; }
+      .meta-grid { grid-template-columns: 1fr; }
+      .step-item { flex-direction: column; gap: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <div class="container">
+      <div class="badge">
+        <svg class="icon" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+        Trabajo de Fin de Grado
+      </div>
+      <h1>Colivi: Plataforma Integral de Convivencia</h1>
+      <p class="subtitle">Guia tecnica y operativa para evaluacion y ejecucion en entorno local.</p>
+
+      <div class="meta-grid">
+        <div class="meta-item">
+          <span class="meta-label">Autor del Proyecto</span>
+          <span class="meta-value">Victor Vallejo Uroz</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Destinatario</span>
+          <span class="meta-value">Tutor Academico / Tribunal</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Modo de Ejecucion</span>
+          <span class="meta-value">Orquestacion Docker Compose</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Estado de la Base de Datos</span>
+          <span class="meta-value">Semillero de prueba precargado</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main class="container">
+
+    <!-- ARQUITECTURA -->
+    <section id="arquitectura">
+      <div class="section-header">
+        <div class="section-icon">
+          <svg class="icon" style="width:24px;height:24px;" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+        </div>
+        <h2>1. Arquitectura y Stack Tecnologico</h2>
+      </div>
+      <p>El sistema opera bajo una arquitectura distribuida y desacoplada de 5 servicios totalmente integrados mediante Docker:</p>
+
+      <div class="arch-grid">
+        <div class="arch-box">
+          <span class="arch-tag">Frontend</span>
+          <div class="arch-name">Vite + React 19</div>
+          <p class="arch-desc">SPA con TypeScript, Tailwind CSS, TanStack Query y componentes interactivos.</p>
+        </div>
+        <div class="arch-box">
+          <span class="arch-tag">Backend REST</span>
+          <div class="arch-name">Java 21 + Spring Boot 3</div>
+          <p class="arch-desc">Arquitectura por capas, seguridad JWT, Flyway y validacion estricta de dominio.</p>
+        </div>
+        <div class="arch-box">
+          <span class="arch-tag">Persistencia</span>
+          <div class="arch-name">PostgreSQL 16</div>
+          <p class="arch-desc">Base de datos relacional con soporte nativo JSONB para auditoria inmutable.</p>
+        </div>
+        <div class="arch-box">
+          <span class="arch-tag">Inteligencia Artificial</span>
+          <div class="arch-name">Servidor MCP (Node.js)</div>
+          <p class="arch-desc">Model Context Protocol para auditoria conversacional y orquestacion con LLM.</p>
+        </div>
+        <div class="arch-box">
+          <span class="arch-tag">Mensajeria Local</span>
+          <div class="arch-name">Mailpit (SMTP Mock)</div>
+          <p class="arch-desc">Servidor de correo local para captura de enlaces de activacion y avisos.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- REQUISITOS -->
+    <section id="requisitos">
+      <div class="section-header">
+        <div class="section-icon">
+          <svg class="icon" style="width:24px;height:24px;" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+        </div>
+        <h2>2. Requisitos Previos Minimos</h2>
+      </div>
+      <p>Para evitar configurar entornos JDK, Maven o Node en la maquina anfitriona, la ejecucion se ha abstraido integramente. Solo se requiere:</p>
+
+      <div class="card">
+        <ul style="list-style:none; display:flex; flex-direction:column; gap:12px;">
+          <li style="display:flex; align-items:center; gap:10px;">
+            <svg class="icon" style="color:var(--success)" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            <span><strong>Docker Desktop</strong> (en ejecucion, con soporte Docker Compose v2).</span>
+          </li>
+          <li style="display:flex; align-items:center; gap:10px;">
+            <svg class="icon" style="color:var(--success)" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            <span><strong>Git</strong> (para clonar el repositorio).</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- DESPLIEGUE EN 3 PASOS -->
+    <section id="despliegue">
+      <div class="section-header">
+        <div class="section-icon">
+          <svg class="icon" style="width:24px;height:24px;" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+        </div>
+        <h2>3. Arranque del Sistema en 3 Comandos</h2>
+      </div>
+      <p>Abra una terminal (Git Bash, PowerShell o Terminal de macOS/Linux) y ejecute los tres bloques siguientes:</p>
+
+      <div class="steps-container">
+        <!-- PASO 1 -->
+        <div class="step-item">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            <div class="step-title">Clonar el repositorio oficial</div>
+            <p>Descarga el codigo fuente completo del proyecto:</p>
+            <div class="code-wrapper">
+              <div class="code-header">
+                <span>Terminal</span>
+                <button class="copy-btn" onclick="copyCode('code-step-1', this)">
+                  <svg class="icon" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                  <span>Copiar</span>
+                </button>
+              </div>
+              <pre id="code-step-1">git clone https://github.com/vvu981/Colivi-TFG.git
+cd Colivi-TFG</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- PASO 2 -->
+        <div class="step-item">
+          <div class="step-number">2</div>
+          <div class="step-content">
+            <div class="step-title">Configurar variables de entorno (.env)</div>
+            <p>Puede generar el archivo copiando la plantilla predeterminada o copiando directamente el bloque inferior en un archivo llamado <code>.env</code> en la raiz del proyecto:</p>
+            <div class="code-wrapper">
+              <div class="code-header">
+                <span>Terminal (Opcion Rapida)</span>
+                <button class="copy-btn" onclick="copyCode('code-step-2', this)">
+                  <svg class="icon" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                  <span>Copiar</span>
+                </button>
+              </div>
+              <pre id="code-step-2">cp .env.example .env</pre>
+            </div>
+
+            <p style="margin-top:16px;">O si prefiere crear el archivo <code>.env</code> manualmente, este es el contenido integro necesario para la ejecucion local:</p>
+            <div class="code-wrapper">
+              <div class="code-header">
+                <span>Archivo .env (Contenido Completo)</span>
+                <button class="copy-btn" onclick="copyCode('code-env-full', this)">
+                  <svg class="icon" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                  <span>Copiar .env</span>
+                </button>
+              </div>
+              <pre id="code-env-full">POSTGRES_PASSWORD=SuperSecretPassword123!
+BACKEND_URL=http://backend:8080
+JWT_SECRET=ZXN0YS1jbGF2ZS1zZWNyZXRhLXRpZW5lLXF1ZS1zZXItbXV5LWxhcmdhLXktY29tcGxlamE=
+CLOUDINARY_API_SECRET=sZMZwguAYGsMDE4gSBLFkw1_pnQ
+CLOUDINARY_API_KEY=944985476469411
+
+CLOUDINARY_CLOUD_NAME=dzym8d5jq
+MAP_TOKEN=your-mapbox-or-leaflet-token
+
+# -- Orquestacion de Inteligencia Artificial (Groq / MCP) --
+AI_BASE_URL=https://api.groq.com/openai
+AI_API_KEY=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
+AI_MODEL=openai/gpt-oss-20b
+
+GROQ_API_KEY=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
+GROQ_MODEL=qwen/qwen3.8-27b
+
+# -- Servidor SMTP Mailpit --
+MAIL_FROM=noreply@colivi.com
+MAIL_REACTIVATION_URL=http://localhost:5173/reactivate?token=
+
+GOOGLE_CLIENT_ID=107294184753-qo7cnr52fmvavskavnhugpekb2nsge6n.apps.googleusercontent.com</pre>
+            </div>
+
+            <div class="alert alert-info">
+              <svg class="icon alert-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+              <span>Este bloque contiene la configuracion completa y operativa para que el tutor pueda evaluar el sistema al instante sin necesidad de registrarse en ningun servicio externo.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- PASO 3 -->
+        <div class="step-item">
+          <div class="step-number">3</div>
+          <div class="step-content">
+            <div class="step-title">Compilar y levantar todos los contenedores</div>
+            <p>Docker construira las imagenes y arrancara los 5 servicios en segundo plano:</p>
+            <div class="code-wrapper">
+              <div class="code-header">
+                <span>Terminal</span>
+                <button class="copy-btn" onclick="copyCode('code-step-3', this)">
+                  <svg class="icon" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                  <span>Copiar</span>
+                </button>
+              </div>
+              <pre id="code-step-3">docker compose up --build -d</pre>
+            </div>
+            <p style="font-size:0.85rem; color:var(--text-dim);">Nota: La primera compilacion tarda aproximadamente 2-3 minutos mientras descarga las dependencias de Maven y Node.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MAPA DE ACCESOS -->
+    <section id="accesos">
+      <div class="section-header">
+        <div class="section-icon">
+          <svg class="icon" style="width:24px;height:24px;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+        </div>
+        <h2>4. Mapa de URLs de Acceso</h2>
+      </div>
+      <p>Una vez levantados los contenedores, los siguientes servicios estaran disponibles en el navegador:</p>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Servicio</th>
+              <th>URL en el Navegador</th>
+              <th>Proposito de Evaluacion</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Frontend Web</strong></td>
+              <td><a class="url-link" href="http://localhost:5173" target="_blank">http://localhost:5173</a></td>
+              <td>Aplicacion principal de usuario (catalogo, convivencia, reservas)</td>
+              <td><span class="status-pill success">Principal</span></td>
+            </tr>
+            <tr>
+              <td><strong>Swagger / OpenAPI</strong></td>
+              <td><a class="url-link" href="http://localhost:8080/swagger-ui.html" target="_blank">http://localhost:8080/swagger-ui.html</a></td>
+              <td>Exploracion interactiva de endpoints y esquemas REST</td>
+              <td><span class="status-pill">Backend</span></td>
+            </tr>
+            <tr>
+              <td><strong>Mailpit Web UI</strong></td>
+              <td><a class="url-link" href="http://localhost:8025" target="_blank">http://localhost:8025</a></td>
+              <td>Bandeja de correo para inspeccionar emails de activacion y avisos</td>
+              <td><span class="status-pill">Email Mock</span></td>
+            </tr>
+            <tr>
+              <td><strong>Servidor MCP</strong></td>
+              <td><a class="url-link" href="http://localhost:3001/health" target="_blank">http://localhost:3001/health</a></td>
+              <td>Endpoint de salud y herramientas MCP para auditoria inteligente</td>
+              <td><span class="status-pill">IA Agent</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- CREDENCIALES DE PRUEBA -->
+    <section id="credenciales">
+      <div class="section-header">
+        <div class="section-icon">
+          <svg class="icon" style="width:24px;height:24px;" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        </div>
+        <h2>5. Cuentas de Prueba Precargadas</h2>
+      </div>
+      <p>La base de datos se inicializa automaticamente mediante la migracion <code>V999__insert_dev_seed_data.sql</code> con usuarios, un hogar compartido y gastos ya calculados. Todos los usuarios comparten la misma clave:</p>
+
+      <div class="card" style="margin-bottom:16px; border-left:4px solid var(--primary);">
+        <div style="font-size:0.95rem;">
+          <strong>Contrasena comun para todas las cuentas:</strong>
+          <code style="background:var(--code-bg); padding:3px 8px; border-radius:4px; margin-left:8px; font-weight:600; color:var(--primary-light);">password123</code>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Rol / Perfil</th>
+              <th>Email de Acceso</th>
+              <th>Contexto en el Sistema</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Administrador Global</strong></td>
+              <td><code>victor@colivi.com</code></td>
+              <td>Permisos totales: moderacion de anuncios, gestion de reportes y administracion de piso.</td>
+            </tr>
+            <tr>
+              <td><strong>Inquilino / Companero A</strong></td>
+              <td><code>ana@colivi.com</code></td>
+              <td>Miembro activo de "Piso Estudiantes Centro". Ha participado en gastos comunes.</td>
+            </tr>
+            <tr>
+              <td><strong>Inquilino / Companero B</strong></td>
+              <td><code>carlos@colivi.com</code></td>
+              <td>Miembro activo de "Piso Estudiantes Centro". Registrado como pagador de cenas colectivas.</td>
+            </tr>
+            <tr>
+              <td><strong>Inquilino / Companero C</strong></td>
+              <td><code>laura@colivi.com</code></td>
+              <td>Miembro activo con balance deudor respecto a los gastos sembrados.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- GUIA DE EVALUACION -->
+    <section id="evaluacion">
+      <div class="section-header">
+        <div class="section-icon">
+          <svg class="icon" style="width:24px;height:24px;" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+        </div>
+        <h2>6. Flujo de Evaluacion para el Tutor</h2>
+      </div>
+      <p>Se sugieren los siguientes recorridos para contrastar la implementacion con los objetivos tecnicos del TFG:</p>
+
+      <div class="card">
+        <div class="card-title">
+          <svg class="icon" style="color:var(--primary)" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+          Flujo 1: Marketplace de Alojamiento y Anuncios
+        </div>
+        <p>1. Ingrese a <a class="url-link" href="http://localhost:5173" target="_blank">http://localhost:5173</a> sin iniciar sesion (rol Invitado).</p>
+        <p>2. Explore el catalogo publico de anuncios comerciales con filtros interactivos.</p>
+        <p>3. Inicie sesion con <code>victor@colivi.com</code> para verificar las opciones de moderacion y creacion de inmuebles con multiples imagenes.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <svg class="icon" style="color:var(--primary)" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          Flujo 2: Modulo de Hogar y Motor de Gastos Compartidos
+        </div>
+        <p>1. Inicie sesion con <code>ana@colivi.com</code> o <code>carlos@colivi.com</code>.</p>
+        <p>2. Acceda a la seccion del hogar <strong>Piso Estudiantes Centro</strong> (codigo de invitacion: <code>PISO-CENTRO-2024</code>).</p>
+        <p>3. Observe la seccion de <strong>Gastos y Deudas</strong>: el algoritmo de simplificacion calcula en memoria el grafo optimo de pagos sin alterar los registros historicos.</p>
+        <p>4. Registre un nuevo gasto compartido indicando importe y miembros afectados para verificar la actualizacion en tiempo real de los balances.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <svg class="icon" style="color:var(--primary)" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+          Flujo 3: Notificaciones y Correos con Mailpit
+        </div>
+        <p>1. Si ejecuta alguna accion que dispare emails transaccionales (por ejemplo, registro de nuevo usuario o reactivacion).</p>
+        <p>2. Abra <a class="url-link" href="http://localhost:8025" target="_blank">http://localhost:8025</a> para visualizar el servidor SMTP local de Mailpit, donde los correos quedan capturados sin necesidad de conexion a servicios de terceros.</p>
+      </div>
+    </section>
+
+    <!-- RESOLUCION DE PROBLEMAS -->
+    <section id="troubleshooting">
+      <div class="section-header">
+        <div class="section-icon">
+          <svg class="icon" style="width:24px;height:24px;" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        </div>
+        <h2>7. Resolucion de Incidencias Comunes</h2>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Conflicto de Puertos (5432 o 8080 en uso)</div>
+        <p>Si la maquina anfitriona ya cuenta con una instancia local de PostgreSQL o Spring Boot ejecutandose en los puertos <code>5432</code> o <code>8080</code>, detenga temporalmente dichos servicios locales o edite el mapeo en el archivo <code>docker-compose.yml</code> (por ejemplo, cambiar <code>"5432:5432"</code> por <code>"5433:5432"</code>).</p>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Reinicio limpio del entorno</div>
+        <p>Para reiniciar el entorno restableciendo la base de datos a su estado original sembrado:</p>
+        <div class="code-wrapper">
+          <div class="code-header">
+            <span>Terminal</span>
+            <button class="copy-btn" onclick="copyCode('code-reset', this)">
+              <svg class="icon" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              <span>Copiar</span>
+            </button>
+          </div>
+          <pre id="code-reset">docker compose down -v
+docker compose up -d</pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- PARADA -->
+    <section id="parada">
+      <div class="section-header">
+        <div class="section-icon">
+          <svg class="icon" style="width:24px;height:24px;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><rect x="9" y="9" width="6" height="6"></rect></svg>
+        </div>
+        <h2>8. Detencion del Sistema</h2>
+      </div>
+      <p>Para detener la ejecucion y liberar los recursos del sistema al concluir la sesion de evaluacion:</p>
+
+      <div class="code-wrapper">
+        <div class="code-header">
+          <span>Terminal</span>
+          <button class="copy-btn" onclick="copyCode('code-stop', this)">
+            <svg class="icon" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            <span>Copiar</span>
+          </button>
+        </div>
+        <pre id="code-stop">docker compose down</pre>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="container">
+      <p>Colivi &mdash; Trabajo de Fin de Grado en Ingenieria Informatica. Desarrollado por Victor Vallejo Uroz.</p>
+    </div>
+  </footer>
+
+  <script>
+    function copyCode(elementId, btn) {
+      const code = document.getElementById(elementId).innerText;
+      navigator.clipboard.writeText(code).then(() => {
+        const originalContent = btn.innerHTML;
+        btn.innerHTML = `
+          <svg class="icon" style="color:var(--success)" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          <span>Copiado</span>
+        `;
+        setTimeout(() => {
+          btn.innerHTML = originalContent;
+        }, 2000);
+      });
+    }
+  </script>
+</body>
+</html>
