@@ -1,612 +1,589 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Colivi TFG — Guía de Ejecución y Evaluación Local</title>
-  <meta name="description" content="Guía técnica paso a paso para la evaluación en local del Trabajo de Fin de Grado Colivi: Plataforma Integral de Búsqueda de Alojamiento, Gestión de Gastos Compartidos y Auditoría Inteligente mediante MCP.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --bg: #090d16;
-      --bg-surface: #111827;
-      --bg-card: #182234;
-      --bg-card-hover: #1e2c42;
-      --border: #243247;
-      --border-accent: #3b82f6;
-      --text: #f1f5f9;
-      --text-muted: #94a3b8;
-      --text-dim: #64748b;
-      --primary: #3b82f6;
-      --primary-light: #60a5fa;
-      --primary-bg: rgba(59, 130, 246, 0.1);
-      --success: #10b981;
-      --success-bg: rgba(16, 185, 129, 0.1);
-      --warning: #f59e0b;
-      --warning-bg: rgba(245, 158, 11, 0.1);
-      --code-bg: #0d121d;
-      --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-      --font-mono: 'JetBrains Mono', monospace;
-      --radius-sm: 6px;
-      --radius-md: 10px;
-      --radius-lg: 16px;
-    }
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Asciidoctor 2.0.17">
+<meta name="author" content="Víctor Vallejo Uroz">
+<title>Colivi — Guía de Evaluación Local</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700">
+<style>
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+/*! Asciidoctor default stylesheet | MIT License | https://asciidoctor.org */
+/* Uncomment the following line when using as a custom stylesheet */
+/* @import "https://fonts.googleapis.com/css?family=Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700"; */
+html{font-family:sans-serif;-webkit-text-size-adjust:100%}
+a{background:none}
+a:focus{outline:thin dotted}
+a:active,a:hover{outline:0}
+h1{font-size:2em;margin:.67em 0}
+b,strong{font-weight:bold}
+abbr{font-size:.9em}
+abbr[title]{cursor:help;border-bottom:1px dotted #dddddf;text-decoration:none}
+dfn{font-style:italic}
+hr{height:0}
+mark{background:#ff0;color:#000}
+code,kbd,pre,samp{font-family:monospace;font-size:1em}
+pre{white-space:pre-wrap}
+q{quotes:"\201C" "\201D" "\2018" "\2019"}
+small{font-size:80%}
+sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}
+sup{top:-.5em}
+sub{bottom:-.25em}
+img{border:0}
+svg:not(:root){overflow:hidden}
+figure{margin:0}
+audio,video{display:inline-block}
+audio:not([controls]){display:none;height:0}
+fieldset{border:1px solid silver;margin:0 2px;padding:.35em .625em .75em}
+legend{border:0;padding:0}
+button,input,select,textarea{font-family:inherit;font-size:100%;margin:0}
+button,input{line-height:normal}
+button,select{text-transform:none}
+button,html input[type=button],input[type=reset],input[type=submit]{-webkit-appearance:button;cursor:pointer}
+button[disabled],html input[disabled]{cursor:default}
+input[type=checkbox],input[type=radio]{padding:0}
+button::-moz-focus-inner,input::-moz-focus-inner{border:0;padding:0}
+textarea{overflow:auto;vertical-align:top}
+table{border-collapse:collapse;border-spacing:0}
+*,::before,::after{box-sizing:border-box}
+html,body{font-size:100%}
+body{background:#fff;color:rgba(0,0,0,.8);padding:0;margin:0;font-family:"Noto Serif","DejaVu Serif",serif;line-height:1;position:relative;cursor:auto;-moz-tab-size:4;-o-tab-size:4;tab-size:4;word-wrap:anywhere;-moz-osx-font-smoothing:grayscale;-webkit-font-smoothing:antialiased}
+a:hover{cursor:pointer}
+img,object,embed{max-width:100%;height:auto}
+object,embed{height:100%}
+img{-ms-interpolation-mode:bicubic}
+.left{float:left!important}
+.right{float:right!important}
+.text-left{text-align:left!important}
+.text-right{text-align:right!important}
+.text-center{text-align:center!important}
+.text-justify{text-align:justify!important}
+.hide{display:none}
+img,object,svg{display:inline-block;vertical-align:middle}
+textarea{height:auto;min-height:50px}
+select{width:100%}
+.subheader,.admonitionblock td.content>.title,.audioblock>.title,.exampleblock>.title,.imageblock>.title,.listingblock>.title,.literalblock>.title,.stemblock>.title,.openblock>.title,.paragraph>.title,.quoteblock>.title,table.tableblock>.title,.verseblock>.title,.videoblock>.title,.dlist>.title,.olist>.title,.ulist>.title,.qlist>.title,.hdlist>.title{line-height:1.45;color:#7a2518;font-weight:400;margin-top:0;margin-bottom:.25em}
+div,dl,dt,dd,ul,ol,li,h1,h2,h3,#toctitle,.sidebarblock>.content>.title,h4,h5,h6,pre,form,p,blockquote,th,td{margin:0;padding:0}
+a{color:#2156a5;text-decoration:underline;line-height:inherit}
+a:hover,a:focus{color:#1d4b8f}
+a img{border:0}
+p{line-height:1.6;margin-bottom:1.25em;text-rendering:optimizeLegibility}
+p aside{font-size:.875em;line-height:1.35;font-style:italic}
+h1,h2,h3,#toctitle,.sidebarblock>.content>.title,h4,h5,h6{font-family:"Open Sans","DejaVu Sans",sans-serif;font-weight:300;font-style:normal;color:#ba3925;text-rendering:optimizeLegibility;margin-top:1em;margin-bottom:.5em;line-height:1.0125em}
+h1 small,h2 small,h3 small,#toctitle small,.sidebarblock>.content>.title small,h4 small,h5 small,h6 small{font-size:60%;color:#e99b8f;line-height:0}
+h1{font-size:2.125em}
+h2{font-size:1.6875em}
+h3,#toctitle,.sidebarblock>.content>.title{font-size:1.375em}
+h4,h5{font-size:1.125em}
+h6{font-size:1em}
+hr{border:solid #dddddf;border-width:1px 0 0;clear:both;margin:1.25em 0 1.1875em}
+em,i{font-style:italic;line-height:inherit}
+strong,b{font-weight:bold;line-height:inherit}
+small{font-size:60%;line-height:inherit}
+code{font-family:"Droid Sans Mono","DejaVu Sans Mono",monospace;font-weight:400;color:rgba(0,0,0,.9)}
+ul,ol,dl{line-height:1.6;margin-bottom:1.25em;list-style-position:outside;font-family:inherit}
+ul,ol{margin-left:1.5em}
+ul li ul,ul li ol{margin-left:1.25em;margin-bottom:0}
+ul.square li ul,ul.circle li ul,ul.disc li ul{list-style:inherit}
+ul.square{list-style-type:square}
+ul.circle{list-style-type:circle}
+ul.disc{list-style-type:disc}
+ol li ul,ol li ol{margin-left:1.25em;margin-bottom:0}
+dl dt{margin-bottom:.3125em;font-weight:bold}
+dl dd{margin-bottom:1.25em}
+blockquote{margin:0 0 1.25em;padding:.5625em 1.25em 0 1.1875em;border-left:1px solid #ddd}
+blockquote,blockquote p{line-height:1.6;color:rgba(0,0,0,.85)}
+@media screen and (min-width:768px){h1,h2,h3,#toctitle,.sidebarblock>.content>.title,h4,h5,h6{line-height:1.2}
+h1{font-size:2.75em}
+h2{font-size:2.3125em}
+h3,#toctitle,.sidebarblock>.content>.title{font-size:1.6875em}
+h4{font-size:1.4375em}}
+table{background:#fff;margin-bottom:1.25em;border:1px solid #dedede;word-wrap:normal}
+table thead,table tfoot{background:#f7f8f7}
+table thead tr th,table thead tr td,table tfoot tr th,table tfoot tr td{padding:.5em .625em .625em;font-size:inherit;color:rgba(0,0,0,.8);text-align:left}
+table tr th,table tr td{padding:.5625em .625em;font-size:inherit;color:rgba(0,0,0,.8)}
+table tr.even,table tr.alt{background:#f8f8f7}
+table thead tr th,table tfoot tr th,table tbody tr td,table tr td,table tfoot tr td{line-height:1.6}
+h1,h2,h3,#toctitle,.sidebarblock>.content>.title,h4,h5,h6{line-height:1.2;word-spacing:-.05em}
+h1 strong,h2 strong,h3 strong,#toctitle strong,.sidebarblock>.content>.title strong,h4 strong,h5 strong,h6 strong{font-weight:400}
+.center{margin-left:auto;margin-right:auto}
+.stretch{width:100%}
+.clearfix::before,.clearfix::after,.float-group::before,.float-group::after{content:" ";display:table}
+.clearfix::after,.float-group::after{clear:both}
+:not(pre).nobreak{word-wrap:normal}
+:not(pre).nowrap{white-space:nowrap}
+:not(pre).pre-wrap{white-space:pre-wrap}
+:not(pre):not([class^=L])>code{font-size:.9375em;font-style:normal!important;letter-spacing:0;padding:.1em .5ex;word-spacing:-.15em;background:#f7f7f8;border-radius:4px;line-height:1.45;text-rendering:optimizeSpeed}
+pre{color:rgba(0,0,0,.9);font-family:"Droid Sans Mono","DejaVu Sans Mono",monospace;line-height:1.45;text-rendering:optimizeSpeed}
+pre code,pre pre{color:inherit;font-size:inherit;line-height:inherit}
+pre>code{display:block}
+pre.nowrap,pre.nowrap pre{white-space:pre;word-wrap:normal}
+em em{font-style:normal}
+strong strong{font-weight:400}
+.keyseq{color:rgba(51,51,51,.8)}
+kbd{font-family:"Droid Sans Mono","DejaVu Sans Mono",monospace;display:inline-block;color:rgba(0,0,0,.8);font-size:.65em;line-height:1.45;background:#f7f7f7;border:1px solid #ccc;border-radius:3px;box-shadow:0 1px 0 rgba(0,0,0,.2),inset 0 0 0 .1em #fff;margin:0 .15em;padding:.2em .5em;vertical-align:middle;position:relative;top:-.1em;white-space:nowrap}
+.keyseq kbd:first-child{margin-left:0}
+.keyseq kbd:last-child{margin-right:0}
+.menuseq,.menuref{color:#000}
+.menuseq b:not(.caret),.menuref{font-weight:inherit}
+.menuseq{word-spacing:-.02em}
+.menuseq b.caret{font-size:1.25em;line-height:.8}
+.menuseq i.caret{font-weight:bold;text-align:center;width:.45em}
+b.button::before,b.button::after{position:relative;top:-1px;font-weight:400}
+b.button::before{content:"[";padding:0 3px 0 2px}
+b.button::after{content:"]";padding:0 2px 0 3px}
+p a>code:hover{color:rgba(0,0,0,.9)}
+#header,#content,#footnotes,#footer{width:100%;margin:0 auto;max-width:62.5em;*zoom:1;position:relative;padding-left:.9375em;padding-right:.9375em}
+#header::before,#header::after,#content::before,#content::after,#footnotes::before,#footnotes::after,#footer::before,#footer::after{content:" ";display:table}
+#header::after,#content::after,#footnotes::after,#footer::after{clear:both}
+#content{margin-top:1.25em}
+#content::before{content:none}
+#header>h1:first-child{color:rgba(0,0,0,.85);margin-top:2.25rem;margin-bottom:0}
+#header>h1:first-child+#toc{margin-top:8px;border-top:1px solid #dddddf}
+#header>h1:only-child,body.toc2 #header>h1:nth-last-child(2){border-bottom:1px solid #dddddf;padding-bottom:8px}
+#header .details{border-bottom:1px solid #dddddf;line-height:1.45;padding-top:.25em;padding-bottom:.25em;padding-left:.25em;color:rgba(0,0,0,.6);display:flex;flex-flow:row wrap}
+#header .details span:first-child{margin-left:-.125em}
+#header .details span.email a{color:rgba(0,0,0,.85)}
+#header .details br{display:none}
+#header .details br+span::before{content:"\00a0\2013\00a0"}
+#header .details br+span.author::before{content:"\00a0\22c5\00a0";color:rgba(0,0,0,.85)}
+#header .details br+span#revremark::before{content:"\00a0|\00a0"}
+#header #revnumber{text-transform:capitalize}
+#header #revnumber::after{content:"\00a0"}
+#content>h1:first-child:not([class]){color:rgba(0,0,0,.85);border-bottom:1px solid #dddddf;padding-bottom:8px;margin-top:0;padding-top:1rem;margin-bottom:1.25rem}
+#toc{border-bottom:1px solid #e7e7e9;padding-bottom:.5em}
+#toc>ul{margin-left:.125em}
+#toc ul.sectlevel0>li>a{font-style:italic}
+#toc ul.sectlevel0 ul.sectlevel1{margin:.5em 0}
+#toc ul{font-family:"Open Sans","DejaVu Sans",sans-serif;list-style-type:none}
+#toc li{line-height:1.3334;margin-top:.3334em}
+#toc a{text-decoration:none}
+#toc a:active{text-decoration:underline}
+#toctitle{color:#7a2518;font-size:1.2em}
+@media screen and (min-width:768px){#toctitle{font-size:1.375em}
+body.toc2{padding-left:15em;padding-right:0}
+#toc.toc2{margin-top:0!important;background:#f8f8f7;position:fixed;width:15em;left:0;top:0;border-right:1px solid #e7e7e9;border-top-width:0!important;border-bottom-width:0!important;z-index:1000;padding:1.25em 1em;height:100%;overflow:auto}
+#toc.toc2 #toctitle{margin-top:0;margin-bottom:.8rem;font-size:1.2em}
+#toc.toc2>ul{font-size:.9em;margin-bottom:0}
+#toc.toc2 ul ul{margin-left:0;padding-left:1em}
+#toc.toc2 ul.sectlevel0 ul.sectlevel1{padding-left:0;margin-top:.5em;margin-bottom:.5em}
+body.toc2.toc-right{padding-left:0;padding-right:15em}
+body.toc2.toc-right #toc.toc2{border-right-width:0;border-left:1px solid #e7e7e9;left:auto;right:0}}
+@media screen and (min-width:1280px){body.toc2{padding-left:20em;padding-right:0}
+#toc.toc2{width:20em}
+#toc.toc2 #toctitle{font-size:1.375em}
+#toc.toc2>ul{font-size:.95em}
+#toc.toc2 ul ul{padding-left:1.25em}
+body.toc2.toc-right{padding-left:0;padding-right:20em}}
+#content #toc{border:1px solid #e0e0dc;margin-bottom:1.25em;padding:1.25em;background:#f8f8f7;border-radius:4px}
+#content #toc>:first-child{margin-top:0}
+#content #toc>:last-child{margin-bottom:0}
+#footer{max-width:none;background:rgba(0,0,0,.8);padding:1.25em}
+#footer-text{color:hsla(0,0%,100%,.8);line-height:1.44}
+#content{margin-bottom:.625em}
+.sect1{padding-bottom:.625em}
+@media screen and (min-width:768px){#content{margin-bottom:1.25em}
+.sect1{padding-bottom:1.25em}}
+.sect1:last-child{padding-bottom:0}
+.sect1+.sect1{border-top:1px solid #e7e7e9}
+#content h1>a.anchor,h2>a.anchor,h3>a.anchor,#toctitle>a.anchor,.sidebarblock>.content>.title>a.anchor,h4>a.anchor,h5>a.anchor,h6>a.anchor{position:absolute;z-index:1001;width:1.5ex;margin-left:-1.5ex;display:block;text-decoration:none!important;visibility:hidden;text-align:center;font-weight:400}
+#content h1>a.anchor::before,h2>a.anchor::before,h3>a.anchor::before,#toctitle>a.anchor::before,.sidebarblock>.content>.title>a.anchor::before,h4>a.anchor::before,h5>a.anchor::before,h6>a.anchor::before{content:"\00A7";font-size:.85em;display:block;padding-top:.1em}
+#content h1:hover>a.anchor,#content h1>a.anchor:hover,h2:hover>a.anchor,h2>a.anchor:hover,h3:hover>a.anchor,#toctitle:hover>a.anchor,.sidebarblock>.content>.title:hover>a.anchor,h3>a.anchor:hover,#toctitle>a.anchor:hover,.sidebarblock>.content>.title>a.anchor:hover,h4:hover>a.anchor,h4>a.anchor:hover,h5:hover>a.anchor,h5>a.anchor:hover,h6:hover>a.anchor,h6>a.anchor:hover{visibility:visible}
+#content h1>a.link,h2>a.link,h3>a.link,#toctitle>a.link,.sidebarblock>.content>.title>a.link,h4>a.link,h5>a.link,h6>a.link{color:#ba3925;text-decoration:none}
+#content h1>a.link:hover,h2>a.link:hover,h3>a.link:hover,#toctitle>a.link:hover,.sidebarblock>.content>.title>a.link:hover,h4>a.link:hover,h5>a.link:hover,h6>a.link:hover{color:#a53221}
+details,.audioblock,.imageblock,.literalblock,.listingblock,.stemblock,.videoblock{margin-bottom:1.25em}
+details{margin-left:1.25rem}
+details>summary{cursor:pointer;display:block;position:relative;line-height:1.6;margin-bottom:.625rem;outline:none;-webkit-tap-highlight-color:transparent}
+details>summary::-webkit-details-marker{display:none}
+details>summary::before{content:"";border:solid transparent;border-left:solid;border-width:.3em 0 .3em .5em;position:absolute;top:.5em;left:-1.25rem;transform:translateX(15%)}
+details[open]>summary::before{border:solid transparent;border-top:solid;border-width:.5em .3em 0;transform:translateY(15%)}
+details>summary::after{content:"";width:1.25rem;height:1em;position:absolute;top:.3em;left:-1.25rem}
+.admonitionblock td.content>.title,.audioblock>.title,.exampleblock>.title,.imageblock>.title,.listingblock>.title,.literalblock>.title,.stemblock>.title,.openblock>.title,.paragraph>.title,.quoteblock>.title,table.tableblock>.title,.verseblock>.title,.videoblock>.title,.dlist>.title,.olist>.title,.ulist>.title,.qlist>.title,.hdlist>.title{text-rendering:optimizeLegibility;text-align:left;font-family:"Noto Serif","DejaVu Serif",serif;font-size:1rem;font-style:italic}
+table.tableblock.fit-content>caption.title{white-space:nowrap;width:0}
+.paragraph.lead>p,#preamble>.sectionbody>[class=paragraph]:first-of-type p{font-size:1.21875em;line-height:1.6;color:rgba(0,0,0,.85)}
+.admonitionblock>table{border-collapse:separate;border:0;background:none;width:100%}
+.admonitionblock>table td.icon{text-align:center;width:80px}
+.admonitionblock>table td.icon img{max-width:none}
+.admonitionblock>table td.icon .title{font-weight:bold;font-family:"Open Sans","DejaVu Sans",sans-serif;text-transform:uppercase}
+.admonitionblock>table td.content{padding-left:1.125em;padding-right:1.25em;border-left:1px solid #dddddf;color:rgba(0,0,0,.6);word-wrap:anywhere}
+.admonitionblock>table td.content>:last-child>:last-child{margin-bottom:0}
+.exampleblock>.content{border:1px solid #e6e6e6;margin-bottom:1.25em;padding:1.25em;background:#fff;border-radius:4px}
+.exampleblock>.content>:first-child{margin-top:0}
+.exampleblock>.content>:last-child{margin-bottom:0}
+.sidebarblock{border:1px solid #dbdbd6;margin-bottom:1.25em;padding:1.25em;background:#f3f3f2;border-radius:4px}
+.sidebarblock>:first-child{margin-top:0}
+.sidebarblock>:last-child{margin-bottom:0}
+.sidebarblock>.content>.title{color:#7a2518;margin-top:0;text-align:center}
+.exampleblock>.content>:last-child>:last-child,.exampleblock>.content .olist>ol>li:last-child>:last-child,.exampleblock>.content .ulist>ul>li:last-child>:last-child,.exampleblock>.content .qlist>ol>li:last-child>:last-child,.sidebarblock>.content>:last-child>:last-child,.sidebarblock>.content .olist>ol>li:last-child>:last-child,.sidebarblock>.content .ulist>ul>li:last-child>:last-child,.sidebarblock>.content .qlist>ol>li:last-child>:last-child{margin-bottom:0}
+.literalblock pre,.listingblock>.content>pre{border-radius:4px;overflow-x:auto;padding:1em;font-size:.8125em}
+@media screen and (min-width:768px){.literalblock pre,.listingblock>.content>pre{font-size:.90625em}}
+@media screen and (min-width:1280px){.literalblock pre,.listingblock>.content>pre{font-size:1em}}
+.literalblock pre,.listingblock>.content>pre:not(.highlight),.listingblock>.content>pre[class=highlight],.listingblock>.content>pre[class^="highlight "]{background:#f7f7f8}
+.literalblock.output pre{color:#f7f7f8;background:rgba(0,0,0,.9)}
+.listingblock>.content{position:relative}
+.listingblock code[data-lang]::before{display:none;content:attr(data-lang);position:absolute;font-size:.75em;top:.425rem;right:.5rem;line-height:1;text-transform:uppercase;color:inherit;opacity:.5}
+.listingblock:hover code[data-lang]::before{display:block}
+.listingblock.terminal pre .command::before{content:attr(data-prompt);padding-right:.5em;color:inherit;opacity:.5}
+.listingblock.terminal pre .command:not([data-prompt])::before{content:"$"}
+.listingblock pre.highlightjs{padding:0}
+.listingblock pre.highlightjs>code{padding:1em;border-radius:4px}
+.listingblock pre.prettyprint{border-width:0}
+.prettyprint{background:#f7f7f8}
+pre.prettyprint .linenums{line-height:1.45;margin-left:2em}
+pre.prettyprint li{background:none;list-style-type:inherit;padding-left:0}
+pre.prettyprint li code[data-lang]::before{opacity:1}
+pre.prettyprint li:not(:first-child) code[data-lang]::before{display:none}
+table.linenotable{border-collapse:separate;border:0;margin-bottom:0;background:none}
+table.linenotable td[class]{color:inherit;vertical-align:top;padding:0;line-height:inherit;white-space:normal}
+table.linenotable td.code{padding-left:.75em}
+table.linenotable td.linenos,pre.pygments .linenos{border-right:1px solid;opacity:.35;padding-right:.5em;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none}
+pre.pygments span.linenos{display:inline-block;margin-right:.75em}
+.quoteblock{margin:0 1em 1.25em 1.5em;display:table}
+.quoteblock:not(.excerpt)>.title{margin-left:-1.5em;margin-bottom:.75em}
+.quoteblock blockquote,.quoteblock p{color:rgba(0,0,0,.85);font-size:1.15rem;line-height:1.75;word-spacing:.1em;letter-spacing:0;font-style:italic;text-align:justify}
+.quoteblock blockquote{margin:0;padding:0;border:0}
+.quoteblock blockquote::before{content:"\201c";float:left;font-size:2.75em;font-weight:bold;line-height:.6em;margin-left:-.6em;color:#7a2518;text-shadow:0 1px 2px rgba(0,0,0,.1)}
+.quoteblock blockquote>.paragraph:last-child p{margin-bottom:0}
+.quoteblock .attribution{margin-top:.75em;margin-right:.5ex;text-align:right}
+.verseblock{margin:0 1em 1.25em}
+.verseblock pre{font-family:"Open Sans","DejaVu Sans",sans-serif;font-size:1.15rem;color:rgba(0,0,0,.85);font-weight:300;text-rendering:optimizeLegibility}
+.verseblock pre strong{font-weight:400}
+.verseblock .attribution{margin-top:1.25rem;margin-left:.5ex}
+.quoteblock .attribution,.verseblock .attribution{font-size:.9375em;line-height:1.45;font-style:italic}
+.quoteblock .attribution br,.verseblock .attribution br{display:none}
+.quoteblock .attribution cite,.verseblock .attribution cite{display:block;letter-spacing:-.025em;color:rgba(0,0,0,.6)}
+.quoteblock.abstract blockquote::before,.quoteblock.excerpt blockquote::before,.quoteblock .quoteblock blockquote::before{display:none}
+.quoteblock.abstract blockquote,.quoteblock.abstract p,.quoteblock.excerpt blockquote,.quoteblock.excerpt p,.quoteblock .quoteblock blockquote,.quoteblock .quoteblock p{line-height:1.6;word-spacing:0}
+.quoteblock.abstract{margin:0 1em 1.25em;display:block}
+.quoteblock.abstract>.title{margin:0 0 .375em;font-size:1.15em;text-align:center}
+.quoteblock.excerpt>blockquote,.quoteblock .quoteblock{padding:0 0 .25em 1em;border-left:.25em solid #dddddf}
+.quoteblock.excerpt,.quoteblock .quoteblock{margin-left:0}
+.quoteblock.excerpt blockquote,.quoteblock.excerpt p,.quoteblock .quoteblock blockquote,.quoteblock .quoteblock p{color:inherit;font-size:1.0625rem}
+.quoteblock.excerpt .attribution,.quoteblock .quoteblock .attribution{color:inherit;font-size:.85rem;text-align:left;margin-right:0}
+p.tableblock:last-child{margin-bottom:0}
+td.tableblock>.content{margin-bottom:1.25em;word-wrap:anywhere}
+td.tableblock>.content>:last-child{margin-bottom:-1.25em}
+table.tableblock,th.tableblock,td.tableblock{border:0 solid #dedede}
+table.grid-all>*>tr>*{border-width:1px}
+table.grid-cols>*>tr>*{border-width:0 1px}
+table.grid-rows>*>tr>*{border-width:1px 0}
+table.frame-all{border-width:1px}
+table.frame-ends{border-width:1px 0}
+table.frame-sides{border-width:0 1px}
+table.frame-none>colgroup+*>:first-child>*,table.frame-sides>colgroup+*>:first-child>*{border-top-width:0}
+table.frame-none>:last-child>:last-child>*,table.frame-sides>:last-child>:last-child>*{border-bottom-width:0}
+table.frame-none>*>tr>:first-child,table.frame-ends>*>tr>:first-child{border-left-width:0}
+table.frame-none>*>tr>:last-child,table.frame-ends>*>tr>:last-child{border-right-width:0}
+table.stripes-all>*>tr,table.stripes-odd>*>tr:nth-of-type(odd),table.stripes-even>*>tr:nth-of-type(even),table.stripes-hover>*>tr:hover{background:#f8f8f7}
+th.halign-left,td.halign-left{text-align:left}
+th.halign-right,td.halign-right{text-align:right}
+th.halign-center,td.halign-center{text-align:center}
+th.valign-top,td.valign-top{vertical-align:top}
+th.valign-bottom,td.valign-bottom{vertical-align:bottom}
+th.valign-middle,td.valign-middle{vertical-align:middle}
+table thead th,table tfoot th{font-weight:bold}
+tbody tr th{background:#f7f8f7}
+tbody tr th,tbody tr th p,tfoot tr th,tfoot tr th p{color:rgba(0,0,0,.8);font-weight:bold}
+p.tableblock>code:only-child{background:none;padding:0}
+p.tableblock{font-size:1em}
+ol{margin-left:1.75em}
+ul li ol{margin-left:1.5em}
+dl dd{margin-left:1.125em}
+dl dd:last-child,dl dd:last-child>:last-child{margin-bottom:0}
+li p,ul dd,ol dd,.olist .olist,.ulist .ulist,.ulist .olist,.olist .ulist{margin-bottom:.625em}
+ul.checklist,ul.none,ol.none,ul.no-bullet,ol.no-bullet,ol.unnumbered,ul.unstyled,ol.unstyled{list-style-type:none}
+ul.no-bullet,ol.no-bullet,ol.unnumbered{margin-left:.625em}
+ul.unstyled,ol.unstyled{margin-left:0}
+li>p:empty:only-child::before{content:"";display:inline-block}
+ul.checklist>li>p:first-child{margin-left:-1em}
+ul.checklist>li>p:first-child>.fa-square-o:first-child,ul.checklist>li>p:first-child>.fa-check-square-o:first-child{width:1.25em;font-size:.8em;position:relative;bottom:.125em}
+ul.checklist>li>p:first-child>input[type=checkbox]:first-child{margin-right:.25em}
+ul.inline{display:flex;flex-flow:row wrap;list-style:none;margin:0 0 .625em -1.25em}
+ul.inline>li{margin-left:1.25em}
+.unstyled dl dt{font-weight:400;font-style:normal}
+ol.arabic{list-style-type:decimal}
+ol.decimal{list-style-type:decimal-leading-zero}
+ol.loweralpha{list-style-type:lower-alpha}
+ol.upperalpha{list-style-type:upper-alpha}
+ol.lowerroman{list-style-type:lower-roman}
+ol.upperroman{list-style-type:upper-roman}
+ol.lowergreek{list-style-type:lower-greek}
+.hdlist>table,.colist>table{border:0;background:none}
+.hdlist>table>tbody>tr,.colist>table>tbody>tr{background:none}
+td.hdlist1,td.hdlist2{vertical-align:top;padding:0 .625em}
+td.hdlist1{font-weight:bold;padding-bottom:1.25em}
+td.hdlist2{word-wrap:anywhere}
+.literalblock+.colist,.listingblock+.colist{margin-top:-.5em}
+.colist td:not([class]):first-child{padding:.4em .75em 0;line-height:1;vertical-align:top}
+.colist td:not([class]):first-child img{max-width:none}
+.colist td:not([class]):last-child{padding:.25em 0}
+.thumb,.th{line-height:0;display:inline-block;border:4px solid #fff;box-shadow:0 0 0 1px #ddd}
+.imageblock.left{margin:.25em .625em 1.25em 0}
+.imageblock.right{margin:.25em 0 1.25em .625em}
+.imageblock>.title{margin-bottom:0}
+.imageblock.thumb,.imageblock.th{border-width:6px}
+.imageblock.thumb>.title,.imageblock.th>.title{padding:0 .125em}
+.image.left,.image.right{margin-top:.25em;margin-bottom:.25em;display:inline-block;line-height:0}
+.image.left{margin-right:.625em}
+.image.right{margin-left:.625em}
+a.image{text-decoration:none;display:inline-block}
+a.image object{pointer-events:none}
+sup.footnote,sup.footnoteref{font-size:.875em;position:static;vertical-align:super}
+sup.footnote a,sup.footnoteref a{text-decoration:none}
+sup.footnote a:active,sup.footnoteref a:active{text-decoration:underline}
+#footnotes{padding-top:.75em;padding-bottom:.75em;margin-bottom:.625em}
+#footnotes hr{width:20%;min-width:6.25em;margin:-.25em 0 .75em;border-width:1px 0 0}
+#footnotes .footnote{padding:0 .375em 0 .225em;line-height:1.3334;font-size:.875em;margin-left:1.2em;margin-bottom:.2em}
+#footnotes .footnote a:first-of-type{font-weight:bold;text-decoration:none;margin-left:-1.05em}
+#footnotes .footnote:last-of-type{margin-bottom:0}
+#content #footnotes{margin-top:-.625em;margin-bottom:0;padding:.75em 0}
+div.unbreakable{page-break-inside:avoid}
+.big{font-size:larger}
+.small{font-size:smaller}
+.underline{text-decoration:underline}
+.overline{text-decoration:overline}
+.line-through{text-decoration:line-through}
+.aqua{color:#00bfbf}
+.aqua-background{background:#00fafa}
+.black{color:#000}
+.black-background{background:#000}
+.blue{color:#0000bf}
+.blue-background{background:#0000fa}
+.fuchsia{color:#bf00bf}
+.fuchsia-background{background:#fa00fa}
+.gray{color:#606060}
+.gray-background{background:#7d7d7d}
+.green{color:#006000}
+.green-background{background:#007d00}
+.lime{color:#00bf00}
+.lime-background{background:#00fa00}
+.maroon{color:#600000}
+.maroon-background{background:#7d0000}
+.navy{color:#000060}
+.navy-background{background:#00007d}
+.olive{color:#606000}
+.olive-background{background:#7d7d00}
+.purple{color:#600060}
+.purple-background{background:#7d007d}
+.red{color:#bf0000}
+.red-background{background:#fa0000}
+.silver{color:#909090}
+.silver-background{background:#bcbcbc}
+.teal{color:#006060}
+.teal-background{background:#007d7d}
+.white{color:#bfbfbf}
+.white-background{background:#fafafa}
+.yellow{color:#bfbf00}
+.yellow-background{background:#fafa00}
+span.icon>.fa{cursor:default}
+a span.icon>.fa{cursor:inherit}
+.admonitionblock td.icon [class^="fa icon-"]{font-size:2.5em;text-shadow:1px 1px 2px rgba(0,0,0,.5);cursor:default}
+.admonitionblock td.icon .icon-note::before{content:"\f05a";color:#19407c}
+.admonitionblock td.icon .icon-tip::before{content:"\f0eb";text-shadow:1px 1px 2px rgba(155,155,0,.8);color:#111}
+.admonitionblock td.icon .icon-warning::before{content:"\f071";color:#bf6900}
+.admonitionblock td.icon .icon-caution::before{content:"\f06d";color:#bf3400}
+.admonitionblock td.icon .icon-important::before{content:"\f06a";color:#bf0000}
+.conum[data-value]{display:inline-block;color:#fff!important;background:rgba(0,0,0,.8);border-radius:50%;text-align:center;font-size:.75em;width:1.67em;height:1.67em;line-height:1.67em;font-family:"Open Sans","DejaVu Sans",sans-serif;font-style:normal;font-weight:bold}
+.conum[data-value] *{color:#fff!important}
+.conum[data-value]+b{display:none}
+.conum[data-value]::after{content:attr(data-value)}
+pre .conum[data-value]{position:relative;top:-.125em}
+b.conum *{color:inherit!important}
+.conum:not([data-value]):empty{display:none}
+dt,th.tableblock,td.content,div.footnote{text-rendering:optimizeLegibility}
+h1,h2,p,td.content,span.alt,summary{letter-spacing:-.01em}
+p strong,td.content strong,div.footnote strong{letter-spacing:-.005em}
+p,blockquote,dt,td.content,span.alt,summary{font-size:1.0625rem}
+p{margin-bottom:1.25rem}
+.sidebarblock p,.sidebarblock dt,.sidebarblock td.content,p.tableblock{font-size:1em}
+.exampleblock>.content{background:#fffef7;border-color:#e0e0dc;box-shadow:0 1px 4px #e0e0dc}
+.print-only{display:none!important}
+@page{margin:1.25cm .75cm}
+@media print{*{box-shadow:none!important;text-shadow:none!important}
+html{font-size:80%}
+a{color:inherit!important;text-decoration:underline!important}
+a.bare,a[href^="#"],a[href^="mailto:"]{text-decoration:none!important}
+a[href^="http:"]:not(.bare)::after,a[href^="https:"]:not(.bare)::after{content:"(" attr(href) ")";display:inline-block;font-size:.875em;padding-left:.25em}
+abbr[title]{border-bottom:1px dotted}
+abbr[title]::after{content:" (" attr(title) ")"}
+pre,blockquote,tr,img,object,svg{page-break-inside:avoid}
+thead{display:table-header-group}
+svg{max-width:100%}
+p,blockquote,dt,td.content{font-size:1em;orphans:3;widows:3}
+h2,h3,#toctitle,.sidebarblock>.content>.title{page-break-after:avoid}
+#header,#content,#footnotes,#footer{max-width:none}
+#toc,.sidebarblock,.exampleblock>.content{background:none!important}
+#toc{border-bottom:1px solid #dddddf!important;padding-bottom:0!important}
+body.book #header{text-align:center}
+body.book #header>h1:first-child{border:0!important;margin:2.5em 0 1em}
+body.book #header .details{border:0!important;display:block;padding:0!important}
+body.book #header .details span:first-child{margin-left:0!important}
+body.book #header .details br{display:block}
+body.book #header .details br+span::before{content:none!important}
+body.book #toc{border:0!important;text-align:left!important;padding:0!important;margin:0!important}
+body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-break-before:always}
+.listingblock code[data-lang]::before{display:block}
+#footer{padding:0 .9375em}
+.hide-on-print{display:none!important}
+.print-only{display:block!important}
+.hide-for-print{display:none!important}
+.show-for-print{display:inherit!important}}
+@media amzn-kf8,print{#header>h1:first-child{margin-top:1.25rem}
+.sect1{padding:0!important}
+.sect1+.sect1{border:0}
+#footer{background:none}
+#footer-text{color:rgba(0,0,0,.6);font-size:.9em}}
+@media amzn-kf8{#header,#content,#footnotes,#footer{padding:0}}
 
-    body {
-      font-family: var(--font-sans);
-      background-color: var(--bg);
-      color: var(--text);
-      line-height: 1.6;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    .container {
-      max-width: 1040px;
-      margin: 0 auto;
-      padding: 0 24px;
-    }
-
-    /* HEADER */
-    header {
-      border-bottom: 1px solid var(--border);
-      background: linear-gradient(180deg, rgba(17, 24, 39, 0.95) 0%, rgba(9, 13, 22, 0.98) 100%);
-      padding: 48px 0 40px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 12px;
-      border-radius: 9999px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      background: var(--primary-bg);
-      color: var(--primary-light);
-      border: 1px solid rgba(59, 130, 246, 0.3);
-      margin-bottom: 16px;
-    }
-
-    h1 {
-      font-size: 2.25rem;
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      line-height: 1.2;
-      margin-bottom: 12px;
-      color: #ffffff;
-    }
-
-    .subtitle {
-      font-size: 1.125rem;
-      color: var(--text-muted);
-      max-width: 800px;
-      margin-bottom: 24px;
-    }
-
-    .meta-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 16px;
-      background: var(--bg-surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 16px 20px;
-    }
-
-    .meta-item {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .meta-label {
-      font-size: 0.75rem;
-      color: var(--text-dim);
-      text-transform: uppercase;
-      font-weight: 600;
-      letter-spacing: 0.05em;
-      margin-bottom: 2px;
-    }
-
-    .meta-value {
-      font-size: 0.95rem;
-      font-weight: 600;
-      color: var(--text);
-    }
-
-    /* MAIN CONTENT */
-    main {
-      padding: 48px 0 80px;
-    }
-
-    section {
-      margin-bottom: 56px;
-    }
-
-    .section-header {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 20px;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 12px;
-    }
-
-    .section-icon {
-      width: 28px;
-      height: 28px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--primary-light);
-    }
-
-    h2 {
-      font-size: 1.45rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      color: #ffffff;
-    }
-
-    p {
-      color: var(--text-muted);
-      margin-bottom: 16px;
-    }
-
-    /* CARDS */
-    .card {
-      background: var(--bg-surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 24px;
-      margin-bottom: 20px;
-    }
-
-    .card-title {
-      font-size: 1.05rem;
-      font-weight: 700;
-      margin-bottom: 8px;
-      color: #ffffff;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    /* ARCHITECTURE GRID */
-    .arch-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 16px;
-      margin-top: 16px;
-    }
-
-    .arch-box {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 16px;
-      transition: border-color 0.2s;
-    }
-
-    .arch-box:hover {
-      border-color: var(--primary);
-    }
-
-    .arch-tag {
-      font-size: 0.7rem;
-      font-weight: 700;
-      color: var(--primary-light);
-      text-transform: uppercase;
-      margin-bottom: 4px;
-      display: block;
-    }
-
-    .arch-name {
-      font-weight: 700;
-      font-size: 0.95rem;
-      margin-bottom: 4px;
-    }
-
-    .arch-desc {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-      margin: 0;
-    }
-
-    /* CODE BLOCKS */
-    .code-wrapper {
-      position: relative;
-      background: var(--code-bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      margin: 16px 0;
-      overflow: hidden;
-    }
-
-    .code-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: #090e17;
-      padding: 8px 16px;
-      border-bottom: 1px solid var(--border);
-      font-family: var(--font-mono);
-      font-size: 0.75rem;
-      color: var(--text-dim);
-    }
-
-    pre {
-      padding: 16px;
-      overflow-x: auto;
-      font-family: var(--font-mono);
-      font-size: 0.88rem;
-      color: #e2e8f0;
-      line-height: 1.5;
-    }
-
-    .copy-btn {
-      background: var(--bg-card);
-      color: var(--text-muted);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 4px 10px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      transition: all 0.2s;
-      font-family: var(--font-sans);
-    }
-
-    .copy-btn:hover {
-      background: var(--primary);
-      color: #ffffff;
-      border-color: var(--primary);
-    }
-
-    /* TABLES */
-    .table-container {
-      overflow-x: auto;
-      margin: 16px 0;
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      text-align: left;
-      font-size: 0.9rem;
-    }
-
-    th {
-      background: var(--bg-card);
-      padding: 12px 16px;
-      font-weight: 600;
-      color: var(--text);
-      border-bottom: 1px solid var(--border);
-      text-transform: uppercase;
-      font-size: 0.75rem;
-      letter-spacing: 0.05em;
-    }
-
-    td {
-      padding: 12px 16px;
-      border-bottom: 1px solid var(--border);
-      color: var(--text-muted);
-    }
-
-    tr:last-child td {
-      border-bottom: none;
-    }
-
-    tr:hover td {
-      background: rgba(255, 255, 255, 0.02);
-    }
-
-    .status-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 2px 8px;
-      border-radius: 9999px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      background: var(--primary-bg);
-      color: var(--primary-light);
-    }
-
-    .status-pill.success {
-      background: var(--success-bg);
-      color: var(--success);
-    }
-
-    .url-link {
-      color: var(--primary-light);
-      text-decoration: none;
-      font-family: var(--font-mono);
-      font-weight: 500;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .url-link:hover {
-      text-decoration: underline;
-    }
-
-    /* STEP LIST */
-    .steps-container {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-      margin-top: 20px;
-    }
-
-    .step-item {
-      display: flex;
-      gap: 16px;
-      background: var(--bg-surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 20px;
-    }
-
-    .step-number {
-      width: 36px;
-      height: 36px;
-      background: var(--primary-bg);
-      border: 1px solid rgba(59, 130, 246, 0.4);
-      color: var(--primary-light);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 1rem;
-      flex-shrink: 0;
-    }
-
-    .step-content {
-      flex: 1;
-    }
-
-    .step-title {
-      font-size: 1.05rem;
-      font-weight: 700;
-      color: #ffffff;
-      margin-bottom: 6px;
-    }
-
-    /* ALERTS */
-    .alert {
-      display: flex;
-      gap: 12px;
-      padding: 16px;
-      border-radius: var(--radius-md);
-      margin: 16px 0;
-      border: 1px solid transparent;
-      font-size: 0.88rem;
-    }
-
-    .alert-info {
-      background: var(--primary-bg);
-      border-color: rgba(59, 130, 246, 0.3);
-      color: #bfdbfe;
-    }
-
-    .alert-warning {
-      background: var(--warning-bg);
-      border-color: rgba(245, 158, 11, 0.3);
-      color: #fde68a;
-    }
-
-    .alert-icon {
-      width: 20px;
-      height: 20px;
-      flex-shrink: 0;
-      margin-top: 2px;
-    }
-
-    /* FOOTER */
-    footer {
-      border-top: 1px solid var(--border);
-      padding: 32px 0;
-      color: var(--text-dim);
-      font-size: 0.85rem;
-      text-align: center;
-    }
-
-    /* SVG ICONS INLINE HELPERS */
-    .icon {
-      width: 16px;
-      height: 16px;
-      stroke-width: 2;
-      stroke: currentColor;
-      fill: none;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      display: inline-block;
-      vertical-align: middle;
-    }
-
-    @media (max-width: 768px) {
-      h1 { font-size: 1.75rem; }
-      .meta-grid { grid-template-columns: 1fr; }
-      .step-item { flex-direction: column; gap: 12px; }
-    }
-  </style>
+/* Boton de copiado minimalista */
+.copy-btn {
+  float: right;
+  background: #f0f0f0;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  padding: 2px 8px;
+  font-size: 0.75em;
+  cursor: pointer;
+  margin-top: -24px;
+}
+.copy-btn:hover { background: #e0e0e0; }
+</style>
 </head>
-<body>
+<body class="book toc2 toc-right">
+<div id="header">
+<h1>Colivi: Plataforma Integral de Convivencia</h1>
+<div class="details">
+<span id="author" class="author">Víctor Vallejo Uroz &lt;vvu981@inlumine.ual.es&gt;</span><br>
+<span id="revdate">Trabajo de Fin de Grado &mdash; Guía de Despliegue y Evaluación Local</span>
+</div>
+<div id="toc" class="toc2">
+<div id="toctitle">Tabla de contenidos</div>
+<ul class="sectlevel1">
+<li><a href="#_resumen">Resumen del Proyecto</a></li>
+<li><a href="#_requisitos">1. Requisitos Previos</a></li>
+<li><a href="#_puesta_en_marcha">2. Puesta en Marcha (Docker Compose)</a>
+<ul class="sectlevel2">
+<li><a href="#_paso1_clonar">2.1. Clonar el repositorio</a></li>
+<li><a href="#_paso2_env">2.2. Configurar el archivo .env</a></li>
+<li><a href="#_paso3_arranque">2.3. Levantar los contenedores</a></li>
+</ul>
+</li>
+<li><a href="#_archivo_env">3. Archivo .env Completo</a></li>
+<li><a href="#_mapa_servicios">4. Mapa de Servicios y Accesos</a></li>
+<li><a href="#_cuentas_prueba">5. Cuentas y Datos de Prueba</a></li>
+<li><a href="#_guia_evaluacion">6. Guía de Evaluación Guiada</a>
+<ul class="sectlevel2">
+<li><a href="#_flujo1_marketplace">6.1. Catálogo de Alojamientos</a></li>
+<li><a href="#_flujo2_gastos">6.2. Módulo de Hogar y Gastos Compartidos</a></li>
+<li><a href="#_flujo3_correos">6.3. Interceptación de Correos en Mailpit</a></li>
+</ul>
+</li>
+<li><a href="#_resolucion_incidencias">7. Resolución de Problemas Comunes</a></li>
+<li><a href="#_detencion">8. Detención del Entorno</a></li>
+</ul>
+</div>
+</div>
+<div id="content">
 
-  <!-- HEADER -->
-  <header>
-    <div class="container">
-      <div class="badge">
-        <svg class="icon" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-        Trabajo de Fin de Grado
-      </div>
-      <h1>Colivi: Plataforma Integral de Convivencia</h1>
-      <p class="subtitle">Guia tecnica y operativa para evaluacion y ejecucion en entorno local.</p>
+<div class="sect1">
+<h2 id="_resumen">Resumen del Proyecto</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><strong>Colivi</strong> es un sistema web full-stack orientado a la búsqueda y publicación de pisos compartidos, gestión integral de convivencia (gastos, repartos y balances) y auditoría inmutable asistida por Inteligencia Artificial mediante el Model Context Protocol (MCP).</p>
+</div>
+<div class="paragraph">
+<p>Para evitar la configuración manual de compiladores, dependencias y bases de datos en la máquina del evaluador, todo el ecosistema está desacoplado y orquestado mediante <strong>Docker Compose</strong> (Spring Boot 3, Vite React, PostgreSQL 16, Mailpit y Servidor MCP).</p>
+</div>
+</div>
+</div>
 
-      <div class="meta-grid">
-        <div class="meta-item">
-          <span class="meta-label">Autor del Proyecto</span>
-          <span class="meta-value">Victor Vallejo Uroz</span>
-        </div>
-        <div class="meta-item">
-          <span class="meta-label">Destinatario</span>
-          <span class="meta-value">Tutor Academico / Tribunal</span>
-        </div>
-        <div class="meta-item">
-          <span class="meta-label">Modo de Ejecucion</span>
-          <span class="meta-value">Orquestacion Docker Compose</span>
-        </div>
-        <div class="meta-item">
-          <span class="meta-label">Estado de la Base de Datos</span>
-          <span class="meta-value">Semillero de prueba precargado</span>
-        </div>
-      </div>
-    </div>
-  </header>
+<div class="sect1">
+<h2 id="_requisitos">1. Requisitos Previos</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Únicamente se requiere tener instaladas y en ejecución las siguientes herramientas:</p>
+</div>
+<div class="ulist">
+<ul>
+<li><p><strong>Docker Desktop</strong> (con Docker Compose v2 activo).</p></li>
+<li><p><strong>Git</strong> (para clonar el repositorio).</p></li>
+</ul>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon"><div class="title">Nota</div></td>
+<td class="content">No es necesario tener instalado Java, Maven, Node.js ni PostgreSQL en el sistema anfitrión; los contenedores de Docker encapsulan todos los entornos de ejecución.</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
 
-  <!-- MAIN -->
-  <main class="container">
+<div class="sect1">
+<h2 id="_puesta_en_marcha">2. Puesta en Marcha (Docker Compose)</h2>
+<div class="sectionbody">
 
-    <!-- ARQUITECTURA -->
-    <section id="arquitectura">
-      <div class="section-header">
-        <div class="section-icon">
-          <svg class="icon" style="width:24px;height:24px;" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
-        </div>
-        <h2>1. Arquitectura y Stack Tecnologico</h2>
-      </div>
-      <p>El sistema opera bajo una arquitectura distribuida y desacoplada de 5 servicios totalmente integrados mediante Docker:</p>
+<div class="sect2">
+<h3 id="_paso1_clonar">2.1. Clonar el repositorio</h3>
+<div class="paragraph">
+<p>Abra una terminal y descargue el proyecto:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-bash" data-lang="bash">git clone https://github.com/vvu981/Colivi-TFG.git
+cd Colivi-TFG</code></pre>
+</div>
+</div>
+</div>
 
-      <div class="arch-grid">
-        <div class="arch-box">
-          <span class="arch-tag">Frontend</span>
-          <div class="arch-name">Vite + React 19</div>
-          <p class="arch-desc">SPA con TypeScript, Tailwind CSS, TanStack Query y componentes interactivos.</p>
-        </div>
-        <div class="arch-box">
-          <span class="arch-tag">Backend REST</span>
-          <div class="arch-name">Java 21 + Spring Boot 3</div>
-          <p class="arch-desc">Arquitectura por capas, seguridad JWT, Flyway y validacion estricta de dominio.</p>
-        </div>
-        <div class="arch-box">
-          <span class="arch-tag">Persistencia</span>
-          <div class="arch-name">PostgreSQL 16</div>
-          <p class="arch-desc">Base de datos relacional con soporte nativo JSONB para auditoria inmutable.</p>
-        </div>
-        <div class="arch-box">
-          <span class="arch-tag">Inteligencia Artificial</span>
-          <div class="arch-name">Servidor MCP (Node.js)</div>
-          <p class="arch-desc">Model Context Protocol para auditoria conversacional y orquestacion con LLM.</p>
-        </div>
-        <div class="arch-box">
-          <span class="arch-tag">Mensajeria Local</span>
-          <div class="arch-name">Mailpit (SMTP Mock)</div>
-          <p class="arch-desc">Servidor de correo local para captura de enlaces de activacion y avisos.</p>
-        </div>
-      </div>
-    </section>
+<div class="sect2">
+<h3 id="_paso2_env">2.2. Configurar el archivo .env</h3>
+<div class="paragraph">
+<p>Cree el archivo <code>.env</code> en la raíz del proyecto. Puede generarlo copiando el bloque completo de la <a href="#_archivo_env">Sección 3</a> o mediante:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-bash" data-lang="bash">cp .env.example .env</code></pre>
+</div>
+</div>
+</div>
 
-    <!-- REQUISITOS -->
-    <section id="requisitos">
-      <div class="section-header">
-        <div class="section-icon">
-          <svg class="icon" style="width:24px;height:24px;" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-        </div>
-        <h2>2. Requisitos Previos Minimos</h2>
-      </div>
-      <p>Para evitar configurar entornos JDK, Maven o Node en la maquina anfitriona, la ejecucion se ha abstraido integramente. Solo se requiere:</p>
+<div class="sect2">
+<h3 id="_paso3_arranque">2.3. Levantar los contenedores</h3>
+<div class="paragraph">
+<p>Ejecute la orden de construcción y arranque en segundo plano:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-bash" data-lang="bash">docker compose up --build -d</code></pre>
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon"><div class="title">Nota</div></td>
+<td class="content">La primera compilación descargará las imágenes base y dependencias de Maven y Node. Este paso puede tomar de 2 a 3 minutos según la conexión.</td>
+</tr>
+</table>
+</div>
+</div>
 
-      <div class="card">
-        <ul style="list-style:none; display:flex; flex-direction:column; gap:12px;">
-          <li style="display:flex; align-items:center; gap:10px;">
-            <svg class="icon" style="color:var(--success)" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-            <span><strong>Docker Desktop</strong> (en ejecucion, con soporte Docker Compose v2).</span>
-          </li>
-          <li style="display:flex; align-items:center; gap:10px;">
-            <svg class="icon" style="color:var(--success)" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-            <span><strong>Git</strong> (para clonar el repositorio).</span>
-          </li>
-        </ul>
-      </div>
-    </section>
+</div>
+</div>
 
-    <!-- DESPLIEGUE EN 3 PASOS -->
-    <section id="despliegue">
-      <div class="section-header">
-        <div class="section-icon">
-          <svg class="icon" style="width:24px;height:24px;" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
-        </div>
-        <h2>3. Arranque del Sistema en 3 Comandos</h2>
-      </div>
-      <p>Abra una terminal (Git Bash, PowerShell o Terminal de macOS/Linux) y ejecute los tres bloques siguientes:</p>
-
-      <div class="steps-container">
-        <!-- PASO 1 -->
-        <div class="step-item">
-          <div class="step-number">1</div>
-          <div class="step-content">
-            <div class="step-title">Clonar el repositorio oficial</div>
-            <p>Descarga el codigo fuente completo del proyecto:</p>
-            <div class="code-wrapper">
-              <div class="code-header">
-                <span>Terminal</span>
-                <button class="copy-btn" onclick="copyCode('code-step-1', this)">
-                  <svg class="icon" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                  <span>Copiar</span>
-                </button>
-              </div>
-              <pre id="code-step-1">git clone https://github.com/vvu981/Colivi-TFG.git
-cd Colivi-TFG</pre>
-            </div>
-          </div>
-        </div>
-
-        <!-- PASO 2 -->
-        <div class="step-item">
-          <div class="step-number">2</div>
-          <div class="step-content">
-            <div class="step-title">Configurar variables de entorno (.env)</div>
-            <p>Puede generar el archivo copiando la plantilla predeterminada o copiando directamente el bloque inferior en un archivo llamado <code>.env</code> en la raiz del proyecto:</p>
-            <div class="code-wrapper">
-              <div class="code-header">
-                <span>Terminal (Opcion Rapida)</span>
-                <button class="copy-btn" onclick="copyCode('code-step-2', this)">
-                  <svg class="icon" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                  <span>Copiar</span>
-                </button>
-              </div>
-              <pre id="code-step-2">cp .env.example .env</pre>
-            </div>
-
-            <p style="margin-top:16px;">O si prefiere crear el archivo <code>.env</code> manualmente, este es el contenido integro necesario para la ejecucion local:</p>
-            <div class="code-wrapper">
-              <div class="code-header">
-                <span>Archivo .env (Contenido Completo)</span>
-                <button class="copy-btn" onclick="copyCode('code-env-full', this)">
-                  <svg class="icon" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                  <span>Copiar .env</span>
-                </button>
-              </div>
-              <pre id="code-env-full">POSTGRES_PASSWORD=SuperSecretPassword123!
+<div class="sect1">
+<h2 id="_archivo_env">3. Archivo .env Completo</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>A continuación se proporciona el contenido íntegro necesario en el archivo <code>.env</code> ubicado en la raíz de <code>Colivi-TFG</code> para que todos los servicios arranquen con las credenciales operativas:</p>
+</div>
+<div class="listingblock">
+<div class="title">Contenido del archivo .env <button class="copy-btn" onclick="copyEnv()">Copiar</button></div>
+<div class="content">
+<pre class="highlight" id="env-code"><code class="language-properties" data-lang="properties">POSTGRES_PASSWORD=SuperSecretPassword123!
 BACKEND_URL=http://backend:8080
 JWT_SECRET=ZXN0YS1jbGF2ZS1zZWNyZXRhLXRpZW5lLXF1ZS1zZXItbXV5LWxhcmdhLXktY29tcGxlamE=
 CLOUDINARY_API_SECRET=sZMZwguAYGsMDE4gSBLFkw1_pnQ
@@ -627,257 +604,201 @@ GROQ_MODEL=qwen/qwen3.8-27b
 MAIL_FROM=noreply@colivi.com
 MAIL_REACTIVATION_URL=http://localhost:5173/reactivate?token=
 
-GOOGLE_CLIENT_ID=107294184753-qo7cnr52fmvavskavnhugpekb2nsge6n.apps.googleusercontent.com</pre>
-            </div>
+GOOGLE_CLIENT_ID=107294184753-qo7cnr52fmvavskavnhugpekb2nsge6n.apps.googleusercontent.com</code></pre>
+</div>
+</div>
+</div>
+</div>
 
-            <div class="alert alert-info">
-              <svg class="icon alert-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-              <span>Este bloque contiene la configuracion completa y operativa para que el tutor pueda evaluar el sistema al instante sin necesidad de registrarse en ningun servicio externo.</span>
-            </div>
-          </div>
-        </div>
+<div class="sect1">
+<h2 id="_mapa_servicios">4. Mapa de Servicios y Accesos</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Una vez completado el arranque, los servicios estarán disponibles en los siguientes puertos locales:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 35%;">
+<col style="width: 40%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Servicio</th>
+<th class="tableblock halign-left valign-top">URL en el Navegador</th>
+<th class="tableblock halign-left valign-top">Propósito</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Frontend Web</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="http://localhost:5173" target="_blank">http://localhost:5173</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Interfaz principal de usuario en React 19 / Vite</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Swagger / OpenAPI</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="http://localhost:8080/swagger-ui.html" target="_blank">http://localhost:8080/swagger-ui.html</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Documentación interactiva de la API REST de Spring Boot</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Mailpit (Web UI)</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="http://localhost:8025" target="_blank">http://localhost:8025</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Bandeja para inspeccionar emails transaccionales enviados</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Servidor MCP</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="http://localhost:3001/health" target="_blank">http://localhost:3001/health</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Estado del servidor Model Context Protocol para IA</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
 
-        <!-- PASO 3 -->
-        <div class="step-item">
-          <div class="step-number">3</div>
-          <div class="step-content">
-            <div class="step-title">Compilar y levantar todos los contenedores</div>
-            <p>Docker construira las imagenes y arrancara los 5 servicios en segundo plano:</p>
-            <div class="code-wrapper">
-              <div class="code-header">
-                <span>Terminal</span>
-                <button class="copy-btn" onclick="copyCode('code-step-3', this)">
-                  <svg class="icon" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                  <span>Copiar</span>
-                </button>
-              </div>
-              <pre id="code-step-3">docker compose up --build -d</pre>
-            </div>
-            <p style="font-size:0.85rem; color:var(--text-dim);">Nota: La primera compilacion tarda aproximadamente 2-3 minutos mientras descarga las dependencias de Maven y Node.</p>
-          </div>
-        </div>
-      </div>
-    </section>
+<div class="sect1">
+<h2 id="_cuentas_prueba">5. Cuentas y Datos de Prueba</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>La base de datos se inicializa automáticamente con la migración Flyway <code>V999__insert_dev_seed_data.sql</code>, incorporando usuarios, piso y gastos ya calculados.</p>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon"><div class="title">Importante</div></td>
+<td class="content">La contraseña para todas las cuentas precargadas es: <strong><code>password123</code></strong></td>
+</tr>
+</table>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 35%;">
+<col style="width: 40%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Rol</th>
+<th class="tableblock halign-left valign-top">Correo de Acceso</th>
+<th class="tableblock halign-left valign-top">Descripción</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Administrador</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>victor@colivi.com</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Acceso global a moderación de anuncios, reportes y administración de piso</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Inquilino A</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ana@colivi.com</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Miembro de 'Piso Estudiantes Centro'. Pagadora de la factura de luz</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Inquilino B</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>carlos@colivi.com</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Miembro del piso. Pagador de la cena compartida</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Inquilino C</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>laura@colivi.com</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Miembro del piso con balances pendientes de liquidación</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
 
-    <!-- MAPA DE ACCESOS -->
-    <section id="accesos">
-      <div class="section-header">
-        <div class="section-icon">
-          <svg class="icon" style="width:24px;height:24px;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
-        </div>
-        <h2>4. Mapa de URLs de Acceso</h2>
-      </div>
-      <p>Una vez levantados los contenedores, los siguientes servicios estaran disponibles en el navegador:</p>
+<div class="sect1">
+<h2 id="_guia_evaluacion">6. Guía de Evaluación Guiada</h2>
+<div class="sectionbody">
 
-      <div class="table-container">
-        <table>
-          <thead>
-            <tr>
-              <th>Servicio</th>
-              <th>URL en el Navegador</th>
-              <th>Proposito de Evaluacion</th>
-              <th>Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>Frontend Web</strong></td>
-              <td><a class="url-link" href="http://localhost:5173" target="_blank">http://localhost:5173</a></td>
-              <td>Aplicacion principal de usuario (catalogo, convivencia, reservas)</td>
-              <td><span class="status-pill success">Principal</span></td>
-            </tr>
-            <tr>
-              <td><strong>Swagger / OpenAPI</strong></td>
-              <td><a class="url-link" href="http://localhost:8080/swagger-ui.html" target="_blank">http://localhost:8080/swagger-ui.html</a></td>
-              <td>Exploracion interactiva de endpoints y esquemas REST</td>
-              <td><span class="status-pill">Backend</span></td>
-            </tr>
-            <tr>
-              <td><strong>Mailpit Web UI</strong></td>
-              <td><a class="url-link" href="http://localhost:8025" target="_blank">http://localhost:8025</a></td>
-              <td>Bandeja de correo para inspeccionar emails de activacion y avisos</td>
-              <td><span class="status-pill">Email Mock</span></td>
-            </tr>
-            <tr>
-              <td><strong>Servidor MCP</strong></td>
-              <td><a class="url-link" href="http://localhost:3001/health" target="_blank">http://localhost:3001/health</a></td>
-              <td>Endpoint de salud y herramientas MCP para auditoria inteligente</td>
-              <td><span class="status-pill">IA Agent</span></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
+<div class="sect2">
+<h3 id="_flujo1_marketplace">6.1. Catálogo de Alojamientos</h3>
+<div class="olist arabic">
+<ol class="arabic">
+<li><p>Acceda a <a href="http://localhost:5173" target="_blank">http://localhost:5173</a> en modo anónimo para probar la experiencia de búsqueda como visitante.</p></li>
+<li><p>Aplique filtros por rango de precio, número de habitaciones y ciudad.</p></li>
+<li><p>Inicie sesión con <code>victor@colivi.com</code> para crear un alojamiento y comprobar la regla de negocio que exige un mínimo de 2 imágenes registradas para publicar.</p></li>
+</ol>
+</div>
+</div>
 
-    <!-- CREDENCIALES DE PRUEBA -->
-    <section id="credenciales">
-      <div class="section-header">
-        <div class="section-icon">
-          <svg class="icon" style="width:24px;height:24px;" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-        </div>
-        <h2>5. Cuentas de Prueba Precargadas</h2>
-      </div>
-      <p>La base de datos se inicializa automaticamente mediante la migracion <code>V999__insert_dev_seed_data.sql</code> con usuarios, un hogar compartido y gastos ya calculados. Todos los usuarios comparten la misma clave:</p>
+<div class="sect2">
+<h3 id="_flujo2_gastos">6.2. Módulo de Hogar y Gastos Compartidos</h3>
+<div class="olist arabic">
+<ol class="arabic">
+<li><p>Inicie sesión con <code>ana@colivi.com</code> (contraseña: <code>password123</code>).</p></li>
+<li><p>Acceda al espacio privado del piso <strong>Piso Estudiantes Centro</strong> (código: <code>PISO-CENTRO-2024</code>).</p></li>
+<li><p>Verifique en la pestaña de <strong>Balances</strong> cómo el algoritmo de simplificación de deudas resuelve las transacciones óptimas en memoria sin reescribir el histórico.</p></li>
+<li><p>Añada un gasto nuevo y observe la actualización reactiva de los saldos de cada miembro.</p></li>
+</ol>
+</div>
+</div>
 
-      <div class="card" style="margin-bottom:16px; border-left:4px solid var(--primary);">
-        <div style="font-size:0.95rem;">
-          <strong>Contrasena comun para todas las cuentas:</strong>
-          <code style="background:var(--code-bg); padding:3px 8px; border-radius:4px; margin-left:8px; font-weight:600; color:var(--primary-light);">password123</code>
-        </div>
-      </div>
+<div class="sect2">
+<h3 id="_flujo3_correos">6.3. Interceptación de Correos en Mailpit</h3>
+<div class="olist arabic">
+<ol class="arabic">
+<li><p>Realice cualquier acción que dispare notificaciones transaccionales (por ejemplo, registro de usuario o reactivación de cuenta).</p></li>
+<li><p>Abra <a href="http://localhost:8025" target="_blank">http://localhost:8025</a> para inspeccionar los correos generados por el backend en tiempo real.</p></li>
+</ol>
+</div>
+</div>
 
-      <div class="table-container">
-        <table>
-          <thead>
-            <tr>
-              <th>Rol / Perfil</th>
-              <th>Email de Acceso</th>
-              <th>Contexto en el Sistema</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>Administrador Global</strong></td>
-              <td><code>victor@colivi.com</code></td>
-              <td>Permisos totales: moderacion de anuncios, gestion de reportes y administracion de piso.</td>
-            </tr>
-            <tr>
-              <td><strong>Inquilino / Companero A</strong></td>
-              <td><code>ana@colivi.com</code></td>
-              <td>Miembro activo de "Piso Estudiantes Centro". Ha participado en gastos comunes.</td>
-            </tr>
-            <tr>
-              <td><strong>Inquilino / Companero B</strong></td>
-              <td><code>carlos@colivi.com</code></td>
-              <td>Miembro activo de "Piso Estudiantes Centro". Registrado como pagador de cenas colectivas.</td>
-            </tr>
-            <tr>
-              <td><strong>Inquilino / Companero C</strong></td>
-              <td><code>laura@colivi.com</code></td>
-              <td>Miembro activo con balance deudor respecto a los gastos sembrados.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
+</div>
+</div>
 
-    <!-- GUIA DE EVALUACION -->
-    <section id="evaluacion">
-      <div class="section-header">
-        <div class="section-icon">
-          <svg class="icon" style="width:24px;height:24px;" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-        </div>
-        <h2>6. Flujo de Evaluacion para el Tutor</h2>
-      </div>
-      <p>Se sugieren los siguientes recorridos para contrastar la implementacion con los objetivos tecnicos del TFG:</p>
+<div class="sect1">
+<h2 id="_resolucion_incidencias">7. Resolución de Problemas Comunes</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><strong>Conflicto con puertos locales (5432 / 8080):</strong><br>
+Si dispone de un servidor PostgreSQL o Apache/Tomcat local ejecutándose, deténgalos temporalmente o modifique el puerto externo en <code>docker-compose.yml</code>.</p>
+</div>
+<div class="paragraph">
+<p><strong>Restablecer base de datos limpia:</strong><br>
+Para volver a cargar los datos originales de la migración V999:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-bash" data-lang="bash">docker compose down -v
+docker compose up -d</code></pre>
+</div>
+</div>
+</div>
+</div>
 
-      <div class="card">
-        <div class="card-title">
-          <svg class="icon" style="color:var(--primary)" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-          Flujo 1: Marketplace de Alojamiento y Anuncios
-        </div>
-        <p>1. Ingrese a <a class="url-link" href="http://localhost:5173" target="_blank">http://localhost:5173</a> sin iniciar sesion (rol Invitado).</p>
-        <p>2. Explore el catalogo publico de anuncios comerciales con filtros interactivos.</p>
-        <p>3. Inicie sesion con <code>victor@colivi.com</code> para verificar las opciones de moderacion y creacion de inmuebles con multiples imagenes.</p>
-      </div>
+<div class="sect1">
+<h2 id="_detencion">8. Detención del Entorno</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Para pausar los contenedores y liberar recursos al concluir la revisión:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-bash" data-lang="bash">docker compose down</code></pre>
+</div>
+</div>
+</div>
+</div>
 
-      <div class="card">
-        <div class="card-title">
-          <svg class="icon" style="color:var(--primary)" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-          Flujo 2: Modulo de Hogar y Motor de Gastos Compartidos
-        </div>
-        <p>1. Inicie sesion con <code>ana@colivi.com</code> o <code>carlos@colivi.com</code>.</p>
-        <p>2. Acceda a la seccion del hogar <strong>Piso Estudiantes Centro</strong> (codigo de invitacion: <code>PISO-CENTRO-2024</code>).</p>
-        <p>3. Observe la seccion de <strong>Gastos y Deudas</strong>: el algoritmo de simplificacion calcula en memoria el grafo optimo de pagos sin alterar los registros historicos.</p>
-        <p>4. Registre un nuevo gasto compartido indicando importe y miembros afectados para verificar la actualizacion en tiempo real de los balances.</p>
-      </div>
+</div>
+<div id="footer">
+<div id="footer-text">
+Colivi &mdash; Trabajo de Fin de Grado en Ingeniería Informática (Universidad de Almería). Autor: Víctor Vallejo Uroz.
+</div>
+</div>
 
-      <div class="card">
-        <div class="card-title">
-          <svg class="icon" style="color:var(--primary)" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
-          Flujo 3: Notificaciones y Correos con Mailpit
-        </div>
-        <p>1. Si ejecuta alguna accion que dispare emails transaccionales (por ejemplo, registro de nuevo usuario o reactivacion).</p>
-        <p>2. Abra <a class="url-link" href="http://localhost:8025" target="_blank">http://localhost:8025</a> para visualizar el servidor SMTP local de Mailpit, donde los correos quedan capturados sin necesidad de conexion a servicios de terceros.</p>
-      </div>
-    </section>
-
-    <!-- RESOLUCION DE PROBLEMAS -->
-    <section id="troubleshooting">
-      <div class="section-header">
-        <div class="section-icon">
-          <svg class="icon" style="width:24px;height:24px;" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-        </div>
-        <h2>7. Resolucion de Incidencias Comunes</h2>
-      </div>
-
-      <div class="card">
-        <div class="card-title">Conflicto de Puertos (5432 o 8080 en uso)</div>
-        <p>Si la maquina anfitriona ya cuenta con una instancia local de PostgreSQL o Spring Boot ejecutandose en los puertos <code>5432</code> o <code>8080</code>, detenga temporalmente dichos servicios locales o edite el mapeo en el archivo <code>docker-compose.yml</code> (por ejemplo, cambiar <code>"5432:5432"</code> por <code>"5433:5432"</code>).</p>
-      </div>
-
-      <div class="card">
-        <div class="card-title">Reinicio limpio del entorno</div>
-        <p>Para reiniciar el entorno restableciendo la base de datos a su estado original sembrado:</p>
-        <div class="code-wrapper">
-          <div class="code-header">
-            <span>Terminal</span>
-            <button class="copy-btn" onclick="copyCode('code-reset', this)">
-              <svg class="icon" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-              <span>Copiar</span>
-            </button>
-          </div>
-          <pre id="code-reset">docker compose down -v
-docker compose up -d</pre>
-        </div>
-      </div>
-    </section>
-
-    <!-- PARADA -->
-    <section id="parada">
-      <div class="section-header">
-        <div class="section-icon">
-          <svg class="icon" style="width:24px;height:24px;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><rect x="9" y="9" width="6" height="6"></rect></svg>
-        </div>
-        <h2>8. Detencion del Sistema</h2>
-      </div>
-      <p>Para detener la ejecucion y liberar los recursos del sistema al concluir la sesion de evaluacion:</p>
-
-      <div class="code-wrapper">
-        <div class="code-header">
-          <span>Terminal</span>
-          <button class="copy-btn" onclick="copyCode('code-stop', this)">
-            <svg class="icon" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-            <span>Copiar</span>
-          </button>
-        </div>
-        <pre id="code-stop">docker compose down</pre>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- FOOTER -->
-  <footer>
-    <div class="container">
-      <p>Colivi &mdash; Trabajo de Fin de Grado en Ingenieria Informatica. Desarrollado por Victor Vallejo Uroz.</p>
-    </div>
-  </footer>
-
-  <script>
-    function copyCode(elementId, btn) {
-      const code = document.getElementById(elementId).innerText;
-      navigator.clipboard.writeText(code).then(() => {
-        const originalContent = btn.innerHTML;
-        btn.innerHTML = `
-          <svg class="icon" style="color:var(--success)" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
-          <span>Copiado</span>
-        `;
-        setTimeout(() => {
-          btn.innerHTML = originalContent;
-        }, 2000);
-      });
-    }
-  </script>
+<script>
+function copyEnv() {
+  const code = document.getElementById('env-code').innerText;
+  navigator.clipboard.writeText(code).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    const prev = btn.innerText;
+    btn.innerText = '¡Copiado!';
+    setTimeout(() => { btn.innerText = prev; }, 2000);
+  });
+}
+</script>
 </body>
 </html>
