@@ -28,6 +28,10 @@ const HomesPage = lazy(() => import("../pages/HomesPage").then(m => ({ default: 
 const ArchivedHomesPage = lazy(() => import("../pages/ArchivedHomesPage").then(m => ({ default: m.ArchivedHomesPage })));
 const HomeDetailPage = lazy(() => import("../pages/HomeDetailPage").then(m => ({ default: m.HomeDetailPage })));
 const MessagesPage = lazy(() => import("../pages/MessagesPage").then(m => ({ default: m.MessagesPage })));
+const TermsPage = lazy(() => import("../pages/TermsPage").then(m => ({ default: m.TermsPage })));
+const PrivacyPage = lazy(() => import("../pages/PrivacyPage").then(m => ({ default: m.PrivacyPage })));
+const CookiesPage = lazy(() => import("../pages/CookiesPage").then(m => ({ default: m.CookiesPage })));
+const ContactPage = lazy(() => import("../pages/ContactPage").then(m => ({ default: m.ContactPage })));
 
 const RouteLoadingFallback = () => (
   <div className="flex items-center justify-center min-h-[60vh]">
@@ -60,6 +64,11 @@ export const AppRoutes = () => {
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/reactivate-request" element={<RequestReactivationPage />} />
       <Route path="/reactivate" element={<ReactivateAccountPage />} />
+      {/* Compliance and Informational Routes */}
+      <Route path="/terms" element={<TermsPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="/cookies" element={<CookiesPage />} />
+      <Route path="/contact" element={<ContactPage />} />
       {/* Protected: requires authentication */}
       <Route
         path="/profile"

@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Sparkles, ChevronDown } from 'lucide-react';
 import { AiChatWindow } from './AiChatWindow';
+import { useCookieConsent } from '../../compliance';
 
 export const AiAssistantWidget: React.FC = () => {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
+  const { isBannerVisible, isPreferencesModalOpen } = useCookieConsent();
 
   const isListingDetail = location.pathname.startsWith('/listings/');
 
@@ -25,6 +27,10 @@ export const AiAssistantWidget: React.FC = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen]);
+
+  if (isPreferencesModalOpen) {
+    return null;
+  }
 
   return (
     <aside
@@ -48,11 +54,11 @@ export const AiAssistantWidget: React.FC = () => {
       {/* Botón de Activación Flotante (FAB) */}
       <div
         className={`pointer-events-auto items-center gap-3 ${
-          isOpen ? 'hidden sm:flex' : 'flex'
+          isOpen ? 'hidden sm:flex' : isBannerVisible ? 'hidden sm:flex' : 'flex'
         }`}
       >
-        {/* Tooltip / Píldora de sugerencia para la primera interacción */}
-        {!isOpen && !hasInteracted && (
+        {/* Tooltip / Píldora de sugerencia para la primera interacción (oculta si el banner de cookies está visible) */}
+        {!isOpen && !hasInteracted && !isBannerVisible && (
           <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container-highest text-on-surface border border-outline-variant/60 shadow-md text-xs font-medium animate-pulse">
             <Sparkles className="w-3.5 h-3.5 text-primary" />
             <span>¿Dudas sobre habitaciones o tareas? Pregunta a la IA</span>
