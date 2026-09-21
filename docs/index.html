@@ -135,7 +135,7 @@ b.button::before,b.button::after{position:relative;top:-1px;font-weight:400}
 b.button::before{content:"[";padding:0 3px 0 2px}
 b.button::after{content:"]";padding:0 2px 0 3px}
 p a>code:hover{color:rgba(0,0,0,.9)}
-#header,#content,#footnotes,#footer{width:100%;margin:0 auto;max-width:62.5em;*zoom:1;position:relative;padding-left:.9375em;padding-right:.9375em}
+#header,#content,#footnotes,#footer{width:100%;margin:0 auto;max-width:62.5em;position:relative;padding-left:.9375em;padding-right:.9375em}
 #header::before,#header::after,#content::before,#content::after,#footnotes::before,#footnotes::after,#footer::before,#footer::after{content:" ";display:table}
 #header::after,#content::after,#footnotes::after,#footer::after{clear:both}
 #content{margin-top:1.25em}
@@ -471,9 +471,6 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_recorrido_propietario">7. Recorrido guiado como propietario / anfitrión</a></li>
 <li><a href="#_recorrido_admin">8. Recorrido guiado como administrador</a></li>
 <li><a href="#_cuentas_prueba">9. Cuentas y escenarios de prueba</a></li>
-<li><a href="#_mejoras_futuras">10. Cómo dejar mejoras para la siguiente versión</a></li>
-<li><a href="#_resolucion_incidencias">11. Resolución de problemas comunes</a></li>
-<li><a href="#_detencion">12. Detención del entorno</a></li>
 </ul>
 </div>
 </div>
@@ -483,10 +480,10 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <h2 id="_resumen">Resumen del proyecto</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p><strong>Colivi</strong> es una aplicación para buscar y publicar pisos para estudiantes, coordinar la convivencia y mantener al día la gestión compartida del hogar. La plataforma cubre el catálogo de alojamientos, la publicación de anuncios, las reservas, la mensajería entre usuarios, la gestión de gastos y deudas, las tareas domésticas y la moderación administrativa.</p>
+<p><strong>Colivi</strong> es mi Trabajo de Fin de Grado en Ingeniería Informática (Universidad de Almería), una plataforma web y móvil integral diseñada para facilitar la búsqueda y publicación de pisos para estudiantes, coordinar la convivencia diaria y mantener al día la gestión compartida del hogar. El sistema abarca catálogo reactivo de alojamientos con mapa interactivo, publicación de anuncios, flujo de reservas, mensajería instantánea, liquidación y reparto de gastos y balances, asignación de tareas domésticas, copiloto de asistencia con IA (MCP) y panel de administración.</p>
 </div>
 <div class="paragraph">
-<p>La guía conserva los pasos técnicos mínimos para arrancar el entorno local, pero el foco principal está en cómo usar la aplicación y en qué comprobar en cada flujo.</p>
+<p>He preparado esta guía con los pasos técnicos mínimos para que puedas arrancar el entorno local en tu máquina y evaluar cada flujo de la aplicación de forma guiada y estructurada.</p>
 </div>
 </div>
 </div>
@@ -635,9 +632,9 @@ GOOGLE_CLIENT_ID=107294184753-qo7cnr52fmvavskavnhugpekb2nsge6n.apps.googleuserco
 <td class="tableblock halign-left valign-top"><p class="tableblock">Documentación técnica de la API REST.</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Mailpit</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="http://localhost:8025" target="_blank">http://localhost:8025</a></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Bandeja para ver correos de pruebas, recuperación de contraseña y confirmaciones.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Mailbox (Mailpit)</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="http://localhost:8025" target="_blank">http://localhost:8025</a><br><code>puerto 8025:8025</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Bandeja web para inspeccionar en tiempo real todos los correos generados por la plataforma (recuperación de contraseñas, reactivación de cuentas y confirmaciones de reservas). Funciona de forma aislada sin requerir salida a internet.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Servidor MCP</strong></p></td>
@@ -670,7 +667,7 @@ GOOGLE_CLIENT_ID=107294184753-qo7cnr52fmvavskavnhugpekb2nsge6n.apps.googleuserco
 <table>
 <tr>
 <td class="icon"><div class="title">Nota</div></td>
-<td class="content">Si quieres una explicación clara para tu tutor, empieza siempre por este recorrido. Es el que mejor resume el objetivo del proyecto sin entrar todavía en gestión privada.</td>
+<td class="content">Este recorrido inicial permite evaluar el catálogo y el mapa reactivo sin necesidad de iniciar sesión en el sistema.</td>
 </tr>
 </table>
 </div>
@@ -685,19 +682,27 @@ GOOGLE_CLIENT_ID=107294184753-qo7cnr52fmvavskavnhugpekb2nsge6n.apps.googleuserco
 </div>
 
 <div class="sect2">
-<h3 id="_acceso_y_recuperacion">5.1. Acceso, recuperación y reactivación</h3>
+<h3 id="_acceso_y_recuperacion">6.1. Acceso, recuperación y reactivación</h3>
 <div class="olist arabic">
 <ol class="arabic">
 <li><p>Entra en <code>/register</code> para crear una cuenta nueva y observar el flujo de alta.</p></li>
 <li><p>Usa <code>/login</code> para iniciar sesión y acceder a las zonas privadas.</p></li>
-<li><p>Prueba <code>/forgot-password</code> y revisa en Mailpit el correo de restablecimiento.</p></li>
+<li><p>Prueba <code>/forgot-password</code> y revisa en el Mailbox (<a href="http://localhost:8025" target="_blank">localhost:8025</a>) el correo capturado de restablecimiento.</p></li>
 <li><p>Si la cuenta está desactivada, abre <code>/reactivate-request</code> y después <code>/reactivate</code> para completar la reactivación.</p></li>
 </ol>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon"><div class="title">Consejo</div></td>
+<td class="content"><strong>Inspección de correos en el Mailbox local:</strong> Para todas las funcionalidades que disparan el envío de emails (recuperación de contraseña, reactivación de cuentas o avisos de reservas), abre en tu navegador <a href="http://localhost:8025" target="_blank">http://localhost:8025</a> (puerto <code>8025:8025</code> de Docker). Esta bandeja web te permite ver los correos generados al instante, copiar los enlaces de verificación o tokens de un solo uso y continuar el flujo de prueba sin necesidad de configurar un servidor SMTP externo ni usar buzones reales.</td>
+</tr>
+</table>
 </div>
 </div>
 
 <div class="sect2">
-<h3 id="_perfil_usuario">5.2. Perfil personal</h3>
+<h3 id="_perfil_usuario">6.2. Perfil personal</h3>
 <div class="olist arabic">
 <ol class="arabic">
 <li><p>Accede a tu perfil en <code>/profile</code> y revisa los datos personales, la foto y las opciones de edición.</p></li>
@@ -708,7 +713,7 @@ GOOGLE_CLIENT_ID=107294184753-qo7cnr52fmvavskavnhugpekb2nsge6n.apps.googleuserco
 </div>
 
 <div class="sect2">
-<h3 id="_hogar_gastos">5.3. Hogar, gastos y balances</h3>
+<h3 id="_hogar_gastos">6.3. Hogar, gastos y balances</h3>
 <div class="olist arabic">
 <ol class="arabic">
 <li><p>Entra en <code>/homes</code> para crear un hogar nuevo, unirte por código o consultar los hogares en los que ya participas.</p></li>
@@ -721,7 +726,7 @@ GOOGLE_CLIENT_ID=107294184753-qo7cnr52fmvavskavnhugpekb2nsge6n.apps.googleuserco
 </div>
 
 <div class="sect2">
-<h3 id="_tareas_domesticas">5.4. Tareas domésticas</h3>
+<h3 id="_tareas_domesticas">6.4. Tareas domésticas</h3>
 <div class="olist arabic">
 <ol class="arabic">
 <li><p>En el hogar, abre la sección de tareas para crear una tarea puntual o una serie recurrente.</p></li>
@@ -733,13 +738,13 @@ GOOGLE_CLIENT_ID=107294184753-qo7cnr52fmvavskavnhugpekb2nsge6n.apps.googleuserco
 </div>
 
 <div class="sect2">
-<h3 id="_mensajeria_ai">5.5. Mensajería y asistente IA</h3>
+<h3 id="_mensajeria_ai">6.5. Mensajería y asistente IA</h3>
 <div class="olist arabic">
 <ol class="arabic">
 <li><p>Abre la bandeja de mensajes para revisar conversaciones activas y no leídas.</p></li>
 <li><p>Entra en un chat para ver el historial y enviar mensajes dentro del contexto del anuncio o del hogar.</p></li>
 <li><p>Abre el chat con IA para preguntar por balances, tareas, reservas o actividad del hogar.</p></li>
-<li><p>Si tu demo incluye herramientas MCP, explica que el asistente no actúa de forma aislada: consulta la API con el contexto del usuario autenticado.</p></li>
+<li><p>Prueba el copiloto de IA: observa cómo no actúa de forma aislada, sino que consulta la API de Colivi utilizando el contexto y permisos del usuario autenticado a través del protocolo Model Context Protocol (MCP).</p></li>
 </ol>
 </div>
 </div>
@@ -759,7 +764,7 @@ GOOGLE_CLIENT_ID=107294184753-qo7cnr52fmvavskavnhugpekb2nsge6n.apps.googleuserco
 <li><p>Revisa <code>/my-accommodations</code> para editar o mantener el inventario físico de la vivienda.</p></li>
 <li><p>Usa <code>/create-listing</code> para publicar un anuncio a partir de una propiedad ya registrada.</p></li>
 <li><p>Abre <code>/my-listings</code> o <code>/edit-listing/:id</code> para modificar condiciones, fotos o estado del anuncio.</p></li>
-<li><p>Revisa <code>/received-requests</code> para ver las peticiones de reserva y decidir si se aceptan o rechazan.</p></li>
+<li><p>Revisa <code>/received-requests</code> para ver las peticiones de reserva y decidir si se aceptan o rechazan. Al cambiar el estado de una reserva, comprueba en el Mailbox (<a href="http://localhost:8025" target="_blank">localhost:8025</a>) cómo el sistema despacha automáticamente el correo de notificación correspondiente al inquilino.</p></li>
 <li><p>Cuando un anuncio tenga suficientes fotos y esté aprobado, comprueba su presencia en el catálogo público y en el mapa.</p></li>
 </ol>
 </div>
@@ -768,7 +773,7 @@ GOOGLE_CLIENT_ID=107294184753-qo7cnr52fmvavskavnhugpekb2nsge6n.apps.googleuserco
 <table>
 <tr>
 <td class="icon"><div class="title">Nota</div></td>
-<td class="content">Si quieres enseñar la relación entre propiedad física y anuncio comercial, este es el bloque más importante. Deja claro que la vivienda y el anuncio son entidades distintas.</td>
+<td class="content">Nota de arquitectura: En el modelo de dominio de Colivi, la vivienda física (<code>Accommodation</code>) y el anuncio comercial (<code>AccommodationListing</code>) son entidades desacopladas. Esto permite publicar varias habitaciones independientes o la vivienda completa bajo una misma propiedad física sin duplicidad de datos.</td>
 </tr>
 </table>
 </div>
@@ -779,16 +784,16 @@ GOOGLE_CLIENT_ID=107294184753-qo7cnr52fmvavskavnhugpekb2nsge6n.apps.googleuserco
 <h2 id="_recorrido_admin">8. Recorrido guiado como administrador</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>La vista administrativa está pensada para moderar contenido, revisar reportes y aplicar acciones sobre usuarios o anuncios.</p>
+<p>En este bloque puedes evaluar el panel de control administrativo, diseñado para moderar contenidos, auditar reportes de usuarios y aplicar acciones disciplinarias sobre anuncios o perfiles.</p>
 </div>
 
 <div class="olist arabic">
 <ol class="arabic">
-<li><p>Accede a <code>/admin</code> con una cuenta de rol administrador.</p></li>
-<li><p>Revisa la cola de reportes y abre el detalle de cada incidencia para entender el motivo, el objetivo y el estado.</p></li>
-<li><p>Usa las acciones de moderación para aprobar, despublicar o bloquear anuncios.</p></li>
-<li><p>Consulta la gestión de usuarios para aplicar baneos temporales o revisar información relevante del perfil.</p></li>
-<li><p>Si el panel muestra ranking o métricas, úsalo para explicar de forma resumida qué contenidos acumulan más incidencia.</p></li>
+<li><p>Accede a <code>/admin</code> con una de las cuentas de rol administrador facilitadas a continuación.</p></li>
+<li><p>Revisa la cola de reportes y abre el detalle de cada incidencia para examinar el motivo, el objetivo y el estado.</p></li>
+<li><p>Usa las acciones de moderación para despublicar, recuperar o bloquear anuncios.</p></li>
+<li><p>Consulta la gestión de usuarios para aplicar bloqueos disciplinarios o revisar el historial del perfil.</p></li>
+<li><p>Examina el resumen de métricas para comprobar qué elementos concentran mayor actividad o reportes.</p></li>
 </ol>
 </div>
 </div>
@@ -798,11 +803,11 @@ GOOGLE_CLIENT_ID=107294184753-qo7cnr52fmvavskavnhugpekb2nsge6n.apps.googleuserco
 <h2 id="_cuentas_prueba">9. Cuentas y escenarios de prueba</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Estas cuentas están pensadas para que puedas enseñar el sistema sin improvisar. Las siguientes credenciales son de prueba y se usan solo en el entorno local del TFG.</p>
+<p>Para facilitar la evaluación sin necesidad de crear datos desde cero, he preconfigurado las siguientes cuentas con datos y escenarios realistas cargados en la base de datos de desarrollo.</p>
 </div>
 
 <div class="sect2">
-<h3 id="_cuentas_admin">8.1. Cuentas de administración</h3>
+<h3 id="_cuentas_admin">9.1. Cuentas de administración</h3>
 <table class="tableblock frame-all grid-all stretch">
 <colgroup>
 <col style="width: 25%;">
@@ -815,38 +820,32 @@ GOOGLE_CLIENT_ID=107294184753-qo7cnr52fmvavskavnhugpekb2nsge6n.apps.googleuserco
 <th class="tableblock halign-left valign-top">Rol</th>
 <th class="tableblock halign-left valign-top">Correo electrónico</th>
 <th class="tableblock halign-left valign-top">Contraseña</th>
-<th class="tableblock halign-left valign-top">Uso recomendado</th>
+<th class="tableblock halign-left valign-top">Finalidad en la prueba</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Administrador</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>admin@gmail.com</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>AdminContrasena1</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Demostrar moderación, reportes y acciones globales.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Moderador</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>moderador@colivi.es</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>Moderador123!</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Revisar bandeja administrativa y pruebas de supervisión.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>victor@colivi.com</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>password123</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Evaluar panel de administración, gestión de usuarios, auditoría y métricas globales.</p></td>
 </tr>
 </tbody>
 </table>
 </div>
 
 <div class="sect2">
-<h3 id="_cuentas_usuarios">8.2. Usuarios y compañeros de convivencia</h3>
+<h3 id="_cuentas_usuarios">9.2. Usuarios y compañeros de convivencia</h3>
 <div class="admonitionblock important">
 <table>
 <tr>
 <td class="icon"><div class="title">Importante</div></td>
-<td class="content">La contraseña de prueba para los usuarios regulares es <strong><code>UsuarioContrasena1</code></strong>.</td>
+<td class="content">La contraseña de prueba configurada para todos los usuarios presembrados en la base de datos es <strong><code>password123</code></strong>.</td>
 </tr>
 </table>
 </div>
 <div class="paragraph">
-<p>Para enseñar el módulo de hogar y gastos, usa el piso <strong>Piso Moncloa - Los 4 Fantásticos</strong> (código <code>8OSCV0LT</code>).</p>
+<p>Para evaluar el módulo de convivencia, balance de deudas y gastos compartidos, he precargado el hogar <strong>Piso Estudiantes Centro</strong> (código de invitación: <code>PISO-CENTRO-2024</code>) con gastos ya asignados (compra semanal, factura de luz y cena común).</p>
 </div>
 <table class="tableblock frame-all grid-all stretch">
 <colgroup>
@@ -858,108 +857,48 @@ GOOGLE_CLIENT_ID=107294184753-qo7cnr52fmvavskavnhugpekb2nsge6n.apps.googleuserco
 <tr>
 <th class="tableblock halign-left valign-top">Usuario</th>
 <th class="tableblock halign-left valign-top">Correo de acceso</th>
-<th class="tableblock halign-left valign-top">Qué conviene mostrar</th>
+<th class="tableblock halign-left valign-top">Aspectos clave a evaluar</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Carlos Gómez</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>carlos.gomez@gmail.com</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Gastos, balances, administración del hogar y tareas.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Victor Admin</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>victor@colivi.com</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Administrador del hogar. Pagador de la compra de Mercadona (100 € repartidos entre los 4 convivientes).</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Sofía Morales</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>sofia.morales@gmail.com</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Vista de miembro activo, reparto de deudas y actividad del hogar.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Ana García</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ana@colivi.com</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Inquilina activa. Pagadora de la factura de luz (40 € repartidos entre Ana y Victor). Balance y liquidaciones.</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Alejandro Romero</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>alejandro.romero@gmail.com</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Recorridos alternativos dentro del mismo hogar.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Carlos López</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>carlos@colivi.com</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Inquilino activo. Pagador de la cena de pizzería (80 € repartidos entre Carlos y Laura).</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Mario Campos</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>mario.campos@gmail.com</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Comparar balances, tareas y mensajes con otro perfil.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Laura Martínez</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>laura@colivi.com</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Inquilina activa con deudas pendientes asignadas en compra y cena. Comprobación del algoritmo de simplificación.</p></td>
 </tr>
 </tbody>
 </table>
 </div>
 
 <div class="sect2">
-<h3 id="_escenarios_sugeridos">8.3. Escenarios sugeridos para la demo</h3>
+<h3 id="_escenarios_sugeridos">9.3. Orden de evaluación recomendado</h3>
 <div class="olist arabic">
 <ol class="arabic">
-<li><p>Enséñale primero al tutor cómo navega un visitante por el catálogo y el mapa.</p></li>
-<li><p>Después muestra el flujo de estudiante: registro, perfil, hogar, gastos y tareas.</p></li>
-<li><p>Continúa con el flujo de propietario: alta de inmueble, subida de fotos y publicación de anuncio.</p></li>
-<li><p>Termina con la parte administrativa y el chat con IA para cerrar la visión completa del sistema.</p></li>
+<li><p><strong>Paso 1: Exploración como visitante:</strong> Navega por el catálogo público en <code>http://localhost:5173</code>, utiliza los filtros por precio y ciudad, y explora la vista interactiva.</p></li>
+<li><p><strong>Paso 2: Convivencia y gestión de hogar:</strong> Inicia sesión con <code>ana@colivi.com</code> o <code>carlos@colivi.com</code> (contraseña: <code>password123</code>) para revisar el hogar <em>Piso Estudiantes Centro</em>, el registro de gastos y el algoritmo de simplificación de deudas.</p></li>
+<li><p><strong>Paso 3: Gestión de alojamiento y reservas:</strong> Publica o gestiona un alojamiento, interactúa con el sistema de mensajería y revisa las notificaciones de correo en Mailpit (<code>http://localhost:8025</code>).</p></li>
+<li><p><strong>Paso 4: Panel administrativo y Copiloto IA:</strong> Entra con <code>victor@colivi.com</code> (contraseña: <code>password123</code>) para revisar las métricas administrativas y formular consultas al asistente de IA sobre el estado del piso.</p></li>
 </ol>
 </div>
 </div>
 </div>
 </div>
 
-<div class="sect1">
-<h2 id="_mejoras_futuras">10. Cómo dejar mejoras para la siguiente versión</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>A futuro habrá un formulario para recoger mejoras y observaciones. Mientras tanto, la mejor forma de preparar ese feedback es anotar ideas concretas después de probar cada recorrido.</p>
-</div>
-<div class="ulist">
-<ul>
-<li><p>Describe qué pantalla te resultó menos clara.</p></li>
-<li><p>Indica qué flujo repetirías con menos clics o con más ayuda visual.</p></li>
-<li><p>Señala si falta información en el catálogo, en el hogar o en la moderación.</p></li>
-<li><p>Apunta qué mejorarías de mensajes, balances, tareas o chat con IA.</p></li>
-</ul>
-</div>
-<div class="paragraph">
-<p>Si enseñas esta guía en clase, puedes cerrar la demo pidiendo a tus compañeros que anoten mejoras en formato breve: problema, pantalla, propuesta. Eso te deja un material claro para la siguiente iteración del proyecto.</p>
-</div>
-</div>
-</div>
-
-<div class="sect1">
-<h2 id="_resolucion_incidencias">11. Resolución de problemas comunes</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p><strong>Conflicto con puertos locales (5432 / 8080 / 5173):</strong><br>
-Si ya tienes otros servicios ejecutándose en esos puertos, deténlos temporalmente o cambia la configuración del <code>docker-compose.yml</code>.</p>
-</div>
-<div class="paragraph">
-<p><strong>Los contenedores no arrancan a la primera:</strong><br>
-Revisa que Docker Desktop esté activo, vuelve a ejecutar <code>docker compose up --build -d</code> y espera a que PostgreSQL, backend y frontend terminen de inicializarse.</p>
-</div>
-<div class="paragraph">
-<p><strong>Limpiar la base de datos de pruebas:</strong><br>
-Si necesitas volver al estado inicial, usa:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-bash" data-lang="bash">docker compose down -v
-docker compose up -d</code></pre>
-</div>
-</div>
-</div>
-</div>
-
-<div class="sect1">
-<h2 id="_detencion">12. Detención del entorno</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>Cuando termines la demo o quieras liberar recursos, detén los servicios con:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-bash" data-lang="bash">docker compose down</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Con eso puedes cerrar la sesión dejando el entorno limpio para la siguiente revisión.</p>
-</div>
-</div>
-</div>
 
 </div>
 <div id="footer">

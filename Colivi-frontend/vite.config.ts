@@ -15,6 +15,7 @@ export default defineConfig({
   },
   server: {
     host: true, // necesario para que Docker exponga el puerto
+    allowedHosts: true,
     proxy: {
       '/api': {
         target: process.env.BACKEND_URL ?? 'http://localhost:8080',
