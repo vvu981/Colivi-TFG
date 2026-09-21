@@ -2,6 +2,7 @@ import React, { useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { userService } from "../../user/services/userService";
+import { MAX_AVATAR_SIZE_MB, isFileSizeAllowed } from "../../user/constants/fileUpload";
 import { type Value as PhoneValue } from "react-phone-number-input";
 import { ColiviPhoneInput } from "../../../components/ui/ColiviPhoneInput";
 import { PasswordWithStrengthInput } from "../../../components/ui/PasswordWithStrengthInput";
@@ -28,9 +29,8 @@ export const RegisterForm = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const MAX_SIZE_MB = 10;
-    if (file.size > MAX_SIZE_MB * 1024 * 1024) {
-      setError(`La foto seleccionada supera el tamaño máximo permitido (${MAX_SIZE_MB} MB). Por favor, elige una imagen más ligera.`);
+    if (!isFileSizeAllowed(file)) {
+      setError(`La foto seleccionada supera el tamaño máximo permitido (${MAX_AVATAR_SIZE_MB} MB). Por favor, elige una imagen más ligera.`);
       setProfilePhoto(null);
       setProfilePhotoPreview(null);
       if (photoInputRef.current) photoInputRef.current.value = "";
@@ -61,17 +61,26 @@ export const RegisterForm = () => {
       });
 
       // Si hay foto, la subimos (el token ya está en localStorage tras register)
+      let photoUploadWarning = false;
       if (profilePhoto) {
         try {
           await userService.uploadProfilePicture(profilePhoto);
-        } catch {
-          // La foto falla silenciosamente: el usuario ya está registrado
-          console.warn('Profile picture upload failed, continuing...');
+        } catch (photoErr) {
+          console.warn('Profile picture upload failed during registration', photoErr);
+          photoUploadWarning = true;
         }
       }
 
       logout();
-      navigate('/login');
+      if (photoUploadWarning) {
+        navigate('/login', {
+          state: {
+            infoMessage: 'Tu cuenta se ha creado con éxito, pero hubo un problema al guardar la foto de perfil. Podrás subirla más tarde desde tu perfil.'
+          }
+        });
+      } else {
+        navigate('/login');
+      }
     } catch (err: any) {
       console.error("Registration failed", err);
       setError(

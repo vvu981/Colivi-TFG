@@ -84,7 +84,7 @@ export const LoginForm = () => {
         }
       }
     }
-  }, [handleGoogleResponse]);
+  }, [handleGoogleResponse, isNative]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,8 +109,17 @@ export const LoginForm = () => {
     error.toLowerCase().includes('reactivación') ||
     error.toLowerCase().includes('reactivar');
 
+  const infoMessage = (location.state as any)?.infoMessage;
+
   return (
     <div className="w-full">
+      {/* Mensaje Informativo de Navegación */}
+      {infoMessage && !error && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg mb-6 text-sm">
+          {infoMessage}
+        </div>
+      )}
+
       {/* Error */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 text-sm flex flex-col gap-2">

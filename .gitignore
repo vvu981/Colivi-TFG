@@ -111,4 +111,11 @@ postgres-data/
 scripts/*
 imgs_prueba/
 
+# ==========================================
+# Binarios Móviles (Android / iOS)
+# ==========================================
+*.apk
+*.aab
+
 fallosPR.md
+

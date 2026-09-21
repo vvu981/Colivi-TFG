@@ -74,8 +74,8 @@ services:
       GROQ_API_KEY: ${GROQ_API_KEY:-${AI_API_KEY}}
       GROQ_MODEL: ${GROQ_MODEL:-${AI_MODEL:-qwen/qwen3.8-27b}}
       MCP_SERVER_URL: http://mcp-server:3001
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost,http://localhost:*,http://127.0.0.1,http://127.0.0.1:*,https://localhost,https://localhost:*,capacitor://localhost,capacitor://*}
-      APP_CORS_ALLOWED_ORIGIN_PATTERNS: ${CORS_ALLOWED_ORIGINS:-http://localhost,http://localhost:*,http://127.0.0.1,http://127.0.0.1:*,https://localhost,https://localhost:*,capacitor://localhost,capacitor://*}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost,http://localhost:*,http://127.0.0.1,http://127.0.0.1:*,https://localhost,https://localhost:*,capacitor://localhost,http://192.168.*:*,http://192.168.*}
+      APP_CORS_ALLOWED_ORIGIN_PATTERNS: ${CORS_ALLOWED_ORIGINS:-http://localhost,http://localhost:*,http://127.0.0.1,http://127.0.0.1:*,https://localhost,https://localhost:*,capacitor://localhost,http://192.168.*:*,http://192.168.*}
     ports:
       - "8080:8080"
     healthcheck:

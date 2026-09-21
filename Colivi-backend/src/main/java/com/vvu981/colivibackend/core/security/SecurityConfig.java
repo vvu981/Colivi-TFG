@@ -31,7 +31,7 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final UserStatusEnforcerFilter userStatusEnforcerFilter;
 
-    @Value("${app.cors.allowed-origin-patterns:http://localhost,http://localhost:*,http://127.0.0.1,http://127.0.0.1:*,https://localhost,https://localhost:*,capacitor://localhost,capacitor://*}")
+    @Value("${app.cors.allowed-origin-patterns:http://localhost,http://localhost:*,http://127.0.0.1,http://127.0.0.1:*,https://localhost,https://localhost:*,capacitor://localhost,http://192.168.*:*,http://192.168.*}")
     private List<String> allowedOriginPatterns;
 
     @Bean

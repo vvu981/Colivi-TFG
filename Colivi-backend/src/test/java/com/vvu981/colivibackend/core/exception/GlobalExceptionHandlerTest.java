@@ -11,6 +11,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.util.Map;
 
@@ -170,6 +171,25 @@ class GlobalExceptionHandlerTest {
         assertEquals("Forbidden", body.get("error"));
         assertEquals(HttpStatus.FORBIDDEN.value(), body.get("status"));
         assertThat((String) body.get("message")).contains("reactivaci");
+        assertNotNull(body.get("timestamp"));
+    }
+
+    @Test
+    @DisplayName("should Return PayloadTooLarge_When MaxUploadSizeExceededException")
+    void shouldReturnPayloadTooLarge_WhenMaxUploadSizeExceededException() {
+        // Arrange
+        MaxUploadSizeExceededException exception = new MaxUploadSizeExceededException(10 * 1024 * 1024);
+
+        // Act
+        ResponseEntity<Map<String, Object>> response = handler.handleMaxUploadSizeExceeded(exception);
+
+        // Assert
+        assertEquals(HttpStatus.PAYLOAD_TOO_LARGE, response.getStatusCode());
+        Map<String, Object> body = response.getBody();
+        assertNotNull(body);
+        assertEquals("Payload Too Large", body.get("error"));
+        assertThat((String) body.get("message")).contains("tamaño máximo permitido");
+        assertEquals(HttpStatus.PAYLOAD_TOO_LARGE.value(), body.get("status"));
         assertNotNull(body.get("timestamp"));
     }
 }

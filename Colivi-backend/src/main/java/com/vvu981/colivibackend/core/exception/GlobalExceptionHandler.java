@@ -99,6 +99,6 @@ public class GlobalExceptionHandler {
     // Error de tamaño de archivo excedido (413 Payload Too Large)
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<Map<String, Object>> handleMaxUploadSizeExceeded(MaxUploadSizeExceededException ex) {
-        return buildErrorResponse(HttpStatus.PAYLOAD_TOO_LARGE, "El archivo excede el tamaño máximo permitido (10 MB).");
+        return buildErrorResponse(HttpStatus.PAYLOAD_TOO_LARGE, "El archivo o la petición excede el tamaño máximo permitido.");
     }
 }

@@ -6,11 +6,11 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   server: {
     androidScheme: 'http',
-    cleartext: true
+    cleartext: true,
   },
   android: {
-    allowMixedContent: true
-  }
+    allowMixedContent: true,
+  },
 };
 
 export default config;

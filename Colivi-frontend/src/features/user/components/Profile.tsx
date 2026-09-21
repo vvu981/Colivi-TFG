@@ -7,6 +7,7 @@ import { DeleteAccountModal } from "./DeleteAccountModal";
 import { type Value as PhoneValue } from "react-phone-number-input";
 import { ProfileHeader } from "./ProfileHeader";
 import { ProfilePersonalInfoForm } from "./ProfilePersonalInfoForm";
+import { MAX_AVATAR_SIZE_MB, isFileSizeAllowed } from "../constants/fileUpload";
 export const Profile = () => {
   const { logout } = useAuth();
   const { user, updateProfile, updateProfilePicture, deleteAccount } = useUser();
@@ -64,9 +65,9 @@ export const Profile = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const MAX_SIZE_MB = 10;
-    if (file.size > MAX_SIZE_MB * 1024 * 1024) {
-      setError(`La foto seleccionada supera el tamaño máximo permitido (${MAX_SIZE_MB} MB). Por favor, elige una imagen más ligera.`);
+    if (!isFileSizeAllowed(file)) {
+      setError(`La foto seleccionada supera el tamaño máximo permitido (${MAX_AVATAR_SIZE_MB} MB). Por favor, elige una imagen más ligera.`);
+      e.target.value = "";
       return;
     }
 
