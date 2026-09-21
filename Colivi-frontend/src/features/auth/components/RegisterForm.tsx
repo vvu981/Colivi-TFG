@@ -261,13 +261,13 @@ export const RegisterForm = () => {
           />
           <label className="text-sm text-[#565e74] cursor-pointer" htmlFor="terms">
             Acepto los{" "}
-            <a href="#" className="text-[#9f3c16] hover:underline font-medium">
+            <Link to="/terms" target="_blank" rel="noopener noreferrer" className="text-[#9f3c16] hover:underline font-medium">
               Términos de servicio
-            </a>{" "}
+            </Link>{" "}
             y la{" "}
-            <a href="#" className="text-[#9f3c16] hover:underline font-medium">
+            <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="text-[#9f3c16] hover:underline font-medium">
               Política de privacidad
-            </a>
+            </Link>
           </label>
         </div>
 

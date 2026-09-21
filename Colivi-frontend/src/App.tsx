@@ -5,14 +5,19 @@ import { queryClient } from './lib/queryClient';
 import { AppRoutes } from './routes/AppRoutes';
 import { AuthProvider } from './features/auth';
 import { ReportFeedbackListener } from './features/report/components/ReportFeedbackListener';
+import { CookieConsentProvider, CookieBanner, CookiePreferencesModal } from './features/compliance';
 
 const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <BrowserRouter>
-          <ReportFeedbackListener />
-          <AppRoutes />
+          <CookieConsentProvider>
+            <ReportFeedbackListener />
+            <AppRoutes />
+            <CookieBanner />
+            <CookiePreferencesModal />
+          </CookieConsentProvider>
         </BrowserRouter>
       </AuthProvider>
     </QueryClientProvider>
