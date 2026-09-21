@@ -36,7 +36,7 @@ export const AiAssistantWidget: React.FC = () => {
       {/* Ventana Flotante / Side-Panel del Asistente */}
       {isOpen && (
         <div
-          className="pointer-events-auto mb-3 sm:mb-4 w-[420px] h-[620px] max-w-[calc(100vw-1.5rem)] sm:max-w-[calc(100vw-2rem)] max-h-[calc(100dvh-5.5rem)] sm:max-h-[calc(100dvh-6.5rem)] animate-in fade-in slide-in-from-bottom-5 duration-200"
+          className="pointer-events-auto fixed inset-x-3 top-4 bottom-4 max-h-[calc(100dvh-2rem)] z-50 sm:static sm:inset-auto sm:z-auto sm:mb-4 sm:w-[420px] sm:h-[620px] sm:max-w-[calc(100vw-2rem)] sm:max-h-[calc(100dvh-6.5rem)] animate-in fade-in slide-in-from-bottom-5 duration-200"
           role="dialog"
           aria-modal="false"
           aria-label="Panel conversacional con IA"
@@ -46,7 +46,11 @@ export const AiAssistantWidget: React.FC = () => {
       )}
 
       {/* Botón de Activación Flotante (FAB) */}
-      <div className="pointer-events-auto flex items-center gap-3">
+      <div
+        className={`pointer-events-auto items-center gap-3 ${
+          isOpen ? 'hidden sm:flex' : 'flex'
+        }`}
+      >
         {/* Tooltip / Píldora de sugerencia para la primera interacción */}
         {!isOpen && !hasInteracted && (
           <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container-highest text-on-surface border border-outline-variant/60 shadow-md text-xs font-medium animate-pulse">

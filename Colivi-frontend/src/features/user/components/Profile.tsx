@@ -7,6 +7,7 @@ import { DeleteAccountModal } from "./DeleteAccountModal";
 import { type Value as PhoneValue } from "react-phone-number-input";
 import { ProfileHeader } from "./ProfileHeader";
 import { ProfilePersonalInfoForm } from "./ProfilePersonalInfoForm";
+import { MAX_AVATAR_SIZE_MB, isFileSizeAllowed } from "../constants/fileUpload";
 export const Profile = () => {
   const { logout } = useAuth();
   const { user, updateProfile, updateProfilePicture, deleteAccount } = useUser();
@@ -64,11 +65,23 @@ export const Profile = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (!isFileSizeAllowed(file)) {
+      setError(`La foto seleccionada supera el tamaño máximo permitido (${MAX_AVATAR_SIZE_MB} MB). Por favor, elige una imagen más ligera.`);
+      e.target.value = "";
+      return;
+    }
+
     try {
+      setError(null);
       setIsUploadingPhoto(true);
       await updateProfilePicture(file);
-    } catch (error) {
-      console.error("Error uploading profile picture", error);
+    } catch (err: any) {
+      console.error("Error uploading profile picture", err);
+      setError(
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        "Error al subir la foto de perfil. Comprueba el tamaño y el formato de la imagen."
+      );
     } finally {
       setIsUploadingPhoto(false);
     }

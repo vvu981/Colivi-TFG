@@ -2,6 +2,7 @@ import React, { useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { userService } from "../../user/services/userService";
+import { MAX_AVATAR_SIZE_MB, isFileSizeAllowed } from "../../user/constants/fileUpload";
 import { type Value as PhoneValue } from "react-phone-number-input";
 import { ColiviPhoneInput } from "../../../components/ui/ColiviPhoneInput";
 import { PasswordWithStrengthInput } from "../../../components/ui/PasswordWithStrengthInput";
@@ -27,6 +28,16 @@ export const RegisterForm = () => {
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (!isFileSizeAllowed(file)) {
+      setError(`La foto seleccionada supera el tamaño máximo permitido (${MAX_AVATAR_SIZE_MB} MB). Por favor, elige una imagen más ligera.`);
+      setProfilePhoto(null);
+      setProfilePhotoPreview(null);
+      if (photoInputRef.current) photoInputRef.current.value = "";
+      return;
+    }
+
+    setError("");
     setProfilePhoto(file);
     const reader = new FileReader();
     reader.onload = (ev) => setProfilePhotoPreview(ev.target?.result as string);
@@ -50,17 +61,26 @@ export const RegisterForm = () => {
       });
 
       // Si hay foto, la subimos (el token ya está en localStorage tras register)
+      let photoUploadWarning = false;
       if (profilePhoto) {
         try {
           await userService.uploadProfilePicture(profilePhoto);
-        } catch {
-          // La foto falla silenciosamente: el usuario ya está registrado
-          console.warn('Profile picture upload failed, continuing...');
+        } catch (photoErr) {
+          console.warn('Profile picture upload failed during registration', photoErr);
+          photoUploadWarning = true;
         }
       }
 
       logout();
-      navigate('/login');
+      if (photoUploadWarning) {
+        navigate('/login', {
+          state: {
+            infoMessage: 'Tu cuenta se ha creado con éxito, pero hubo un problema al guardar la foto de perfil. Podrás subirla más tarde desde tu perfil.'
+          }
+        });
+      } else {
+        navigate('/login');
+      }
     } catch (err: any) {
       console.error("Registration failed", err);
       setError(
@@ -140,8 +160,8 @@ export const RegisterForm = () => {
         </div>
 
         {/* Nombre + Primer Apellido */}
-        <div className="flex gap-3">
-          <div className="flex flex-col gap-1.5 flex-1">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col gap-1.5 flex-1 min-w-0">
             <label className="text-sm font-medium text-[#0b1c30]" htmlFor="first-name">
               Nombre <span className="text-[#9f3c16]">*</span>
             </label>
@@ -156,7 +176,7 @@ export const RegisterForm = () => {
               className="w-full bg-white border border-[#dec0b7] text-[#0b1c30] text-sm rounded-lg py-3 px-4 focus:border-[#0b1c30] focus:ring-2 focus:ring-[#dae2fd] focus:outline-none placeholder-[#565e74]/60 transition-all duration-200"
             />
           </div>
-          <div className="flex flex-col gap-1.5 flex-1">
+          <div className="flex flex-col gap-1.5 flex-1 min-w-0">
             <label className="text-sm font-medium text-[#0b1c30]" htmlFor="last-name-1">
               Primer apellido
             </label>
@@ -173,8 +193,8 @@ export const RegisterForm = () => {
         </div>
 
         {/* Segundo Apellido + Teléfono */}
-        <div className="flex gap-3">
-          <div className="flex flex-col gap-1.5 flex-1">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col gap-1.5 flex-1 min-w-0">
             <label className="text-sm font-medium text-[#0b1c30]" htmlFor="last-name-2">
               Segundo apellido
             </label>
@@ -188,7 +208,7 @@ export const RegisterForm = () => {
               className="w-full bg-white border border-[#dec0b7] text-[#0b1c30] text-sm rounded-lg py-3 px-4 focus:border-[#0b1c30] focus:ring-2 focus:ring-[#dae2fd] focus:outline-none placeholder-[#565e74]/60 transition-all duration-200"
             />
           </div>
-          <div className="flex flex-col gap-1.5 flex-1">
+          <div className="flex flex-col gap-1.5 flex-1 min-w-0">
             <label className="text-sm font-medium text-[#0b1c30]" htmlFor="phone">
               Teléfono
             </label>

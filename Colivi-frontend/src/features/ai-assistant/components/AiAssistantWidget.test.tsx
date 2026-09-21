@@ -81,4 +81,28 @@ describe('AiAssistantWidget component', () => {
     const aside = container.querySelector('aside');
     expect(aside).toHaveClass('bottom-20');
   });
+
+  it('oculta el botón de minimizar en móvil cuando el chat está abierto y permite cerrar con onClose', async () => {
+    const { container } = render(
+      <MemoryRouter>
+        <AiAssistantWidget />
+      </MemoryRouter>
+    );
+
+    const fabButton = screen.getByRole('button', { name: /abrir asistente colivi ia/i });
+    await userEvent.click(fabButton);
+
+    expect(screen.getByTestId('mock-chat-window')).toBeInTheDocument();
+
+    // El contenedor del FAB debe tener 'hidden sm:flex' para no mostrarse en móvil
+    const fabContainer = container.querySelector('.pointer-events-auto.items-center');
+    expect(fabContainer).toHaveClass('hidden');
+    expect(fabContainer).toHaveClass('sm:flex');
+
+    // Cerrar a través del botón de cierre de la ventana (cruz)
+    const closeBtn = screen.getByRole('button', { name: /cerrar mock/i });
+    await userEvent.click(closeBtn);
+
+    expect(screen.queryByTestId('mock-chat-window')).not.toBeInTheDocument();
+  });
 });

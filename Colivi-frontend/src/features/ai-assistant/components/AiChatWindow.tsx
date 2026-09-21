@@ -81,11 +81,11 @@ export const AiChatWindow: React.FC<AiChatWindowProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 shrink-0">
           <button
             type="button"
             onClick={clearHistory}
-            className="p-1.5 rounded-lg text-secondary hover:text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer"
+            className="p-2 sm:p-1.5 rounded-lg text-secondary hover:text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer"
             title="Limpiar conversación"
             aria-label="Limpiar conversación"
           >
@@ -95,11 +95,11 @@ export const AiChatWindow: React.FC<AiChatWindowProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg text-secondary hover:text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer"
+              className="p-2 sm:p-1.5 rounded-lg text-secondary hover:text-on-surface hover:bg-surface-container-high active:bg-surface-container-highest transition-colors cursor-pointer"
               title="Cerrar panel"
               aria-label="Cerrar panel"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5 sm:w-4 sm:h-4" />
             </button>
           )}
         </div>
