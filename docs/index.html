@@ -464,12 +464,13 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_resumen">Resumen del proyecto</a></li>
 <li><a href="#_que_aprenderas">1. Qué aprenderás en este tutorial</a></li>
 <li><a href="#_puesta_en_marcha">2. Puesta en marcha rápida</a></li>
-<li><a href="#_acceso_servicios">4. Acceso a servicios y enlaces útiles</a></li>
-<li><a href="#_recorrido_visitante">5. Recorrido guiado como visitante</a></li>
-<li><a href="#_recorrido_estudiante">6. Recorrido guiado como estudiante o compañero</a></li>
-<li><a href="#_recorrido_propietario">7. Recorrido guiado como propietario / anfitrión</a></li>
-<li><a href="#_recorrido_admin">8. Recorrido guiado como administrador</a></li>
-<li><a href="#_cuentas_prueba">9. Cuentas y escenarios de prueba</a></li>
+<li><a href="#_acceso_servicios">3. Acceso a servicios y enlaces útiles</a></li>
+<li><a href="#_recorrido_visitante">4. Recorrido guiado como visitante</a></li>
+<li><a href="#_recorrido_estudiante">5. Recorrido guiado como estudiante o compañero</a></li>
+<li><a href="#_recorrido_propietario">6. Recorrido guiado como propietario / anfitrión</a></li>
+<li><a href="#_recorrido_admin">7. Recorrido guiado como administrador</a></li>
+<li><a href="#_cuentas_prueba">8. Cuentas y escenarios de prueba</a></li>
+<li><a href="#_parada_reinicio">9. Parada del entorno y reinicio limpio</a></li>
 </ul>
 </div>
 </div>
@@ -529,17 +530,14 @@ cd Colivi-TFG</code></pre>
 <div class="sect2">
 <h3 id="_paso2_env">2.2. Configurar el archivo .env</h3>
 <div class="paragraph">
-<p>Crea el archivo <code>.env</code> en la raíz del proyecto. Si tienes un <code>.env.example</code>, úsalo como base. Si no, toma la plantilla de la siguiente sección y adapta los valores a tu entorno local.</p>
-</div>
-<div class="paragraph">
-<p>La regla práctica es simple: no publiques credenciales reales en la documentación. Los valores de este archivo deben tratarse como configuración local del entorno, no como parte del texto del tutorial.</p>
+<p>Crea un archivo llamado <code>.env</code> en la raíz del proyecto. Para evitar el registro en servicios externos (proveedores de IA, almacenamiento multimedia o mapas), a continuación se proporciona el bloque de configuración completo con los valores necesarios para ejecutar la plataforma en local.</p>
 </div>
 </div>
 
 <div class="sect2">
-<h3 id="_archivo_env">2.3. Archivo .env completo</h3>
+<h3 id="_archivo_env">2.3. Archivo .env preconfigurado</h3>
 <div class="paragraph">
-<p>A continuación se incluye el contenido completo pensado para el entorno de desarrollo local. Si prefieres, también puedes usarlo como base para tu archivo <code>.env</code> y ajustar después los valores concretos de tu máquina.</p>
+<p>Haz clic en el botón <strong>Copiar</strong> y pega este contenido íntegro en tu archivo <code>.env</code>:</p>
 </div>
 <div class="listingblock">
 <div class="title">Contenido del archivo .env <button class="copy-btn" onclick="copyEnv()">Copiar</button></div>
@@ -593,7 +591,23 @@ GOOGLE_CLIENT_ID=107294184753-qo7cnr52fmvavskavnhugpekb2nsge6n.apps.googleuserco
 <div class="sect2">
 <h3 id="_paso4_verificar">2.5. Verificar que todo funciona</h3>
 <div class="paragraph">
-<p>Cuando el entorno esté listo, abre la web, entra en el catálogo y comprueba que ves anuncios, mapa, menú y acceso a las distintas secciones privadas. Si la página carga pero alguna vista tarda más, normalmente es porque aún se están levantando backend, base de datos o el servidor MCP.</p>
+<p>Cuando el entorno esté listo, abre la web en <a href="http://localhost:5173" target="_blank">http://localhost:5173</a>, entra en el catálogo y comprueba que se visualizan los anuncios y el mapa interactivo.</p>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon"><div class="title">Importante</div></td>
+<td class="content"><strong>Tiempo de ejecución del seeder inicial (1 a 5 minutos):</strong> La plataforma cuenta con un servicio automatizado (<code>seeder</code>) que en el primer encendido puebla la base de datos con un catálogo completo: más de 50 usuarios, 36 alojamientos reales en 11 ciudades con fotos en Cloudinary, reservas, reseñas, tareas y balances. Por esta razón, <strong>es totalmente normal que durante los primeros minutos los anuncios y marcadores del mapa tarden un breve instante en aparecer en pantalla</strong> mientras el seeder concluye las inserciones y la subida de imágenes.</td>
+</tr>
+</table>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon"><div class="title">Consejo</div></td>
+<td class="content">Si deseas comprobar desde tu terminal el progreso de la carga de datos en tiempo real o el estado del backend, puedes consultar sus registros ejecutando: <code>docker compose logs -f seeder</code> o <code>docker compose logs -f backend</code> (pulsa <code>Ctrl + C</code> para salir del visor).</td>
+</tr>
+</table>
 </div>
 </div>
 
@@ -601,7 +615,7 @@ GOOGLE_CLIENT_ID=107294184753-qo7cnr52fmvavskavnhugpekb2nsge6n.apps.googleuserco
 </div>
 
 <div class="sect1">
-<h2 id="_acceso_servicios">4. Acceso a servicios y enlaces útiles</h2>
+<h2 id="_acceso_servicios">3. Acceso a servicios y enlaces útiles</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>Una vez completado el arranque, estos son los puntos más útiles para revisar el sistema:</p>
@@ -642,23 +656,69 @@ GOOGLE_CLIENT_ID=107294184753-qo7cnr52fmvavskavnhugpekb2nsge6n.apps.googleuserco
 </tr>
 </tbody>
 </table>
+
+<div class="paragraph">
+<p><strong>Cuentas de acceso rápido para evaluar los distintos roles:</strong></p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 35%;">
+<col style="width: 20%;">
+<col style="width: 20%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Rol de prueba</th>
+<th class="tableblock halign-left valign-top">Correo de acceso</th>
+<th class="tableblock halign-left valign-top">Contraseña</th>
+<th class="tableblock halign-left valign-top">Área principal a evaluar</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Administrador</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>victor@colivi.com</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>password123</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Panel de moderación, cola de reportes y métricas globales.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Estudiante / Inquilina</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ana@colivi.com</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>password123</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Hogar <em>Piso Estudiantes Centro</em>, reparto de gastos y tareas.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Estudiante / Inquilino</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>carlos@colivi.com</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>password123</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Balances de deudas, mensajería y consultas al Copiloto IA (MCP).</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Propietario / Anfitrión</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>carlos.gomez@gmail.com</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>UsuarioContrasena1</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Gestión de inmuebles y anuncios ya creados en Madrid.</p></td>
+</tr>
+</tbody>
+</table>
 </div>
 </div>
 
 <div class="sect1">
-<h2 id="_recorrido_visitante">5. Recorrido guiado como visitante</h2>
+<h2 id="_recorrido_visitante">4. Recorrido guiado como visitante</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Este es el primer recorrido que conviene mostrar en una demo. No necesita autenticación y sirve para entender la propuesta de valor de la aplicación en menos de un minuto.</p>
+<p>Este es el primer recorrido para evaluar la plataforma sin necesidad de iniciar sesión. Permite comprobar la reactividad del catálogo y la experiencia de un estudiante en busca de piso.</p>
 </div>
 
 <div class="olist arabic">
 <ol class="arabic">
-<li><p>Abre <a href="http://localhost:5173" target="_blank">http://localhost:5173</a> y revisa la portada con los anuncios recomendados y la barra de búsqueda.</p></li>
-<li><p>Usa la búsqueda para filtrar por ciudad, precio o preferencias generales y comprueba que los resultados cambian sin recargar la página.</p></li>
-<li><p>Entra en el mapa interactivo desde la pantalla principal o desde <code>/map</code> para ver cómo se agrupan los anuncios por zonas.</p></li>
-<li><p>Abre el detalle de un anuncio para ver fotos, ubicación aproximada, amenities, anfitrión, reseñas y habitaciones hermanas.</p></li>
-<li><p>Explora el comportamiento de las cuentas públicas, como la visualización de perfiles o la consulta de reseñas.</p></li>
+<li><p>Abre <a href="http://localhost:5173" target="_blank">http://localhost:5173</a> en tu navegador para ver la portada principal, el buscador interactivo y las tarjetas de alojamientos destacados.</p></li>
+<li><p>Escribe una ciudad en la barra de búsqueda o ajusta los filtros (rango de precio, tipo de habitación) y observa cómo los resultados se actualizan al instante sin recargar la página.</p></li>
+<li><p>Haz clic en la pestaña <strong>Mapa</strong> de la barra superior de navegación para ver los marcadores geográficos de los pisos. Pulsa sobre cualquier marcador para desplegar su tarjeta flotante de vista previa.</p></li>
+<li><p>Pulsa sobre cualquier tarjeta de alojamiento para abrir su ficha completa. En ella podrás explorar la galería de fotos, las comodidades (Wi-Fi, calefacción, etc.), la ubicación aproximada, las normas de la vivienda y las opiniones de otros inquilinos.</p></li>
+<li><p>Haz clic sobre el nombre o avatar del anfitrión para ver su ficha de perfil público y las valoraciones que ha recibido.</p></li>
 </ol>
 </div>
 
@@ -666,7 +726,7 @@ GOOGLE_CLIENT_ID=107294184753-qo7cnr52fmvavskavnhugpekb2nsge6n.apps.googleuserco
 <table>
 <tr>
 <td class="icon"><div class="title">Nota</div></td>
-<td class="content">Este recorrido inicial permite evaluar el catálogo y el mapa reactivo sin necesidad de iniciar sesión en el sistema.</td>
+<td class="content">Todo este recorrido inicial es plenamente accesible como visitante antes de autenticarse en el sistema.</td>
 </tr>
 </table>
 </div>
@@ -674,20 +734,20 @@ GOOGLE_CLIENT_ID=107294184753-qo7cnr52fmvavskavnhugpekb2nsge6n.apps.googleuserco
 </div>
 
 <div class="sect1">
-<h2 id="_recorrido_estudiante">6. Recorrido guiado como estudiante o compañero</h2>
+<h2 id="_recorrido_estudiante">5. Recorrido guiado como estudiante o compañero</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Este bloque cubre el uso diario de la aplicación para alguien que vive en un piso compartido y quiere llevarlo todo al día: acceso, perfil, hogar, gastos, tareas, mensajes y asistente IA.</p>
+<p>Este bloque cubre el día a día de un estudiante que comparte piso: inicio de sesión, perfil, control del hogar, reparto de gastos, asignación de tareas domésticas, mensajería y asistente inteligente con IA.</p>
 </div>
 
 <div class="sect2">
-<h3 id="_acceso_y_recuperacion">6.1. Acceso, recuperación y reactivación</h3>
+<h3 id="_acceso_y_recuperacion">5.1. Acceso, recuperación y reactivación</h3>
 <div class="olist arabic">
 <ol class="arabic">
-<li><p>Entra en <code>/register</code> para crear una cuenta nueva y observar el flujo de alta.</p></li>
-<li><p>Usa <code>/login</code> para iniciar sesión y acceder a las zonas privadas.</p></li>
-<li><p>Prueba <code>/forgot-password</code> y revisa en el Mailbox (<a href="http://localhost:8025" target="_blank">localhost:8025</a>) el correo capturado de restablecimiento.</p></li>
-<li><p>Si la cuenta está desactivada, abre <code>/reactivate-request</code> y después <code>/reactivate</code> para completar la reactivación.</p></li>
+<li><p>Haz clic en el botón <strong>Registrarse</strong> (esquina superior derecha) para examinar el formulario de alta de nuevo usuario.</p></li>
+<li><p>Pulsa el botón <strong>Entrar</strong> e inicia sesión con una de las cuentas de prueba presembradas (por ejemplo, correo <code>carlos.gomez@gmail.com</code> y contraseña <code>UsuarioContrasena1</code>).</p></li>
+<li><p>Cierra sesión desde tu menú de usuario y prueba el enlace <strong>¿Olvidaste tu contraseña?</strong> en la ventana de acceso: introduce el correo y abre el Mailbox local (<a href="http://localhost:8025" target="_blank">http://localhost:8025</a>) para ver cómo llega el correo de restablecimiento y pulsar su enlace de un solo uso.</p></li>
+<li><p>Para verificar el flujo de reactivación con una cuenta desactivada, pulsa sobre el enlace de solicitud de reactivación y comprueba la recepción del correo de confirmación en Mailbox.</p></li>
 </ol>
 </div>
 <div class="admonitionblock tip">
@@ -701,70 +761,86 @@ GOOGLE_CLIENT_ID=107294184753-qo7cnr52fmvavskavnhugpekb2nsge6n.apps.googleuserco
 </div>
 
 <div class="sect2">
-<h3 id="_perfil_usuario">6.2. Perfil personal</h3>
+<h3 id="_perfil_usuario">5.2. Perfil personal</h3>
 <div class="olist arabic">
 <ol class="arabic">
-<li><p>Accede a tu perfil en <code>/profile</code> y revisa los datos personales, la foto y las opciones de edición.</p></li>
-<li><p>Comprueba que puedes cambiar información no sensible, actualizar la contraseña o eliminar la cuenta según el rol y el estado de la sesión.</p></li>
-<li><p>Visita un perfil público en <code>/users/:id</code> para ver qué datos se exponen al resto de usuarios.</p></li>
+<li><p>Haz clic sobre tu avatar en la esquina superior derecha y selecciona <strong>Mi perfil</strong> en el menú desplegable para revisar tus datos personales, biografía y preferencias.</p></li>
+<li><p>Pulsa el botón <strong>Editar información</strong> para modificar datos de contacto o cambiar la contraseña, o pulsa en las opciones de configuración de la cuenta.</p></li>
 </ol>
 </div>
 </div>
 
 <div class="sect2">
-<h3 id="_hogar_gastos">6.3. Hogar, gastos y balances</h3>
+<h3 id="_hogar_gastos">5.3. Hogar, gastos y balances</h3>
 <div class="olist arabic">
 <ol class="arabic">
-<li><p>Entra en <code>/homes</code> para crear un hogar nuevo, unirte por código o consultar los hogares en los que ya participas.</p></li>
-<li><p>Abre un hogar en <code>/homes/:id</code> y revisa sus pestañas: miembros, gastos, balances, tareas y actividad.</p></li>
-<li><p>Registra un gasto en el hogar y comprueba que se reparte entre los miembros seleccionados.</p></li>
-<li><p>Observa la vista de balances para ver cómo se simplifican las deudas sin tocar el historial.</p></li>
-<li><p>Abre el feed de actividad para verificar que cada cambio importante queda trazado.</p></li>
+<li><p>Pulsa en la pestaña <strong>Hogares</strong> de la barra superior. Verás el hogar precargado <strong>Piso Moncloa - Los 4 Fantásticos
+</strong>, junto a los botones para <strong>Crear nuevo hogar</strong> o <strong>Unirse con código</strong> (código de invitación de prueba: <code>QL8BMVIN</code>).</p></li>
+<li><p>Haz clic sobre la tarjeta de <strong>Piso Moncloa - Los 4 Fantásticos</strong> para entrar a su panel de gestión y pulsa en sus distintas pestañas: <strong>Miembros</strong>, <strong>Gastos</strong>, <strong>Balances</strong>, <strong>Tareas</strong> y <strong>Actividad</strong>.</p></li>
+<li><p>Entra en la pestaña <strong>Gastos</strong> y pulsa el botón <strong>+ Añadir gasto</strong>: introduce un concepto (ej. <em>"Compra semanal"</em>), un importe y selecciona entre qué convivientes se reparte. Pulsa <strong>Guardar</strong> y verás el gasto registrado en la lista.</p></li>
+<li><p>Baja hasta <strong>Balances</strong> para observar el resultado del algoritmo de simplificación de deudas: muestra de forma visual quién le debe a quién la cantidad neta mínima sin necesidad de hacer múltiples transferencias cruzadas.</p></li>
+<li><p>Haz clic en la pestaña <strong>Actividad</strong> para revisar el muro cronológico con todos los eventos y cambios recientes en el piso.</p></li>
 </ol>
 </div>
 </div>
 
 <div class="sect2">
-<h3 id="_tareas_domesticas">6.4. Tareas domésticas</h3>
+<h3 id="_tareas_domesticas">5.4. Tareas domésticas</h3>
 <div class="olist arabic">
 <ol class="arabic">
-<li><p>En el hogar, abre la sección de tareas para crear una tarea puntual o una serie recurrente.</p></li>
-<li><p>Revisa el tablero y el calendario para entender quién tiene cada tarea y qué está pendiente.</p></li>
-<li><p>Marca una tarea como completada y comprueba cómo cambia el estado y el reparto de puntos.</p></li>
-<li><p>Si existe una tarea vencida, prueba el flujo de rescate para ver cómo otro compañero puede asumirla.</p></li>
+<li><p>Dentro del hogar, pulsa en la pestaña <strong>Tareas</strong> y haz clic en el botón <strong>+ Nueva tarea</strong> para definir una labor doméstica (ej. <em>"Limpieza de cocina"</em>), asignándole responsable, periodicidad y fecha límite.</p></li>
+<li><p>Alterna entre los botones de vista de <strong>Tablero</strong> y vista de <strong>Calendario</strong> para comprobar la distribución visual de las tareas pendientes y completadas de la semana.</p></li>
+<li><p>Haz clic en el botón de completar sobre una tarea asignada a tu usuario para marcarla como realizada y comprueba cómo suma puntos a tu balance de convivencia.</p></li>
+<li><p>En el caso de una tarea atrasada o asignada a otro compañero, pulsa el botón <strong>Rescatar tarea</strong> para asumirla voluntariamente.</p></li>
 </ol>
 </div>
 </div>
 
 <div class="sect2">
-<h3 id="_mensajeria_ai">6.5. Mensajería y asistente IA</h3>
+<h3 id="_mensajeria_ai">5.5. Mensajería y asistente IA</h3>
 <div class="olist arabic">
 <ol class="arabic">
-<li><p>Abre la bandeja de mensajes para revisar conversaciones activas y no leídas.</p></li>
-<li><p>Entra en un chat para ver el historial y enviar mensajes dentro del contexto del anuncio o del hogar.</p></li>
-<li><p>Abre el chat con IA para preguntar por balances, tareas, reservas o actividad del hogar.</p></li>
-<li><p>Prueba el copiloto de IA: observa cómo no actúa de forma aislada, sino que consulta la API de Colivi utilizando el contexto y permisos del usuario autenticado a través del protocolo Model Context Protocol (MCP).</p></li>
+<li><p>Abre el menú de usuario en la esquina superior derecha y haz clic en <strong>Mensajes</strong> para ver tu bandeja de conversaciones activas.</p></li>
+<li><p>Haz clic sobre una conversación de la lista para abrir el chat en tiempo real, revisar el historial y escribir un mensaje nuevo.</p></li>
+<li><p>Pulsa sobre el <strong>botón flotante del Asistente IA</strong> en la esquina inferior derecha de la pantalla para desplegar la ventana de conversación con el copiloto inteligente.</p></li>
+<li><p>Escribe una consulta en el chat del asistente para comprobar cómo utiliza el protocolo Model Context Protocol (MCP) para consultar la información viva de tu piso en la base de datos respetando tus permisos.</p></li>
 </ol>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon"><div class="title">Consejo</div></td>
+<td class="content">
+<p><strong>Consultas de prueba recomendadas para evaluar el Copiloto IA (MCP):</strong></p>
+<div class="ulist">
+<ul>
+<li><p><em>"¿Qué tareas domésticas tengo pendientes o asignadas esta semana?"</em> (consultará el calendario y cuadrante de tareas del hogar).</p></li>
+<li><p><em>"¿Cuáles han sido los últimos gastos registrados en el piso?"</em> (no dará respuesta porque no tiene acceso, prueba de Alucinación).</p></li>
+</ul>
+</div>
+</td>
+</tr>
+</table>
 </div>
 </div>
 </div>
 </div>
 
 <div class="sect1">
-<h2 id="_recorrido_propietario">7. Recorrido guiado como propietario / anfitrión</h2>
+<h2 id="_recorrido_propietario">6. Recorrido guiado como propietario / anfitrión</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Este flujo sirve para mostrar la parte del proyecto que convierte Colivi en un sistema de publicación real de pisos y habitaciones.</p>
+<p>Este flujo permite evaluar la gestión de propiedades y la publicación de ofertas de alquiler mediante acciones directas en la interfaz.</p>
 </div>
 
 <div class="olist arabic">
 <ol class="arabic">
-<li><p>Entra en <code>/create-accommodation</code> para registrar una propiedad física con dirección, comodidades, fotos y coordenadas.</p></li>
-<li><p>Revisa <code>/my-accommodations</code> para editar o mantener el inventario físico de la vivienda.</p></li>
-<li><p>Usa <code>/create-listing</code> para publicar un anuncio a partir de una propiedad ya registrada.</p></li>
-<li><p>Abre <code>/my-listings</code> o <code>/edit-listing/:id</code> para modificar condiciones, fotos o estado del anuncio.</p></li>
-<li><p>Revisa <code>/received-requests</code> para ver las peticiones de reserva y decidir si se aceptan o rechazan. Al cambiar el estado de una reserva, comprueba en el Mailbox (<a href="http://localhost:8025" target="_blank">localhost:8025</a>) cómo el sistema despacha automáticamente el correo de notificación correspondiente al inquilino.</p></li>
-<li><p>Cuando un anuncio tenga suficientes fotos y esté aprobado, comprueba su presencia en el catálogo público y en el mapa.</p></li>
+<li><p>Pulsa el botón <strong>+ Nuevo</strong> en la cabecera y selecciona <strong>Crear alojamiento</strong> para registrar las características físicas de la vivienda (dirección, fotos, comodidades generales y ubicación en el mapa).</p></li>
+<li><p>Abre tu menú de usuario en la esquina superior derecha y haz clic en <strong>Mis alojamientos</strong> para ver el inventario de tus propiedades registradas y acceder al botón de editar sus características.</p></li>
+<li><p>Vuelve a pulsar el botón <strong>+ Nuevo</strong> y selecciona <strong>Publicar anuncio</strong> para crear una oferta comercial asociada a tu alojamiento (fijando precio mensual, fianza, fechas de disponibilidad y normas de la casa).</p></li>
+<li><p>Abre el menú de usuario y pulsa en <strong>Mis anuncios</strong> para comprobar el estado de tus publicaciones (activas, pausadas o en borrador) y pulsa en el botón de edición para ajustar detalles.</p></li>
+<li><p>En el mismo menú de usuario, haz clic en <strong>Solicitudes recibidas</strong> para gestionar las reservas enviadas por estudiantes. Pulsa el botón <strong>Aceptar</strong> o <strong>Rechazar</strong> sobre una solicitud y abre el Mailbox local (<a href="http://localhost:8025" target="_blank">http://localhost:8025</a>) para comprobar el correo de notificación despachado al instante hacia el inquilino.</p></li>
+<li><p>Haz clic en la pestaña <strong>Explorar</strong> o <strong>Mapa</strong> en la barra superior para comprobar cómo el nuevo anuncio aparece publicado en el catálogo público y visible para todos los usuarios.</p></li>
 </ol>
 </div>
 
@@ -772,7 +848,7 @@ GOOGLE_CLIENT_ID=107294184753-qo7cnr52fmvavskavnhugpekb2nsge6n.apps.googleuserco
 <table>
 <tr>
 <td class="icon"><div class="title">Nota</div></td>
-<td class="content">Nota de arquitectura: En el modelo de dominio de Colivi, la vivienda física (<code>Accommodation</code>) y el anuncio comercial (<code>AccommodationListing</code>) son entidades desacopladas. Esto permite publicar varias habitaciones independientes o la vivienda completa bajo una misma propiedad física sin duplicidad de datos.</td>
+<td class="content"><strong>Gestión de alojamientos y anuncios:</strong> Colivi desacopla la propiedad física del inmueble (<code>Accommodation</code>) de sus anuncios comerciales (<code>AccommodationListing</code>). Gracias a esto, un propietario puede dar de alta un piso una sola vez y posteriormente publicar anuncios diferenciados (por ejemplo, alquiler por habitaciones individuales independientes o alquiler de la vivienda completa) sin necesidad de duplicar datos.</td>
 </tr>
 </table>
 </div>
@@ -780,33 +856,33 @@ GOOGLE_CLIENT_ID=107294184753-qo7cnr52fmvavskavnhugpekb2nsge6n.apps.googleuserco
 </div>
 
 <div class="sect1">
-<h2 id="_recorrido_admin">8. Recorrido guiado como administrador</h2>
+<h2 id="_recorrido_admin">7. Recorrido guiado como administrador</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>En este bloque puedes evaluar el panel de control administrativo, diseñado para moderar contenidos, auditar reportes de usuarios y aplicar acciones disciplinarias sobre anuncios o perfiles.</p>
+<p>En este bloque puedes evaluar el panel de control administrativo, diseñado para moderar contenidos, auditar reportes de usuarios y supervisar la plataforma.</p>
 </div>
 
 <div class="olist arabic">
 <ol class="arabic">
-<li><p>Accede a <code>/admin</code> con una de las cuentas de rol administrador facilitadas a continuación.</p></li>
-<li><p>Revisa la cola de reportes y abre el detalle de cada incidencia para examinar el motivo, el objetivo y el estado.</p></li>
-<li><p>Usa las acciones de moderación para despublicar, recuperar o bloquear anuncios.</p></li>
-<li><p>Consulta la gestión de usuarios para aplicar bloqueos disciplinarios o revisar el historial del perfil.</p></li>
-<li><p>Examina el resumen de métricas para comprobar qué elementos concentran mayor actividad o reportes.</p></li>
+<li><p>Inicia sesión con la cuenta de administración (correo <code>victor@colivi.com</code>, contraseña <code>password123</code>) y pulsa el botón <strong>Panel Moderación</strong> (con icono de escudo) visible en la barra superior de navegación.</p></li>
+<li><p>Dentro del panel de control, haz clic en la sección de <strong>Reportes</strong> para revisar la lista de denuncias enviadas por usuarios y pulsa sobre cualquiera de las filas para inspeccionar los detalles de la incidencia.</p></li>
+<li><p>Utiliza los botones de acción de moderación para <strong>Despublicar</strong>, <strong>Bloquear</strong> o <strong>Restaurar</strong> el anuncio o contenido reportado.</p></li>
+<li><p>Pulsa en la sección de <strong>Gestión de usuarios</strong> para buscar perfiles, consultar su historial en la plataforma o utilizar el botón de suspender o bloquear cuenta si procede.</p></li>
+<li><p>Examina el panel de <strong>Métricas y estadísticas</strong> para comprobar el balance global de la plataforma (volumen de usuarios, anuncios activos y reportes gestionados).</p></li>
 </ol>
 </div>
 </div>
 </div>
 
 <div class="sect1">
-<h2 id="_cuentas_prueba">9. Cuentas y escenarios de prueba</h2>
+<h2 id="_cuentas_prueba">8. Cuentas y escenarios de prueba</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>Para facilitar la evaluación sin necesidad de crear datos desde cero, he preconfigurado las siguientes cuentas con datos y escenarios realistas cargados en la base de datos de desarrollo.</p>
 </div>
 
 <div class="sect2">
-<h3 id="_cuentas_admin">9.1. Cuentas de administración</h3>
+<h3 id="_cuentas_admin">8.1. Cuentas de administración</h3>
 <table class="tableblock frame-all grid-all stretch">
 <colgroup>
 <col style="width: 25%;">
@@ -834,28 +910,22 @@ GOOGLE_CLIENT_ID=107294184753-qo7cnr52fmvavskavnhugpekb2nsge6n.apps.googleuserco
 </div>
 
 <div class="sect2">
-<h3 id="_cuentas_usuarios">9.2. Usuarios y compañeros de convivencia</h3>
-<div class="admonitionblock important">
-<table>
-<tr>
-<td class="icon"><div class="title">Importante</div></td>
-<td class="content">La contraseña de prueba configurada para todos los usuarios presembrados en la base de datos es <strong><code>password123</code></strong>.</td>
-</tr>
-</table>
-</div>
+<h3 id="_cuentas_usuarios">8.2. Usuarios y compañeros de convivencia</h3>
 <div class="paragraph">
-<p>Para evaluar el módulo de convivencia, balance de deudas y gastos compartidos, he precargado el hogar <strong>Piso Estudiantes Centro</strong> (código de invitación: <code>PISO-CENTRO-2024</code>) con gastos ya asignados (compra semanal, factura de luz y cena común).</p>
+<p>Para evaluar el módulo de convivencia, balance de deudas y gastos compartidos, he precargado el hogar <strong>Piso Estudiantes Centro</strong> (código de invitación: <code>PISO-CENTRO-2024</code>) con gastos ya asignados (compra semanal, factura de luz y cena común). Las contraseñas se indican de forma explícita a continuación:</p>
 </div>
 <table class="tableblock frame-all grid-all stretch">
 <colgroup>
+<col style="width: 20%;">
 <col style="width: 25%;">
+<col style="width: 20%;">
 <col style="width: 35%;">
-<col style="width: 40%;">
 </colgroup>
 <thead>
 <tr>
 <th class="tableblock halign-left valign-top">Usuario</th>
 <th class="tableblock halign-left valign-top">Correo de acceso</th>
+<th class="tableblock halign-left valign-top">Contraseña</th>
 <th class="tableblock halign-left valign-top">Aspectos clave a evaluar</th>
 </tr>
 </thead>
@@ -863,21 +933,25 @@ GOOGLE_CLIENT_ID=107294184753-qo7cnr52fmvavskavnhugpekb2nsge6n.apps.googleuserco
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Victor Admin</strong></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>victor@colivi.com</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>password123</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Administrador del hogar. Pagador de la compra de Mercadona (100 € repartidos entre los 4 convivientes).</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Ana García</strong></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>ana@colivi.com</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>password123</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Inquilina activa. Pagadora de la factura de luz (40 € repartidos entre Ana y Victor). Balance y liquidaciones.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Carlos López</strong></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>carlos@colivi.com</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>password123</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Inquilino activo. Pagador de la cena de pizzería (80 € repartidos entre Carlos y Laura).</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Laura Martínez</strong></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>laura@colivi.com</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>password123</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Inquilina activa con deudas pendientes asignadas en compra y cena. Comprobación del algoritmo de simplificación.</p></td>
 </tr>
 </tbody>
@@ -885,14 +959,95 @@ GOOGLE_CLIENT_ID=107294184753-qo7cnr52fmvavskavnhugpekb2nsge6n.apps.googleuserco
 </div>
 
 <div class="sect2">
-<h3 id="_escenarios_sugeridos">9.3. Orden de evaluación recomendado</h3>
+<h3 id="_cuentas_propietarios">8.3. Cuentas de propietarios y anfitriones</h3>
+<div class="paragraph">
+<p>Para evaluar la gestión de propiedades y reservas como arrendador con pisos y habitaciones ya publicados, utiliza cualquiera de estas cuentas generadas por el seeder:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 30%;">
+<col style="width: 20%;">
+<col style="width: 25%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Propietario</th>
+<th class="tableblock halign-left valign-top">Correo de acceso</th>
+<th class="tableblock halign-left valign-top">Contraseña</th>
+<th class="tableblock halign-left valign-top">Inmuebles asociados</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Carlos Gómez</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>carlos.gomez@gmail.com</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>UsuarioContrasena1</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Alojamientos y habitaciones activas en Madrid Centro.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Laura Navarro</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>laura.navarro@gmail.com</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>UsuarioContrasena1</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Pisos y habitaciones en Eixample y Gràcia (Barcelona).</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Javier Sanz</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>javier.sanz@gmail.com</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>UsuarioContrasena1</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Alojamientos universitarios en Ruzafa y Benimaclet (Valencia).</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<div class="sect2">
+<h3 id="_escenarios_sugeridos">8.4. Orden de evaluación recomendado</h3>
 <div class="olist arabic">
 <ol class="arabic">
-<li><p><strong>Paso 1: Exploración como visitante:</strong> Navega por el catálogo público en <code>http://localhost:5173</code>, utiliza los filtros por precio y ciudad, y explora la vista interactiva.</p></li>
-<li><p><strong>Paso 2: Convivencia y gestión de hogar:</strong> Inicia sesión con <code>ana@colivi.com</code> o <code>carlos@colivi.com</code> (contraseña: <code>password123</code>) para revisar el hogar <em>Piso Estudiantes Centro</em>, el registro de gastos y el algoritmo de simplificación de deudas.</p></li>
-<li><p><strong>Paso 3: Gestión de alojamiento y reservas:</strong> Publica o gestiona un alojamiento, interactúa con el sistema de mensajería y revisa las notificaciones de correo en Mailpit (<code>http://localhost:8025</code>).</p></li>
-<li><p><strong>Paso 4: Panel administrativo y Copiloto IA:</strong> Entra con <code>victor@colivi.com</code> (contraseña: <code>password123</code>) para revisar las métricas administrativas y formular consultas al asistente de IA sobre el estado del piso.</p></li>
+<li><p><strong>Paso 1: Exploración como visitante:</strong> Abre <a href="http://localhost:5173" target="_blank">http://localhost:5173</a>, prueba los filtros del catálogo, haz clic en la pestaña <strong>Mapa</strong> y pulsa sobre cualquier tarjeta de alojamiento para ver su ficha, fotos y normas.</p></li>
+<li><p><strong>Paso 2: Convivencia y gestión del hogar:</strong> Haz clic en el botón <strong>Entrar</strong>, inicia sesión con <code>ana@colivi.com</code> (contraseña: <code>password123</code>), pulsa en la pestaña <strong>Hogares</strong> y abre <strong>Piso Estudiantes Centro</strong>. Prueba a pulsar en <strong>+ Añadir gasto</strong>, revisa la simplificación de deudas en la pestaña <strong>Balances</strong> y marca una tarea en <strong>Tareas</strong>.</p></li>
+<li><p><strong>Paso 3: Copiloto IA (MCP):</strong> Sin salir de la sesión, haz clic en el <strong>botón flotante del Asistente IA</strong> en la esquina inferior derecha y pregúntale por los gastos o las tareas del piso para comprobar cómo consulta los datos vivos en tiempo real.</p></li>
+<li><p><strong>Paso 4: Publicación y reservas como anfitrión:</strong> Pulsa en el botón <strong>+ Nuevo</strong> para crear un alojamiento o publicar un anuncio, gestiona las reservas recibidas desde tu menú de usuario en <strong>Solicitudes recibidas</strong> y comprueba los correos en Mailbox (<a href="http://localhost:8025" target="_blank">http://localhost:8025</a>).</p></li>
+<li><p><strong>Paso 5: Panel administrativo y moderación:</strong> Cierra sesión desde el menú de usuario, entra como <code>victor@colivi.com</code> (contraseña: <code>password123</code>), pulsa el botón <strong>Panel Moderación</strong> en la cabecera y evalúa la gestión de reportes y las métricas globales.</p></li>
 </ol>
+</div>
+</div>
+</div>
+</div>
+
+<div class="sect1">
+<h2 id="_parada_reinicio">9. Parada del entorno y reinicio limpio</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Cuando finalices la sesión de evaluación o si deseas restablecer la aplicación a su estado de fábrica:</p>
+</div>
+
+<div class="sect2">
+<h3 id="_parada_servicios">9.1. Detener los servicios</h3>
+<div class="paragraph">
+<p>Para pausar y apagar los contenedores conservando los datos creados durante la prueba:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-bash" data-lang="bash">docker compose down</code></pre>
+</div>
+</div>
+</div>
+
+<div class="sect2">
+<h3 id="_reinicio_limpio">9.2. Reinicio con datos limpios (reset)</h3>
+<div class="paragraph">
+<p>Si durante la evaluación has realizado modificaciones, borrado registros o probado escenarios destructivos y deseas reiniciar la base de datos con los datos semilla iniciales limpios, ejecuta:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-bash" data-lang="bash">docker compose down -v
+docker compose up --build -d</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>El parámetro <code>-v</code> elimina los volúmenes de base de datos persistidos, forzando a que al volver a levantar el entorno se ejecute la inicialización limpia con todos los usuarios, hogares y gastos de ejemplo.</p>
 </div>
 </div>
 </div>

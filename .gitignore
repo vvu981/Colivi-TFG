@@ -108,8 +108,11 @@ postgres-data/
 # ==========================================
 # Scripts y Datos de Prueba
 # ==========================================
-scripts/*
-imgs_prueba/
+scripts/**/__pycache__/
+scripts/**/*.pyc
+scripts/**/~$*
+imgs_prueba/**/.DS_Store
+imgs_prueba/**/Thumbs.db
 
 # ==========================================
 # Binarios Móviles (Android / iOS)
