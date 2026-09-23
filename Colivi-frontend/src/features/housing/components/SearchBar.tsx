@@ -94,8 +94,8 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, onReset }) => {
       className="w-full bg-surface-container-lowest border border-outline-variant rounded-3xl shadow-md p-3.5 md:p-4"
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-12 gap-2.5 items-end">
-        {/* Title input (3 cols on lg) */}
-        <div className="flex flex-col gap-1 lg:col-span-3 min-w-0">
+        {/* Title input (2 cols on lg) */}
+        <div className="flex flex-col gap-1 lg:col-span-2 min-w-0">
           <label
             htmlFor="search-title"
             className="text-[11px] text-on-surface-variant uppercase tracking-wider font-semibold"
@@ -203,17 +203,17 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, onReset }) => {
           />
         </div>
 
-        {/* Action button (1 col on lg / full on mobile) */}
-        <div className="flex items-center gap-1.5 lg:col-span-1 min-w-0 sm:col-span-2 md:col-span-3">
+        {/* Action buttons (2 cols on lg / fills grid cleanly across breakpoints) */}
+        <div className="flex items-center gap-2 lg:col-span-2 min-w-0">
           {hasActiveFilters && (
             <button
               type="button"
               onClick={handleReset}
-              title="Limpiar filtros"
-              aria-label="Limpiar filtros"
-              className="h-[42px] w-[38px] rounded-xl border border-outline-variant bg-surface text-on-surface-variant hover:text-primary hover:border-primary transition-all flex items-center justify-center flex-shrink-0 cursor-pointer shadow-xs"
+              title="Restablecer filtros"
+              aria-label="Restablecer filtros"
+              className="h-[42px] w-[42px] rounded-xl border border-outline-variant bg-surface text-on-surface-variant hover:text-primary hover:border-primary transition-all flex items-center justify-center shrink-0 cursor-pointer shadow-xs animate-in fade-in zoom-in-95 duration-150"
             >
-              <RotateCcw size={14} />
+              <RotateCcw size={15} />
             </button>
           )}
 
@@ -221,9 +221,9 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, onReset }) => {
             type="submit"
             title="Buscar alojamientos"
             aria-label="Buscar alojamientos"
-            className="flex-1 h-[42px] px-2.5 bg-primary text-on-primary rounded-xl text-xs font-bold hover:opacity-95 active:scale-95 transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+            className="flex-1 min-w-0 h-[42px] px-3 bg-primary text-on-primary rounded-xl text-xs font-bold hover:opacity-95 active:scale-95 transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
           >
-            <Search size={15} className="flex-shrink-0" />
+            <Search size={15} className="shrink-0" />
             <span>Buscar</span>
           </button>
         </div>
