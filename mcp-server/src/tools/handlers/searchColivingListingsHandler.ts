@@ -5,11 +5,17 @@ import { IListingClient, listingClient } from "../../clients/listingClient.js";
 import { VibeClassifier, VibeType } from "../../domain/vibeClassifier.js";
 import { InvalidArgumentError } from "../../core/errors/mcpError.js";
 
-const searchInputSchema = z.object({
-  location: z.string().min(1, "Location is required"),
-  maxPrice: z.number().positive().optional(),
-  requiredVibe: z.enum(["TIDY", "SOCIAL", "QUIET", "ANY"]).optional()
-});
+const searchInputSchema = z
+  .object({
+    location: z.string().trim().optional(),
+    title: z.string().trim().optional(),
+    maxPrice: z.number().positive().optional(),
+    requiredVibe: z.enum(["TIDY", "SOCIAL", "QUIET", "ANY"]).optional()
+  })
+  .refine(
+    (data) => (data.location && data.location.length > 0) || (data.title && data.title.length > 0),
+    { message: "Location or title is required" }
+  );
 
 type SearchInput = z.infer<typeof searchInputSchema>;
 
@@ -26,11 +32,12 @@ export class SearchColivingListingsHandler implements IMcpToolHandler<SearchInpu
       );
     }
 
-    const { location, maxPrice, requiredVibe } = parseResult.data;
+    const { location, title, maxPrice, requiredVibe } = parseResult.data;
     const PAGE_SIZE = 5;
 
     const catalogPage = await this.client.searchCatalog({
       city: location,
+      title,
       maxPrice,
       size: PAGE_SIZE
     });
@@ -49,11 +56,17 @@ export class SearchColivingListingsHandler implements IMcpToolHandler<SearchInpu
         totalElements > catalogPage.content.length
           ? ` (solo se analizaron ${catalogPage.content.length} de ${totalElements} anuncios disponibles)`
           : "";
+      const criteria: string[] = [];
+      if (location) criteria.push(`en "${location}"`);
+      if (title) criteria.push(`con título "${title}"`);
+      criteria.push(`(precio max: ${maxPrice ?? "sin limite"}`);
+      criteria.push(`ambiente: ${requiredVibe ?? "cualquiera"})`);
+
       return {
         content: [
           {
             type: "text",
-            text: `No se encontraron anuncios de coliving en "${location}" con los criterios especificados (precio max: ${maxPrice ?? "sin limite"}, ambiente: ${requiredVibe ?? "cualquiera"})${truncationContext}.`
+            text: `No se encontraron anuncios de coliving ${criteria.join(" ")}${truncationContext}.`
           }
         ]
       };

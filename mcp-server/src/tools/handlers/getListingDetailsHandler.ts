@@ -24,24 +24,65 @@ export class GetListingDetailsHandler implements IMcpToolHandler<ListingDetailsI
     }
 
     const { listingId } = parseResult.data;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(listingId);
 
-    // BUG-02: ColiviHttpClient lanza BackendIntegrationError con status 404 si el anuncio no existe.
-    // Se captura controladamente para retornar una respuesta semántica sin fallar la herramienta con isError: true.
     let listing: AccommodationListingItem | undefined;
-    try {
-      listing = await this.client.getListingById(listingId);
-    } catch (error) {
-      if (error instanceof BackendIntegrationError && error.statusCode === 404) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: `No se encontro el anuncio de alojamiento con ID: ${listingId}`
-            }
-          ]
-        };
+
+    if (isUuid) {
+      try {
+        listing = await this.client.getListingById(listingId);
+      } catch (error) {
+        if (error instanceof BackendIntegrationError && error.statusCode === 404) {
+          listing = undefined;
+        } else {
+          throw error;
+        }
       }
-      throw error;
+    } else {
+      // 1. Si no es UUID, buscar primero por título en el catálogo
+      try {
+        const searchResult = await this.client.searchCatalog({ title: listingId, size: 5 });
+        if (searchResult.content && searchResult.content.length > 0) {
+          listing = searchResult.content[0];
+        }
+      } catch {
+        // Fallback defensivo
+      }
+
+      // 2. Si no se encontró y contiene " en " (ej. "Habitación Doble en Palma"), separar título y ciudad
+      if (!listing && listingId.toLowerCase().includes(" en ")) {
+        const parts = listingId.split(/\s+en\s+/i);
+        if (parts.length >= 2) {
+          try {
+            const searchResult = await this.client.searchCatalog({
+              title: parts[0].trim(),
+              city: parts[1].trim(),
+              size: 5
+            });
+            if (searchResult.content && searchResult.content.length > 0) {
+              listing = searchResult.content[0];
+            }
+          } catch {
+            // Ignorar y continuar a fallback
+          }
+        }
+      }
+
+      // 3. Fallback directo a getListingById para identificadores de tests (ej. "listing-detail-1")
+      if (!listing) {
+        try {
+          const direct = await this.client.getListingById(listingId);
+          if (direct && direct.id) {
+            listing = direct;
+          }
+        } catch (error) {
+          if (error instanceof BackendIntegrationError && error.statusCode === 404) {
+            listing = undefined;
+          } else {
+            throw error;
+          }
+        }
+      }
     }
 
     if (!listing || !listing.id) {

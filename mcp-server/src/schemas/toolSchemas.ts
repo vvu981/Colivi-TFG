@@ -2,13 +2,17 @@ import { Tool as McpToolDefinition } from "@modelcontextprotocol/sdk/types.js";
 
 export const SEARCH_COLIVING_LISTINGS_TOOL: McpToolDefinition = {
   name: "search_coliving_listings",
-  description: "Busca anuncios de coliving por ubicación, precio máximo y ambiente.",
+  description: "Busca anuncios de coliving por ubicación, título, precio máximo y ambiente.",
   inputSchema: {
     type: "object",
     properties: {
       location: {
         type: "string",
-        description: "Ciudad o barrio"
+        description: "Ciudad o barrio opcional"
+      },
+      title: {
+        type: "string",
+        description: "Título o palabra clave del anuncio"
       },
       maxPrice: {
         type: "number",
@@ -20,7 +24,7 @@ export const SEARCH_COLIVING_LISTINGS_TOOL: McpToolDefinition = {
         description: "Filtro de ambiente de convivencia"
       }
     },
-    required: ["location"]
+    required: []
   }
 };
 
@@ -82,13 +86,13 @@ export const GET_MY_BOOKINGS_STATUS_TOOL: McpToolDefinition = {
 
 export const GET_LISTING_DETAILS_TOOL: McpToolDefinition = {
   name: "get_listing_details",
-  description: "Ficha técnica completa de un anuncio por UUID: fianza, servicios y normas.",
+  description: "Ficha técnica completa de un anuncio por título o UUID: fianza, servicios y normas.",
   inputSchema: {
     type: "object",
     properties: {
       listingId: {
         type: "string",
-        description: "UUID del anuncio de alojamiento"
+        description: "UUID o título del anuncio de alojamiento a consultar"
       }
     },
     required: ["listingId"]

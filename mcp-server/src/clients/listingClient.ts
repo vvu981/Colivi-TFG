@@ -46,7 +46,8 @@ export interface PageResponse<T> {
 
 export interface IListingClient {
   searchCatalog(params: {
-    city: string;
+    city?: string;
+    title?: string;
     maxPrice?: number;
     rentalType?: string;
     page?: number;
@@ -59,17 +60,25 @@ export class ListingClient implements IListingClient {
   constructor(private readonly http: IHttpClient = httpClient) {}
 
   public async searchCatalog(params: {
-    city: string;
+    city?: string;
+    title?: string;
     maxPrice?: number;
     rentalType?: string;
     page?: number;
     size?: number;
   }): Promise<PageResponse<AccommodationListingItem>> {
     const query: Record<string, unknown> = {
-      city: params.city,
       page: params.page ?? 0,
       size: params.size ?? 20
     };
+
+    if (params.city) {
+      query.city = params.city;
+    }
+
+    if (params.title) {
+      query.title = params.title;
+    }
 
     if (params.maxPrice !== undefined) {
       query.maxPrice = params.maxPrice;

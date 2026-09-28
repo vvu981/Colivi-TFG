@@ -708,4 +708,139 @@ describe("MCP Tools & Handlers Suite", () => {
     const text = extractText(result.content[0]);
     assert.match(text, /No se encontro el anuncio de alojamiento con ID: listing-404-uuid/);
   });
+
+  it("get_listing_details: should find listing by title when non-UUID is provided", async () => {
+    const mockListing: AccommodationListingItem = {
+      id: "uuid-palma-123",
+      title: "Habitacion Doble con Balcon Privado",
+      description: "Preciosa habitacion con balcon en Palma.",
+      pricePerMonth: 550,
+      securityDeposit: 550,
+      rentalType: "ROOM",
+      status: "AVAILABLE",
+      createdAt: "2026-09-01T12:00:00Z",
+      hostId: "host-uuid-1",
+      hostNickname: "maria_host",
+      isPromoted: false,
+      accommodation: {
+        id: "acc-uuid-palma",
+        address: "Calle Balmes 15",
+        city: "Palma",
+        country: "Espana",
+        totalRooms: 3,
+        freeRooms: 1,
+        amenities: ["WIFI", "BALCONY"]
+      }
+    };
+
+    const mockListingClient: IListingClient = {
+      searchCatalog: async (params) => {
+        if (params.title && params.title.includes("Habitacion Doble")) {
+          return { content: [mockListing], totalElements: 1, totalPages: 1, size: 5, number: 0 };
+        }
+        return { content: [], totalElements: 0, totalPages: 0, size: 5, number: 0 };
+      },
+      getListingById: async () => {
+        throw new BackendIntegrationError("/listings/mock", "Not a UUID", 400);
+      }
+    };
+
+    const handler = new GetListingDetailsHandler(mockListingClient);
+    const result = await handler.execute({ listingId: "Habitacion Doble con Balcon Privado" });
+    assert.equal(result.isError, undefined);
+    const text = extractText(result.content[0]);
+    const data = JSON.parse(text);
+    assert.equal(data.anuncio.id, "uuid-palma-123");
+    assert.equal(data.anuncio.titulo, "Habitacion Doble con Balcon Privado");
+  });
+
+  it("get_listing_details: should resolve title and city when query contains 'en <ciudad>'", async () => {
+    const mockListing: AccommodationListingItem = {
+      id: "uuid-palma-456",
+      title: "Habitacion Doble con Balcon Privado",
+      description: "Preciosa habitacion.",
+      pricePerMonth: 550,
+      rentalType: "ROOM",
+      status: "AVAILABLE",
+      accommodation: {
+        id: "acc-uuid-palma",
+        city: "Palma",
+        address: "Calle Balmes 15",
+        country: "Espana",
+        totalRooms: 3,
+        freeRooms: 1,
+        amenities: ["WIFI"]
+      }
+    };
+
+    let searchedTitle = "";
+    let searchedCity = "";
+    const mockListingClient: IListingClient = {
+      searchCatalog: async (params) => {
+        searchedTitle = params.title ?? "";
+        searchedCity = params.city ?? "";
+        if (params.title === "Habitacion Doble con Balcon Privado" && params.city === "Palma") {
+          return { content: [mockListing], totalElements: 1, totalPages: 1, size: 5, number: 0 };
+        }
+        return { content: [], totalElements: 0, totalPages: 0, size: 5, number: 0 };
+      },
+      getListingById: async () => {
+        throw new BackendIntegrationError("/listings/mock", "Not a UUID", 400);
+      }
+    };
+
+    const handler = new GetListingDetailsHandler(mockListingClient);
+    const result = await handler.execute({ listingId: "Habitacion Doble con Balcon Privado en Palma" });
+    assert.equal(result.isError, undefined);
+    assert.equal(searchedTitle, "Habitacion Doble con Balcon Privado");
+    assert.equal(searchedCity, "Palma");
+    const text = extractText(result.content[0]);
+    const data = JSON.parse(text);
+    assert.equal(data.anuncio.id, "uuid-palma-456");
+  });
+
+  it("search_coliving_listings: should allow searching by title only without location", async () => {
+    const mockListings: PageResponse<AccommodationListingItem> = {
+      content: [
+        {
+          id: "listing-title-only",
+          title: "Estudio moderno",
+          description: "Estudio centrico y equipado",
+          pricePerMonth: 700,
+          rentalType: "STUDIO",
+          status: "APPROVED",
+          accommodation: {
+            id: "acc-2",
+            city: "Valencia",
+            address: "Calle Colon",
+            country: "Spain",
+            totalRooms: 1,
+            freeRooms: 1,
+            amenities: ["WIFI"]
+          }
+        }
+      ],
+      totalElements: 1,
+      totalPages: 1,
+      size: 5,
+      number: 0
+    };
+
+    let capturedTitle = "";
+    const mockClient: IListingClient = {
+      searchCatalog: async (params) => {
+        capturedTitle = params.title ?? "";
+        return mockListings;
+      },
+      getListingById: async () => ({} as AccommodationListingItem)
+    };
+
+    const handler = new SearchColivingListingsHandler(mockClient);
+    const result = await handler.execute({ title: "Estudio moderno" });
+
+    assert.equal(result.isError, undefined);
+    assert.equal(capturedTitle, "Estudio moderno");
+    const text = extractText(result.content[0]);
+    assert.match(text, /Estudio moderno/);
+  });
 });
