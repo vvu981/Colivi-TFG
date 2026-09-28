@@ -167,11 +167,11 @@ class SpringAiOrchestratorServiceImplTest {
         Prompt prompt = promptCaptor.getValue();
         List<Message> messages = prompt.getInstructions();
 
-        // 1 SystemMessage + 6 últimos mensajes del historial + 1 UserMessage actual = 8
-        assertThat(messages).hasSize(8);
-        assertThat(messages.get(1).getText()).isEqualTo("Mensaje 5");
-        assertThat(messages.get(6).getText()).isEqualTo("Mensaje 10");
-        assertThat(messages.get(7).getText()).isEqualTo("Última pregunta");
+        // 1 SystemMessage + 2 últimos mensajes del historial + 1 UserMessage actual = 4
+        assertThat(messages).hasSize(4);
+        assertThat(messages.get(1).getText()).isEqualTo("Mensaje 9");
+        assertThat(messages.get(2).getText()).isEqualTo("Mensaje 10");
+        assertThat(messages.get(3).getText()).isEqualTo("Última pregunta");
     }
 
     @Test

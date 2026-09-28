@@ -32,7 +32,7 @@ import java.util.regex.Pattern;
 public class SpringAiOrchestratorServiceImpl implements AiOrchestratorService {
 
     private static final Logger log = LoggerFactory.getLogger(SpringAiOrchestratorServiceImpl.class);
-    private static final int MAX_HISTORY_MESSAGES = 6;
+    private static final int MAX_HISTORY_MESSAGES = 2;
     private static final Pattern MARKDOWN_BLOCK_PATTERN = Pattern.compile("```(?:json)?\\s*([\\s\\S]*?)\\s*```",
             Pattern.DOTALL);
 

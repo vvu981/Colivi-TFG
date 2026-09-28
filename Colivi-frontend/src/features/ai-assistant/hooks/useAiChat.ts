@@ -128,6 +128,8 @@ export const useAiChat = () => {
       // FNT-01: Usar messagesRef.current sincronizado de forma segura
       // BUG-01: Truncar la ventana deslizante del historial a un máximo de 20 mensajes
       // para respetar estrictamente la restricción @Size(max = 20) de AiChatRequest del backend.
+      // Nota: El backend SpringAiOrchestratorServiceImpl se encarga de truncar a MAX_HISTORY_MESSAGES=2
+      // para minimizar el consumo de tokens en Groq.
       const currentMessages = messagesRef.current;
       const historyPayload = currentMessages
         .filter((msg) => msg.id !== 'greeting-msg' && !msg.isError)
