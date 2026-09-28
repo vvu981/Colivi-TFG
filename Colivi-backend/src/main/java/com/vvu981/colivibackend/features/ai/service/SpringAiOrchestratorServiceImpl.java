@@ -33,6 +33,8 @@ public class SpringAiOrchestratorServiceImpl implements AiOrchestratorService {
 
     private static final Logger log = LoggerFactory.getLogger(SpringAiOrchestratorServiceImpl.class);
     private static final int MAX_HISTORY_MESSAGES = 2;
+    private static final String COMPACT_RESPONSE_FORMAT =
+            "{\"response\":\"string\",\"draft\":\"string|null\",\"toolsUsed\":[\"string\"]}";
     private static final Pattern MARKDOWN_BLOCK_PATTERN = Pattern.compile("```(?:json)?\\s*([\\s\\S]*?)\\s*```",
             Pattern.DOTALL);
 
@@ -42,6 +44,7 @@ public class SpringAiOrchestratorServiceImpl implements AiOrchestratorService {
     private final McpClientFactory mcpClientFactory;
     private final McpTicketService mcpTicketService;
     private final AiPromptProvider promptProvider;
+    private final BeanOutputConverter<AiChatResponse> outputConverter = new BeanOutputConverter<>(AiChatResponse.class);
 
     @Autowired
     public SpringAiOrchestratorServiceImpl(
@@ -99,10 +102,8 @@ public class SpringAiOrchestratorServiceImpl implements AiOrchestratorService {
             log.info("Herramientas MCP registradas en Spring AI: count={}",
                     toolCallbacks != null ? toolCallbacks.length : 0);
 
-            BeanOutputConverter<AiChatResponse> outputConverter = new BeanOutputConverter<>(AiChatResponse.class);
-
             List<Message> messages = new ArrayList<>();
-            messages.add(promptProvider.createSystemMessage(outputConverter.getFormat()));
+            messages.add(promptProvider.createSystemMessage(COMPACT_RESPONSE_FORMAT));
 
             // Salvaguarda 2: Truncado de historial (máximo últimos 6 mensajes)
             if (request.history() != null && !request.history().isEmpty()) {
