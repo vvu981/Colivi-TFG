@@ -56,6 +56,13 @@ const saveMessagesToStorage = (storageKey: string, messages: AiChatMessage[]) =>
   }
 };
 
+const generateMessageId = (): string => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+};
+
 export const useAiChat = () => {
   const auth = useContext(AuthContext);
   const userId = auth?.user?.id;
@@ -139,7 +146,7 @@ export const useAiChat = () => {
     },
     onMutate: (messageText: string) => {
       const userMessage: AiChatMessage = {
-        id: crypto.randomUUID(),
+        id: generateMessageId(),
         role: 'user',
         content: messageText.trim(),
         timestamp: new Date().toISOString(),
@@ -153,7 +160,7 @@ export const useAiChat = () => {
     },
     onSuccess: (data: AiChatResponse) => {
       const assistantMessage: AiChatMessage = {
-        id: crypto.randomUUID(),
+        id: generateMessageId(),
         role: 'assistant',
         content: data.response || 'No se ha recibido respuesta del modelo.',
         draftContent: data.draft,
@@ -168,7 +175,7 @@ export const useAiChat = () => {
     },
     onError: (err: Error) => {
       const errorMessage: AiChatMessage = {
-        id: crypto.randomUUID(),
+        id: generateMessageId(),
         role: 'assistant',
         content: `Error al procesar la consulta: ${err.message || 'El servicio de IA no responde en este momento.'}`,
         timestamp: new Date().toISOString(),
