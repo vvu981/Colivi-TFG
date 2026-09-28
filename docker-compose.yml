@@ -62,6 +62,7 @@ services:
       CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
 
       # ── Mail (Mailpit en local / SMTP real en producción) ──
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
       MAIL_HOST: ${MAIL_HOST:-mailpit}
       MAIL_PORT: ${MAIL_PORT:-1025}
       MAIL_USERNAME: ${MAIL_USERNAME:-}
@@ -69,7 +70,9 @@ services:
       MAIL_SMTP_AUTH: ${MAIL_SMTP_AUTH:-false}
       MAIL_SMTP_STARTTLS_ENABLE: ${MAIL_SMTP_STARTTLS_ENABLE:-false}
       MAIL_FROM: ${MAIL_FROM:-noreply@colivi.com}
-      MAIL_REACTIVATION_URL: ${MAIL_REACTIVATION_URL}
+      MAIL_REACTIVATION_URL: ${MAIL_REACTIVATION_URL:-${FRONTEND_URL:-http://localhost:5173}/reactivate?token=}
+      MAIL_PASSWORD_RESET_URL: ${MAIL_PASSWORD_RESET_URL:-${FRONTEND_URL:-http://localhost:5173}/reset-password?token=}
+      MAIL_RECEIVED_REQUESTS_URL: ${MAIL_RECEIVED_REQUESTS_URL:-${FRONTEND_URL:-http://localhost:5173}/received-requests?requestId=}
 
       # ── AI Orchestration & MCP (Configuración delegada al .env) ──
       AI_BASE_URL: ${AI_BASE_URL:-https://api.groq.com/openai}
