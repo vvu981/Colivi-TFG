@@ -77,7 +77,7 @@ export class GetMyBookingsStatusHandler implements IMcpToolHandler<Record<string
       content: [
         {
           type: "text",
-          text: JSON.stringify(summary, null, 2) + truncationWarning
+          text: JSON.stringify(summary) + truncationWarning
         }
       ]
     };

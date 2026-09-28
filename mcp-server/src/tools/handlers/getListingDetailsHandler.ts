@@ -61,7 +61,7 @@ export class GetListingDetailsHandler implements IMcpToolHandler<ListingDetailsI
       content: [
         {
           type: "text",
-          text: JSON.stringify(fichaTecnica, null, 2)
+          text: JSON.stringify(fichaTecnica)
         }
       ]
     };

@@ -27,7 +27,7 @@ export class SearchColivingListingsHandler implements IMcpToolHandler<SearchInpu
     }
 
     const { location, maxPrice, requiredVibe } = parseResult.data;
-    const PAGE_SIZE = 50;
+    const PAGE_SIZE = 5;
 
     const catalogPage = await this.client.searchCatalog({
       city: location,
@@ -65,7 +65,8 @@ export class SearchColivingListingsHandler implements IMcpToolHandler<SearchInpu
         ? `\n[AVISO: Se analizaron ${catalogPage.content.length} de ${totalElements} anuncios disponibles en "${location}". Los resultados pueden ser parciales.]`
         : "";
 
-    const formattedListings = enrichedListings.map((item) => ({
+    const limitedListings = enrichedListings.slice(0, 5);
+    const formattedListings = limitedListings.map((item) => ({
       id: item.id,
       titulo: item.title,
       precioMes: `${item.pricePerMonth} EUR`,
@@ -81,15 +82,11 @@ export class SearchColivingListingsHandler implements IMcpToolHandler<SearchInpu
         {
           type: "text",
           text:
-            JSON.stringify(
-              {
-                totalEncontrados: enrichedListings.length,
-                filtrosAplicados: { location, maxPrice, requiredVibe: requiredVibe ?? "ANY" },
-                anuncios: formattedListings
-              },
-              null,
-              2
-            ) + resultsTruncationNote
+            JSON.stringify({
+              totalEncontrados: enrichedListings.length,
+              filtrosAplicados: { location, maxPrice, requiredVibe: requiredVibe ?? "ANY" },
+              anuncios: formattedListings
+            }) + resultsTruncationNote
         }
       ]
     };

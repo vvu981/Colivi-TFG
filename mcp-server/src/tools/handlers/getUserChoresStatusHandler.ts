@@ -112,7 +112,7 @@ export class GetUserChoresStatusHandler implements IMcpToolHandler<UserChoresSta
       content: [
         {
           type: "text",
-          text: JSON.stringify(choreSummary, null, 2) + multiHomarWarning + consistencyNote
+          text: JSON.stringify(choreSummary) + multiHomarWarning + consistencyNote
         }
       ]
     };
