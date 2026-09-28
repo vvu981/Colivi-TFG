@@ -62,6 +62,7 @@ describe('ForgotPasswordForm', () => {
     await waitFor(() => {
       expect(screen.getByText(/correo enviado/i)).toBeInTheDocument();
       expect(screen.getByText(/si existe una cuenta asociada/i)).toBeInTheDocument();
+      expect(screen.getByText(/revisa también tu carpeta de spam/i)).toBeInTheDocument();
     });
     
     expect(authService.forgotPassword).toHaveBeenCalledWith('test@example.com');

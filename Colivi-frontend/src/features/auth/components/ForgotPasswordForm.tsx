@@ -45,8 +45,7 @@ export const ForgotPasswordForm = () => {
           </div>
           <h3 className="text-xl font-semibold text-[#0b1c30]">Correo enviado</h3>
           <p className="text-sm text-[#565e74]">
-            Si existe una cuenta asociada a ese correo, te enviaremos un enlace para restablecer tu
-            contraseña.
+            Si existe una cuenta asociada a ese correo, te enviaremos un enlace para restablecer tu contraseña. Revisa también tu carpeta de spam o correo no deseado. 
           </p>
           <Link
             to="/login"
