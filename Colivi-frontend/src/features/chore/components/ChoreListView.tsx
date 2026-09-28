@@ -15,7 +15,11 @@ import {
   type ChoreFilters,
   type ChoreStatusFilter,
 } from './ChoreFilterDropdown';
-import { calculateStatusCounts, filterChores } from '../utils/choreFilter';
+import {
+  calculateStatusCounts,
+  filterChores,
+  getSeriesFutureTurnsCount,
+} from '../utils/choreFilter';
 
 interface ChoreListViewProps {
   chores: ChoreResponseDto[];
@@ -117,7 +121,10 @@ export const ChoreListView: React.FC<ChoreListViewProps> = ({
     return <span>{dueDateStr}</span>;
   };
 
-  const hasActiveFilters = filters.status !== 'ALL' || filters.date !== 'ALL';
+  const hasActiveFilters =
+    filters.status !== 'ALL' ||
+    filters.date !== 'ALL' ||
+    Boolean(filters.showAllSeriesOccurrences);
 
   return (
     <div className="space-y-4">
@@ -127,7 +134,15 @@ export const ChoreListView: React.FC<ChoreListViewProps> = ({
           <ChoreFilterDropdown
             filters={filters}
             onFilterChange={handleFilterChange}
-            onReset={() => handleFilterChange({ status: 'ALL', date: 'ALL', customStartDate: '', customEndDate: '' })}
+            onReset={() =>
+              handleFilterChange({
+                status: 'ALL',
+                date: 'ALL',
+                customStartDate: '',
+                customEndDate: '',
+                showAllSeriesOccurrences: false,
+              })
+            }
             statusCounts={statusCounts}
           />
         </div>
@@ -176,9 +191,32 @@ export const ChoreListView: React.FC<ChoreListViewProps> = ({
             </span>
           )}
 
+          {filters.showAllSeriesOccurrences && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-primary/10 text-primary font-medium text-[11px]">
+              <span>Series: Todos los turnos</span>
+              <button
+                type="button"
+                onClick={() => handleFilterChange({ ...filters, showAllSeriesOccurrences: false })}
+                className="hover:text-primary-container cursor-pointer p-0.5"
+                title="Ocultar turnos futuros de series"
+                aria-label="Ocultar turnos futuros de series"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          )}
+
           <button
             type="button"
-            onClick={() => handleFilterChange({ status: 'ALL', date: 'ALL', customStartDate: '', customEndDate: '' })}
+            onClick={() =>
+              handleFilterChange({
+                status: 'ALL',
+                date: 'ALL',
+                customStartDate: '',
+                customEndDate: '',
+                showAllSeriesOccurrences: false,
+              })
+            }
             className="inline-flex items-center gap-1 text-[11px] font-semibold text-error hover:underline cursor-pointer ml-1"
           >
             <RotateCcw className="w-3 h-3" />
@@ -209,6 +247,7 @@ export const ChoreListView: React.FC<ChoreListViewProps> = ({
             const canRescue = chore.canRescue;
             const canComplete = chore.canComplete;
             const isLate = chore.isLate && chore.status === 'PENDING';
+            const futureTurnsCount = getSeriesFutureTurnsCount(chore, chores);
 
             const choreColor = chore.assigneeColor || '#4F46E5';
 
@@ -246,10 +285,16 @@ export const ChoreListView: React.FC<ChoreListViewProps> = ({
                     {chore.seriesId && (
                       <span
                         className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary font-semibold text-[10px]"
-                        title="Tarea periódica / serie"
+                        title={
+                          futureTurnsCount > 0 && !filters.showAllSeriesOccurrences
+                            ? `Tarea periódica (+${futureTurnsCount} turno${futureTurnsCount > 1 ? 's' : ''} futuro${futureTurnsCount > 1 ? 's' : ''} programado${futureTurnsCount > 1 ? 's' : ''})`
+                            : 'Tarea periódica / serie'
+                        }
                       >
                         <RotateCcw className="w-3 h-3" />
-                        Serie
+                        <span>
+                          Serie{futureTurnsCount > 0 && !filters.showAllSeriesOccurrences ? ` (+${futureTurnsCount} futuro${futureTurnsCount > 1 ? 's' : ''})` : ''}
+                        </span>
                       </span>
                     )}
 

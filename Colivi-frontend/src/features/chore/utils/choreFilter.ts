@@ -29,6 +29,70 @@ export function getChoreDateRanges(referenceDate: Date = new Date()): ChoreFilte
   return { todayStr, mondayStr, sundayStr, currentYearMonth };
 }
 
+/**
+ * Deduplica las tareas pendientes no atrasadas pertenecientes a la misma serie recurrente,
+ * conservando únicamente el turno más próximo (menor dueDate) y todas las atrasadas/rescatables.
+ */
+export function collapseSeriesOccurrences(
+  chores: ChoreResponseDto[],
+  showAllSeriesOccurrences: boolean = false
+): ChoreResponseDto[] {
+  if (showAllSeriesOccurrences) {
+    return chores;
+  }
+
+  // 1. Identificar para cada seriesId la tarea pendiente no atrasada con menor dueDate
+  const earliestNonLatePendingBySeries = new Map<string, string>(); // seriesId -> choreId
+
+  for (const chore of chores) {
+    if (chore.seriesId && chore.status === 'PENDING' && !chore.isLate) {
+      const currentEarliestId = earliestNonLatePendingBySeries.get(chore.seriesId);
+      if (!currentEarliestId) {
+        earliestNonLatePendingBySeries.set(chore.seriesId, chore.id);
+      } else {
+        const currentEarliestChore = chores.find((c) => c.id === currentEarliestId);
+        if (currentEarliestChore) {
+          if (
+            chore.dueDate < currentEarliestChore.dueDate ||
+            (chore.dueDate === currentEarliestChore.dueDate && chore.id < currentEarliestChore.id)
+          ) {
+            earliestNonLatePendingBySeries.set(chore.seriesId, chore.id);
+          }
+        }
+      }
+    }
+  }
+
+  // 2. Conservar individuales, completadas, atrasadas y exclusivamente el turno más próximo de cada serie
+  return chores.filter((chore) => {
+    if (!chore.seriesId || chore.status !== 'PENDING' || chore.isLate) {
+      return true;
+    }
+    const earliestId = earliestNonLatePendingBySeries.get(chore.seriesId);
+    return chore.id === earliestId;
+  });
+}
+
+/**
+ * Calcula cuántos turnos futuros pendientes y no atrasados existen en la serie que suceden a la tarea dada.
+ */
+export function getSeriesFutureTurnsCount(
+  chore: ChoreResponseDto,
+  allChores: ChoreResponseDto[]
+): number {
+  if (!chore.seriesId || chore.status !== 'PENDING' || chore.isLate) {
+    return 0;
+  }
+
+  return allChores.filter(
+    (c) =>
+      c.seriesId === chore.seriesId &&
+      c.status === 'PENDING' &&
+      !c.isLate &&
+      (c.dueDate > chore.dueDate || (c.dueDate === chore.dueDate && c.id > chore.id))
+  ).length;
+}
+
 export function calculateStatusCounts(
   chores: ChoreResponseDto[],
   filters: ChoreFilters,
@@ -41,7 +105,12 @@ export function calculateStatusCounts(
     ? chores.filter((c) => c.assigneeId === selectedUserId)
     : chores;
 
-  const dateFiltered = userFiltered.filter((chore) => {
+  const candidateChores = collapseSeriesOccurrences(
+    userFiltered,
+    Boolean(filters.showAllSeriesOccurrences)
+  );
+
+  const dateFiltered = candidateChores.filter((chore) => {
     if (filters.date === 'TODAY') return chore.dueDate === todayStr;
     if (filters.date === 'WEEK') return chore.dueDate >= mondayStr && chore.dueDate <= sundayStr;
     if (filters.date === 'MONTH') return chore.dueDate.startsWith(currentYearMonth);
@@ -81,13 +150,17 @@ export function filterChores(
 ): ChoreResponseDto[] {
   const { todayStr, mondayStr, sundayStr, currentYearMonth } = getChoreDateRanges(referenceDate);
 
-  return chores.filter((chore) => {
-    // 1. Filtrar por usuario seleccionado
-    if (selectedUserId && chore.assigneeId !== selectedUserId) {
-      return false;
-    }
+  const userFiltered = selectedUserId
+    ? chores.filter((chore) => chore.assigneeId === selectedUserId)
+    : chores;
 
-    // 2. Filtro acumulable por Estado
+  const candidateChores = collapseSeriesOccurrences(
+    userFiltered,
+    Boolean(filters.showAllSeriesOccurrences)
+  );
+
+  return candidateChores.filter((chore) => {
+    // 1. Filtro acumulable por Estado
     if (filters.status === 'PENDING') {
       if (chore.status !== 'PENDING') return false;
     } else if (filters.status === 'COMPLETED') {
@@ -96,7 +169,7 @@ export function filterChores(
       if (!(chore.isLate && chore.status === 'PENDING')) return false;
     }
 
-    // 3. Filtro acumulable por Fecha
+    // 2. Filtro acumulable por Fecha
     if (filters.date === 'TODAY') {
       if (chore.dueDate !== todayStr) return false;
     } else if (filters.date === 'WEEK') {

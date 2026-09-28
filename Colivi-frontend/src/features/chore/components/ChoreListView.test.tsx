@@ -279,6 +279,111 @@ describe('ChoreListView', () => {
     const completedByLink = screen.getByRole('link', { name: /Borja Martín/i });
     expect(completedByLink).toHaveAttribute('href', '/users/user-2');
   });
+
+  it('collapses series future occurrences and shows future turns badge, expanding when showAllSeriesOccurrences is enabled', () => {
+    const seriesChores: ChoreResponseDto[] = [
+      {
+        id: 'series-turn-1',
+        seriesId: 'series-abc',
+        homeId: 'home-1',
+        title: 'Fregar platos',
+        description: null,
+        assigneeId: 'user-1',
+        assigneeName: 'Ana García',
+        assigneeAvatar: null,
+        completedById: null,
+        completedByName: null,
+        completedByAvatar: null,
+        basePoints: 10,
+        dueDate: '2026-10-01',
+        status: 'PENDING',
+        completedAt: null,
+        createdAt: '2026-09-01T10:00:00',
+        isLate: false,
+        canRescue: false,
+        canComplete: true,
+      },
+      {
+        id: 'series-turn-2',
+        seriesId: 'series-abc',
+        homeId: 'home-1',
+        title: 'Fregar platos',
+        description: null,
+        assigneeId: 'user-2',
+        assigneeName: 'Borja Martín',
+        assigneeAvatar: null,
+        completedById: null,
+        completedByName: null,
+        completedByAvatar: null,
+        basePoints: 10,
+        dueDate: '2026-10-08',
+        status: 'PENDING',
+        completedAt: null,
+        createdAt: '2026-09-01T10:00:00',
+        isLate: false,
+        canRescue: false,
+        canComplete: false,
+      },
+      {
+        id: 'series-turn-3',
+        seriesId: 'series-abc',
+        homeId: 'home-1',
+        title: 'Fregar platos',
+        description: null,
+        assigneeId: 'user-1',
+        assigneeName: 'Ana García',
+        assigneeAvatar: null,
+        completedById: null,
+        completedByName: null,
+        completedByAvatar: null,
+        basePoints: 10,
+        dueDate: '2026-10-15',
+        status: 'PENDING',
+        completedAt: null,
+        createdAt: '2026-09-01T10:00:00',
+        isLate: false,
+        canRescue: false,
+        canComplete: false,
+      },
+    ];
+
+    const { rerender } = render(
+      <MemoryRouter>
+        <ChoreListView
+          chores={seriesChores}
+          selectedUserId={null}
+          onComplete={vi.fn()}
+          onDelete={vi.fn()}
+        />
+      </MemoryRouter>
+    );
+
+    // Only turn 1 is rendered
+    expect(screen.getByText('2026-10-01')).toBeInTheDocument();
+    expect(screen.queryByText('2026-10-08')).not.toBeInTheDocument();
+    expect(screen.queryByText('2026-10-15')).not.toBeInTheDocument();
+
+    // Badge indicates +2 future turns
+    expect(screen.getByText(/Serie \(\+2 futuros\)/i)).toBeInTheDocument();
+
+    // Now re-render with showAllSeriesOccurrences: true
+    rerender(
+      <MemoryRouter>
+        <ChoreListView
+          chores={seriesChores}
+          selectedUserId={null}
+          onComplete={vi.fn()}
+          onDelete={vi.fn()}
+          filters={{ status: 'ALL', date: 'ALL', showAllSeriesOccurrences: true }}
+        />
+      </MemoryRouter>
+    );
+
+    // All turns are rendered
+    expect(screen.getByText('2026-10-01')).toBeInTheDocument();
+    expect(screen.getByText('2026-10-08')).toBeInTheDocument();
+    expect(screen.getByText('2026-10-15')).toBeInTheDocument();
+  });
 });
 
 

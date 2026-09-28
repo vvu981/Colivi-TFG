@@ -105,12 +105,22 @@ export const HomeChoresTab: React.FC<HomeChoresTabProps> = ({
     return calculateStatusCounts(chores, filters, selectedUserId);
   }, [chores, filters, selectedUserId]);
 
-  // Tareas filtradas acumulativamente (Usuario + Estado + Fechas) aplicadas a ambas vistas
+  // Tareas filtradas acumulativamente (Usuario + Estado + Fechas) aplicadas a la vista de lista
   const filteredChores = useMemo(() => {
     return filterChores(chores, filters, selectedUserId);
   }, [chores, filters, selectedUserId]);
 
-  const hasActiveFilters = filters.status !== 'ALL' || filters.date !== 'ALL';
+  // En la vista de calendario se muestran todas las ocurrencias en sus fechas correspondientes
+  const calendarChores = useMemo(() => {
+    return filterChores(chores, { ...filters, showAllSeriesOccurrences: true }, selectedUserId);
+  }, [chores, filters, selectedUserId]);
+
+  const activeFilteredChores = viewMode === 'calendar' ? calendarChores : filteredChores;
+
+  const hasActiveFilters =
+    filters.status !== 'ALL' ||
+    filters.date !== 'ALL' ||
+    Boolean(filters.showAllSeriesOccurrences);
 
   const handleCompleteChore = async (chore: ChoreResponseDto) => {
     try {
@@ -190,7 +200,7 @@ export const HomeChoresTab: React.FC<HomeChoresTabProps> = ({
               <ChoreFilterDropdown
                 filters={filters}
                 onFilterChange={setFilters}
-                onReset={() => setFilters({ status: 'ALL', date: 'ALL', customStartDate: '', customEndDate: '' })}
+                onReset={() => setFilters({ status: 'ALL', date: 'ALL', customStartDate: '', customEndDate: '', showAllSeriesOccurrences: false })}
                 statusCounts={statusCounts}
               />
 
@@ -311,9 +321,24 @@ export const HomeChoresTab: React.FC<HomeChoresTabProps> = ({
                   </span>
                 )}
 
+                {filters.showAllSeriesOccurrences && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-primary/10 text-primary font-medium text-[11px]">
+                    <span>Series: Todos los turnos</span>
+                    <button
+                      type="button"
+                      onClick={() => setFilters((prev) => ({ ...prev, showAllSeriesOccurrences: false }))}
+                      className="hover:text-primary-container cursor-pointer p-0.5"
+                      title="Ocultar turnos futuros de series"
+                      aria-label="Ocultar turnos futuros de series"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+
                 <button
                   type="button"
-                  onClick={() => setFilters({ status: 'ALL', date: 'ALL', customStartDate: '', customEndDate: '' })}
+                  onClick={() => setFilters({ status: 'ALL', date: 'ALL', customStartDate: '', customEndDate: '', showAllSeriesOccurrences: false })}
                   className="inline-flex items-center gap-1 text-[11px] font-semibold text-error hover:underline cursor-pointer ml-1"
                 >
                   <RotateCcw className="w-3 h-3" />
@@ -322,7 +347,7 @@ export const HomeChoresTab: React.FC<HomeChoresTabProps> = ({
               </div>
 
               <span className="text-xs font-medium text-secondary">
-                {filteredChores.length} tarea{filteredChores.length === 1 ? '' : 's'} encontrada{filteredChores.length === 1 ? '' : 's'}
+                {activeFilteredChores.length} tarea{activeFilteredChores.length === 1 ? '' : 's'} encontrada{activeFilteredChores.length === 1 ? '' : 's'}
               </span>
             </div>
           )}
@@ -338,7 +363,7 @@ export const HomeChoresTab: React.FC<HomeChoresTabProps> = ({
           </div>
         ) : viewMode === 'calendar' ? (
           <ChoreCalendarView
-            chores={filteredChores}
+            chores={calendarChores}
             selectedUserId={selectedUserId}
             onComplete={handleCompleteChore}
             onDelete={setChoreToDelete}

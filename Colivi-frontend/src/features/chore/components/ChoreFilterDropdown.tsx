@@ -10,6 +10,7 @@ export interface ChoreFilters {
   date: ChoreDateFilter;
   customStartDate?: string;
   customEndDate?: string;
+  showAllSeriesOccurrences?: boolean;
 }
 
 export interface ChoreFilterDropdownProps {
@@ -37,6 +38,7 @@ export const ChoreFilterDropdown: React.FC<ChoreFilterDropdownProps> = ({
   let activeCount = 0;
   if (filters.status !== 'ALL') activeCount++;
   if (filters.date !== 'ALL') activeCount++;
+  if (filters.showAllSeriesOccurrences) activeCount++;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -239,6 +241,34 @@ export const ChoreFilterDropdown: React.FC<ChoreFilterDropdownProps> = ({
               </div>
             </div>
           )}
+
+          {/* Sección 4: Series recurrentes */}
+          <div className="pt-2 border-t border-outline-variant/40 space-y-1.5">
+            <label className="text-xs font-bold text-on-surface block">
+              Series recurrentes
+            </label>
+            <label className="flex items-center gap-2.5 p-2 rounded-xl bg-surface-container-low border border-outline-variant/40 hover:bg-surface-container transition-all cursor-pointer">
+              <input
+                type="checkbox"
+                checked={Boolean(filters.showAllSeriesOccurrences)}
+                onChange={(e) =>
+                  onFilterChange({
+                    ...filters,
+                    showAllSeriesOccurrences: e.target.checked,
+                  })
+                }
+                className="w-4 h-4 rounded border-outline text-primary focus:ring-primary/30 cursor-pointer"
+              />
+              <div className="text-[11px] leading-tight">
+                <span className="font-semibold text-on-surface block">
+                  Mostrar todos los turnos futuros
+                </span>
+                <span className="text-secondary text-[10px]">
+                  Por defecto solo se muestra el próximo turno para evitar saturar la lista
+                </span>
+              </div>
+            </label>
+          </div>
 
           {/* Pie del Desplegable */}
           <div className="flex items-center justify-between pt-2 border-t border-outline-variant/40">
