@@ -71,7 +71,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
     'w-full px-3 py-2 rounded-xl border border-outline-variant text-body-md text-on-surface bg-surface-container-lowest focus:outline-none focus:border-on-surface focus:ring-2 focus:ring-secondary-container transition-all';
 
   return (
-    <div className="px-4 py-4 bg-surface-container-low border-b border-outline-variant flex flex-col gap-4 animate-in fade-in slide-in-from-top-2 duration-200">
+    <div className="relative z-30 px-4 py-4 bg-surface-container-low border-b border-outline-variant flex flex-col gap-4 animate-in fade-in slide-in-from-top-2 duration-200">
       <div className="flex items-center justify-between">
         <span className="text-label-lg font-bold text-on-surface">Filtros de búsqueda</span>
         <button

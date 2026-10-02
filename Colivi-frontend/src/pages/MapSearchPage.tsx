@@ -621,20 +621,22 @@ export const MapSearchPage: React.FC = () => {
 
           {/* Collapsible Filter Panel in Sidebar */}
           {filtersOpen && (
-            <FilterPanel
-              filters={filters}
-              maxPriceLimit={globalMaxPrice}
-              histogramData={globalHistogramData}
-              onChange={setFilters}
-              onApply={applyFilters}
-              onReset={resetFilters}
-              onClose={() => setFiltersOpen(false)}
-            />
+            <div className="relative z-30 flex-shrink-0">
+              <FilterPanel
+                filters={filters}
+                maxPriceLimit={globalMaxPrice}
+                histogramData={globalHistogramData}
+                onChange={setFilters}
+                onApply={applyFilters}
+                onReset={resetFilters}
+                onClose={() => setFiltersOpen(false)}
+              />
+            </div>
           )}
 
           <div
             ref={sidebarContainerRef}
-            className="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-2"
+            className="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-2 relative z-0"
           >
             {error && (
               <div className="flex flex-col items-center justify-center py-12 gap-2 text-center">

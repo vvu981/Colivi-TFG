@@ -30,7 +30,17 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
   const generatedId = useId();
   const selectId = id || generatedId;
   const [isOpen, setIsOpen] = useState(false);
+  const [isUp, setIsUp] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-detect if menu should open upwards
+  useEffect(() => {
+    if (isOpen && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      setIsUp(spaceBelow < 260 && rect.top > spaceBelow);
+    }
+  }, [isOpen]);
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -98,7 +108,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
   };
 
   return (
-    <div ref={containerRef} className="relative w-full">
+    <div ref={containerRef} className={`relative w-full ${isOpen ? 'z-40' : ''}`}>
       <button
         id={selectId}
         type="button"
@@ -126,7 +136,9 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
           role="listbox"
           aria-labelledby={selectId}
           aria-multiselectable="true"
-          className="absolute left-0 right-0 top-full mt-0.5 z-50 max-h-64 overflow-y-auto rounded-xl border border-outline-variant bg-surface-container-lowest shadow-lg py-1.5 px-1 animate-in fade-in zoom-in-95 duration-150 flex flex-col gap-0.5"
+          className={`absolute left-0 right-0 ${
+            isUp ? 'bottom-full mb-1.5' : 'top-full mt-0.5'
+          } z-50 max-h-64 overflow-y-auto rounded-xl border border-outline-variant bg-surface-container-lowest shadow-lg py-1.5 px-1 animate-in fade-in zoom-in-95 duration-150 flex flex-col gap-0.5`}
         >
           {options.map((option) => {
             const isChecked = value.includes(option.value);
