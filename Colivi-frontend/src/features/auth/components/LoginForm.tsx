@@ -68,9 +68,15 @@ export const LoginForm = () => {
 
     function initGoogleSignIn() {
       if ((window as any).google) {
+        const googleClientId =
+          import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+          "107294184753-qo7cnr52fmvavskavnhugpekb2nsge6n.apps.googleusercontent.com";
+
         (window as any).google.accounts.id.initialize({
-          client_id: "107294184753-qo7cnr52fmvavskavnhugpekb2nsge6n.apps.googleusercontent.com",
+          client_id: googleClientId,
           callback: handleGoogleResponse,
+          auto_select: false,
+          itp_support: true,
         });
 
         const container = document.getElementById("google-btn-container");

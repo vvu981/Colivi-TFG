@@ -196,61 +196,68 @@ describe('ChoreListView', () => {
   });
 
   it('supports cumulative filtering via dropdown with custom date range X to Z', () => {
-    render(
-      <MemoryRouter>
-        <ChoreListView
-          chores={mockChores}
-          selectedUserId={null}
-          onComplete={vi.fn()}
-          onDelete={vi.fn()}
-        />
-      </MemoryRouter>
-    );
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-05T12:00:00Z'));
 
-    // Initial state: both chores are displayed
-    expect(screen.getByText('Limpiar cristales')).toBeInTheDocument();
-    expect(screen.getByText('Sacar basura')).toBeInTheDocument();
+    try {
+      render(
+        <MemoryRouter>
+          <ChoreListView
+            chores={mockChores}
+            selectedUserId={null}
+            onComplete={vi.fn()}
+            onDelete={vi.fn()}
+          />
+        </MemoryRouter>
+      );
 
-    // Open filter dropdown
-    const filterBtn = screen.getByRole('button', { name: /Abrir filtros acumulables/i });
-    fireEvent.click(filterBtn);
+      // Initial state: both chores are displayed
+      expect(screen.getByText('Limpiar cristales')).toBeInTheDocument();
+      expect(screen.getByText('Sacar basura')).toBeInTheDocument();
 
-    expect(screen.getByText('Filtros Acumulables')).toBeInTheDocument();
+      // Open filter dropdown
+      const filterBtn = screen.getByRole('button', { name: /Abrir filtros acumulables/i });
+      fireEvent.click(filterBtn);
 
-    // Select "Entre fechas (X y Z)"
-    const customRangeBtn = screen.getByRole('button', { name: /Entre fechas \(X y Z\)/i });
-    fireEvent.click(customRangeBtn);
+      expect(screen.getByText('Filtros Acumulables')).toBeInTheDocument();
 
-    // Date range inputs should be visible
-    expect(screen.getByText('Desde (Fecha X)')).toBeInTheDocument();
-    expect(screen.getByText('Hasta (Fecha Z)')).toBeInTheDocument();
+      // Select "Entre fechas (X y Z)"
+      const customRangeBtn = screen.getByRole('button', { name: /Entre fechas \(X y Z\)/i });
+      fireEvent.click(customRangeBtn);
 
-    // Click on start date trigger and pick a day
-    const startTrigger = screen.getByLabelText(/Desde \(Fecha X\)/i);
-    fireEvent.click(startTrigger);
-    // Click on day 9
-    const day9Btn = screen.getByRole('button', { name: /^9 de /i });
-    fireEvent.click(day9Btn);
+      // Date range inputs should be visible
+      expect(screen.getByText('Desde (Fecha X)')).toBeInTheDocument();
+      expect(screen.getByText('Hasta (Fecha Z)')).toBeInTheDocument();
 
-    // Click "Aplicar"
-    const applyBtn = screen.getByRole('button', { name: /Aplicar/i });
-    fireEvent.click(applyBtn);
+      // Click on start date trigger and pick a day
+      const startTrigger = screen.getByLabelText(/Desde \(Fecha X\)/i);
+      fireEvent.click(startTrigger);
+      // Click on day 9
+      const day9Btn = screen.getByRole('button', { name: /^9 de /i });
+      fireEvent.click(day9Btn);
 
-    // Now due date 2026-09-03 ('Limpiar cristales') is outside range (>= 9 Sept),
-    // and 'Sacar basura' (2026-09-10) is inside range!
-    expect(screen.queryByText('Limpiar cristales')).not.toBeInTheDocument();
-    expect(screen.getByText('Sacar basura')).toBeInTheDocument();
+      // Click "Aplicar"
+      const applyBtn = screen.getByRole('button', { name: /Aplicar/i });
+      fireEvent.click(applyBtn);
 
-    // Verify active filter chip is visible
-    expect(screen.getByText(/Fechas: 2026-09-09/i)).toBeInTheDocument();
+      // Now due date 2026-09-03 ('Limpiar cristales') is outside range (>= 9 Sept),
+      // and 'Sacar basura' (2026-09-10) is inside range!
+      expect(screen.queryByText('Limpiar cristales')).not.toBeInTheDocument();
+      expect(screen.getByText('Sacar basura')).toBeInTheDocument();
 
-    // Click remove date filter chip
-    const removeDateChip = screen.getByRole('button', { name: /Quitar filtro de fecha/i });
-    fireEvent.click(removeDateChip);
+      // Verify active filter chip is visible
+      expect(screen.getByText(/Fechas: 2026-09-09/i)).toBeInTheDocument();
 
-    // Both chores are visible again
-    expect(screen.getByText('Limpiar cristales')).toBeInTheDocument();
-    expect(screen.getByText('Sacar basura')).toBeInTheDocument();
+      // Click remove date filter chip
+      const removeDateChip = screen.getByRole('button', { name: /Quitar filtro de fecha/i });
+      fireEvent.click(removeDateChip);
+
+      // Both chores are visible again
+      expect(screen.getByText('Limpiar cristales')).toBeInTheDocument();
+      expect(screen.getByText('Sacar basura')).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('renders profile links for chore assignee and completedBy user', () => {

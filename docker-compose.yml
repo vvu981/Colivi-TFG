@@ -60,7 +60,7 @@ services:
       CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
 
       # ── Mail (Mailpit en local / SMTP real en producción) ──
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      FRONTEND_URL: ${FRONTEND_URL:-https://colivi.denmarkeast.cloudapp.azure.com}
       MAIL_HOST: ${MAIL_HOST:-mailpit}
       MAIL_PORT: ${MAIL_PORT:-1025}
       MAIL_USERNAME: ${MAIL_USERNAME:-}
@@ -68,9 +68,9 @@ services:
       MAIL_SMTP_AUTH: ${MAIL_SMTP_AUTH:-false}
       MAIL_SMTP_STARTTLS_ENABLE: ${MAIL_SMTP_STARTTLS_ENABLE:-false}
       MAIL_FROM: ${MAIL_FROM:-noreply@colivi.com}
-      MAIL_REACTIVATION_URL: ${MAIL_REACTIVATION_URL:-${FRONTEND_URL:-http://localhost:5173}/reactivate?token=}
-      MAIL_PASSWORD_RESET_URL: ${MAIL_PASSWORD_RESET_URL:-${FRONTEND_URL:-http://localhost:5173}/reset-password?token=}
-      MAIL_RECEIVED_REQUESTS_URL: ${MAIL_RECEIVED_REQUESTS_URL:-${FRONTEND_URL:-http://localhost:5173}/received-requests?requestId=}
+      MAIL_REACTIVATION_URL: ${MAIL_REACTIVATION_URL:-${FRONTEND_URL:-https://colivi.denmarkeast.cloudapp.azure.com}/reactivate?token=}
+      MAIL_PASSWORD_RESET_URL: ${MAIL_PASSWORD_RESET_URL:-${FRONTEND_URL:-https://colivi.denmarkeast.cloudapp.azure.com}/reset-password?token=}
+      MAIL_RECEIVED_REQUESTS_URL: ${MAIL_RECEIVED_REQUESTS_URL:-${FRONTEND_URL:-https://colivi.denmarkeast.cloudapp.azure.com}/received-requests?requestId=}
 
       # ── AI Orchestration & MCP (Configuración delegada al .env) ──
       AI_BASE_URL: ${AI_BASE_URL:-https://api.groq.com/openai}
@@ -79,8 +79,8 @@ services:
       GROQ_API_KEY: ${GROQ_API_KEY:-${AI_API_KEY}}
       GROQ_MODEL: ${GROQ_MODEL:-${AI_MODEL:-qwen/qwen3.8-27b}}
       MCP_SERVER_URL: http://mcp-server:3001
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost,http://localhost:*,http://127.0.0.1,http://127.0.0.1:*,https://localhost,https://localhost:*,capacitor://localhost,http://192.168.*:*,http://192.168.*}
-      APP_CORS_ALLOWED_ORIGIN_PATTERNS: ${CORS_ALLOWED_ORIGINS:-http://localhost,http://localhost:*,http://127.0.0.1,http://127.0.0.1:*,https://localhost,https://localhost:*,capacitor://localhost,http://192.168.*:*,http://192.168.*}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost,http://localhost:*,http://127.0.0.1,http://127.0.0.1:*,https://localhost,https://localhost:*,capacitor://localhost,http://192.168.*:*,http://192.168.*,https://*.cloudapp.azure.com,https://*.cloudapp.azure.com:*}
+      APP_CORS_ALLOWED_ORIGIN_PATTERNS: ${CORS_ALLOWED_ORIGINS:-http://localhost,http://localhost:*,http://127.0.0.1,http://127.0.0.1:*,https://localhost,https://localhost:*,capacitor://localhost,http://192.168.*:*,http://192.168.*,https://*.cloudapp.azure.com,https://*.cloudapp.azure.com:*}
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     healthcheck:
@@ -137,6 +137,26 @@ services:
       - ./Colivi-frontend/vite.config.ts:/app/vite.config.ts
 
   # ──────────────────────────────────────────────
+  # REVERSE PROXY & TERMINACIÓN SSL/HTTPS — Caddy
+  # ──────────────────────────────────────────────
+  caddy:
+    image: caddy:2.8-alpine
+    container_name: tfg_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:-colivi.denmarkeast.cloudapp.azure.com}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+      - backend
+
+  # ──────────────────────────────────────────────
   # SEEDER — Población automática de datos iniciales para evaluación
   # ──────────────────────────────────────────────
   seeder:
@@ -159,3 +179,5 @@ services:
 
 volumes:
   postgres_data:
+  caddy_data:
+  caddy_config:

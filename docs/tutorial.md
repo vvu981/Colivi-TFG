@@ -17,20 +17,20 @@ en paralelo para simular la interacción real entre dos usuarios distintos (ej. 
 1. Accede a la URL de la aplicación.
 2. Abre una ventana en modo incógnito en paralelo (servirá para simular a tu compañero de piso o arrendador).
 3. **Requisito de correo electrónico:** Utiliza direcciones de correo electrónico reales a las que tengas acceso inmediato, ya que la plataforma envía correos transaccionales (confirmaciones y restablecimiento de credenciales).
-4. **Advertencia de autenticación:** NO utilices las opciones de "Registrarse con Google" ni "Iniciar sesión con Google", dado que la integración con OAuth de Google aún no está configurada. Utiliza exclusivamente el registro tradicional con correo y contraseña.
+4. **Opciones de autenticación:** Puedes utilizar tanto el registro tradicional (correo y contraseña) como la autenticación ágil mediante "Continuar con Google" / "Registrarse con Google". Se recomienda registrar un usuario con Google y otro mediante correo y contraseña para evaluar ambos mecanismos de acceso.
 
 ---
 
 ### Misión 1: Registro de Usuarios, Recuperación de Contraseña y Perfil
-* Objetivo: Validar el flujo de autenticación, verificación por correo, restablecimiento de contraseñas y personalización.
+* Objetivo: Validar el flujo de autenticación (Google SSO y manual), verificación por correo, restablecimiento de contraseñas y personalización.
 
 **Pasos a realizar:**
-1. En la ventana normal, accede a "Registrarse" y crea la cuenta del Usuario A con un correo real al que tengas acceso.
-2. En la ventana de incógnito, accede a "Registrarse" y crea la cuenta del Usuario B (también con un correo real accesible).
-3. **Comprobación de recuperación de contraseña:**
-   - Cierra sesión temporalmente con el Usuario A o ve a la pantalla de "Iniciar Sesión".
+1. En la ventana normal, accede a "Registrarse" y crea la cuenta del Usuario A (puedes probar el botón "Registrarse con Google" o completar el formulario con tu correo).
+2. En la ventana de incógnito, accede a "Registrarse" y crea la cuenta del Usuario B (con correo tradicional accesible o una cuenta alternativa de Google).
+3. **Comprobación de recuperación de contraseña (para cuenta con correo/contraseña):**
+   - En la cuenta registrada manualmente, cierra sesión temporalmente o accede a la pantalla de "Iniciar Sesión".
    - Pulsa en "¿Has olvidado tu contraseña?" (o "Recuperar contraseña").
-   - Introduce el correo real del Usuario A y solicita el enlace/código de recuperación.
+   - Introduce el correo registrado y solicita el enlace/código de recuperación.
    - Revisa tu bandeja de entrada (y la carpeta de spam si es necesario), accede al enlace recibido y define una nueva contraseña.
    - Vuelve a iniciar sesión con la nueva contraseña para certificar que el restablecimiento funciona de extremo a extremo.
 4. Entra en "Mi Perfil" con el Usuario A. Modifica tu biografía, número de teléfono y avatar.
