@@ -96,6 +96,10 @@ export const Profile = () => {
         setError("El nombre es obligatorio.");
         return;
       }
+      if (!formData.lastName1.trim()) {
+        setError("El primer apellido es obligatorio.");
+        return;
+      }
       if (!formData.nickname.trim()) {
         setError("El nickname es obligatorio.");
         return;

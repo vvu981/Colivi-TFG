@@ -82,13 +82,13 @@ public class UserServiceImpl implements UserService {
                 .orElseGet(() -> {
                     String givenName = (String) payload.getOrDefault("given_name",
                             payload.getOrDefault("name", "Usuario Google"));
-                    String familyName = (String) payload.getOrDefault("family_name", "");
+                    String familyName = (String) payload.get("family_name");
                     String picture = (String) payload.get("picture");
 
                     User newUser = new User();
                     newUser.setEmail(email);
-                    newUser.setFirstName(givenName);
-                    newUser.setLastName1(familyName);
+                    newUser.setFirstName(givenName != null && !givenName.isBlank() ? givenName : "Usuario Google");
+                    newUser.setLastName1(familyName != null && !familyName.isBlank() ? familyName.trim() : "");
                     newUser.setLastName2("");
 
                     String baseNickname = email.split("@")[0];
@@ -141,7 +141,7 @@ public class UserServiceImpl implements UserService {
         newUser.setEmail(request.email());
         newUser.setNickname(request.nickname());
         newUser.setFirstName(request.firstName());
-        newUser.setLastName1(request.lastName1());
+        newUser.setLastName1(request.lastName1() != null ? request.lastName1().trim() : "");
         newUser.setLastName2(request.lastName2());
         newUser.setPhone(request.phone());
 

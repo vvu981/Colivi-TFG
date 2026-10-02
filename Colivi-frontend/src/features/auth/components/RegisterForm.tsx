@@ -55,7 +55,7 @@ export const RegisterForm = () => {
       await register({
         nickname,
         firstName,
-        lastName1: lastName1 || undefined,
+        lastName1: lastName1.trim(),
         lastName2: lastName2 || undefined,
         phone: phone || undefined,
         email,
@@ -279,12 +279,13 @@ export const RegisterForm = () => {
           </div>
           <div className="flex flex-col gap-1.5 flex-1 min-w-0">
             <label className="text-sm font-medium text-[#0b1c30]" htmlFor="last-name-1">
-              Primer apellido
+              Primer apellido <span className="text-[#9f3c16]">*</span>
             </label>
             <input
               id="last-name-1"
               type="text"
               placeholder="Pérez"
+              required
               autoComplete="family-name"
               value={lastName1}
               onChange={(e) => setLastName1(e.target.value)}

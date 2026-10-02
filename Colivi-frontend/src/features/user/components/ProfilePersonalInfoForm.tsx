@@ -83,6 +83,7 @@ export const ProfilePersonalInfoForm: React.FC<ProfilePersonalInfoFormProps> = (
               <input
                 type="text"
                 name="lastName1"
+                required
                 value={formData.lastName1}
                 onChange={onChange}
                 className="border border-outline-variant rounded px-2 py-1 bg-surface-container-lowest text-on-surface focus:outline-primary"

@@ -56,7 +56,7 @@ public class User {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Version
+    @Column(name = "token_version", nullable = false)
     private Integer tokenVersion = 1;
 
     private LocalDateTime bannedUntil;
