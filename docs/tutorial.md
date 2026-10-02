@@ -14,7 +14,9 @@ en paralelo para simular la interacción real entre dos usuarios distintos (ej. 
 ---
 
 ### Preparación del Entorno
-1. Accede a la URL de la aplicación.
+* **URL de acceso a la plataforma:** [https://colivi.denmarkeast.cloudapp.azure.com/](https://colivi.denmarkeast.cloudapp.azure.com/)
+
+1. Accede a la URL de la aplicación: [https://colivi.denmarkeast.cloudapp.azure.com/](https://colivi.denmarkeast.cloudapp.azure.com/)
 2. Abre una ventana en modo incógnito en paralelo (servirá para simular a tu compañero de piso o arrendador).
 3. **Requisito de correo electrónico:** Utiliza direcciones de correo electrónico reales a las que tengas acceso inmediato, ya que la plataforma envía correos transaccionales (confirmaciones y restablecimiento de credenciales).
 4. **Opciones de autenticación:** Puedes utilizar tanto el registro tradicional (correo y contraseña) como la autenticación ágil mediante "Continuar con Google" / "Registrarse con Google". Se recomienda registrar un usuario con Google y otro mediante correo y contraseña para evaluar ambos mecanismos de acceso.
