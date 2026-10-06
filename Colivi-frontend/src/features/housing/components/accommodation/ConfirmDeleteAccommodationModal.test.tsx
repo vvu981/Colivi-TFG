@@ -106,7 +106,7 @@ describe('ConfirmDeleteAccommodationModal', () => {
     );
 
     const link = screen.getByRole('link', { name: /Ir a Mis Anuncios/ });
-    expect(link).toHaveAttribute('href', '/my-listings?accommodationId=acc-123');
+    expect(link).toHaveAttribute('href', '/my-listings#accommodation-acc-123');
   });
 
   it('renders generic error message without link when error is unrelated to active listings', () => {

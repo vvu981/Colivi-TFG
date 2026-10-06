@@ -85,7 +85,7 @@ export const ConfirmDeleteAccommodationModal: React.FC<ConfirmDeleteAccommodatio
               <div className="mt-2 pt-2 border-t border-error/20 flex items-center justify-between">
                 <span className="text-xs text-error/90">Gestiona tus publicaciones:</span>
                 <Link
-                  to={accommodationId ? `/my-listings?accommodationId=${encodeURIComponent(accommodationId)}` : '/my-listings'}
+                  to={accommodationId ? `/my-listings#accommodation-${encodeURIComponent(accommodationId)}` : '/my-listings'}
                   onClick={onClose}
                   className="inline-flex items-center gap-1 text-xs font-bold underline hover:opacity-80"
                 >
