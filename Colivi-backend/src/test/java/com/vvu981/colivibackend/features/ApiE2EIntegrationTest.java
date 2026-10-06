@@ -394,6 +394,17 @@ public class ApiE2EIntegrationTest extends BaseIntegrationTest {
         @Test
         @Order(24)
         void step14_softDeleteAccommodation() throws Exception {
+                // Intento de borrado con anuncio activo debe devolver 400 Bad Request
+                mockMvc.perform(patch("/api/v1/accommodation/delete/" + accommodationId)
+                                .header("Authorization", "Bearer " + userToken))
+                                .andExpect(status().isBadRequest());
+
+                // Damos de baja el anuncio primero
+                mockMvc.perform(patch("/api/v1/listings/softDelete/" + listingId)
+                                .header("Authorization", "Bearer " + userToken))
+                                .andExpect(status().isNoContent());
+
+                // Ahora la eliminación del alojamiento debe completarse con éxito (200 OK)
                 mockMvc.perform(patch("/api/v1/accommodation/delete/" + accommodationId)
                                 .header("Authorization", "Bearer " + userToken))
                                 .andExpect(status().isOk());

@@ -150,11 +150,12 @@ class AccommodationServiceImplTest {
         class DeleteAccommodationSoft {
 
                 @Test
-                @DisplayName("debe realizar borrado lógico si el usuario es el dueño")
+                @DisplayName("debe realizar borrado lógico si el usuario es el dueño y no tiene anuncios activos")
                 void shouldSoftDeleteIfUserIsOwner() {
                         // Arrange
-                        when(accommodationRepository.findByIdAndDeletedAtIsNull(accommodation.getId()))
+                        when(accommodationRepository.findByIdAndDeletedAtIsNullWithImages(accommodation.getId()))
                                         .thenReturn(Optional.of(accommodation));
+                        when(listingService.hasActiveListings(accommodation.getId())).thenReturn(false);
                         when(accommodationRepository.save(any(Accommodation.class))).thenReturn(accommodation);
 
                         // Act
@@ -167,11 +168,12 @@ class AccommodationServiceImplTest {
                 }
 
                 @Test
-                @DisplayName("debe realizar borrado lógico si el usuario es un administrador")
+                @DisplayName("debe realizar borrado lógico si el usuario es un administrador y no tiene anuncios activos")
                 void shouldSoftDeleteIfUserIsAdmin() {
                         // Arrange
-                        when(accommodationRepository.findByIdAndDeletedAtIsNull(accommodation.getId()))
+                        when(accommodationRepository.findByIdAndDeletedAtIsNullWithImages(accommodation.getId()))
                                         .thenReturn(Optional.of(accommodation));
+                        when(listingService.hasActiveListings(accommodation.getId())).thenReturn(false);
                         when(accommodationRepository.save(any(Accommodation.class))).thenReturn(accommodation);
 
                         // Act
@@ -184,10 +186,94 @@ class AccommodationServiceImplTest {
                 }
 
                 @Test
+                @DisplayName("debe lanzar BusinessRuleValidationException si el alojamiento tiene anuncios activos")
+                void shouldThrowExceptionIfAccommodationHasActiveListings() {
+                        // Arrange
+                        when(accommodationRepository.findByIdAndDeletedAtIsNullWithImages(accommodation.getId()))
+                                        .thenReturn(Optional.of(accommodation));
+                        when(listingService.hasActiveListings(accommodation.getId())).thenReturn(true);
+
+                        // Act & Assert
+                        assertThatThrownBy(() -> accommodationService.deleteAccommodationSoft(accommodation.getId(),
+                                        owner.getId()))
+                                        .isInstanceOf(BusinessRuleValidationException.class)
+                                        .hasMessageContaining("anuncios activos asociados");
+                        verify(accommodationRepository, never()).save(any(Accommodation.class));
+                }
+
+                @Test
+                @DisplayName("debe purgar imágenes de almacenamiento remoto tras el commit de BD")
+                void shouldPurgeImagesInStorageAfterCommit() {
+                        // Arrange
+                        AccommodationImage img1 = AccommodationImage.builder()
+                                        .id(UUID.randomUUID())
+                                        .imageUrl("https://res.cloudinary.com/colivi/image/upload/v1/img1.jpg")
+                                        .displayOrder(0)
+                                        .accommodation(accommodation)
+                                        .build();
+                        AccommodationImage img2 = AccommodationImage.builder()
+                                        .id(UUID.randomUUID())
+                                        .imageUrl("https://res.cloudinary.com/colivi/image/upload/v1/img2.jpg")
+                                        .displayOrder(1)
+                                        .accommodation(accommodation)
+                                        .build();
+                        accommodation.setImages(new ArrayList<>(List.of(img1, img2)));
+
+                        when(accommodationRepository.findByIdAndDeletedAtIsNullWithImages(accommodation.getId()))
+                                        .thenReturn(Optional.of(accommodation));
+                        when(listingService.hasActiveListings(accommodation.getId())).thenReturn(false);
+                        when(accommodationRepository.save(any(Accommodation.class))).thenReturn(accommodation);
+
+                        // Act
+                        AccommodationResponse result = accommodationService
+                                        .deleteAccommodationSoft(accommodation.getId(), owner.getId());
+
+                        // Assert
+                        assertThat(result).isNotNull();
+                        // Trigger transaction synchronizations
+                        for (org.springframework.transaction.support.TransactionSynchronization sync : TransactionSynchronizationManager.getSynchronizations()) {
+                                sync.afterCommit();
+                        }
+                        verify(imageStorageService).deleteImage("https://res.cloudinary.com/colivi/image/upload/v1/img1.jpg");
+                        verify(imageStorageService).deleteImage("https://res.cloudinary.com/colivi/image/upload/v1/img2.jpg");
+                }
+
+                @Test
+                @DisplayName("debe manejar fallo en purga remota de imágenes sin propagar error tras commit")
+                void shouldHandleImageStorageErrorGracefullyAfterCommit() {
+                        // Arrange
+                        AccommodationImage img = AccommodationImage.builder()
+                                        .id(UUID.randomUUID())
+                                        .imageUrl("https://res.cloudinary.com/colivi/image/upload/v1/fail.jpg")
+                                        .displayOrder(0)
+                                        .accommodation(accommodation)
+                                        .build();
+                        accommodation.setImages(new ArrayList<>(List.of(img)));
+
+                        when(accommodationRepository.findByIdAndDeletedAtIsNullWithImages(accommodation.getId()))
+                                        .thenReturn(Optional.of(accommodation));
+                        when(listingService.hasActiveListings(accommodation.getId())).thenReturn(false);
+                        when(accommodationRepository.save(any(Accommodation.class))).thenReturn(accommodation);
+                        doThrow(new RuntimeException("Cloudinary timeout")).when(imageStorageService).deleteImage("https://res.cloudinary.com/colivi/image/upload/v1/fail.jpg");
+
+                        // Act
+                        AccommodationResponse result = accommodationService
+                                        .deleteAccommodationSoft(accommodation.getId(), owner.getId());
+
+                        // Assert
+                        assertThat(result).isNotNull();
+                        // Trigger transaction synchronizations and verify it doesn't crash
+                        for (org.springframework.transaction.support.TransactionSynchronization sync : TransactionSynchronizationManager.getSynchronizations()) {
+                                sync.afterCommit();
+                        }
+                        verify(imageStorageService).deleteImage("https://res.cloudinary.com/colivi/image/upload/v1/fail.jpg");
+                }
+
+                @Test
                 @DisplayName("debe lanzar excepción si el usuario no tiene permisos")
                 void shouldThrowExceptionIfUserNotAuthorized() {
                         // Arrange
-                        when(accommodationRepository.findByIdAndDeletedAtIsNull(accommodation.getId()))
+                        when(accommodationRepository.findByIdAndDeletedAtIsNullWithImages(accommodation.getId()))
                                         .thenReturn(Optional.of(accommodation));
 
                         // Act & Assert
@@ -202,7 +288,7 @@ class AccommodationServiceImplTest {
                 @DisplayName("debe lanzar excepción si el alojamiento no existe")
                 void shouldThrowExceptionIfAccommodationNotFound() {
                         // Arrange
-                        when(accommodationRepository.findByIdAndDeletedAtIsNull(any(UUID.class)))
+                        when(accommodationRepository.findByIdAndDeletedAtIsNullWithImages(any(UUID.class)))
                                         .thenReturn(Optional.empty());
 
                         // Act & Assert
@@ -216,7 +302,7 @@ class AccommodationServiceImplTest {
                 @Test
                 @DisplayName("debe lanzar excepcion si el usuario actual no existe")
                 void shouldThrowExceptionIfUserDoesNotExist() {
-                        when(accommodationRepository.findByIdAndDeletedAtIsNull(accommodation.getId()))
+                        when(accommodationRepository.findByIdAndDeletedAtIsNullWithImages(accommodation.getId()))
                                         .thenReturn(Optional.of(accommodation));
                         UUID nonExistentUserId = UUID.randomUUID();
                         when(userRepository.findActiveById(nonExistentUserId)).thenReturn(Optional.empty());

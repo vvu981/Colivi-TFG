@@ -402,4 +402,10 @@ public class AccommodationListingServiceImpl implements AccommodationListingServ
         listingRepository.softDeleteAllByAccommodationId(accommodationId, LocalDateTime.now());
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public boolean hasActiveListings(UUID accommodationId) {
+        return listingRepository.existsByAccommodationIdAndDeletedAtIsNull(accommodationId);
+    }
+
 }

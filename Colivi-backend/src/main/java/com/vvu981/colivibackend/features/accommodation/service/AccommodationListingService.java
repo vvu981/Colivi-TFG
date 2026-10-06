@@ -56,4 +56,6 @@ public interface AccommodationListingService {
         void softDeleteAllByAccommodationId(UUID accommodationId);
 
         AccommodationListingStatsDTO getListingStatsForAccommodation(UUID accommodationId);
+
+        boolean hasActiveListings(UUID accommodationId);
 }

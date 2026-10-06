@@ -80,14 +80,40 @@ public class AccommodationServiceImpl implements AccommodationService {
     @Override
     @Transactional
     public AccommodationResponse deleteAccommodationSoft(UUID accommodationId, UUID currentUserId) {
-        Accommodation accommodationToSoftDelete = findAccommodationByIdAndDeletedAtIsNull(accommodationId);
+        Accommodation accommodationToSoftDelete = findAccommodationWithImagesByIdAndDeletedAtIsNull(accommodationId);
         User currentUser = getUser(currentUserId);
         if (!canEdit(accommodationToSoftDelete, currentUser))
             throw new UnauthorizedActionException("Error: no puedes editar");
+
+        if (listingService.hasActiveListings(accommodationId)) {
+            throw new BusinessRuleValidationException(
+                    "No es posible eliminar el alojamiento porque todavía tiene anuncios activos asociados. Debes dar de baja o eliminar primero todos sus anuncios vinculados.");
+        }
+
         accommodationToSoftDelete.setDeletedAt(LocalDateTime.now());
         Accommodation accommodationDeleted = accommodationRepository.save(accommodationToSoftDelete);
 
-        listingService.softDeleteAllByAccommodationId(accommodationDeleted.getId());
+        List<String> imageUrlsToPurge = accommodationToSoftDelete.getImages() != null
+                ? accommodationToSoftDelete.getImages().stream()
+                        .map(AccommodationImage::getImageUrl)
+                        .filter(url -> url != null && !url.trim().isEmpty())
+                        .toList()
+                : java.util.Collections.emptyList();
+
+        if (!imageUrlsToPurge.isEmpty()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    for (String url : imageUrlsToPurge) {
+                        try {
+                            imageStorageService.deleteImage(url);
+                        } catch (Exception e) {
+                            log.error("Alerta de Inconsistencia: Imagen huérfana en Cloud tras borrado de alojamiento ({}): {}", url, e.getMessage(), e);
+                        }
+                    }
+                }
+            });
+        }
 
         return new AccommodationResponse(accommodationDeleted);
     }

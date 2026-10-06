@@ -1136,5 +1136,29 @@ class AccommodationListingServiceImplTest {
                         assertThat(listing.getStatus()).isEqualTo(ListingStatus.UNAVAILABLE);
                         verify(listingRepository).save(listing);
                 }
+
+                @Test
+                @DisplayName("hasActiveListings retorna true si existen anuncios activos")
+                void shouldReturnTrueWhenActiveListingsExist() {
+                        UUID accId = UUID.randomUUID();
+                        when(listingRepository.existsByAccommodationIdAndDeletedAtIsNull(accId)).thenReturn(true);
+
+                        boolean result = listingServiceImpl.hasActiveListings(accId);
+
+                        assertThat(result).isTrue();
+                        verify(listingRepository).existsByAccommodationIdAndDeletedAtIsNull(accId);
+                }
+
+                @Test
+                @DisplayName("hasActiveListings retorna false si no existen anuncios activos")
+                void shouldReturnFalseWhenNoActiveListingsExist() {
+                        UUID accId = UUID.randomUUID();
+                        when(listingRepository.existsByAccommodationIdAndDeletedAtIsNull(accId)).thenReturn(false);
+
+                        boolean result = listingServiceImpl.hasActiveListings(accId);
+
+                        assertThat(result).isFalse();
+                        verify(listingRepository).existsByAccommodationIdAndDeletedAtIsNull(accId);
+                }
         }
 }
