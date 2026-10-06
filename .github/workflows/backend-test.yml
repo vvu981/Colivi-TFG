@@ -2,9 +2,9 @@ name: CI — Backend Test & Coverage Gate
 
 on:
   push:
-    branches: [ "main", "dev", "feat/**", "test/**", "fix/**" ]
+    branches: [ "main", "dev", "feat/**", "test/**", "fix/**", "dev_**", "feat(**" ]
   pull_request:
-    branches: [ "main", "dev", "feat/**", "test/**", "fix/**" ]
+    branches: [ "main", "dev", "feat/**", "test/**", "fix/**", "dev_**", "feat(**"]
 
 jobs:
   test:

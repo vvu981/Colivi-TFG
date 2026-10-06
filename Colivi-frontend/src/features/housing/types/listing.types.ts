@@ -38,6 +38,7 @@ export interface ListingFilterParams {
   rentalType?: RentalType;
   amenities?: string;
   hostId?: string;
+  accommodationId?: string;
   page?: number;
   size?: number;
 }

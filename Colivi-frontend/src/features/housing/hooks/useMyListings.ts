@@ -13,7 +13,7 @@ interface UseMyListingsResult {
   refetch: () => void;
 }
 
-export const useMyListings = (page = 0, size = 10): UseMyListingsResult => {
+export const useMyListings = (page = 0, size = 10, accommodationId?: string): UseMyListingsResult => {
   const { user } = useAuth();
   const [data, setData] = useState<Page<AccommodationListingResponse> | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -29,8 +29,15 @@ export const useMyListings = (page = 0, size = 10): UseMyListingsResult => {
     setIsLoading(true);
     setError(null);
 
+    const searchParams = {
+      hostId: user.id,
+      page,
+      size,
+      ...(accommodationId ? { accommodationId } : {}),
+    };
+
     listingService
-      .search({ hostId: user.id, page, size })
+      .search(searchParams)
       .then((result) => {
         if (!cancelled) setData(result);
       })
@@ -52,7 +59,7 @@ export const useMyListings = (page = 0, size = 10): UseMyListingsResult => {
     return () => {
       cancelled = true;
     };
-  }, [user?.id, page, size, tick]);
+  }, [user?.id, page, size, tick, accommodationId]);
 
   return {
     listings: data?.content ?? [],

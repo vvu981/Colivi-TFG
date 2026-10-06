@@ -44,6 +44,8 @@ public interface AccommodationListingRepository
                         "accommodation" })
         java.util.Optional<AccommodationListing> findById(UUID id);
 
+        boolean existsByAccommodationIdAndDeletedAtIsNull(UUID accommodationId);
+
         boolean existsByAccommodationIdAndRentalTypeAndDeletedAtIsNull(UUID accommodationId,
                         com.vvu981.colivibackend.features.accommodation.domain.RentalType rentalType);
 
