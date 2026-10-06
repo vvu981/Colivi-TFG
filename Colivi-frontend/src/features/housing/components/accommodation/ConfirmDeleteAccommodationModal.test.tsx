@@ -90,8 +90,23 @@ describe('ConfirmDeleteAccommodationModal', () => {
       screen.getByText(
         'No es posible eliminar el alojamiento porque todavía tiene anuncios activos asociados.'
       )
-    ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Ir a Mis Anuncios/ })).toBeInTheDocument();
+    );
+    const link = screen.getByRole('link', { name: /Ir a Mis Anuncios/ });
+    expect(link).toBeInTheDocument();
+    expect(link).toHaveAttribute('href', '/my-listings');
+  });
+
+  it('renders link with accommodationId query param when accommodationId is provided', () => {
+    renderWithRouter(
+      <ConfirmDeleteAccommodationModal
+        {...defaultProps}
+        accommodationId="acc-123"
+        error="No es posible eliminar el alojamiento porque todavía tiene anuncios activos asociados."
+      />
+    );
+
+    const link = screen.getByRole('link', { name: /Ir a Mis Anuncios/ });
+    expect(link).toHaveAttribute('href', '/my-listings?accommodationId=acc-123');
   });
 
   it('renders generic error message without link when error is unrelated to active listings', () => {

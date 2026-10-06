@@ -162,6 +162,7 @@ export const MyAccommodationsPage = () => {
             if (!isDeleting) setAccommodationToDelete(null);
           }}
           accommodationAddress={accommodationToDelete?.address ?? ''}
+          accommodationId={accommodationToDelete?.id}
           onConfirmDelete={handleConfirmDelete}
           isLoading={isDeleting}
           error={deleteError}

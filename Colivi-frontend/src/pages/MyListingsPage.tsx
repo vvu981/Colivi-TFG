@@ -1,18 +1,33 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { FileText, PlusCircle, Loader2, MapPin, Euro, Pencil, Home, DoorOpen, Trash2, CheckCircle2 } from 'lucide-react';
 import { MainLayout } from '../layouts/MainLayout';
 import { useMyListings } from '../features/housing/hooks/useMyListings';
+import { useMyAccommodations } from '../features/housing/hooks/useMyAccommodations';
 import { useDeleteListing } from '../features/housing/hooks/useDeleteListing';
 import { ConfirmDeleteListingModal } from '../features/housing/components/listing/ConfirmDeleteListingModal';
 import type { AccommodationListingResponse } from '../features/housing/types/listing.types';
 import clsx from 'clsx';
 
 export const MyListingsPage: React.FC = () => {
-  const { listings, isLoading, error, refetch } = useMyListings(0, 50);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const accommodationIdParam = searchParams.get('accommodationId') || '';
+
+  const { accommodations } = useMyAccommodations(0, 100);
+  const { listings, isLoading, error, refetch } = useMyListings(0, 50, accommodationIdParam || undefined);
   const { deleteListing, isLoading: isDeleting, error: deleteError, setError: setDeleteError } = useDeleteListing();
   const [listingToDelete, setListingToDelete] = useState<AccommodationListingResponse | null>(null);
   const [successBanner, setSuccessBanner] = useState<string | null>(null);
+
+  const handleAccommodationFilterChange = (selectedAccId: string) => {
+    const nextParams = new URLSearchParams(searchParams);
+    if (selectedAccId) {
+      nextParams.set('accommodationId', selectedAccId);
+    } else {
+      nextParams.delete('accommodationId');
+    }
+    setSearchParams(nextParams);
+  };
 
   const handleConfirmDelete = async () => {
     if (!listingToDelete) return;
@@ -54,6 +69,45 @@ export const MyListingsPage: React.FC = () => {
           </div>
         )}
 
+        {/* Selector de filtro por alojamiento */}
+        {accommodations.length > 0 && (
+          <div className="mb-6 p-4 rounded-2xl bg-surface border border-outline-variant flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-surface-container flex items-center justify-center text-on-surface-variant flex-shrink-0">
+                <Home size={18} />
+              </div>
+              <div className="flex flex-col">
+                <label htmlFor="filter-accommodation" className="text-label-sm font-label-sm text-on-surface-variant">
+                  Filtrar por alojamiento
+                </label>
+                <select
+                  id="filter-accommodation"
+                  value={accommodationIdParam}
+                  onChange={(e) => handleAccommodationFilterChange(e.target.value)}
+                  className="text-body-md font-body-md text-on-surface bg-transparent border-none p-0 focus:ring-0 cursor-pointer font-medium"
+                >
+                  <option value="">Todos mis alojamientos ({accommodations.length})</option>
+                  {accommodations.map((acc) => (
+                    <option key={acc.id} value={acc.id}>
+                      {acc.address} ({acc.city})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {accommodationIdParam && (
+              <button
+                type="button"
+                onClick={() => handleAccommodationFilterChange('')}
+                className="text-label-sm font-label-sm text-primary hover:underline self-start sm:self-center cursor-pointer font-medium"
+              >
+                Limpiar filtro de alojamiento
+              </button>
+            )}
+          </div>
+        )}
+
         {isLoading ? (
           <div className="flex justify-center py-20">
             <Loader2 className="animate-spin text-primary" size={40} />
@@ -67,16 +121,31 @@ export const MyListingsPage: React.FC = () => {
             <div className="bg-gradient-to-br from-primary-container to-surface-variant p-6 rounded-full mb-6 shadow-sm ring-8 ring-primary/5 mx-auto w-fit">
               <FileText className="h-12 w-12 text-primary" />
             </div>
-            <h3 className="text-headline-md md:text-display-sm text-on-surface mb-3 font-bold mx-auto">No tienes anuncios publicados</h3>
+            <h3 className="text-headline-md md:text-display-sm text-on-surface mb-3 font-bold mx-auto">
+              {accommodationIdParam ? 'No hay anuncios para este alojamiento' : 'No tienes anuncios publicados'}
+            </h3>
             <p className="text-body-lg text-on-surface-variant mx-auto max-w-lg mb-8">
-              Publica un anuncio sobre alguno de tus alojamientos registrados para empezar a encontrar inquilinos.
+              {accommodationIdParam
+                ? 'Este inmueble no cuenta con ningún anuncio activo. Puedes publicar uno nuevo o ver todos tus alojamientos.'
+                : 'Publica un anuncio sobre alguno de tus alojamientos registrados para empezar a encontrar inquilinos.'}
             </p>
-            <Link
-              to="/create-listing"
-              className="bg-primary text-on-primary px-8 py-3 rounded-full font-label-md text-lg hover:shadow-md transition-all hover:-translate-y-1 active:translate-y-0 flex items-center gap-2 mx-auto w-fit"
-            >
-              <PlusCircle size={18} /> Publicar anuncio
-            </Link>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              {accommodationIdParam && (
+                <button
+                  type="button"
+                  onClick={() => handleAccommodationFilterChange('')}
+                  className="px-6 py-3 rounded-full border border-outline hover:bg-surface-container text-on-surface font-label-md text-base transition-colors cursor-pointer"
+                >
+                  Ver todos los anuncios
+                </button>
+              )}
+              <Link
+                to="/create-listing"
+                className="bg-primary text-on-primary px-8 py-3 rounded-full font-label-md text-lg hover:shadow-md transition-all hover:-translate-y-1 active:translate-y-0 flex items-center gap-2"
+              >
+                <PlusCircle size={18} /> Publicar anuncio
+              </Link>
+            </div>
           </div>
         ) : (
           <div className="flex flex-col gap-4">
