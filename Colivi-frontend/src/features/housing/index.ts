@@ -19,6 +19,7 @@ export { useMyAccommodations } from './hooks/useMyAccommodations';
 export { useCreateListing } from './hooks/useCreateListing';
 export { useGetListing } from './hooks/useGetListing';
 export { useDeleteListing } from './hooks/useDeleteListing';
+export { useDeleteAccommodation } from './hooks/useDeleteAccommodation';
 export { useMapListings } from './hooks/useMapListings';
 
 // Components — Accommodation
@@ -26,6 +27,7 @@ export { AccommodationForm } from './components/accommodation/AccommodationForm'
 export { AmenitySelector } from './components/accommodation/AmenitySelector';
 export { ImageUploader } from './components/accommodation/ImageUploader';
 export { MapPicker } from './components/accommodation/MapPicker';
+export { ConfirmDeleteAccommodationModal } from './components/accommodation/ConfirmDeleteAccommodationModal';
 
 // Components — Listing
 export { ListingForm } from './components/listing/ListingForm';

@@ -1,10 +1,34 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Home, PlusCircle, MapPin, Loader2, Image as ImageIcon, Pencil } from 'lucide-react';
+import { Home, PlusCircle, MapPin, Loader2, Image as ImageIcon, Pencil, Trash2, CheckCircle2 } from 'lucide-react';
 import { MainLayout } from '../layouts/MainLayout';
 import { useMyAccommodations } from '../features/housing/hooks/useMyAccommodations';
+import { useDeleteAccommodation } from '../features/housing/hooks/useDeleteAccommodation';
+import { ConfirmDeleteAccommodationModal } from '../features/housing/components/accommodation/ConfirmDeleteAccommodationModal';
+import type { AccommodationResponse } from '../features/housing/types/accommodation.types';
 
 export const MyAccommodationsPage = () => {
-  const { accommodations, isLoading, error } = useMyAccommodations(0, 50);
+  const { accommodations, isLoading, error, refetch } = useMyAccommodations(0, 50);
+  const {
+    deleteAccommodation,
+    isLoading: isDeleting,
+    error: deleteError,
+    setError: setDeleteError,
+  } = useDeleteAccommodation();
+  const [accommodationToDelete, setAccommodationToDelete] = useState<AccommodationResponse | null>(null);
+  const [successBanner, setSuccessBanner] = useState<string | null>(null);
+
+  const handleConfirmDelete = async () => {
+    if (!accommodationToDelete) return;
+    const ok = await deleteAccommodation(accommodationToDelete.id);
+    if (ok) {
+      const address = accommodationToDelete.address;
+      setAccommodationToDelete(null);
+      setSuccessBanner(`El alojamiento "${address}" ha sido eliminado del sistema.`);
+      refetch();
+      setTimeout(() => setSuccessBanner(null), 4000);
+    }
+  };
 
   return (
     <MainLayout>
@@ -26,6 +50,13 @@ export const MyAccommodationsPage = () => {
             Registrar alojamiento
           </Link>
         </div>
+
+        {successBanner && (
+          <div className="mb-6 p-4 rounded-xl bg-green-50 border border-green-200 text-green-800 text-body-md flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+            <CheckCircle2 size={20} className="text-green-600 flex-shrink-0" />
+            <span>{successBanner}</span>
+          </div>
+        )}
 
         {isLoading ? (
           <div className="flex justify-center py-20">
@@ -90,19 +121,32 @@ export const MyAccommodationsPage = () => {
                     <span className="text-label-sm font-label-sm text-on-surface-variant bg-surface-container px-3 py-1 rounded-lg">
                       {acc.squareMeters} m²
                     </span>
-                    <div className="flex gap-3">
+                    <div className="flex items-center gap-2">
                       <Link 
                         to={`/edit-accommodation/${acc.id}`}
                         className="flex items-center justify-center p-2 rounded-lg border border-outline hover:bg-surface-container text-on-surface-variant transition-colors"
                         title="Editar alojamiento"
+                        aria-label={`Editar alojamiento ${acc.address}`}
                       >
                         <Pencil size={18} />
                       </Link>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDeleteError(null);
+                          setAccommodationToDelete(acc);
+                        }}
+                        className="flex items-center justify-center p-2 rounded-lg border border-error/30 text-error hover:bg-error-container/20 transition-colors cursor-pointer"
+                        title="Eliminar alojamiento"
+                        aria-label={`Eliminar alojamiento ${acc.address}`}
+                      >
+                        <Trash2 size={18} />
+                      </button>
                       <Link 
                         to="/create-listing" 
-                        className="text-primary text-label-sm font-label-sm font-semibold hover:underline self-center"
+                        className="text-primary text-label-sm font-label-sm font-semibold hover:underline self-center ml-1"
                       >
-                        Publicar anuncio
+                        Publicar
                       </Link>
                     </div>
                   </div>
@@ -111,6 +155,17 @@ export const MyAccommodationsPage = () => {
             ))}
           </div>
         )}
+
+        <ConfirmDeleteAccommodationModal
+          isOpen={Boolean(accommodationToDelete)}
+          onClose={() => {
+            if (!isDeleting) setAccommodationToDelete(null);
+          }}
+          accommodationAddress={accommodationToDelete?.address ?? ''}
+          onConfirmDelete={handleConfirmDelete}
+          isLoading={isDeleting}
+          error={deleteError}
+        />
       </div>
     </MainLayout>
   );
