@@ -1,0 +1,121 @@
+package com.vvu981.colivibackend.features.user.controller;
+
+import com.vvu981.colivibackend.features.user.dto.BanRequest;
+import com.vvu981.colivibackend.features.user.dto.UpdateNonSensible;
+import com.vvu981.colivibackend.features.user.dto.UpdateSensible;
+import com.vvu981.colivibackend.features.user.service.UserService;
+
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.Map;
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/api/v1/users")
+@RequiredArgsConstructor
+public class UserController {
+
+    private final UserService userService;
+
+    // El candado de seguridad: solo los administradores pasan de esta línea
+    @PreAuthorize("hasAuthority('ADMIN')")
+    @PatchMapping("/{userId}/admin")
+    public ResponseEntity<Void> setAdmin(@PathVariable UUID userId) {
+
+        // Si el código llega aquí, es porque el vigilante ya confirmó que es un ADMIN.
+        // Simplemente delegamos el trabajo al cerebro (UserService)
+        userService.setAdmin(userId);
+
+        // Devolvemos un 204 No Content sin cuerpo, indicando éxito.
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<com.vvu981.colivibackend.features.user.dto.MyProfileResponse> getMyProfile(
+            @AuthenticationPrincipal(expression = "id") UUID userId) {
+        return ResponseEntity.ok(userService.getMyProfile(userId));
+    }
+
+    @GetMapping("/{userId}")
+    public ResponseEntity<com.vvu981.colivibackend.features.user.dto.UserProfileResponse> getUserProfile(
+            @PathVariable UUID userId) {
+        return ResponseEntity.ok(userService.getUserProfile(userId));
+    }
+
+    @PreAuthorize("hasAuthority('ADMIN')")
+    @GetMapping("/admin/{userId}")
+    public ResponseEntity<com.vvu981.colivibackend.features.user.dto.AdminUserProfileResponse> getAdminUserProfile(
+            @PathVariable UUID userId) {
+        return ResponseEntity.ok(userService.getAdminUserProfile(userId));
+    }
+
+    @PatchMapping("/me/profile")
+    public ResponseEntity<UpdateNonSensible> updateMyProfile(
+            @Valid @RequestBody UpdateNonSensible request,
+            @AuthenticationPrincipal(expression = "id") UUID userId) {
+
+        // El controlador simplemente hace de puente. Le pasa el usuario seguro y los
+        // datos al servicio.
+        UpdateNonSensible response = userService.updateNonSensibleData(userId, request);
+
+        // Devuelve un 200 OK con los datos actualizados
+        return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping(value = "/me/profile-picture", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String, String>> uploadProfilePicture(
+            @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal(expression = "id") UUID userId) {
+
+        String url = userService.uploadProfilePicture(userId, file);
+        return ResponseEntity.ok(Map.of("profilePicUrl", url));
+    }
+
+    @PatchMapping("/me/credentials")
+    public ResponseEntity<Void> updateMyCredentials(
+            @Valid @RequestBody UpdateSensible request, @AuthenticationPrincipal(expression = "id") UUID userId) {
+        userService.updateSensibleData(userId, request);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/me/logout")
+    public ResponseEntity<Void> logout(@AuthenticationPrincipal(expression = "id") UUID userId) {
+        userService.logout(userId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/me/delete/soft")
+    public ResponseEntity<Void> deleteUserSoft(@AuthenticationPrincipal(expression = "id") UUID userId) {
+        userService.deleteUserSoft(userId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PreAuthorize("hasAuthority('ADMIN')")
+    @DeleteMapping("/hard/{userId}")
+    public ResponseEntity<Void> deleteUserHard(@PathVariable UUID userId) {
+        userService.deleteUserHard(userId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PreAuthorize("hasAuthority('ADMIN')")
+    @PatchMapping("/{userId}/ban")
+    public ResponseEntity<Void> banUser(@PathVariable UUID userId,
+            @Valid @RequestBody BanRequest request) {
+        userService.banUser(userId, request.message(), request.bannedUntil());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PreAuthorize("hasAuthority('ADMIN')")
+    @PatchMapping("/{userId}/unban")
+    public ResponseEntity<Void> unbanUser(@PathVariable UUID userId) {
+        userService.unbanUser(userId);
+        return ResponseEntity.noContent().build();
+    }
+}

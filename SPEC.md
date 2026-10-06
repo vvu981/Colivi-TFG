@@ -31,7 +31,7 @@ Este módulo gestiona el mercado de alquileres de corta y larga duración, permi
     * Visualización del mapa interactivo con marcadores geolocalizados de los anuncios filtrados.
 * **Usuario Registrado:**
     * Hereda los permisos del Invitado.
-    * **Solicitud de Publicación:** Puede enviar un formulario para dar de alta un anuncio. El anuncio queda en estado `PENDIENTE` y no es visible para el público hasta que un administrador lo apruebe.
+    * **Solicitud de Publicación:** Puede enviar un formulario para dar de alta un anuncio. El anuncio queda por defecto en estado `PENDING`. Como regla de negocio fundamental, el anuncio *sí* es visible públicamente en el catálogo bajo este estado; el DTO de respuesta propaga dicho estado para que el frontend (Next.js) renderice dinámicamente un aviso visual indicando que es un "Anuncio en revisión por la administración".
     * **Sistema de Valoraciones y Comentarios:** Puede emitir una valoración numérica (de 1 a 5 estrellas) acompañada opcionalmente de un único comentario escrito. Este sistema se aplica en dos direcciones:
         * Usuario evalúa a Alojamiento.
         * Usuario evalúa a otro Usuario (perfil de inquilino o propietario).
@@ -40,6 +40,7 @@ Este módulo gestiona el mercado de alquileres de corta y larga duración, permi
     * Acceso a un panel de moderación global.
     * Capacidad de eliminar cualquier anuncio, comentario o valoración que vulnere las normativas de la plataforma.
     * **Gestión de Solicitudes:** Bandeja de entrada para `ACEPTAR` o `RECHAZAR` las solicitudes de nuevos alojamientos enviadas por los usuarios.
+    * **Alertas de Moderación Automática:** Recibirá notificaciones prioritarias cuando un anuncio supere el umbral de 5 denuncias únicas en estado `PENDING`, que habrán activado la ocultación preventiva automática del anuncio.
 
 #### B. Requisitos del Anuncio de Alojamiento
 Cada anuncio publicado debe contener obligatoriamente los siguientes datos validados en el backend:
@@ -47,7 +48,32 @@ Cada anuncio publicado debe contener obligatoriamente los siguientes datos valid
 * Dirección exacta, Localidad, Ciudad y País.
 * Precio mensual de alquiler (expresado en moneda local/Euros).
 * Identificador y nickname del propietario del alojamiento.
-* Estado del anuncio (`PENDIENTE`, `ACTIVO`, `RECHAZADO`, `FINALIZADO`).
+* Estado definitivo del anuncio: `PENDING` (en revisión pero visible), `APPROVED` (validado por admin), `BANNED` (bloqueado por infracciones), `UNAVAILABLE` (alquilado u ocupado).
+* Visibilidad del anuncio (`AVAILABLE`, `DELETED`, `ALL`).
+
+#### C. Listado y Catálogo Unificado
+Para evitar la redundancia de código y cumplir con los principios SOLID, todas las consultas y búsquedas del catálogo de alojamientos se centralizan en una única consulta JPQL dinámica parametrizada:
+* **Método de Servicio:** `Page<Accommodation> getAccommodationsCatalog(User owner, AccommodationVisibility visibility, int page, int size)`
+* **Filtros de Visibilidad (`AccommodationVisibility`):**
+    * `AVAILABLE`: Retorna únicamente anuncios activos (no eliminados logicamente, `deletedAt IS NULL`).
+    * `DELETED`: Retorna únicamente anuncios con borrado lógico (`deletedAt IS NOT NULL`) en la papelera del administrador o usuario.
+    * `ALL`: Retorna todo el historial de alojamientos de forma incondicional.
+* **Filtro de Propietario (`owner`):** Si es `null`, se realiza una búsqueda global; si se informa, se limita a las propiedades publicadas por dicho usuario.
+
+#### D. Gestión de Solicitudes de Reserva (BookingRequests)
+Este submódulo orquesta el ciclo de vida de las reservas entre inquilinos y propietarios mediante una máquina de estados determinista, integrando una pasarela de fianza simulada.
+* **Flujo de Estados:**
+    1. `PENDING`: El inquilino candidato envía formalmente la solicitud de reserva de la plaza.
+    2. `ACCEPTED`: El propietario revisa el perfil del candidato y acepta la solicitud. Esta transición notifica a la aplicación cliente (Next.js) para que desbloquee y presente un formulario de pasarela de pago simulada al inquilino.
+    3. `CONFIRMED`: El inquilino introduce datos ficticios de tarjeta de crédito/débito. La transacción simulada se aprueba, el estado conmuta a `CONFIRMED` y la plaza queda oficialmente cerrada (el anuncio pasa a estado `UNAVAILABLE`).
+    4. `REJECTED`: El propietario declina la solicitud de reserva del candidato.
+    5. `CANCELLED`: Cancelación asíncrona por cualquiera de las dos partes antes o después de la confirmación.
+* **Mecanismo de Contingencia por Cancelación:** Si un inquilino ejecuta una cancelación sobre una reserva que ya se encontraba en estado `CONFIRMED`, el backend interviene automáticamente mediante un trigger lógico: revierte el estado del anuncio asociado a `APPROVED` (o a su estado de visibilidad activa) reintroduciendo el inmueble en el catálogo público de forma instantánea. A nivel documental (memoria), se establece que la fianza económica simulada se transfiere al propietario en concepto de penalización y compensación.
+
+#### E. Sistema Inteligente de Sugerencias ("Sugeridos para ti")
+Para maximizar la experiencia de usuario (UX) y optimizar el descubrimiento de inmuebles, la plataforma incorpora una sección dinámica de "Sugeridos para ti".
+* **Estrategia Frontend-First:** Este sistema se gestiona de manera inteligente desde la capa de presentación (Next.js). El cliente almacena el histórico de las últimas búsquedas y visualizaciones del usuario (ej. ciudad de preferencia, rango de precios, tipo de alquiler) utilizando Cookies de navegador o LocalStorage.
+* **Reutilización de Endpoints:** Para alimentar este bloque de sugerencias, el frontend no requiere de una lógica adicional pesada en el backend; simplemente recicla y parametriza los endpoints de filtrado y catálogo ya existentes, inyectando las preferencias almacenadas en el lado del cliente de forma transparente.
 
 ---
 
@@ -70,7 +96,7 @@ Este módulo opera de forma completamente privada. Todos los usuarios que intera
     * Debajo del nombre de cada usuario aparecerá un **círculo rojo** si el balance global del usuario es negativo (debe dinero al grupo).
     * Aparecerá un **círculo verde** si el balance global es positivo (el grupo le debe dinero a él).
 * **Algoritmo de Simplificación de Deudas:** El backend ejecutará un algoritmo de optimización de grafos de transacciones para reducir el número de transferencias necesarias para liquidar el hogar.
-    * *Restricción de Integridad Histórica:* Para coexistir armónicamente con el subsistema de auditoría inmutable, **este algoritmo opera estrictamente como una vista proyectada calculada en tiempo de ejecución (On-the-Fly)** o cacheada temporalmente. Bajo ninguna circunstancia modificará, reescribirá o fusionará los registros de gastos originales persistidos en la base de datos. El historial de transacciones se mantiene intacto; el sistema simplemente calcula y sugiere de forma dinámica la matriz óptima de compensaciones (*"quién debe pagar a quién hoy"*) para saldar las cuentas totales reduciendo los pasos intermedios.
+    * *Restricción de Integridad Histórica:* Para coexistir armónicamente con el subsistema de auditoría inmutable, **este algoritmo opera estrictamente como una vista proyectada calculada en tiempo de ejecución (On-the-Fly)** o cacheada temporalmente. Bajo ninguna circunstancia modificará, reescribirá o fusionará los registros de gastos originales persistidos en la base de datos. El historial de transacciones se mantiene intacto; el sistema simplemente calcula y sugiere de forma dinámica la matriz óptima de compensaciones (*"quién debe pagar a quién hoy"*) para saldar las cuentas totales reduciendo los pasos indeseados.
     * *Regla de tránsito:* Si el usuario A debe 10€ al usuario B, y el usuario B debe 10€ al usuario C, el sistema simplifica automáticamente la estructura transaccional sugiriendo que **A debe 10€ directamente a C**, eliminando la necesidad de que el dinero pase por B en la vista de liquidación.
 
 #### C. Módulo de Tareas Colectivas
@@ -99,98 +125,7 @@ Este componente técnico transversal responde de manera directa a las restriccio
 
 A continuación se detalla la estructura de entidades e índices necesaria en la base de datos PostgreSQL para dar soporte al sistema y garantizar el cumplimiento de las restricciones funcionales.
 
-```
-                                  +-----------------------+
-                                  |         USER          |
-                                  +-----------------------+
-                                  | PK: id (UUID)         |<----+
-                                  | nickname (VARCHAR)    |     |
-                                  | email (VARCHAR)       |     |
-                                  | password_hash (TEXT)  |     |
-                                  | first_name (VARCHAR)  |     |
-                                  | last_name_1 (VARCHAR) |     |
-                                  | last_name_2 (VARCHAR) |     |
-                                  | phone (VARCHAR)       |     |
-                                  | profile_pic_url (TEXT)|     |
-                                  | role (ENUM)           |     |
-                                  +-----------------------+     |
-                                   /     |           \         |
-                                  /      |            \        |
-                                 /       |             \       |
-  +-----------------------------+        |             //       |
-  |    ACCOMMODATION_REVIEW     |        |            //        |
-  +-----------------------------+        |           //         |
-  | PK: id (UUID)               |        |          //          |
-  | FK: author_id ------------->|        |         //           |
-  | FK: accommodation_id -------|----+   |        //            |
-  | rating (INT)                |    |   |       //             |
-  | comment (TEXT, NULL)        |    |   |      //              |
-  +-----------------------------+    |   |     //               |
-                                     v   v    v                 |
-  +-----------------------------+ +-----------------------+     |
-  |        ACCOMMODATION        | |     HOGAR_MEMBER      |     |
-  +-----------------------------+ +-----------------------+     |
-  | PK: id (UUID)               | | FK: hogar_id ---------|--+  |
-  | FK: owner_id -------------->| | FK: user_id ----------|--+--+
-  +-----------------------------+ +-----------------------+  |
-  | title (VARCHAR)                                          |
-  | description (TEXT)                                       |
-  | price_per_month (NUMERIC)                                 |
-  | address (VARCHAR)                                        |
-  | locality (VARCHAR)                                       |
-  | city (VARCHAR)                                           |
-  | country (VARCHAR)                                        |
-  | latitude (NUMERIC)                                       |
-  | longitude (NUMERIC)                                      |
-  | status (ENUM)                                            |
-  +-----------------------------+                            |
-                 |                                           |
-                 v                                           v
-  +-----------------------------+             +-----------------------+
-  |     ACCOMMODATION_IMAGE     |             |         HOGAR         |
-  +-----------------------------+             +-----------------------+
-  | PK: id (UUID)               |             | PK: id (UUID)         |
-  | FK: accommodation_id        |             | name (VARCHAR)        |
-  | image_url (TEXT)            |             | version (INT)         |
-  +-----------------------------+             | created_at (TIMESTAMP)|
-                                              +-----------------------+
-                                                  |           |
-                                         +--------+           +--------+
-                                         |                             |
-                                         v                             v
-                              +-----------------------+     +-----------------------+
-                              |        EXPENSE        |     |         TASK          |
-                              +-----------------------+     +-----------------------+
-                              | PK: id (UUID)         |     | PK: id (UUID)         |
-                              | FK: hogar_id ---------|---->| FK: hogar_id          |
-                              | FK: payer_id ---------|---->| title (VARCHAR)       |
-                              | amount (NUMERIC)      |     | description (TEXT)    |
-                              | description (VARCHAR) |     | is_completed (BOOLEAN)|
-                              | version (INT)         |     | version (INT)         |
-                              | created_at (TIMESTAMP)|     +-----------------------+
-                              +-----------------------+                 |
-                                   |            |                       |
-                                   v            |                       |
-                      +-----------------------+ |                       |
-                      |   EXPENSE_AFFECTED    | |                       |
-                      +-----------------------+ |                       |
-                      | FK: expense_id        | |                       |
-                      | FK: user_id ----------|-+-----------------------+
-                      +-----------------------+ |                       |
-                                                v                       v
-                                      +-----------------------------------+
-                                      |         AUDIT_SNAPSHOT_LOG        |
-                                      +-----------------------------------+
-                                      | PK: id (UUID)                     |
-                                      | FK: user_id (Autor)               |
-                                      | entity_type (VARCHAR)             |
-                                      | entity_id (UUID)                  |
-                                      | action_type (ENUM)                |
-                                      | snapshot_before (JSONB)           |
-                                      | snapshot_after (JSONB)            |
-                                      | server_timestamp (TIMESTAMP)      |
-                                      +-----------------------------------+
-```
+![Diagrama Entidad-Relación](./docs/db_schema.svg)
 
 ### Reglas Críticas de Integridad y Restricciones de Base de Datos
 1.  **Inmutabilidad de Auditoría:** La tabla `AUDIT_SNAPSHOT_LOG` contará con un trigger a nivel de base de datos o una restricción interceptora en Spring Boot (`@PreUpdate` y `@PreRemove`) que lanzará una excepción crítica si se intenta modificar o eliminar un registro existente.
@@ -199,6 +134,20 @@ A continuación se detalla la estructura de entidades e índices necesaria en la
     * Índice compuesto en `ACCOMMODATION(city, price_per_month)` para optimizar los filtros de la página principal.
     * Índices numéricos estándar sobre B-Tree para `latitude` y `longitude` para resolver las consultas del buscador basado en mapas de forma eficiente.
 4.  **Campos de Control de Bloqueo:** Las tablas `HOGAR`, `EXPENSE` y `TASK` incorporan la columna `version (INT)` gestionada de forma automática por Spring Data JPA para instrumentar el control de concurrencia optimista.
+5.  **Gestión de Baneos Temporales (Entidad `USER`):**
+    * El campo `bannedUntil (TIMESTAMP, NULL)` almacena la fecha/hora de expiración del baneo. Un valor `NULL` o una fecha en el pasado significa que el usuario no está baneado.
+    * El campo `banReason (TEXT, NULL)` almacena el motivo humano-legible de la sanción impuesta por el administrador.
+    * La entidad `User` expone el método de negocio `isBanned(): boolean` que compara `bannedUntil` con el reloj del servidor (`LocalDateTime.now()`) de forma dinámica. No se persiste ningún flag booleano de estado.
+    * El `JwtAuthenticationFilter` intercepta **cada petición entrante** y, tras validar el JWT, invoca `isBanned()` sobre el usuario cargado. Si el resultado es `true`, la petición se rechaza inmediatamente con `403 Forbidden` y un cuerpo de error que incluye la fecha de expiración del baneo. Esto garantiza que un JWT activo emitido antes del baneo quede operativamente anulado en tiempo real sin necesidad de invalidar el token en base de datos.
+6.  **Auto-Moderación Preventiva de Denuncias (`ACCOMMODATION_REPORT`):**
+    * Si un anuncio acumula más de 5 denuncias únicas (por `reporter_id` distinto o anónimas) en estado `PENDING`, el sistema ejecuta automáticamente las siguientes acciones de forma atómica dentro de la misma transacción:
+        1. Cambia el `status` del `ACCOMMODATION` afectado a `PENDIENTE` (ocultándolo del marketplace público).
+        2. Genera una alerta prioritaria en la bandeja del Administrador para revisión humana urgente.
+    * El umbral de 5 denuncias se evalúa en `AccommodationReportService` tras cada nueva denuncia persistida.
+    * El endpoint de creación de denuncias es: `POST /api/v1/accommodations/{id}/reports` (🔒 o anónimo).
+    * **Enumerados requeridos:**
+        * `report_reason AS ENUM ('SPAM', 'SCAM', 'INAPPROPRIATE', 'MISLEADING')`
+        * `report_status AS ENUM ('PENDING', 'REVIEWED', 'DISMISSED')`
 
 ---
 
@@ -228,15 +177,15 @@ Para evitar brechas de privacidad y garantizar el aislamiento absoluto de los da
 #### Herramienta 1: `auditar_conflictos_hogar`
 * **Descripción:** Recupera y analiza la secuencia cronológica de cambios estructurales, precios o responsabilidades sobre un hogar específico, procesando los snapshots para resolver malentendidos entre convivientes.
 * **Parámetros de Entrada:**
-    * `hogarId` (string, obligatorio): Identificador único del hogar.
+    * `homeId` (string, obligatorio): Identificador único del hogar.
     * `limite` (integer, opcional): Número máximo de registros a analizar para evitar desbordamiento de contexto.
-* **Funcionamiento Interno:** El servidor MCP realiza una petición GET al endpoint `/api/v1/audit/hogar/{hogarId}` del backend en Spring Boot inyectando el token JWT del usuario. Transforma el array de snapshots en un texto estructurado donde se contrasta la autoría de cada cambio.
+* **Funcionamiento Interno:** El servidor MCP realiza una petición GET al endpoint `/api/v1/audit/home/{homeId}` del backend en Spring Boot inyectando el token JWT del usuario. Transforma el array de snapshots en un texto estructurado donde se contrasta la autoría de cada cambio.
 
 #### Herramienta 2: `analizar_balances_y_deudas`
 * **Descripción:** Extrae el grafo de deudas consolidado y el histórico financiero de los últimos meses dentro del hogar para proveer análisis de optimización de gastos y planes de pago eficientes.
 * **Parámetros de Entrada:**
-    * `hogarId` (string, obligatorio): Identificador del hogar.
-* **Funcionamiento Interno:** Consume el endpoint `/api/v1/hogares/{hogarId}/balances` bajo la identidad del token JWT provisto. Devuelve los estados de saldo (quién debe y a quién se le debe una vez procesado el algoritmo de tránsito virtual). El LLM procesa esta información para emitir recomendaciones conversacionales (ej. *"Os recomiendo que A le haga una transferencia de 10€ a C y con eso cerráis la deuda entera del mes"*).
+    * `homeId` (string, obligatorio): Identificador del hogar.
+* **Funcionamiento Interno:** Consume el endpoint `/api/v1/home/{homeId}/balances` bajo la identidad del token JWT provisto. Devuelve los estados de saldo (quién debe y a quién se le debe una vez procesado el algoritmo de tránsito virtual). El LLM procesa esta información para emitir recomendaciones conversacionales (ej. *"Os recomiendo que A le haga una transferencia de 10€ a C y con eso cerráis la deuda entera del mes"*).
 
 #### Herramienta 3: `busqueda_semantica_alojamientos`
 * **Descripción:** Permite al LLM cruzar las peticiones en lenguaje natural del usuario (ej. "piso luminoso, casero amable, zona universitaria") con las valoraciones textuales y descripciones del sistema que la búsqueda por filtros tradicionales de base de datos no puede indexar.
@@ -270,11 +219,11 @@ es.tfg.plataforma
 
 ### Aplicación Práctica de Principios SOLID en el Backend
 
-1.  **Single Responsibility Principle (SRP):** Un controlador (`AccommodationController`) solo gestiona la deserialización y validación HTTP. La lógica de aprobación o rechazo de anuncios reside exclusivamente en `AccommodationService`. La persistencia física de la inmutabilidad de logs se delega a `AuditLogService`. Ninguna clase asume dos responsabilidades.
+1.  **Single Responsibility Principle (SRP):** Un controlador (`AccommodationController`) solo gestiona la deserialización y validación HTTP. La lógica de aprobación o rechazo de anuncios reside exclusivamente en `AccommodationService`. La persistencia física de la inmutabilidad de logs se delega a `AuditLogService`. La evaluación del contador de denuncias y la auto-moderación reside exclusivamente en `AccommodationReportService`. Ninguna clase asume dos responsabilidades.
 2.  **Open/Closed Principle (OCP):** El motor de liquidación de deudas se implementará mediante una interfaz `DebtSimplifierEngine`. Si en el futuro se desea cambiar el algoritmo actual de tránsito directo por uno basado en programación lineal o flujos de redes maximales, se creará una nueva clase implementando la interfaz sin modificar el código de los servicios que consumen la liquidación.
 3.  **Liskov Substitution Principle (LSP):** Todas las extensiones o tipos de usuarios heredan de la entidad base o comparten contratos de seguridad. Cualquier componente del sistema que requiera un identificador de autoría puede interactuar con la abstracción del usuario autenticado sin importar si el rol final es un Administrador o un Usuario Común.
-4.  **Interface Segregation Principle (ISP):** Los repositorios de Spring Data se fragmentan. No se crea una interfaz gigantesca de base de datos. `AuditLogRepository` solo expone operaciones de lectura (`findById`, `findAll`) y guardado (`save`), eliminando de su interfaz cualquier método de actualización o borrado destructivo.
-5.  **Dependency Inversion Principle (DIP):** Los componentes de alto nivel (como los controladores o los servicios principales) nunca dependen de implementaciones concretas de bajo nivel. Todas las dependencias se inyectan a través de constructores utilizando interfaces, facilitando el desacoplamiento total y la viabilidad de pruebas unitarias con mocks.
+4.  **Interface Segregation Principle (ISP):** Los repositorios de Spring Data se fragmentan. No se crea una interfaz gigantesca de base de datos. `AuditLogRepository` solo expone operaciones de lectura (`findById`, `findAll`) y guardado (`save`), eliminando de su interfaz cualquier método de actualización o borrado destructivo. De igual forma, `IAccommodationReportRepository` únicamente expone `save`, `countPendingByAccommodationId` y `findByAccommodationId`, sin métodos de mutación masiva.
+5.  **Dependency Inversion Principle (DIP):** Los componentes de alto nivel (como los controladores o los servicios principales) nunca dependen de implementaciones concretas de bajo nivel. Todas las dependencias se inyectan a través de constructores utilizando interfaces, facilitando el desacoplamiento total y la viabilidad de pruebas unitarias con mocks. El `JwtAuthenticationFilter` depende de la abstracción `IUserService` para cargar el usuario y evaluar `isBanned()`, nunca de `UserServiceImpl` directamente.
 
 ---
 

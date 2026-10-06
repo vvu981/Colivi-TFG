@@ -1,0 +1,170 @@
+import { z } from "zod";
+import { IMcpToolHandler, ToolExecutionResult } from "../types.js";
+import { GET_LISTING_DETAILS_TOOL } from "../../schemas/toolSchemas.js";
+import { IListingClient, listingClient, AccommodationListingItem } from "../../clients/listingClient.js";
+import { InvalidArgumentError, BackendIntegrationError } from "../../core/errors/mcpError.js";
+
+const listingDetailsInputSchema = z.object({
+  listingId: z.string().trim().min(1, "listingId is required")
+});
+
+type ListingDetailsInput = z.infer<typeof listingDetailsInputSchema>;
+
+export class GetListingDetailsHandler implements IMcpToolHandler<ListingDetailsInput> {
+  public readonly definition = GET_LISTING_DETAILS_TOOL;
+
+  constructor(private readonly client: IListingClient = listingClient) {}
+
+  public async execute(rawArgs: ListingDetailsInput): Promise<ToolExecutionResult> {
+    const parseResult = listingDetailsInputSchema.safeParse(rawArgs);
+    if (!parseResult.success) {
+      throw new InvalidArgumentError(
+        `Invalid listing arguments: ${parseResult.error.errors.map((e) => e.message).join(", ")}`
+      );
+    }
+
+    const { listingId } = parseResult.data;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(listingId);
+
+    let listing: AccommodationListingItem | undefined;
+
+    if (isUuid) {
+      try {
+        listing = await this.client.getListingById(listingId);
+      } catch (error) {
+        if (error instanceof BackendIntegrationError && error.statusCode === 404) {
+          listing = undefined;
+        } else {
+          throw error;
+        }
+      }
+    } else {
+      // 1. Si no es UUID, buscar primero por título en el catálogo
+      try {
+        const searchResult = await this.client.searchCatalog({ title: listingId, size: 5 });
+        if (searchResult.content && searchResult.content.length > 0) {
+          listing = searchResult.content[0];
+        }
+      } catch {
+        // Fallback defensivo
+      }
+
+      // 2. Si no se encontró y contiene " en " (ej. "Habitación Doble en Palma"), separar título y ciudad
+      if (!listing && listingId.toLowerCase().includes(" en ")) {
+        const parts = listingId.split(/\s+en\s+/i);
+        if (parts.length >= 2) {
+          try {
+            const searchResult = await this.client.searchCatalog({
+              title: parts[0].trim(),
+              city: parts[1].trim(),
+              size: 5
+            });
+            if (searchResult.content && searchResult.content.length > 0) {
+              listing = searchResult.content[0];
+            }
+          } catch {
+            // Ignorar y continuar a fallback
+          }
+        }
+      }
+
+      // 3. Fallback directo a getListingById para identificadores de tests (ej. "listing-detail-1")
+      if (!listing) {
+        try {
+          const direct = await this.client.getListingById(listingId);
+          if (direct && direct.id) {
+            listing = direct;
+          }
+        } catch (error) {
+          if (error instanceof BackendIntegrationError && error.statusCode === 404) {
+            listing = undefined;
+          } else {
+            throw error;
+          }
+        }
+      }
+    }
+
+    if (!listing || !listing.id) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `No se encontro el anuncio de alojamiento con ID: ${listingId}`
+          }
+        ]
+      };
+    }
+
+    const fichaTecnica = this.formatListingDetails(listing);
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(fichaTecnica)
+        }
+      ]
+    };
+  }
+
+  private formatListingDetails(listing: AccommodationListingItem) {
+    const rawAmenities = listing.accommodation?.amenities ?? [];
+    const amenitiesSet = new Set(rawAmenities.map((a) => a.toUpperCase()));
+
+    const petsAllowed = amenitiesSet.has("PETS_ALLOWED");
+    const smokingAllowed = amenitiesSet.has("SMOKING_ALLOWED");
+
+    const coexistenceRules = {
+      mascotasPermitidas: petsAllowed
+        ? "PERMITIDO: Se admiten mascotas en el inmueble."
+        : "NO PERMITIDO: No se admiten mascotas.",
+      tabacoPermitido: smokingAllowed
+        ? "PERMITIDO: Esta permitido fumar en zonas habilitadas."
+        : "NO PERMITIDO: Estrictamente prohibido fumar en la vivienda."
+    };
+
+    const technicalAmenities = rawAmenities.filter(
+      (a) => a.toUpperCase() !== "PETS_ALLOWED" && a.toUpperCase() !== "SMOKING_ALLOWED"
+    );
+
+    const priceMonth = listing.pricePerMonth ?? 0;
+    const deposit = listing.securityDeposit ?? 0;
+
+    return {
+      anuncio: {
+        id: listing.id,
+        titulo: listing.title,
+        descripcion: listing.description,
+        tipoAlquiler: listing.rentalType,
+        estadoDisponibilidad: listing.status,
+        promocionado: listing.isPromoted ?? false,
+        fechaPublicacion: listing.createdAt ?? "No especificada"
+      },
+      desgloseEconomico: {
+        precioMensual: `${priceMonth} EUR`,
+        fianzaDeposito: `${deposit} EUR`,
+        totalPrimerMesEstimado: `${priceMonth + deposit} EUR (primer mes + fianza reembolsable)`
+      },
+      habitabilidadYDisponibilidad: {
+        habitacionesLibres: listing.accommodation?.freeRooms ?? 0,
+        habitacionesTotales: listing.accommodation?.totalRooms ?? 0,
+        ratioDisponibilidad: `${listing.accommodation?.freeRooms ?? 0} de ${listing.accommodation?.totalRooms ?? 0} disponibles`,
+        banosTotales: listing.accommodation?.totalBathrooms ?? "No especificado",
+        superficieM2: listing.accommodation?.squareMeters ? `${listing.accommodation.squareMeters} m²` : "No especificado"
+      },
+      serviciosIncluidos: technicalAmenities,
+      normasDeConvivencia: coexistenceRules,
+      ubicacion: {
+        direccion: listing.accommodation?.address ?? "No especificada",
+        ciudad: listing.accommodation?.city ?? "No especificada",
+        provincia: listing.accommodation?.province ?? "No especificada",
+        pais: listing.accommodation?.country ?? "No especificado"
+      },
+      anfitrion: {
+        id: listing.hostId ?? "No especificado",
+        nickname: listing.hostNickname ?? "No especificado"
+      }
+    };
+  }
+}

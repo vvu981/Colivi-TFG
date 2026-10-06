@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Colivi</string>
+    <string name="title_activity_main">Colivi</string>
+    <string name="package_name">com.vvu981.colivi</string>
+    <string name="custom_url_scheme">com.vvu981.colivi</string>
+</resources>

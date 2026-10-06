@@ -1,0 +1,266 @@
+import React, { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { FileText, PlusCircle, Loader2, MapPin, Euro, Pencil, Home, DoorOpen, Trash2, CheckCircle2 } from 'lucide-react';
+import { MainLayout } from '../layouts/MainLayout';
+import { useMyListings } from '../features/housing/hooks/useMyListings';
+import { useDeleteListing } from '../features/housing/hooks/useDeleteListing';
+import { ConfirmDeleteListingModal } from '../features/housing/components/listing/ConfirmDeleteListingModal';
+import type { AccommodationListingResponse } from '../features/housing/types/listing.types';
+import type { AccommodationResponse } from '../features/housing/types/accommodation.types';
+import clsx from 'clsx';
+
+interface AccommodationListingGroup {
+  accommodation: AccommodationResponse | null;
+  listings: AccommodationListingResponse[];
+}
+
+export const MyListingsPage: React.FC = () => {
+  const { listings, isLoading, error, refetch } = useMyListings(0, 50);
+  const { deleteListing, isLoading: isDeleting, error: deleteError, setError: setDeleteError } = useDeleteListing();
+  const [listingToDelete, setListingToDelete] = useState<AccommodationListingResponse | null>(null);
+  const [successBanner, setSuccessBanner] = useState<string | null>(null);
+
+  const groupedListings = useMemo(() => {
+    const map = new Map<string, AccommodationListingGroup>();
+
+    for (const listing of listings) {
+      const accId = listing.accommodation?.id ?? 'unassigned';
+      if (!map.has(accId)) {
+        map.set(accId, {
+          accommodation: listing.accommodation ?? null,
+          listings: [],
+        });
+      }
+      map.get(accId)!.listings.push(listing);
+    }
+
+    return Array.from(map.values());
+  }, [listings]);
+
+  const handleConfirmDelete = async () => {
+    if (!listingToDelete) return;
+    const ok = await deleteListing(listingToDelete.id);
+    if (ok) {
+      const deletedTitle = listingToDelete.title;
+      setListingToDelete(null);
+      setSuccessBanner(`El anuncio "${deletedTitle}" ha sido retirado del catálogo.`);
+      refetch();
+      setTimeout(() => setSuccessBanner(null), 4000);
+    }
+  };
+
+  return (
+    <MainLayout>
+      <div className="w-full px-margin-mobile md:px-margin-desktop py-10 max-w-5xl mx-auto">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
+          <div>
+            <h1 className="text-display-lg-mobile md:text-headline-md font-headline-md text-on-surface mb-1">
+              Mis anuncios
+            </h1>
+            <p className="text-body-md font-body-md text-on-surface-variant">
+              Gestiona los anuncios clasificados según el inmueble al que pertenecen.
+            </p>
+          </div>
+          <Link
+            to="/create-listing"
+            className="flex items-center gap-2 px-5 py-2.5 bg-primary text-on-primary rounded-xl text-label-md font-label-md hover:bg-primary/90 transition-colors"
+          >
+            <PlusCircle size={18} />
+            Publicar anuncio
+          </Link>
+        </div>
+
+        {successBanner && (
+          <div className="mb-6 p-4 rounded-xl bg-green-50 border border-green-200 text-green-800 text-body-md flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+            <CheckCircle2 size={20} className="text-green-600 flex-shrink-0" />
+            <span>{successBanner}</span>
+          </div>
+        )}
+
+        {isLoading ? (
+          <div className="flex justify-center py-20">
+            <Loader2 className="animate-spin text-primary" size={40} />
+          </div>
+        ) : error ? (
+          <div className="rounded-lg bg-error-container text-on-error-container p-4 text-label-md font-label-md">
+            {error}
+          </div>
+        ) : groupedListings.length === 0 ? (
+          <div className="flex flex-col justify-center py-24 px-6 border-2 border-dashed border-outline-variant/50 rounded-3xl bg-surface-container-lowest/50 backdrop-blur-sm w-full max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 text-center">
+            <div className="bg-gradient-to-br from-primary-container to-surface-variant p-6 rounded-full mb-6 shadow-sm ring-8 ring-primary/5 mx-auto w-fit">
+              <FileText className="h-12 w-12 text-primary" />
+            </div>
+            <h3 className="text-headline-md md:text-display-sm text-on-surface mb-3 font-bold mx-auto">
+              No tienes anuncios publicados
+            </h3>
+            <p className="text-body-lg text-on-surface-variant mx-auto max-w-lg mb-8">
+              Publica un anuncio sobre alguno de tus alojamientos registrados para empezar a encontrar inquilinos.
+            </p>
+            <Link
+              to="/create-listing"
+              className="bg-primary text-on-primary px-8 py-3 rounded-full font-label-md text-lg hover:shadow-md transition-all hover:-translate-y-1 active:translate-y-0 flex items-center gap-2 mx-auto w-fit"
+            >
+              <PlusCircle size={18} /> Publicar anuncio
+            </Link>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-10">
+            {groupedListings.map((group) => {
+              const acc = group.accommodation;
+              const sectionId = acc?.id ? `accommodation-${acc.id}` : undefined;
+
+              return (
+                <section
+                  key={acc?.id ?? 'unassigned'}
+                  id={sectionId}
+                  className="flex flex-col gap-4 scroll-mt-24 p-6 rounded-3xl bg-surface-container-lowest border border-outline-variant/80 shadow-xs"
+                >
+                  {/* Encabezado de clasificación por alojamiento */}
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-4 border-b border-outline-variant/60">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <Home size={20} />
+                      </div>
+                      <div>
+                        <h2 className="text-title-lg font-bold text-on-surface leading-tight">
+                          {acc?.address ?? 'Alojamiento no especificado'}
+                        </h2>
+                        <p className="text-body-sm text-on-surface-variant">
+                          {acc
+                            ? `${acc.city}, ${acc.province} - ${acc.totalRooms} hab. (${acc.squareMeters} m²)`
+                            : 'Inmueble desvinculado'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 self-end sm:self-auto">
+                      <span className="px-3 py-1 bg-surface-container rounded-full text-label-sm font-label-sm text-on-surface-variant font-medium">
+                        {group.listings.length} {group.listings.length === 1 ? 'anuncio' : 'anuncios'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Lista de anuncios correspondientes a este alojamiento */}
+                  <div className="flex flex-col gap-4 pt-1">
+                    {group.listings.map((listing) => {
+                      const isAvailable = listing.status === 'AVAILABLE';
+
+                      return (
+                        <div
+                          key={listing.id}
+                          className="flex flex-col sm:flex-row bg-surface rounded-2xl border border-outline-variant overflow-hidden shadow-xs hover:shadow-sm transition-shadow"
+                        >
+                          {/* Image */}
+                          <div className="w-full sm:w-48 h-48 sm:h-auto bg-surface-container-high relative flex-shrink-0">
+                            {acc?.images && acc.images.length > 0 ? (
+                              <img
+                                src={[...acc.images].sort((a, b) => a.displayOrder - b.displayOrder)[0].imageUrl}
+                                alt={listing.title}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <FileText size={32} className="text-on-surface-variant/30" />
+                              </div>
+                            )}
+                            <div
+                              className={clsx(
+                                'absolute top-3 left-3 px-3 py-1 rounded-full text-label-sm font-label-sm shadow-sm',
+                                isAvailable ? 'bg-green-100 text-green-800' : 'bg-surface/90 text-on-surface'
+                              )}
+                            >
+                              {isAvailable ? 'Disponible' : 'Oculto'}
+                            </div>
+                          </div>
+
+                          {/* Content */}
+                          <div className="p-5 flex flex-col flex-grow">
+                            <div className="flex justify-between items-start gap-4 mb-2">
+                              <h3 className="text-title-lg font-title-lg text-on-surface line-clamp-1">
+                                {listing.title}
+                              </h3>
+                              <div className="flex items-center text-primary font-bold whitespace-nowrap">
+                                <Euro size={18} className="mr-1" />
+                                {listing.pricePerMonth}
+                                <span className="text-label-sm font-normal text-on-surface-variant ml-1">/mes</span>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-body-md font-body-md text-on-surface-variant mb-4">
+                              <div className="flex items-center gap-1.5">
+                                <MapPin size={16} />
+                                <span className="truncate">
+                                  {acc ? `${acc.city}, ${acc.province}` : 'Ubicación no disponible'}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1.5 border-l border-outline-variant pl-4">
+                                {listing.rentalType === 'ENTIRE_PLACE' ? (
+                                  <>
+                                    <Home size={16} />
+                                    <span>Piso completo</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <DoorOpen size={16} />
+                                    <span>Habitación</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+
+                            <p className="text-body-md font-body-md text-on-surface-variant line-clamp-2 mb-4">
+                              {listing.description}
+                            </p>
+
+                            <div className="mt-auto flex justify-end gap-2 sm:gap-3 pt-4 border-t border-outline-variant flex-wrap">
+                              <Link
+                                to={`/listings/${listing.id}`}
+                                className="px-4 py-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-label-md font-label-md transition-colors flex items-center justify-center"
+                              >
+                                Ver página
+                              </Link>
+                              <Link
+                                to={`/edit-listing/${listing.id}`}
+                                className="flex items-center gap-2 px-4 py-2 rounded-lg border border-outline hover:bg-surface-container text-on-surface text-label-md font-label-md transition-colors"
+                                title="Editar anuncio"
+                              >
+                                <Pencil size={18} />
+                                Editar
+                              </Link>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setDeleteError(null);
+                                  setListingToDelete(listing);
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-error/30 text-error hover:bg-error-container/20 text-label-md font-label-md transition-colors cursor-pointer"
+                                title="Eliminar anuncio"
+                              >
+                                <Trash2 size={16} />
+                                <span>Eliminar</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+        )}
+
+        <ConfirmDeleteListingModal
+          isOpen={Boolean(listingToDelete)}
+          onClose={() => {
+            if (!isDeleting) setListingToDelete(null);
+          }}
+          listingTitle={listingToDelete?.title ?? ''}
+          onConfirmDelete={handleConfirmDelete}
+          isLoading={isDeleting}
+          error={deleteError}
+        />
+      </div>
+    </MainLayout>
+  );
+};

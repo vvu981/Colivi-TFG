@@ -1,7 +1,7 @@
 # Plan de Desarrollo Maestro — TFG
 ## Plataforma Integral de Búsqueda de Alojamiento, Gestión de Gastos Compartidos y Auditoría Inteligente mediante MCP
 
-> **Versión:** 1.0.0 · **Autor:** Víctor Vallejo Uroz · **Metodología:** Desarrollo Secuencial por Fases
+> **Víctor Vallejo Uroz · Arquitectura desacoplada · Java 21 + Spring Boot 3.x + Next.js 15 + Servidor MCP**
 
 ---
 
@@ -21,541 +21,677 @@
 
 ## 1. Descripción General de la Plataforma
 
-La plataforma es un sistema web completo que integra tres funcionalidades principales bajo una arquitectura desacoplada de tres capas:
+La plataforma es un sistema web full-stack de tres capas independientes que cubre dos grandes necesidades:
 
-- **Módulo de Alojamiento:** Mercado de anuncios de alquiler con búsqueda geolocalizada, sistema de valoraciones cruzadas (usuario→alojamiento, usuario→usuario), mensajería privada con soporte para ofertas económicas formales y flujo de aprobación administrativa.
-- **Módulo de Hogar Compartido:** Gestión privada de convivencia entre usuarios registrados. Incluye registro de gastos con prorrateo configurable, un algoritmo de simplificación de deudas (proyección en memoria sin alteración del historial), y gestión de tareas colectivas del hogar.
-- **Módulo de Inteligencia Artificial (MCP):** Capa de extensión que expone los datos internos del sistema a un LLM (mediante API Key de Groq) mediante el Model Context Protocol. Permite auditorías conversacionales, análisis de deudas y búsqueda semántica de alojamientos respetando el aislamiento multi-tenant por JWT.
+### 1.1 Módulo de Alojamiento (Físico y Comercial)
 
-**Usuarios objetivo:** Universitarios, jóvenes profesionales y propietarios particulares que necesiten gestionar convivencia y búsqueda de alojamiento en una sola plataforma.
+El marketplace de alquiler residencial se divide en dos submódulos bien diferenciados por rol (Invitado, Usuario Registrado, Administrador) para garantizar alta cohesión y bajo acoplamiento:
+- **Estructura Física (Accommodation)**: Representa la propiedad física inmutable asociada a su propietario. Contiene dirección, ciudad, provincia, país, habitaciones totales/libres, baños, metros cuadrados, coordenadas (latitud/longitud), "amenities" estructurales (Set de `AmenityType`) y la gestión de imágenes físicas integradas en la nube con Cloudinary. Su ciclo de vida depende del propietario.
+- **Publicación Comercial (AccommodationListing)**: Representa el anuncio, la oferta o publicación en el catálogo para alquilar. Depende de un `Accommodation` (relación 1:N o 1:1, un alojamiento físico puede poseer históricos de anuncios). Contiene el precio mensual, fechas de disponibilidad, reglas de convivencia (house_rules), fianza y el estado de la publicación (`PENDING`, `APPROVED`, `BANNED`, `UNAVAILABLE`).
+
+### 1.2 Módulo de Hogar (Gestión Privada de Convivencia)
+
+Espacio privado multi-tenant para grupos de convivencia. Permite registrar gastos compartidos con prorrateo flexible, visualizar balances en tiempo real con un algoritmo de simplificación de deudas (tránsito virtual sin reescritura de BD), gestionar tareas colectivas y auditar de forma inmutable cada cambio financiero u organizativo mediante snapshots JSONB.
+
+### 1.3 Capa de Inteligencia Artificial (Servidor MCP)
+
+Servidor independiente que implementa el Model Context Protocol (MCP) y actúa como puente seguro entre un LLM (Claude, GPT, etc.) y la API REST del backend. Expone herramientas estructuradas (JSON-RPC) para auditoría conversacional, análisis de deudas y búsqueda semántica de alojamientos, con aislamiento multi-tenant garantizado por propagación de JWT.
+
+### 1.4 Módulo de Reservas y Fianza Simulada (BookingRequests)
+
+Orquesta el ciclo de vida de las solicitudes de alquiler entre inquilinos y caseros. Opera bajo una máquina de estados determinista (`PENDING`, `ACCEPTED`, `CONFIRMED`, `REJECTED`, `CANCELLED`). Incorpora una pasarela de pago simulada donde, tras la aceptación del casero (`ACCEPTED`), el inquilino introduce datos ficticios para confirmar la plaza (`CONFIRMED`), lo que cambia automáticamente el estado del anuncio a `UNAVAILABLE`.
+
+### 1.5 Sistema Inteligente de Sugerencias ("Sugeridos para ti")
+
+Módulo gestionado bajo una estrategia Frontend-First (Next.js). El cliente almacena el histórico de búsquedas y visitas del usuario mediante Cookies/LocalStorage, y reutiliza los endpoints de filtrado del backend inyectando estas preferencias para poblar de forma dinámica y eficiente la sección de sugerencias del catálogo.
 
 ---
 
 ## 2. Reglas de Negocio y Restricciones
 
-### 2.1 Gestión de Roles y Acceso
+### 2.1 Gestión de Alojamientos y Anuncios Comerciales
 
-| Rol | Permisos |
-|-----|----------|
-| **Invitado** (no registrado) | Lectura de anuncios, filtros básicos, visualización de mapa |
-| **Usuario Registrado** | Todo lo anterior + publicar anuncios (en estado PENDIENTE), valorar, mensajear, crear/unirse a hogares |
-| **Administrador** | Todo lo anterior + aprobar/rechazar anuncios, moderar valoraciones y comentarios |
+| Regla | Detalle |
+|---|---|
+| **Mínimo de imágenes** | Un anuncio comercial (`AccommodationListing`) no puede pasar a estado de visibilidad activa (`AVAILABLE` y moderación `APPROVED`) si la propiedad física (`Accommodation`) asociada tiene menos de 2 imágenes registradas en Cloudinary. Validación en `AccommodationListingService` y a nivel de base de datos. |
+| **Ciclo de vida del anuncio** | Moderación y Estado: `PENDING` (por defecto, en revisión pero visible en catálogo) → `APPROVED` (validado por admin). Estados de finalización o sanción: `UNAVAILABLE` (alquilado/reservado) · `BANNED` (bloqueado por infracciones). El DTO debe exponer este estado para que el frontend (Next.js) renderice un aviso de "Anuncio en revisión". |
+| **Almacenamiento de imágenes** | Asociadas al alojamiento físico (`Accommodation`). Las imágenes se suben a Cloudinary. El backend persiste únicamente las URLs absolutas públicas de las imágenes físicas. Nunca se almacenan binarios en el servidor Spring Boot. |
+| **Moderación manual** | Un Administrador puede eliminar cualquier alojamiento físico o anuncio comercial, comentario o valoración. Solo un Administrador puede aprobar solicitudes de publicación en estado `PENDING` o banearlas pasándolas a `BANNED`. |
+| **Auto-moderación preventiva** | Si un anuncio comercial (`AccommodationListing`) acumula más de **5 denuncias únicas** en estado `PENDING` (en tabla `ACCOMMODATION_REPORT`), el sistema cambia automáticamente su estado a `PENDING` (o `BANNED` preventivo), y genera una alerta prioritaria en la bandeja del Administrador. Acción atómica y gestionada por `AccommodationReportService`. |
+| **Denuncias de anuncios** | Cualquier usuario (registrado o anónimo) puede enviar una denuncia contra un anuncio comercial vía `POST /api/v1/listings/{id}/reports`. Los motivos posibles son: `SPAM`, `SCAM`, `INAPPROPRIATE`, `MISLEADING`. El estado de la denuncia sigue el ciclo: `PENDING → REVIEWED → DISMISSED`. |
+| **Listado dinámico y catálogo** | Unificación en `getListingsCatalog(owner, status, page, size)` con los estados (`PENDING`, `APPROVED`, `UNAVAILABLE`, `BANNED`) para evitar duplicidad de consultas JPA y optimizar filtrados. |
+| **Listado dinámico y catálogo** | Unificación en `getAccommodationsCatalog(owner, visibility, page, size)` con estados `AVAILABLE` (activos), `DELETED` (borrado lógico) y `ALL` (todo el histórico) para evitar duplicidad de consultas JPA y optimizar filtrados. |
 
-### 2.2 Ciclo de Vida de un Anuncio de Alojamiento
+### 2.2 Motor de Gastos Compartidos
 
-```
-[Usuario envía solicitud] → PENDIENTE → [Admin revisa] → ACTIVO | RECHAZADO
-                                                                      ↓
-                                                                 FINALIZADO
-```
+| Regla | Detalle |
+|---|---|
+| **Pagador único** | Cada gasto tiene exactamente un usuario pagador (`payer_id`). |
+| **Afectados y prorrateo** | El conjunto de usuarios afectados puede ser un subconjunto del hogar. La distribución es equitativa por defecto; se admite porcentaje personalizado siempre que la suma sea 100 %. |
+| **Algoritmo de simplificación** | El grafo de tránsito de deudas se calcula en memoria (on-the-fly o caché temporal). **Nunca modifica, reescribe ni fusiona registros de `EXPENSE` en base de datos.** |
+| **Eliminación de miembros** | El administrador del Hogar solo puede eliminar a un miembro si su balance neto es cero (sin deudas pendientes). |
+| **Porcentajes** | Los porcentajes de los afectados deben sumar exactamente el 100 %. Validación en `ExpenseService` antes de persistir. |
 
-- Un anuncio no puede pasar a estado `ACTIVO` si tiene menos de **2 imágenes** asociadas en `ACCOMMODATION_IMAGE`.
-- Las imágenes se almacenan en un proveedor cloud (S3 / GCS / Cloudinary); la base de datos persiste únicamente las **URLs absolutas públicas**.
+### 2.3 Trazabilidad e Inmutabilidad de Auditoría
 
-### 2.3 Motor de Gastos Compartidos
+| Regla | Detalle |
+|---|---|
+| **Append-Only** | La tabla `AUDIT_SNAPSHOT_LOG` es de solo escritura. Ningún `UPDATE` ni `DELETE` sobre ella puede prosperar. Bloqueado mediante trigger de PostgreSQL + interceptores `@PreUpdate` / `@PreRemove` en Spring Data JPA. |
+| **Timestamp de servidor** | La marca de tiempo de cada snapshot es inyectada por el servidor en el momento de la escritura. El cliente nunca puede manipularla. |
+| **Snapshot Before / After** | Cualquier operación de creación, modificación o eliminación sobre `EXPENSE` o `TASK` genera un registro con el estado previo y posterior en formato JSONB. |
+| **Control de concurrencia optimista** | Las entidades `HOGAR`, `EXPENSE` y `TASK` llevan campo `version (INT)` gestionado por `@Version` de JPA. En conflicto, la segunda transacción lanza `OptimisticLockingFailureException` y se rechaza. |
 
-- Cada gasto define un **pagador único** y un conjunto de **usuarios afectados**.
-- La división por defecto es equitativa. Se permite configurar porcentajes personalizados; la suma de todos los porcentajes debe ser exactamente **100%**.
-- El algoritmo de simplificación de deudas opera **exclusivamente en memoria / como vista proyectada**. Nunca modifica, reescribe ni fusiona registros de gastos en la base de datos.
-- **Regla de tránsito:** Si A debe 10 € a B y B debe 10 € a C → el sistema proyecta que A debe 10 € directamente a C.
-- Un miembro con **deudas pendientes** no puede ser eliminado del hogar.
+### 2.4 Seguridad y Control de Acceso
 
-### 2.4 Inmutabilidad del Subsistema de Auditoría
-
-- La tabla `AUDIT_SNAPSHOT_LOG` es **Append-Only**. Ninguna operación `UPDATE` o `DELETE` está permitida sobre sus registros.
-- La inmutabilidad se refuerza a **dos niveles**:
-  - Interceptores JPA (`@PreUpdate`, `@PreRemove`) en Spring Boot que lanzan excepción crítica.
-  - Trigger a nivel de base de datos PostgreSQL como segunda barrera.
-- Cada registro de auditoría captura el estado `snapshot_before` y `snapshot_after` en formato **JSONB**.
-- El `server_timestamp` se obtiene exclusivamente del reloj del servidor, nunca del cliente.
-
-### 2.5 Control de Concurrencia Optimista
-
-- Las entidades `HOGAR`, `EXPENSE` y `TASK` implementan un campo `version (INT)` gestionado por la anotación `@Version` de JPA.
-- En caso de conflicto concurrente, Spring lanza `OptimisticLockingFailureException`. El cliente secundario debe sincronizar el estado real antes de reintentar.
-
-### 2.6 Seguridad Multi-Tenant en el Servidor MCP
-
-- El servidor MCP no tiene acceso directo a la base de datos.
-- El token JWT del usuario se propaga desde el frontend → servidor MCP → API Spring Boot sin modificaciones (**JWT Passthrough**).
-- El backend valida en cada llamada que el usuario autenticado pertenece al `hogar_id` solicitado. En caso contrario, retorna `403 Forbidden`.
+| Regla | Detalle |
+|---|---|
+| **Autenticación** | JWT firmado (HS256 o RS256). Expiración configurable. Renovación mediante refresh token. |
+| **Cifrado de contraseñas** | BCrypt con factor de coste ≥ 12. |
+| **Multi-tenant estricto** | Antes de devolver datos de un `hogar_id`, el backend verifica que el JWT del solicitante pertenezca a ese hogar. Respuesta `403 Forbidden` en caso contrario. |
+| **MCP Passthrough Auth** | El Servidor MCP no genera ni almacena tokens. Propaga el JWT del usuario sin modificaciones en la cabecera `Authorization: Bearer <JWT>` de cada llamada al backend. |
+| **Baneos temporales** | Los campos `bannedUntil (LocalDateTime)` y `banReason (String)` en la entidad `User` permiten penalizaciones con expiración automática. El método `isBanned()` calcula dinámicamente el estado comparando `bannedUntil` con `LocalDateTime.now()` en el servidor, sin persistir flags booleanos. El `JwtAuthenticationFilter` invoca `isBanned()` en cada petición tras validar el JWT: si el usuario está baneado, la petición se rechaza con `403 Forbidden` incluyendo la fecha de expiración, anulando operativamente cualquier JWT activo emitido antes del baneo sin necesidad de invalidar tokens en base de datos. |
 
 ---
 
 ## 3. Arquitectura y Stack Tecnológico
 
-### 3.1 Diagrama de Tres Capas
+### 3.1 Diagrama de las Tres Capas
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                  CAPA DE PRESENTACIÓN                       │
-│                 Next.js 15 + TypeScript                     │
-│                                                             │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
-│  │  Páginas SSR │  │ Componentes  │  │  Interfaz Chat   │  │
-│  │  (App Router)│  │    React     │  │  (LLM / MCP)     │  │
-│  └──────────────┘  └──────────────┘  └──────────────────┘  │
-│           │                                    │            │
-│    HTTP REST (JWT)                   JSON-RPC + JWT         │
-└───────────┼────────────────────────────────────┼────────────┘
-            │                                    │
-            ▼                                    ▼
-┌───────────────────────┐         ┌──────────────────────────┐
-│   CAPA DE NEGOCIO     │         │   CAPA IA / MCP          │
-│  Java Spring Boot 3.x │◄────────│  Node.js + TypeScript    │
-│                       │  HTTP   │                          │
-│  • Spring Security    │  REST   │  • Model Context Protocol│
-│  • Spring Data JPA    │  + JWT  │  • JSON-RPC sobre SSE    │
-│  • BCrypt + JWT       │         │  • JWT Passthrough Auth  │
-│  • Lógica de negocio  │         │  • Tools: auditar,       │
-│  • Auditoría AOP      │         │    analizar, buscar      │
-└───────────┬───────────┘         └──────────────────────────┘
-            │
-            ▼
-┌───────────────────────┐
-│   CAPA DE DATOS       │
-│   PostgreSQL 16       │
-│                       │
-│  • Índices B-Tree     │
-│  • Tipos JSONB        │
-│  • Triggers DDL       │
-│  • Constraint checks  │
-└───────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                  CAPA 1: PRESENTACIÓN (Frontend)                 │
+│                                                                  │
+│   Next.js 15 · React · TypeScript                                │
+│   - SSR / SSG para optimización de carga                         │
+│   - Mapa interactivo (Leaflet / Mapbox)                          │
+│   - Interfaz de chat → LLM (via API)                             │
+│   - Gestión de estado: Zustand / React Query                     │
+│                                                                  │
+│   Comunica EXCLUSIVAMENTE vía HTTP REST con el Backend           │
+└────────────────────────┬─────────────────────────────────────────┘
+                         │  HTTP REST (JSON)
+                         │  Authorization: Bearer <JWT>
+┌────────────────────────▼─────────────────────────────────────────┐
+│               CAPA 2: NEGOCIO Y PERSISTENCIA (Backend)           │
+│                                                                  │
+│   Java 21 · Spring Boot 3.x · Spring Security · Spring Data JPA  │
+│   - Arquitectura limpia: Controller → Service → Repository       │
+│   - Dominio de Alojamientos separado en Estructura (Accommodation)│
+│     y Publicación Comercial (AccommodationListing) (SOLID)       │
+│   - Lógica de negocio, validaciones, control de acceso           │
+│   - Algoritmo de simplificación de deudas (en memoria)           │
+│   - Generación de snapshots de auditoría (Append-Only)           │
+│   - Integración con proveedor de almacenamiento cloud            │
+│                                                                  │
+│   Persistencia: PostgreSQL 15+ via Hibernate / Spring Data JPA   │
+└──────────┬─────────────────────────────────┬─────────────────────┘
+           │  JDBC / JPA                      │  HTTP REST + JWT
+           │                                  │
+┌──────────▼──────────┐            ┌──────────▼─────────────────────┐
+│   PostgreSQL 15+    │            │  CAPA 3: EXTENSIÓN IA (MCP)    │
+│   - UUID PKs        │            │                                 │
+│   - JSONB para      │            │  Node.js · TypeScript           │
+│     snapshots       │            │  - Implementa Model Context     │
+│   - Triggers de     │            │    Protocol (JSON-RPC / SSE)    │
+│     inmutabilidad   │            │  - NO accede a BD directamente  │
+│   - Índices B-Tree  │            │  - Propaga JWT del usuario      │
+│     geoespaciales   │            │  - Expone Tools al LLM          │
+└─────────────────────┘            └─────────────────────────────────┘
 ```
 
-### 3.2 Stack Tecnológico
+### 3.2 Stack Tecnológico Detallado
 
-| Capa | Tecnología | Versión |
-|------|------------|---------|
-| Frontend | Next.js (App Router) | 15.x |
-| Frontend | React + TypeScript | 18.x / 5.x |
-| Frontend | Mapas interactivos | Leaflet.js / Mapbox GL |
-| Backend | Java | 21 (LTS) |
-| Backend | Spring Boot | 3.x |
-| Backend | Spring Security + JWT | 6.x |
-| Backend | Spring Data JPA + Hibernate | 6.x |
-| Base de Datos | PostgreSQL | 16 |
-| Servidor MCP | Node.js + TypeScript | 20 LTS |
-| Almacenamiento Objetos | Cloudinary / S3 / GCS | — |
-| Contenedores | Docker + Docker Compose | — |
-| Build Backend | Maven o Gradle | — |
-| Build Frontend | pnpm / npm | — |
+| Capa | Tecnología | Versión | Rol |
+|---|---|---|---|
+| **Frontend** | Next.js | 15.x | Framework React con SSR/SSG |
+| **Frontend** | TypeScript | 5.x | Tipado estático |
+| **Frontend** | Tailwind CSS | 3.x | Estilos utilitarios |
+| **Frontend** | React Query | 5.x | Caché y sincronización de server state |
+| **Frontend** | Zustand | 4.x | Estado global del cliente |
+| **Frontend** | Leaflet / react-leaflet | Latest | Mapas interactivos |
+| **Backend** | Java | 21 (LTS) | Lenguaje principal del backend |
+| **Backend** | Spring Boot | 3.x | Framework principal |
+| **Backend** | Spring Security | 6.x | Autenticación JWT y control de acceso |
+| **Backend** | Spring Data JPA | 3.x | Abstracción de persistencia |
+| **Backend** | Hibernate | 6.x | ORM (implementación JPA) |
+| **Backend** | Lombok | Latest | Reducción de boilerplate |
+| **Backend** | MapStruct | Latest | Mapeo DTO ↔ Entity |
+| **Base de Datos** | PostgreSQL | 15+ | Motor relacional principal |
+| **Base de Datos** | Flyway | Latest | Migraciones de esquema versionadas |
+| **Servidor MCP** | Node.js | 20 LTS | Runtime del servidor MCP |
+| **Servidor MCP** | TypeScript | 5.x | Tipado estático |
+| **Servidor MCP** | MCP SDK | Latest | SDK oficial del protocolo MCP |
+| **Cloud Storage** | AWS S3 / Cloudinary | — | Almacenamiento de imágenes |
+| **Testing** | JUnit 5 + Mockito | Latest | Tests unitarios backend |
+| **Testing** | Testcontainers | Latest | Tests de integración con PostgreSQL real |
+| **Contenedores** | Docker + Compose | Latest | Entorno de desarrollo y despliegue |
 
 ---
 
 ## 4. Modelo de Datos
 
-### 4.1 Esquema Relacional Completo
+### 4.1 Diagrama Entidad-Relación
+
+```
+┌──────────────────────────────┐
+│            USER              │
+├──────────────────────────────┤
+│ PK id             UUID       │◄──────────────────────────────────┐
+│    nickname       VARCHAR    │                                   │
+│    email          VARCHAR    │                                   │
+│    password_hash  TEXT       │                                   │
+│    first_name     VARCHAR    │                                   │
+│    last_name_1    VARCHAR    │                                   │
+│    last_name_2    VARCHAR    │                                   │
+│    phone          VARCHAR    │                                   │
+│    profile_pic_url TEXT      │                                   │
+│    role           ENUM       │  (ADMIN, USER)                    │
+│    created_at     TIMESTAMP  │                                   │
+│    bannedUntil    TIMESTAMP  │  ← NULL = sin baneo activo        │
+│    banReason      TEXT NULL  │  ← motivo de la sanción           │
+└──────────────────────────────┘                                   │
+         │                                                         │
+         │ 1:N  (un usuario es propietario de alojamientos)        │
+         ▼                                                         │
+┌──────────────────────────────┐                                   │
+│        ACCOMMODATION         │  ← Propiedad Física               │
+├──────────────────────────────┤                                   │
+│ PK id             UUID       │                                   │
+│ FK owner_id       UUID ──────┼───────────────────────────────────┤
+│    address        VARCHAR    │                                   │
+│    city           VARCHAR    │                                   │
+│    province       VARCHAR    │                                   │
+│    country        VARCHAR    │                                   │
+│    total_rooms    INT        │                                   │
+│    free_rooms     INT        │                                   │
+│    bathrooms      INT        │                                   │
+│    square_meters  NUMERIC    │                                   │
+│    latitude       NUMERIC    │                                   │
+│    longitude      NUMERIC    │                                   │
+│    amenities      VARCHAR[]  │  (Set<AmenityType> estructural)   │
+│    created_at     TIMESTAMP  │                                   │
+└─────────┬──────────────┬─────┘                                   │
+          │              │ 1:N  (propiedad → varios anuncios)      │
+          │              ▼                                         │
+          │        ┌──────────────────────────────────────┐        │
+          │        │         ACCOMMODATION_LISTING        │        │
+          │        ├──────────────────────────────────────┤        │
+          │        │ PK id                UUID            │        │
+          │        │ FK accommodation_id  UUID ───────────┘        │
+          │        │ FK host_id           UUID ────────────────────┤
+          │        │    title             VARCHAR         │        │
+          │        │    description       TEXT            │        │
+          │        │    price_per_month   NUMERIC         │        │
+          │        │    status            ENUM            │        │
+          │        │    version           INT             │        │
+          │        │    created_at        TIMESTAMP       │        │
+          │        └──────────────────────┬───────────────┘        │
+          │                               │                        │
+          │ 1:N                           │ 1:N                    │
+          ▼                               ▼                        │
+┌──────────────────────────┐    ┌─────────────────────────────┐    │
+│  ACCOMMODATION_IMAGE     │    │    ACCOMMODATION_REVIEW     │    │
+├──────────────────────────┤    ├─────────────────────────────┤    │
+│ PK id    UUID            │    │ PK id          UUID          │    │
+│ FK accommodation_id UUID │    │ FK author_id ───────────────┼────┤
+│ image_url TEXT           │    │ FK listing_id  UUID          │    │
+│ display_order INT        │    │ rating         INT (1-5)     │    │
+└──────────────────────────┘    │ comment        TEXT NULL     │    │
+                                │ created_at     TIMESTAMP     │    │
+                                └─────────────────────────────┘    │
+                                                                   │
+┌──────────────────────────────┐                                   │
+│        BOOKING_REQUEST       │                                   │
+├──────────────────────────────┤                                   │
+│ PK id              UUID      │                                   │
+│ FK listing_id      UUID      │                                   │
+│ FK tenant_id       UUID ─────┼───────────────────────────────────┘
+│    status          ENUM      │  (PENDING, ACCEPTED, CONFIRMED...)│
+│    created_at      TIMESTAMP │                                   │
+└──────────────────────────────┘                                   │
+                                                                   │
+┌──────────────────────────────┐                                   │
+│          HOGAR               │                                   │
+├──────────────────────────────┤                                   │
+│ PK id         UUID           │◄──────────────┐                   │
+│    name       VARCHAR        │               │                   │
+│    version    INT            │               │                   │
+│    created_at TIMESTAMP      │               │                   │
+└──────────────────────────────┘               │                   │
+         │              │                      │                   │
+         │ 1:N          │ 1:N                  │                   │
+         ▼              ▼                  ┌───┴──────────────────┐│
+┌──────────────┐  ┌───────────────┐        │    HOGAR_MEMBER      ││
+│   EXPENSE    │  │     TASK      │        ├──────────────────────┤│
+├──────────────┤  ├───────────────┤        │ FK hogar_id          ││
+│ PK id  UUID  │  │ PK id  UUID   │        │ FK user_id ──────────┼┘
+│ FK hogar_id  │  │ FK hogar_id   │        │    is_admin BOOLEAN  │
+│ FK payer_id  │  │ FK assigned_to│        │    joined_at TIMESTAMP│
+│ amount NUMERIC│ │ title VARCHAR │        └──────────────────────┘
+│ description  │  │ description   │
+│ version INT  │  │ is_completed  │
+│ created_at   │  │ version INT   │
+└──────┬───────┘  │ created_at    │
+       │          └───────────────┘
+       │ 1:N
+       ▼
+┌─────────────────────┐
+│  EXPENSE_AFFECTED   │
+├─────────────────────┤
+│ FK expense_id       │
+│ FK user_id          │
+│    percentage NUMERIC│  (suma = 100 por expense_id)
+└─────────────────────┘
+
+┌───────────────────────────────────────────────────────────┐
+│                   AUDIT_SNAPSHOT_LOG                      │
+│                   (APPEND-ONLY — sin UPDATE ni DELETE)    │
+├───────────────────────────────────────────────────────────┤
+│ PK id               UUID                                  │
+│ FK user_id          UUID  (autor del cambio)              │
+│    entity_type      VARCHAR  (EXPENSE | TASK)             │
+│    entity_id        UUID                                  │
+│    action_type      ENUM  (CREATE | UPDATE | DELETE)      │
+│    snapshot_before  JSONB NULL                            │
+│    snapshot_after   JSONB NULL                            │
+│    server_timestamp TIMESTAMP (inyectado por servidor)    │
+└───────────────────────────────────────────────────────────┘
+
+┌───────────────────────────────────────────────────────────┐
+│                   ACCOMMODATION_REPORT                    │
+├───────────────────────────────────────────────────────────┤
+│ PK id               UUID                                  │
+│ FK listing_id       UUID                                  │
+│ FK reporter_id      UUID NULL                             │
+│    reason           ENUM      (SPAM, SCAM, etc.)          │
+│    description      TEXT                                  │
+│    status           ENUM      (PENDING, REVIEWED, etc.)   │
+│    created_at       TIMESTAMP                             │
+└───────────────────────────────────────────────────────────┘
+
+┌───────────────────────────────────────────────────────────┐
+│                      MESSAGE                              │
+├───────────────────────────────────────────────────────────┤
+│ PK id               UUID                                  │
+│ FK sender_id        UUID                                  │
+│ FK receiver_id      UUID                                  │
+│ FK listing_id       UUID NULL                             │
+│    content          TEXT                                  │
+│    offer_amount     NUMERIC NULL  (si es oferta formal)   │
+│    is_offer         BOOLEAN                               │
+│    created_at       TIMESTAMP                             │
+└───────────────────────────────────────────────────────────┘
+```
+
+### 4.2 Índices Críticos
 
 ```sql
--- ============================================================
--- USUARIOS Y AUTENTICACIÓN
--- ============================================================
-CREATE TABLE "user" (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    nickname        VARCHAR(50)  NOT NULL UNIQUE,
-    email           VARCHAR(255) NOT NULL UNIQUE,
-    password_hash   TEXT         NOT NULL,
-    first_name      VARCHAR(100) NOT NULL,
-    last_name_1     VARCHAR(100) NOT NULL,
-    last_name_2     VARCHAR(100),
-    phone           VARCHAR(20),
-    profile_pic_url TEXT,
-    role            VARCHAR(20)  NOT NULL DEFAULT 'USER'  -- 'USER' | 'ADMIN'
-);
+-- Búsqueda de anuncios comerciales activos por ciudad y precio (en catálogo)
+-- Nota: La ciudad se obtiene de la relación con la propiedad física (Accommodation)
+CREATE INDEX idx_listing_status_price
+    ON accommodation_listing(price_per_month)
+    WHERE status IN ('PENDING', 'APPROVED');
 
--- ============================================================
--- MÓDULO DE ALOJAMIENTO
--- ============================================================
-CREATE TABLE accommodation (
-    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    owner_id         UUID        NOT NULL REFERENCES "user"(id),
-    title            VARCHAR(255) NOT NULL,
-    description      TEXT,
-    price_per_month  NUMERIC(10,2) NOT NULL,
-    address          VARCHAR(255) NOT NULL,
-    locality         VARCHAR(100) NOT NULL,
-    city             VARCHAR(100) NOT NULL,
-    country          VARCHAR(100) NOT NULL,
-    latitude         NUMERIC(9,6) NOT NULL,
-    longitude        NUMERIC(9,6) NOT NULL,
-    status           VARCHAR(20)  NOT NULL DEFAULT 'PENDIENTE'
-                         -- 'PENDIENTE' | 'ACTIVO' | 'RECHAZADO' | 'FINALIZADO'
-);
+-- Geolocalización (consultas de radio por mapa, sobre la propiedad física)
+CREATE INDEX idx_accommodation_lat  ON accommodation(latitude);
+CREATE INDEX idx_accommodation_lng  ON accommodation(longitude);
+CREATE INDEX idx_accommodation_city ON accommodation(city);
 
-CREATE TABLE accommodation_image (
-    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    accommodation_id UUID NOT NULL REFERENCES accommodation(id) ON DELETE CASCADE,
-    image_url        TEXT NOT NULL
-);
+-- Búsqueda de todos los anuncios de una propiedad física
+CREATE INDEX idx_listing_accommodation_id
+    ON accommodation_listing(accommodation_id);
 
--- Restricción: mínimo 2 imágenes para activar anuncio (validada en servicio)
--- Índices de búsqueda optimizada
-CREATE INDEX idx_accommodation_city_price
-    ON accommodation(city, price_per_month);
-CREATE INDEX idx_accommodation_lat
-    ON accommodation(latitude);
-CREATE INDEX idx_accommodation_lon
-    ON accommodation(longitude);
+-- Todos los anuncios publicados por un host
+CREATE INDEX idx_listing_host_id
+    ON accommodation_listing(host_id, created_at DESC);
 
-CREATE TABLE accommodation_review (
-    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    author_id        UUID NOT NULL REFERENCES "user"(id),
-    accommodation_id UUID NOT NULL REFERENCES accommodation(id) ON DELETE CASCADE,
-    rating           SMALLINT NOT NULL CHECK (rating BETWEEN 1 AND 5),
-    comment          TEXT,
-    created_at       TIMESTAMP NOT NULL DEFAULT now(),
-    UNIQUE (author_id, accommodation_id)  -- Un usuario, una review por alojamiento
-);
+-- Auditoría: consultas por hogar (a través de entity_id)
+CREATE INDEX idx_audit_entity       ON audit_snapshot_log(entity_id, server_timestamp DESC);
 
-CREATE TABLE user_review (
-    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    author_id     UUID NOT NULL REFERENCES "user"(id),
-    reviewed_id   UUID NOT NULL REFERENCES "user"(id),
-    rating        SMALLINT NOT NULL CHECK (rating BETWEEN 1 AND 5),
-    comment       TEXT,
-    created_at    TIMESTAMP NOT NULL DEFAULT now(),
-    UNIQUE (author_id, reviewed_id)
-);
+-- Mensajería privada vinculada a anuncios comerciales
+CREATE INDEX idx_message_receiver   ON message(receiver_id, created_at DESC);
+CREATE INDEX idx_message_sender     ON message(sender_id, created_at DESC);
 
-CREATE TABLE private_message (
-    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    sender_id        UUID NOT NULL REFERENCES "user"(id),
-    receiver_id      UUID NOT NULL REFERENCES "user"(id),
-    accommodation_id UUID REFERENCES accommodation(id),
-    content          TEXT NOT NULL,
-    offer_amount     NUMERIC(10,2),          -- NULL si es mensaje de texto plano
-    sent_at          TIMESTAMP NOT NULL DEFAULT now()
-);
+-- Denuncias: contar denuncias pendientes por anuncio comercial (clave para la regla de auto-moderación)
+CREATE INDEX idx_report_listing_status
+    ON accommodation_report(listing_id, status)
+    WHERE status = 'PENDING';
+```
 
--- ============================================================
--- MÓDULO DE HOGAR
--- ============================================================
-CREATE TABLE hogar (
-    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name        VARCHAR(100) NOT NULL,
-    admin_id    UUID NOT NULL REFERENCES "user"(id),
-    version     INT NOT NULL DEFAULT 0,       -- Bloqueo optimista JPA @Version
-    created_at  TIMESTAMP NOT NULL DEFAULT now()
-);
+### 4.3 Trigger de Inmutabilidad (PostgreSQL)
 
-CREATE TABLE hogar_member (
-    hogar_id UUID NOT NULL REFERENCES hogar(id) ON DELETE CASCADE,
-    user_id  UUID NOT NULL REFERENCES "user"(id),
-    joined_at TIMESTAMP NOT NULL DEFAULT now(),
-    PRIMARY KEY (hogar_id, user_id)
-);
-
-CREATE TABLE expense (
-    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    hogar_id    UUID NOT NULL REFERENCES hogar(id) ON DELETE CASCADE,
-    payer_id    UUID NOT NULL REFERENCES "user"(id),
-    amount      NUMERIC(10,2) NOT NULL CHECK (amount > 0),
-    description VARCHAR(255) NOT NULL,
-    version     INT NOT NULL DEFAULT 0,       -- Bloqueo optimista JPA @Version
-    created_at  TIMESTAMP NOT NULL DEFAULT now()
-);
-
-CREATE TABLE expense_affected (
-    expense_id  UUID NOT NULL REFERENCES expense(id) ON DELETE CASCADE,
-    user_id     UUID NOT NULL REFERENCES "user"(id),
-    percentage  NUMERIC(5,2) NOT NULL CHECK (percentage > 0 AND percentage <= 100),
-    PRIMARY KEY (expense_id, user_id)
-    -- Restricción de negocio: suma de porcentajes = 100 (validada en servicio)
-);
-
-CREATE TABLE task (
-    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    hogar_id     UUID NOT NULL REFERENCES hogar(id) ON DELETE CASCADE,
-    title        VARCHAR(255) NOT NULL,
-    description  TEXT,
-    assigned_to  UUID REFERENCES "user"(id),
-    is_completed BOOLEAN NOT NULL DEFAULT false,
-    version      INT NOT NULL DEFAULT 0,      -- Bloqueo optimista JPA @Version
-    created_at   TIMESTAMP NOT NULL DEFAULT now()
-);
-
--- ============================================================
--- SUBSISTEMA DE AUDITORÍA (APPEND-ONLY)
--- ============================================================
-CREATE TABLE audit_snapshot_log (
-    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id          UUID NOT NULL REFERENCES "user"(id),
-    entity_type      VARCHAR(50) NOT NULL,  -- 'EXPENSE' | 'TASK' | 'HOGAR'
-    entity_id        UUID NOT NULL,
-    action_type      VARCHAR(20) NOT NULL,  -- 'CREATE' | 'UPDATE' | 'DELETE'
-    snapshot_before  JSONB,
-    snapshot_after   JSONB,
-    server_timestamp TIMESTAMP NOT NULL DEFAULT now()
-);
-
-CREATE INDEX idx_audit_hogar_entity
-    ON audit_snapshot_log(entity_id, entity_type, server_timestamp DESC);
-
--- Trigger de inmutabilidad (doble barrera junto al interceptor Spring)
-CREATE OR REPLACE FUNCTION prevent_audit_modification()
-RETURNS trigger AS $$
+```sql
+CREATE OR REPLACE FUNCTION fn_block_audit_mutation()
+RETURNS TRIGGER AS $$
 BEGIN
-    RAISE EXCEPTION 'audit_snapshot_log es inmutable: no se permiten UPDATE ni DELETE';
+    RAISE EXCEPTION
+        'VIOLACIÓN DE INTEGRIDAD: La tabla audit_snapshot_log es append-only. '
+        'Operación % sobre el registro % está prohibida.',
+        TG_OP, OLD.id;
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trg_audit_immutable
     BEFORE UPDATE OR DELETE ON audit_snapshot_log
-    FOR EACH ROW EXECUTE FUNCTION prevent_audit_modification();
+    FOR EACH ROW EXECUTE FUNCTION fn_block_audit_mutation();
 ```
 
-### 4.2 Entidades JPA Clave (Resumen)
+### 4.4 Enumerados de Base de Datos
 
-| Entidad JPA | Tabla | Notas |
-|-------------|-------|-------|
-| `UserEntity` | `user` | Enum `Role { USER, ADMIN }` |
-| `AccommodationEntity` | `accommodation` | Enum `AccommodationStatus` |
-| `AccommodationImageEntity` | `accommodation_image` | Colección en `AccommodationEntity` |
-| `AccommodationReviewEntity` | `accommodation_review` | |
-| `UserReviewEntity` | `user_review` | |
-| `PrivateMessageEntity` | `private_message` | `offerAmount` nullable |
-| `HogarEntity` | `hogar` | `@Version` en `version` |
-| `ExpenseEntity` | `expense` | `@Version` en `version` |
-| `ExpenseAffectedEntity` | `expense_affected` | Clave compuesta `@EmbeddedId` |
-| `TaskEntity` | `task` | `@Version` en `version` |
-| `AuditSnapshotLogEntity` | `audit_snapshot_log` | Solo `save()` permitido |
+```sql
+CREATE TYPE user_role           AS ENUM ('ADMIN', 'USER');
+CREATE TYPE listing_status      AS ENUM ('PENDING', 'APPROVED', 'BANNED', 'UNAVAILABLE');
+CREATE TYPE booking_status      AS ENUM ('PENDING', 'ACCEPTED', 'CONFIRMED', 'REJECTED', 'CANCELLED');
+CREATE TYPE audit_action        AS ENUM ('CREATE', 'UPDATE', 'DELETE');
+CREATE TYPE report_reason       AS ENUM ('SPAM', 'SCAM', 'INAPPROPRIATE', 'MISLEADING');
+CREATE TYPE report_status       AS ENUM ('PENDING', 'REVIEWED', 'DISMISSED');
+```
 
 ---
 
 ## 5. Endpoints de la REST API
 
-> **Base URL:** `/api/v1`
-> **Autenticación:** `Authorization: Bearer <JWT>` en todos los endpoints protegidos.
-> **Roles:** `[PUBLIC]` = sin autenticación · `[USER]` = token válido · `[ADMIN]` = rol administrador
+> **Base URL:** `http://localhost:8080/api/v1`
+> **Autenticación:** `Authorization: Bearer <JWT>` en todos los endpoints marcados con 🔒
 
-### 5.1 Autenticación y Usuarios
+### 5.1 Autenticación (`/auth`)
 
-| Método | Endpoint | Rol | Descripción |
-|--------|----------|-----|-------------|
-| `POST` | `/auth/register` | PUBLIC | Registro de nuevo usuario |
-| `POST` | `/auth/login` | PUBLIC | Login → retorna JWT |
-| `GET` | `/users/{id}` | USER | Perfil público de un usuario |
-| `PUT` | `/users/{id}` | USER | Actualizar perfil propio |
-| `GET` | `/users/{id}/reviews` | PUBLIC | Valoraciones recibidas por un usuario |
+| Método | Endpoint | Auth | Descripción |
+|---|---|---|---|
+| `POST` | `/auth/register` | ❌ | Registro de nuevo usuario. Body: `{nickname, email, password, firstName, ...}` |
+| `POST` | `/auth/login` | ❌ | Login. Devuelve `{accessToken, refreshToken, expiresIn}` |
+| `POST` | `/auth/refresh` | ❌ | Renueva el access token con el refresh token |
+| `POST` | `/auth/logout` | 🔒 | Invalida el refresh token del usuario |
 
-### 5.2 Alojamientos
+### 5.2 Usuarios (`/users`)
 
-| Método | Endpoint | Rol | Descripción |
-|--------|----------|-----|-------------|
-| `GET` | `/accommodations` | PUBLIC | Listar anuncios `ACTIVOS` con filtros (`city`, `minPrice`, `maxPrice`, `page`, `size`) |
-| `GET` | `/accommodations/{id}` | PUBLIC | Detalle de un anuncio |
-| `POST` | `/accommodations` | USER | Crear anuncio (estado inicial `PENDIENTE`) |
-| `PUT` | `/accommodations/{id}` | USER | Editar anuncio propio (solo si no está `ACTIVO`) |
-| `DELETE` | `/accommodations/{id}` | ADMIN | Eliminar cualquier anuncio |
-| `POST` | `/accommodations/{id}/images` | USER | Subir URL de imagen al anuncio |
-| `DELETE` | `/accommodations/{id}/images/{imgId}` | USER | Eliminar imagen del anuncio propio |
-| `PATCH` | `/accommodations/{id}/status` | ADMIN | Cambiar estado (`ACEPTAR` / `RECHAZAR`) |
-| `GET` | `/accommodations/pending` | ADMIN | Listar anuncios pendientes de revisión |
-| `GET` | `/accommodations/reviews` | PUBLIC | Valoraciones de alojamientos (con `?city=`) |
+| Método | Endpoint | Auth | Descripción |
+|---|---|---|---|
+| `GET` | `/users/me` | 🔒 | Perfil del usuario autenticado |
+| `PUT` | `/users/me` | 🔒 | Actualizar datos propios (nombre, teléfono, avatar) |
+| `GET` | `/users/{userId}` | 🔒 | Perfil público de un usuario |
+| `GET` | `/users/{userId}/reviews` | 🔒 | Valoraciones recibidas por un usuario |
+| `POST` | `/users/{userId}/reviews` | 🔒 | Emitir valoración sobre un usuario |
 
-### 5.3 Valoraciones
+### 5.3 Alojamientos Físicos (`/accommodations`)
 
-| Método | Endpoint | Rol | Descripción |
-|--------|----------|-----|-------------|
-| `POST` | `/accommodations/{id}/reviews` | USER | Crear valoración de alojamiento |
-| `DELETE` | `/accommodations/{accommodationId}/reviews/{reviewId}` | ADMIN | Eliminar valoración |
-| `POST` | `/users/{id}/reviews` | USER | Crear valoración de usuario |
-| `DELETE` | `/users/{userId}/reviews/{reviewId}` | ADMIN | Eliminar valoración de usuario |
+| Método | Endpoint | Auth | Descripción |
+|---|---|---|---|
+| `POST` | `/accommodations` | 🔒 | Registrar una propiedad física. Body: `{address, city, province, country, totalRooms, freeRooms, bathrooms, squareMeters, latitude, longitude, amenities[]}` |
+| `GET` | `/accommodations/{id}` | 🔒 | Obtener los detalles de una propiedad física |
+| `PUT` | `/accommodations/{id}` | 🔒 | Actualizar la propiedad física propia |
+| `DELETE` | `/accommodations/{id}` | 🔒 | Eliminar propiedad física (solo si no tiene listings activos/pendientes) |
+| `POST` | `/accommodations/{id}/images` | 🔒 | Añadir URL de imagen física subida en Cloudinary. Body: `{imageUrl, displayOrder}` |
+| `DELETE` | `/accommodations/{id}/images/{imageId}` | 🔒 | Eliminar imagen física del alojamiento |
 
-### 5.4 Mensajería
+### 5.4 Publicaciones Comerciales (`/listings`)
 
-| Método | Endpoint | Rol | Descripción |
-|--------|----------|-----|-------------|
-| `GET` | `/messages/conversations` | USER | Lista de conversaciones del usuario autenticado |
-| `GET` | `/messages/conversations/{userId}` | USER | Hilo de mensajes con un usuario |
-| `POST` | `/messages` | USER | Enviar mensaje (texto o con `offerAmount`) |
+| Método | Endpoint | Auth | Descripción |
+|---|---|---|---|
+| `GET` | `/listings` | ❌ | Listar anuncios del catálogo (`PENDING` y `APPROVED`). Query params: `city`, `minPrice`, `maxPrice`, `page`, `size` |
+| `GET` | `/listings/{id}` | ❌ | Detalle del anuncio (incluye datos del alojamiento físico `Accommodation`) |
+| `POST` | `/accommodations/{accommodationId}/listings` | 🔒 | Publicar anuncio comercial para una propiedad propia. Queda en `PENDIENTE` de moderación. Body: `{title, description, pricePerMonth, deposit, availableFrom, availableTo, houseRules}` |
+| `PUT` | `/listings/{id}` | 🔒 | Actualizar anuncio propio (solo si sigue en `PENDIENTE` o visible en catálogo) |
+| `DELETE` | `/listings/{id}` | 🔒 | Eliminar (borrado lógico) del anuncio propio o cualquiera (ADMIN) |
+| `GET` | `/listings/{id}/reviews` | ❌ | Valoraciones recibidas por este anuncio comercial |
+| `POST` | `/listings/{id}/reviews` | 🔒 | Publicar valoración sobre la estancia en este anuncio |
+| `DELETE` | `/listings/{id}/reviews/{reviewId}` | 🔒 ADMIN | Moderar y eliminar valoración del catálogo |
+| `POST` | `/listings/{id}/reports` | ❌/🔒 | Enviar denuncia sobre el anuncio. Body: `{reason, description}`. Anonymous si no se adjunta JWT. |
 
-### 5.5 Hogares
 
-| Método | Endpoint | Rol | Descripción |
-|--------|----------|-----|-------------|
-| `POST` | `/hogares` | USER | Crear hogar (el creador se convierte en admin) |
-| `GET` | `/hogares/{id}` | USER | Detalle del hogar (solo miembros) |
-| `POST` | `/hogares/{id}/invitations` | USER | Invitar miembro por email o nickname |
-| `DELETE` | `/hogares/{id}/members/{userId}` | USER | Expulsar miembro (solo si no tiene deudas) |
-| `GET` | `/hogares/{id}/balances` | USER | Balances actuales + deudas simplificadas |
+#### 5.4.1 Reservas (BookingRequests)
 
-### 5.6 Gastos
+| Método | Endpoint | Auth | Descripción |
+|---|---|---|---|
+| `POST` | `/listings/{id}/bookings` | 🔒 | Inquilino solicita reserva (`PENDING`). |
+| `POST` | `/bookings/{id}/accept` | 🔒 | Propietario acepta la reserva (`ACCEPTED`). |
+| `POST` | `/bookings/{id}/confirm` | 🔒 | Inquilino confirma la plaza con fianza (`CONFIRMED`). |
+| `POST` | `/bookings/{id}/reject` | 🔒 | Propietario rechaza candidato (`REJECTED`). |
+| `POST` | `/bookings/{id}/cancel` | 🔒 | Cancelar reserva (`CANCELLED`). Revierte anuncio a `APPROVED` si estaba en `CONFIRMED`. |
 
-| Método | Endpoint | Rol | Descripción |
-|--------|----------|-----|-------------|
-| `GET` | `/hogares/{hogarId}/expenses` | USER | Listar gastos del hogar |
-| `POST` | `/hogares/{hogarId}/expenses` | USER | Registrar nuevo gasto |
-| `PUT` | `/hogares/{hogarId}/expenses/{id}` | USER | Editar gasto (pagador o admin del hogar) |
-| `DELETE` | `/hogares/{hogarId}/expenses/{id}` | USER | Eliminar gasto |
+#### Endpoints de Administración y Moderación
 
-### 5.7 Tareas
+| Método | Endpoint | Auth | Descripción |
+|---|---|---|---|
+| `GET` | `/admin/listings/pending` | 🔒 ADMIN | Listar anuncios comerciales en estado de moderación `PENDIENTE` |
+| `POST` | `/admin/listings/{id}/approve` | 🔒 ADMIN | Aprobar anuncio → Cambia a moderación `APPROVED` y visibilidad `AVAILABLE` |
+| `POST` | `/admin/listings/{id}/reject` | 🔒 ADMIN | Rechazar anuncio → Cambia a moderación `REJECTED` |
+| `GET` | `/admin/listings/{id}/reports` | 🔒 ADMIN | Listar las denuncias recibidas por un anuncio comercial |
+| `POST` | `/admin/listings/{id}/reports/{reportId}/review` | 🔒 ADMIN | Marcar denuncia como revisada (`REVIEWED`) |
+| `POST` | `/admin/listings/{id}/reports/{reportId}/dismiss` | 🔒 ADMIN | Desestimar denuncia (`DISMISSED`) |
+| `POST` | `/admin/users/{userId}/ban` | 🔒 ADMIN | Banear temporalmente a un usuario. Body: `{bannedUntil, banReason}` |
 
-| Método | Endpoint | Rol | Descripción |
-|--------|----------|-----|-------------|
-| `GET` | `/hogares/{hogarId}/tasks` | USER | Listar tareas del hogar |
-| `POST` | `/hogares/{hogarId}/tasks` | USER | Crear tarea |
-| `PUT` | `/hogares/{hogarId}/tasks/{id}` | USER | Editar tarea |
-| `PATCH` | `/hogares/{hogarId}/tasks/{id}/toggle` | USER | Conmutar estado `COMPLETADA` / `PENDIENTE` |
-| `DELETE` | `/hogares/{hogarId}/tasks/{id}` | USER | Eliminar tarea |
+### 5.5 Mensajería (`/messages`)
 
-### 5.8 Auditoría
+| Método | Endpoint | Auth | Descripción |
+|---|---|---|---|
+| `GET` | `/messages/conversations` | 🔒 | Listar conversaciones del usuario |
+| `GET` | `/messages/conversations/{userId}` | 🔒 | Mensajes con un usuario concreto |
+| `POST` | `/messages` | 🔒 | Enviar mensaje vinculando `listingId` (texto o con `isOffer: true` y `offerAmount`) |
 
-| Método | Endpoint | Rol | Descripción |
-|--------|----------|-----|-------------|
-| `GET` | `/audit/hogar/{hogarId}` | USER | Feed cronológico de cambios del hogar (con `?limit=`) |
-| `GET` | `/audit/entity/{entityId}` | USER | Historial de cambios de una entidad específica |
+### 5.6 Hogares (`/home`)
+
+| Método | Endpoint | Auth | Descripción |
+|---|---|---|---|
+| `POST` | `/home` | 🔒 | Crear un nuevo hogar (el creador es admin del hogar) |
+| `GET` | `/home/{hogarId}` | 🔒 | Detalle del hogar (solo miembros) |
+| `PUT` | `/home/{hogarId}` | 🔒 HOGAR-ADMIN | Actualizar nombre del hogar |
+| `POST` | `/home/{hogarId}/members` | 🔒 HOGAR-ADMIN | Invitar miembro por email o nickname |
+| `DELETE` | `/home/{hogarId}/members/{userId}` | 🔒 HOGAR-ADMIN | Eliminar miembro (solo si balance neto = 0) |
+| `GET` | `/home/{hogarId}/balances` | 🔒 | Balances actuales y grafo de deudas simplificado |
+
+### 5.7 Gastos (`/home/{hogarId}/expenses`)
+
+| Método | Endpoint | Auth | Descripción |
+|---|---|---|---|
+| `GET` | `/home/{hogarId}/expenses` | 🔒 | Listar gastos del hogar (`page`, `size`, `from`, `to`) |
+| `GET` | `/home/{hogarId}/expenses/{expenseId}` | 🔒 | Detalle de un gasto |
+| `POST` | `/home/{hogarId}/expenses` | 🔒 | Registrar nuevo gasto (`payerId`, `amount`, `affectedUsers[]`, `percentages[]`) |
+| `PUT` | `/home/{hogarId}/expenses/{expenseId}` | 🔒 | Modificar gasto (genera snapshot de auditoría) |
+| `DELETE` | `/home/{hogarId}/expenses/{expenseId}` | 🔒 | Eliminar gasto (genera snapshot de auditoría) |
+
+### 5.8 Tareas (`/home/{hogarId}/tasks`)
+
+| Método | Endpoint | Auth | Descripción |
+|---|---|---|---|
+| `GET` | `/home/{hogarId}/tasks` | 🔒 | Listar tareas del hogar |
+| `POST` | `/home/{hogarId}/tasks` | 🔒 | Crear tarea (`title`, `description`, `assignedTo`) |
+| `PUT` | `/home/{hogarId}/tasks/{taskId}` | 🔒 | Actualizar tarea (genera snapshot de auditoría) |
+| `PATCH` | `/home/{hogarId}/tasks/{taskId}/toggle` | 🔒 | Conmutar estado `COMPLETADA` / `PENDIENTE` |
+| `DELETE` | `/home/{hogarId}/tasks/{taskId}` | 🔒 | Eliminar tarea |
+
+### 5.9 Auditoría (`/audit`)
+
+| Método | Endpoint | Auth | Descripción |
+|---|---|---|---|
+| `GET` | `/audit/home/{homeId}` | 🔒 | Feed cronológico de actividad del hogar. Query: `limit`, `page`, `entityType` |
+| `GET` | `/audit/home/{homeId}/expense/{expenseId}` | 🔒 | Historial completo de cambios de un gasto |
+| `GET` | `/audit/home/{homeId}/task/{taskId}` | 🔒 | Historial completo de cambios de una tarea |
+
+### 5.10 Codificación de Respuestas de Error
+
+```json
+{
+  "timestamp": "2024-11-15T10:30:00.000Z",
+  "status": 403,
+  "error": "Forbidden",
+  "message": "El usuario no pertenece al hogar solicitado.",
+  "path": "/api/v1/home/abc123/balances"
+}
+```
+
+| Código | Escenario |
+|---|---|
+| `400` | Validación de datos (porcentajes ≠ 100 %, imágenes insuficientes, etc.) |
+| `401` | Token JWT ausente, expirado o inválido |
+| `403` | Acceso a recursos de otro hogar / acciones sin permiso de rol / usuario baneado temporalmente (incluye `bannedUntil` en el cuerpo del error) |
+| `404` | Recurso no encontrado |
+| `409` | Conflicto de versión (`OptimisticLockingFailureException`) |
+| `500` | Error interno del servidor |
 
 ---
 
 ## 6. Especificación del Servidor MCP
 
-### 6.1 Arquitectura de Comunicación
+### 6.1 Arquitectura y Flujo de Comunicación
 
 ```
-┌────────────────────────────────────────┐
-│         Interfaz de Chat (Next.js)     │
-│  Usuario escribe: "¿Cuánto le debo     │
-│  a Ana este mes?"                      │
-└─────────────────┬──────────────────────┘
-                  │  JSON-RPC sobre SSE
-                  │  + JWT en metadatos de contexto
-                  ▼
-┌────────────────────────────────────────┐
-│           Servidor MCP                 │
-│      (Node.js 20 + TypeScript)         │
-│                                        │
-│  1. Extrae JWT del contexto MCP        │
-│  2. Selecciona tool adecuada           │
-│  3. Llama a Spring Boot API            │
-│     con Authorization: Bearer <JWT>   │
-│  4. Formatea respuesta para el LLM     │
-└─────────────────┬──────────────────────┘
-                  │  HTTP REST + JWT Passthrough
-                  ▼
-┌────────────────────────────────────────┐
-│          API Spring Boot               │
-│  Valida JWT → Verifica membresía       │
-│  hogar → Retorna datos o 403           │
-└────────────────────────────────────────┘
+ ┌────────────────────────────────────────────────────────────────┐
+  │  CLIENTE NEXT.JS (Interfaz de Chat)                           │
+  │  - Captura input del usuario                                   │
+  │  - Inyecta JWT en metadatos del contexto MCP                   │
+  └────────────────────────┬───────────────────────────────────────┘
+                           │ JSON-RPC 2.0 sobre SSE / stdio
+                           │ Contexto: { jwt: "Bearer eyJ..." }
+  ┌────────────────────────▼───────────────────────────────────────┐
+  │  SERVIDOR MCP (Node.js / TypeScript)                          │
+  │  - Parsea la petición JSON-RPC                                 │
+  │  - Extrae JWT del contexto                                     │
+  │  - Selecciona la herramienta (tool) apropiada                  │
+  │  - Llama al endpoint REST del Backend con el JWT               │
+  └────────────────────────┬───────────────────────────────────────┘
+                           │ HTTP REST
+                           │ Authorization: Bearer <JWT>
+  ┌────────────────────────▼───────────────────────────────────────┐
+  │  API SPRING BOOT (Backend)                                    │
+  │  - Valida JWT                                                  │
+  │  - Verifica pertenencia al hogar_id solicitado                 │
+  │  - Devuelve datos o 403 Forbidden                              │
+  └────────────────────────────────────────────────────────────────┘
 ```
 
-### 6.2 Catálogo de Herramientas (Tools)
+### 6.2 Protocolo de Seguridad Multi-Tenant
+
+El servidor MCP **no almacena, no genera y no modifica** tokens JWT. Actúa exclusivamente como proxy autenticado. Si el backend devuelve `401` o `403`, el servidor MCP propaga el error al LLM sin intentar acceder a datos alternativos.
+
+### 6.3 Catálogo de Herramientas (Tools)
+
+---
 
 #### Tool 1: `auditar_conflictos_hogar`
 
+**Descripción:** Recupera y analiza la secuencia cronológica de snapshots de auditoría de un hogar para resolver malentendidos entre convivientes sobre quién modificó qué y cuándo.
+
+**Parámetros de entrada:**
+
 ```typescript
 {
-  name: "auditar_conflictos_hogar",
-  description: "Recupera y analiza la secuencia cronológica de cambios sobre un hogar específico (gastos, tareas, miembros) para resolver malentendidos entre convivientes.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      hogarId: {
-        type: "string",
-        description: "Identificador UUID del hogar a auditar"
-      },
-      limite: {
-        type: "integer",
-        description: "Número máximo de registros a analizar (default: 50)",
-        default: 50
-      }
-    },
-    required: ["hogarId"]
-  }
+  hogarId:    string,   // obligatorio — UUID del hogar
+  limite?:    number,   // opcional — máximo de registros (default: 50)
+  entityType?: "EXPENSE" | "TASK"  // opcional — filtrar por tipo
 }
 ```
 
-**Flujo interno:**
-1. Extrae el JWT del contexto de la petición MCP.
-2. `GET /api/v1/audit/hogar/{hogarId}?limit={limite}` con `Authorization: Bearer <JWT>`.
-3. Itera sobre el array de snapshots y construye un texto estructurado: `[Timestamp] Usuario X [acción] sobre [entidad]: ANTES → {...}, DESPUÉS → {...}`.
-4. Retorna el texto formateado al LLM para análisis conversacional.
+**Endpoint interno consumido:**
+
+```
+GET /api/v1/audit/home/{homeId}?limit={limite}&entityType={entityType}
+Authorization: Bearer <JWT propagado>
+```
+
+**Salida estructurada para el LLM:**
+
+```
+[{
+  "timestamp": "2024-11-15T10:30:00Z",
+  "autor": "maria_garcia",
+  "accion": "UPDATE",
+  "entidad": "EXPENSE",
+  "cambios": {
+    "antes": { "amount": 50.00, "description": "Agua" },
+    "despues": { "amount": 65.00, "description": "Agua + electricidad" }
+  }
+}]
+```
+
+**Caso de uso LLM de ejemplo:**
+
+> *"El gasto de 'Agua' fue modificado por maria_garcia el 15/11/2024 a las 10:30. El importe subió de 50€ a 65€ y la descripción cambió de 'Agua' a 'Agua + electricidad'. Antes de ese cambio, nadie más había tocado ese gasto."*
 
 ---
 
 #### Tool 2: `analizar_balances_y_deudas`
 
+**Descripción:** Extrae el grafo de deudas consolidado y simplificado del hogar para proporcionar recomendaciones de liquidación eficiente.
+
+**Parámetros de entrada:**
+
 ```typescript
 {
-  name: "analizar_balances_y_deudas",
-  description: "Extrae el grafo de deudas consolidado del hogar para proveer análisis de optimización de pagos y recomendaciones de liquidación eficiente.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      hogarId: {
-        type: "string",
-        description: "Identificador UUID del hogar"
-      }
-    },
-    required: ["hogarId"]
-  }
+  hogarId: string   // obligatorio — UUID del hogar
 }
 ```
 
-**Flujo interno:**
-1. Extrae el JWT del contexto MCP.
-2. `GET /api/v1/hogares/{hogarId}/balances` con `Authorization: Bearer <JWT>`.
-3. Transforma la estructura de balances en lenguaje natural: lista de quién debe a quién y por qué importe, ya optimizada por el algoritmo de tránsito del backend.
-4. El LLM emite recomendaciones: *"Para cerrar todas las deudas del mes, Ana debería transferir 35 € a Carlos y 12 € a Luis."*
+**Endpoint interno consumido:**
+
+```
+GET /api/v1/home/{homeId}/balances
+Authorization: Bearer <JWT propagado>
+```
+
+**Salida estructurada para el LLM:**
+
+```json
+{
+  "balances": [
+    { "usuario": "carlos", "balance": -30.00, "estado": "DEUDOR" },
+    { "usuario": "maria",  "balance": +15.00, "estado": "ACREEDOR" },
+    { "usuario": "pablo",  "balance": +15.00, "estado": "ACREEDOR" }
+  ],
+  "transaccionesOptimas": [
+    { "de": "carlos", "a": "maria",  "importe": 15.00 },
+    { "de": "carlos", "a": "pablo",  "importe": 15.00 }
+  ]
+}
+```
+
+**Caso de uso LLM de ejemplo:**
+
+> *"Para saldar las cuentas del mes con el mínimo de transferencias, Carlos necesita hacer dos pagos: 15€ a María y 15€ a Pablo. Con eso quedan todos a cero."*
 
 ---
 
 #### Tool 3: `busqueda_semantica_alojamientos`
 
+**Descripción:** Permite al LLM cruzar criterios en lenguaje natural del usuario con las valoraciones y descripciones textuales de alojamientos, superando las limitaciones del filtrado por campos estructurados.
+
+**Parámetros de entrada:**
+
 ```typescript
 {
-  name: "busqueda_semantica_alojamientos",
-  description: "Permite buscar alojamientos mediante lenguaje natural cruzando criterios cualitativos (casero amable, zona tranquila, luminoso) con las valoraciones y comentarios del sistema.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      criterioSemantico: {
-        type: "string",
-        description: "Texto libre con preferencias: 'piso luminoso cerca de la universidad, propietario responsivo'"
-      },
-      ciudad: {
-        type: "string",
-        description: "Ciudad base para filtrar los alojamientos"
-      }
-    },
-    required: ["criterioSemantico", "ciudad"]
-  }
+  criterioSemantico: string,  // obligatorio — texto libre con preferencias
+  ciudad:            string   // obligatorio — filtro geográfico base
 }
 ```
 
-**Flujo interno:**
-1. Extrae el JWT del contexto MCP.
-2. `GET /api/v1/accommodations/reviews?city={ciudad}` con `Authorization: Bearer <JWT>`.
-3. Concatena descripciones y comentarios de valoraciones en un corpus de texto.
-4. El LLM actúa como filtro semántico sobre el corpus, identificando qué alojamientos o propietarios mejor se ajustan al `criterioSemantico`.
-5. Retorna una lista priorizada con justificación cualitativa.
+**Endpoint interno consumido:**
 
-### 6.3 Protocolo de Seguridad Multi-Tenant
+```
+GET /api/v1/accommodations/reviews?city={ciudad}
+Authorization: Bearer <JWT propagado>
+```
+
+**Proceso interno del LLM:**
+
+1. Recibe el listado de alojamientos con sus descripciones y comentarios de usuarios.
+2. Evaluá cualitativamente qué inmuebles o propietarios encajan con el `criterioSemantico`.
+3. Devuelve un ranking razonado con justificaciones basadas en experiencias reales de otros usuarios.
+
+**Caso de uso LLM de ejemplo:**
+
+> *"Basándome en las valoraciones, el alojamiento de calle Alameda 12 tiene 4 comentarios que mencionan explícitamente la 'amabilidad del casero' y la 'luminosidad'. Es el que mejor encaja con lo que buscas."*
+
+### 6.4 Manejo de Errores en el Servidor MCP
 
 ```typescript
-// Ejemplo de extracción y propagación del JWT en el servidor MCP
-server.setRequestHandler(CallToolRequestSchema, async (request, context) => {
-  // 1. Extraer JWT de los metadatos de contexto inyectados por el frontend
-  const jwt = context?.meta?.authorization?.replace("Bearer ", "");
-  if (!jwt) throw new McpError(ErrorCode.InvalidRequest, "Token JWT requerido");
-
-  // 2. Propagar en todas las llamadas al backend
-  const response = await fetch(`${SPRING_API_BASE}${endpoint}`, {
-    headers: {
-      "Authorization": `Bearer ${jwt}`,
-      "Content-Type": "application/json"
-    }
-  });
-
-  // 3. Gestionar respuestas de autorización denegada
-  if (response.status === 403) {
-    throw new McpError(ErrorCode.InvalidRequest, "Acceso denegado: no eres miembro de este hogar");
+// Respuesta de error propagada al LLM
+{
+  "error": {
+    "code": -32603,
+    "message": "Backend returned 403: El usuario no pertenece al hogar solicitado.",
+    "data": { "httpStatus": 403 }
   }
-
-  return await response.json();
-});
+}
 ```
 
 ---
@@ -567,104 +703,141 @@ server.setRequestHandler(CallToolRequestSchema, async (request, context) => {
 ```
 app/
 ├── (public)/
-│   ├── page.tsx                  → Home: listado + mapa de alojamientos
-│   ├── accommodations/
-│   │   ├── page.tsx              → Búsqueda con filtros
-│   │   └── [id]/
-│   │       └── page.tsx          → Detalle de alojamiento
-│   └── users/
-│       └── [id]/
-│           └── page.tsx          → Perfil público de usuario
+│   ├── page.tsx                    # Home — listado de anuncios + mapa
+│   ├── listings/
+│   │   └── [id]/page.tsx           # Detalle de la publicación (anuncio)
+│   └── auth/
+│       ├── login/page.tsx          # Login
+│       └── register/page.tsx       # Registro
 │
-├── (auth)/
-│   ├── login/page.tsx            → Formulario de login
-│   └── register/page.tsx         → Formulario de registro
-│
-├── (dashboard)/                  → Layout protegido (requiere JWT)
-│   ├── layout.tsx                → Sidebar + NavBar autenticada
-│   ├── dashboard/page.tsx        → Panel principal del usuario
+├── (private)/
+│   ├── layout.tsx                  # Layout con guard de autenticación
+│   ├── dashboard/page.tsx          # Panel del usuario autenticado
 │   ├── accommodations/
-│   │   └── new/page.tsx          → Formulario de nuevo anuncio
+│   │   ├── new/page.tsx            # Formulario de alta de propiedad física
+│   │   └── page.tsx                # Listado de mis propiedades físicas
+│   ├── listings/
+│   │   └── new/page.tsx            # Crear un anuncio a partir de una propiedad propia
 │   ├── messages/
-│   │   ├── page.tsx              → Lista de conversaciones
-│   │   └── [userId]/page.tsx     → Hilo de mensajes
+│   │   └── [userId]/page.tsx       # Conversación con un usuario
 │   ├── hogar/
-│   │   ├── page.tsx              → Vista del hogar: balances, tareas
-│   │   ├── expenses/
-│   │   │   ├── page.tsx          → Lista de gastos
-│   │   │   └── new/page.tsx      → Formulario de nuevo gasto
-│   │   ├── tasks/page.tsx        → Gestión de tareas
-│   │   └── activity/page.tsx     → Feed de auditoría cronológica
-│   └── chat/page.tsx             → Interfaz de chat con LLM (MCP)
+│   │   ├── page.tsx                # Selección / creación de hogar
+│   │   └── [hogarId]/
+│   │       ├── page.tsx            # Dashboard del hogar
+│   │       ├── expenses/page.tsx   # Listado y formulario de gastos
+│   │       ├── tasks/page.tsx      # Listado y gestión de tareas
+│   │       ├── balances/page.tsx   # Balances visuales + grafo de deudas
+│   │       ├── audit/page.tsx      # Feed cronológico de actividad
+│   │       └── chat/page.tsx       # Chat con el LLM (MCP integrado)
+│   └── profile/
+│       └── [userId]/page.tsx       # Perfil público de usuario
 │
-└── (admin)/                      → Layout solo ADMIN
-    ├── layout.tsx
-    └── admin/
-        ├── pending/page.tsx      → Anuncios pendientes de aprobación
-        └── moderation/page.tsx   → Moderación de reviews y comentarios
+└── (admin)/
+    ├── layout.tsx                  # Layout con guard de rol ADMIN
+    └── moderation/
+        ├── pending/page.tsx        # Anuncios comerciales pendientes de moderación
+        └── reviews/page.tsx        # Moderación de valoraciones
 ```
 
-### 7.2 Componentes Reutilizables Clave
+### 7.2 Descripción de Vistas Clave
+
+#### 7.2.1 Home (Página Pública Principal)
+
+**Componentes:**
+- `<SearchBar />` — Filtros de ciudad, precio mínimo y máximo.
+- `<AccommodationMap />` — Mapa Leaflet con marcadores geolocalizados de anuncios disponibles. Al hacer clic en un marcador, muestra una `<PopupCard />` con foto, título y precio.
+- `<AccommodationGrid />` — Grid de tarjetas de anuncios sincronizado con los filtros del mapa.
+- `<AccommodationCard />` — Tarjeta individual del anuncio con foto principal (Cloudinary), título, precio, ciudad y rating medio de valoraciones.
+
+**Comportamiento:**
+- Los filtros actualizan el mapa y la cuadrícula de forma reactiva mediante React Query.
+- No requiere autenticación.
+
+#### 7.2.2 Dashboard del Hogar
+
+**Componentes:**
+- `<BalanceSummaryWidget />` — Muestra un círculo verde/rojo por cada miembro con su balance neto.
+- `<RecentExpensesList />` — Últimos 5 gastos del hogar con paginación.
+- `<PendingTasksList />` — Tareas con estado `PENDIENTE` y botón de completar.
+- `<ActivityFeedPreview />` — Últimos 5 registros de auditoría en lenguaje legible.
+
+#### 7.2.3 Vista de Balances
+
+**Componentes:**
+- `<MemberBalanceCard userId amount status />` — Tarjeta por miembro con indicador de color.
+- `<DebtSimplificationPanel />` — Lista de transacciones óptimas recomendadas.
+- `<ExpenseHistoryChart />` — Gráfico de evolución de gastos por mes (Recharts).
+
+**Regla visual:** El indicador de balance es un círculo de 24px de diámetro:
+- 🟢 Verde `#22c55e` → balance positivo (le deben dinero).
+- 🔴 Rojo `#ef4444` → balance negativo (debe dinero al grupo).
+- ⚪ Gris `#94a3b8` → balance = 0.
+
+#### 7.2.4 Feed de Actividad (Auditoría)
+
+**Componentes:**
+- `<AuditFeedItem />` — Muestra cada snapshot en lenguaje natural: *"María subió el gasto 'Electricidad' de 45€ a 62€ el 14 nov a las 09:15."*
+- `<AuditFilterBar />` — Filtros por tipo de entidad (`EXPENSE` / `TASK`) y rango de fechas.
+
+#### 7.2.5 Chat con LLM (Integración MCP)
+
+**Componentes:**
+- `<ChatWindow />` — Historial de mensajes entre usuario y LLM.
+- `<ChatInput />` — Campo de texto con envío al LLM vía la API de chat.
+- `<ToolCallIndicator />` — Muestra visualmente cuando el LLM invoca una herramienta MCP.
+
+**Flujo de datos:**
+1. El usuario escribe en `<ChatInput />`.
+2. El frontend llama a la API del LLM con el mensaje y el JWT del usuario en los metadatos de contexto.
+3. El LLM decide si invocar una herramienta MCP.
+4. El servidor MCP llama al backend con el JWT propagado.
+5. La respuesta vuelve al LLM y este genera la respuesta final.
+6. `<ChatWindow />` muestra la respuesta.
+
+### 7.3 Componentes Compartidos (Shared Components)
 
 | Componente | Descripción |
-|------------|-------------|
-| `<AccommodationCard />` | Tarjeta de anuncio con imagen, precio, ciudad y rating |
-| `<AccommodationMap />` | Mapa Leaflet/Mapbox con marcadores geolocalizados filtrados |
-| `<FilterBar />` | Barra de filtros: ciudad, rango de precios |
-| `<StarRating />` | Componente de valoración de 1-5 estrellas |
-| `<BalanceIndicator />` | Círculo verde/rojo con importe de balance del usuario |
-| `<DebtGraph />` | Visualización del grafo simplificado de deudas |
-| `<ExpenseForm />` | Formulario de gasto con selector de afectados y porcentajes |
-| `<TaskCard />` | Tarjeta de tarea con toggle de estado completada/pendiente |
-| `<AuditFeedItem />` | Ítem del feed de actividad con diff antes/después en lenguaje natural |
-| `<ChatInterface />` | Interfaz de chat conectada al LLM vía servidor MCP |
-| `<ImageUploader />` | Subida de imágenes a la nube con previsualización |
-| `<MessageThread />` | Hilo de mensajes privados con soporte para ofertas económicas |
-| `<ProtectedRoute />` | HOC / layout que redirige a /login si no hay JWT válido |
-
-### 7.3 Gestión de Estado y Peticiones
-
-- **Autenticación:** JWT almacenado en `httpOnly cookie` o `localStorage` según política CORS. Contexto global con React Context / Zustand.
-- **Peticiones API:** `fetch` nativo o `axios` con interceptor que inyecta el JWT automáticamente en cada cabecera.
-- **Mapa:** Carga dinámica con `next/dynamic` y `{ ssr: false }` para evitar errores de hidratación con Leaflet.
-- **Formularios:** React Hook Form + Zod para validación en cliente.
+|---|---|
+| `<StarRating rating onChange? />` | Selector de valoración de 1 a 5 estrellas |
+| `<UserAvatar userId size />` | Avatar con fallback a iniciales |
+| `<PriceTag amount currency />` | Formateo de moneda consistente |
+| `<StatusBadge status />` | Badge de color para estados de anuncio/moderación |
+| `<ConfirmationModal />` | Modal reutilizable para acciones destructivas |
+| `<Pagination page total onChange />` | Componente de paginación estándar |
+| `<LoadingSpinner />` | Indicador de carga |
+| `<ErrorBoundary />` | Captura y muestra errores de renderizado |
 
 ---
 
 ## 8. Infraestructura Docker
 
-### 8.1 `docker-compose.yml` Sugerido
+### 8.1 `docker-compose.yml` (Entorno de Desarrollo)
 
 ```yaml
 version: "3.9"
 
 services:
 
-  # ──────────────────────────────────────────────
-  # BASE DE DATOS
-  # ──────────────────────────────────────────────
+  # ─── Base de Datos ───────────────────────────────────────────
   postgres:
-    image: postgres:16-alpine
+    image: postgres:15-alpine
     container_name: tfg_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: tfg_db
-      POSTGRES_USER: tfg_user
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB:       tfg_db
+      POSTGRES_USER:     tfg_user
+      POSTGRES_PASSWORD: tfg_password
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U tfg_user -d tfg_db"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # ──────────────────────────────────────────────
-  # BACKEND — Java Spring Boot
-  # ──────────────────────────────────────────────
+  # ─── Backend Spring Boot ─────────────────────────────────────
   backend:
     build:
       context: ./backend
@@ -675,24 +848,19 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/tfg_db
+      SPRING_DATASOURCE_URL:      jdbc:postgresql://postgres:5432/tfg_db
       SPRING_DATASOURCE_USERNAME: tfg_user
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_EXPIRATION_MS: 86400000
-      CLOUD_STORAGE_URL: ${CLOUD_STORAGE_URL}
-      CLOUD_STORAGE_API_KEY: ${CLOUD_STORAGE_API_KEY}
+      SPRING_DATASOURCE_PASSWORD: tfg_password
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      JWT_SECRET:                 ${JWT_SECRET}
+      JWT_EXPIRATION_MS:          86400000
+      CLOUD_STORAGE_BUCKET:       ${CLOUD_STORAGE_BUCKET}
+      CLOUD_STORAGE_KEY_ID:       ${CLOUD_STORAGE_KEY_ID}
+      CLOUD_STORAGE_SECRET:       ${CLOUD_STORAGE_SECRET}
     ports:
       - "8080:8080"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
-  # ──────────────────────────────────────────────
-  # SERVIDOR MCP — Node.js / TypeScript
-  # ──────────────────────────────────────────────
+  # ─── Servidor MCP ────────────────────────────────────────────
   mcp-server:
     build:
       context: ./mcp-server
@@ -700,17 +868,14 @@ services:
     container_name: tfg_mcp
     restart: unless-stopped
     depends_on:
-      backend:
-        condition: service_healthy
+      - backend
     environment:
-      SPRING_API_BASE_URL: http://backend:8080/api/v1
-      MCP_PORT: 3001
+      BACKEND_BASE_URL: http://backend:8080/api/v1
+      MCP_PORT:         3001
     ports:
       - "3001:3001"
 
-  # ──────────────────────────────────────────────
-  # FRONTEND — Next.js
-  # ──────────────────────────────────────────────
+  # ─── Frontend Next.js ────────────────────────────────────────
   frontend:
     build:
       context: ./frontend
@@ -721,34 +886,37 @@ services:
       - backend
       - mcp-server
     environment:
-      NEXT_PUBLIC_API_URL: http://backend:8080/api/v1
-      NEXT_PUBLIC_MCP_URL: http://mcp-server:3001
-      NEXT_PUBLIC_MAP_TOKEN: ${MAP_TOKEN}
+      NEXT_PUBLIC_API_URL:     http://localhost:8080/api/v1
+      NEXT_PUBLIC_MCP_URL:     http://localhost:3001
+      NEXT_PUBLIC_MAPS_TOKEN:  ${MAPS_TOKEN}
     ports:
       - "3000:3000"
 
 volumes:
   postgres_data:
+    driver: local
 ```
 
-### 8.2 Dockerfiles de Referencia
+### 8.2 `Dockerfile` del Backend (Spring Boot)
 
-**Backend (`backend/Dockerfile`):**
 ```dockerfile
-FROM maven:3.9-eclipse-temurin-21 AS build
+# Etapa de construcción
+FROM eclipse-temurin:21-jdk-alpine AS builder
 WORKDIR /app
 COPY pom.xml .
 COPY src ./src
-RUN mvn clean package -DskipTests
+RUN ./mvnw package -DskipTests
 
+# Etapa de ejecución
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-COPY --from=build /app/target/*.jar app.jar
+COPY --from=builder /app/target/*.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
 ```
 
-**MCP Server (`mcp-server/Dockerfile`):**
+### 8.3 `Dockerfile` del Servidor MCP (Node.js)
+
 ```dockerfile
 FROM node:20-alpine
 WORKDIR /app
@@ -759,7 +927,8 @@ EXPOSE 3001
 CMD ["node", "dist/index.js"]
 ```
 
-**Frontend (`frontend/Dockerfile`):**
+### 8.4 `Dockerfile` del Frontend (Next.js)
+
 ```dockerfile
 FROM node:20-alpine AS builder
 WORKDIR /app
@@ -768,253 +937,314 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-FROM node:20-alpine AS runner
+FROM node:20-alpine
 WORKDIR /app
-ENV NODE_ENV=production
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
 EXPOSE 3000
 CMD ["node", "server.js"]
-```
-
-### 8.3 Variables de Entorno (`.env`)
-
-```env
-POSTGRES_PASSWORD=SuperSecretPassword123!
-JWT_SECRET=your-256-bit-secret-key-here
-CLOUD_STORAGE_URL=https://api.cloudinary.com/v1_1/your-cloud
-CLOUD_STORAGE_API_KEY=your-cloudinary-api-key
-MAP_TOKEN=your-mapbox-or-leaflet-token
 ```
 
 ---
 
 ## 9. Fases de Desarrollo y Desglose de Tareas
 
-> **Metodología:** Desarrollo secuencial por un único desarrollador. Cada fase debe completarse y pasar sus pruebas antes de iniciar la siguiente. Las estimaciones son orientativas.
+> **Metodología:** Desarrollo secuencial para desarrollador único. Cada fase tiene entregables verificables. TDD obligatorio desde la Fase 2 para el motor financiero.
+>
+> **Convención de ramas Git:** `feat/<fase>-<descripcion>`, `fix/<descripcion>`, `test/<descripcion>`
 
 ---
 
-### Fase 1 — Infraestructura Base y Seguridad
-**Duración estimada: 1-2 semanas**
+### Fase 0 — Configuración del Entorno y Scaffolding (Semana 0)
 
-**Objetivo:** Tener el proyecto configurado, la base de datos funcionando y la autenticación completamente operativa.
+**Objetivo:** Tener un entorno de desarrollo funcional con todas las herramientas configuradas antes de escribir una sola línea de lógica.
 
-#### 1.1 Configuración del Proyecto Backend
-- [ ] Inicializar proyecto Spring Boot 3.x con Java 21 (via Spring Initializr).
-- [ ] Agregar dependencias: `spring-boot-starter-web`, `spring-boot-starter-data-jpa`, `spring-boot-starter-security`, `spring-boot-starter-validation`, `postgresql`, `jjwt`.
-- [ ] Configurar `application.yml` con perfiles `dev` y `prod` (datasource, JPA DDL, logging).
-- [ ] Estructurar paquetes según arquitectura limpia: `config`, `features/{user,accommodation,hogar,audit}`, `shared`.
+**Tareas:**
 
-#### 1.2 Esquema de Base de Datos
-- [ ] Crear todas las entidades JPA (`@Entity`, `@Table`, relaciones `@ManyToOne`, `@OneToMany`, `@ManyToMany`).
-- [ ] Añadir `@Version` a `HogarEntity`, `ExpenseEntity`, `TaskEntity`.
-- [ ] Configurar Hibernate para generación de esquema en dev (`ddl-auto: create`).
-- [ ] Crear script `init.sql` con índices compuestos, índices B-Tree sobre `latitude`/`longitude` y trigger de inmutabilidad para `audit_snapshot_log`.
-- [ ] Verificar la creación correcta del esquema en PostgreSQL local / Docker.
+- [X] Crear repositorio Git con estructura monorepo: `/backend`, `/frontend`, `/mcp-server`
+- [X] Inicializar proyecto Spring Boot 3.x con Java 21 (Spring Initializr):
+  - Dependencias: `spring-web`, `spring-data-jpa`, `spring-security`, `postgresql`, `lombok`, `mapstruct`, `flyway`, `validation`
+- [X] Configurar `docker-compose.yml` con PostgreSQL y levantar base de datos local
+- [X] Configurar Flyway: crear migración `V1__init_schema.sql` con el esquema completo del modelo de datos
+- [ ] Inicializar proyecto Next.js 15 con TypeScript, Tailwind CSS y App Router
+- [ ] Inicializar proyecto Node.js TypeScript para el servidor MCP
+- [ ] Configurar ESLint + Prettier en frontend y MCP server
+- [ ] Configurar Checkstyle / SpotBugs en el backend
+- [ ] Crear archivo `.env.example` con todas las variables de entorno necesarias
 
-#### 1.3 Módulo de Seguridad JWT
-- [ ] Diseñar interfaz `JwtTokenProvider` y su implementación.
-- [ ] Implementar `JwtAuthenticationFilter` (extends `OncePerRequestFilter`).
-- [ ] Configurar `SecurityFilterChain`: rutas públicas vs. protegidas, CORS.
-- [ ] Implementar `UserDetailsServiceImpl` que carga usuarios desde repositorio.
-
-#### 1.4 Autenticación de Usuarios (SRP aplicado)
-- [ ] Diseñar interfaz `UserService` con métodos `register`, `login`, `findById`.
-- [ ] Implementar `UserServiceImpl` (lógica de negocio, cifrado BCrypt, generación de JWT).
-- [ ] Crear `UserController`: `POST /auth/register`, `POST /auth/login`.
-- [ ] Crear `UserRepository extends JpaRepository<UserEntity, UUID>`.
-- [ ] Definir DTOs: `RegisterRequestDto`, `LoginRequestDto`, `AuthResponseDto`, `UserProfileDto`.
-- [ ] Pruebas unitarias de `UserServiceImpl` con Mockito.
-
-#### 1.5 Configuración del Proyecto Frontend
-- [ ] Inicializar proyecto Next.js 15 con TypeScript, Tailwind CSS y App Router.
-- [ ] Configurar cliente HTTP (axios o fetch) con interceptor de JWT.
-- [ ] Implementar páginas `/login` y `/register` con React Hook Form + Zod.
-- [ ] Implementar contexto de autenticación global (almacenamiento de JWT, estado del usuario).
-- [ ] Implementar layout protegido `(dashboard)/layout.tsx`.
+**Entregable verificable:** `docker-compose up` levanta PostgreSQL, backend arranca con `200 OK` en `/api/v1/health`, frontend carga en `localhost:3000`.
 
 ---
 
-### Fase 2 — Backend Core: Hogar y Motor Financiero
-**Duración estimada: 2 semanas**
+### Fase 1 — Núcleo de Seguridad y Gestión de Usuarios (Semanas 1-2)
 
-**Objetivo:** Módulo de hogar completamente funcional con gestión de gastos, deudas simplificadas y tareas.
+**Objetivo:** Sistema de autenticación robusto y gestión de perfiles de usuario.
 
-#### 2.1 Módulo de Hogar (SOLID estricto)
-- [ ] Diseñar interfaz `HogarService` (ISP: métodos separados por responsabilidad).
-- [ ] Implementar `HogarServiceImpl`: crear hogar, invitar miembro (por email/nickname), expulsar miembro (con validación de deudas), listar miembros.
-- [ ] Crear `HogarController` con endpoints CRUD del hogar.
-- [ ] Crear `HogarRepository`, `HogarMemberRepository`.
+**Principios SOLID aplicados:**
+- `UserService` (interfaz `IUserService`) → única responsabilidad: lógica de usuario
+- `JwtTokenProvider` (interfaz `ITokenProvider`) → única responsabilidad: generación y validación de tokens
+- `SecurityConfig` depende de la abstracción `ITokenProvider`, no de la implementación concreta
 
-#### 2.2 Motor de Gastos
-- [ ] Diseñar interfaz `ExpenseService`.
-- [ ] Implementar `ExpenseServiceImpl`: registrar gasto con pagador y afectados, validar suma de porcentajes = 100%, editar, eliminar.
-- [ ] Crear `ExpenseController`, `ExpenseRepository`, `ExpenseAffectedRepository`.
-- [ ] DTOs con validaciones (`@NotNull`, `@Positive`, `@Size`).
+**Tareas — Backend:**
 
-#### 2.3 Algoritmo de Simplificación de Deudas (OCP aplicado)
-- [ ] Diseñar interfaz `DebtSimplifierEngine` con método `simplify(List<Balance> balances): List<DebtTransfer>`.
-- [ ] Implementar `TransitDebtSimplifier implements DebtSimplifierEngine`:
-  - Calcular saldo neto por usuario (Σ pagado − Σ adeudado).
-  - Aplicar algoritmo greedy de compensación directa (acreedores vs deudores).
-  - Retornar lista de transferencias optimizadas `{from, to, amount}`.
-- [ ] El servicio de balances consume la interfaz `DebtSimplifierEngine` vía DIP (inyección por constructor).
-- [ ] **No se modifica ningún registro de BD:** el resultado es exclusivamente una proyección en memoria.
-- [ ] Endpoint `GET /hogares/{id}/balances` retorna: balances por usuario (verde/rojo) + lista de transferencias sugeridas.
-- [ ] Pruebas unitarias exhaustivas del algoritmo con casos extremos (deudas circulares, un solo deudor, balances cero).
+- [ ] Crear entidad JPA `User` con todos los campos del modelo (incluyendo `@Version` si aplica)
+- [ ] Crear interfaz `IUserRepository extends JpaRepository<User, UUID>` con métodos `findByEmail` y `findByNickname`
+- [ ] Diseñar interfaz `IUserService` con métodos: `register`, `findById`, `updateProfile`, `findByNicknameOrEmail`
+- [ ] Implementar `UserServiceImpl implements IUserService` con cifrado BCrypt (factor 12)
+- [ ] Diseñar interfaz `ITokenProvider` con métodos: `generateAccessToken`, `generateRefreshToken`, `validateToken`, `extractUserId`
+- [ ] Implementar `JwtTokenProviderImpl implements ITokenProvider`
+- [ ] Implementar filtro `JwtAuthenticationFilter extends OncePerRequestFilter` inyectando `ITokenProvider`
+- [ ] Implementar `AuthController` con endpoints: `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`
+- [ ] Implementar `UserController` con endpoints: `GET /users/me`, `PUT /users/me`, `GET /users/{userId}`
+- [ ] Crear DTOs (`RegisterRequest`, `LoginRequest`, `AuthResponse`, `UserProfileDto`) con validaciones `@NotBlank`, `@Email`, `@Size`
+- [ ] Configurar `SecurityFilterChain`: rutas públicas (`/auth/**`) vs. protegidas
+- [ ] Configurar manejo global de excepciones con `@RestControllerAdvice`
 
-#### 2.4 Módulo de Tareas
-- [ ] Diseñar interfaz `TaskService` y `TaskServiceImpl`.
-- [ ] Operaciones: crear tarea, editar, eliminar, conmutar estado `COMPLETADA`/`PENDIENTE`.
-- [ ] Verificar que el `@Version` en `TaskEntity` dispara `OptimisticLockingFailureException` ante concurrencia.
-- [ ] Controlador de excepciones global (`@ControllerAdvice`) que retorna `409 Conflict` ante `OptimisticLockingFailureException`.
+**Tareas — Tests (TDD-compatible):**
+
+- [ ] Test unitario: `UserServiceImplTest` — registro con email duplicado lanza `UserAlreadyExistsException`
+- [ ] Test unitario: `JwtTokenProviderImplTest` — token expirado lanza excepción, token válido extrae `userId` correctamente
+- [ ] Test de integración: `AuthControllerIT` con Testcontainers — registro, login, obtención de perfil
+
+**Entregable verificable:** Un usuario puede registrarse, iniciar sesión y obtener su perfil con token JWT válido. Intentos con credenciales incorrectas devuelven `401`.
 
 ---
 
-### Fase 3 — Subsistema de Auditoría Inmutable
-**Duración estimada: 1 semana**
+### Fase 2 — Motor Financiero (TDD Obligatorio) (Semanas 3-4)
 
-**Objetivo:** Captura automática de snapshots, inmutabilidad garantizada y feed de actividad.
+**Objetivo:** Implementar el núcleo del módulo de gastos compartidos con cobertura de tests completa antes de escribir el código de producción.
 
-#### 3.1 Mecanismo de Captura de Snapshots
-- [ ] Implementar `AuditInterceptor` mediante **Spring AOP** (`@Aspect`, `@Around`) que intercepta los métodos de `ExpenseService` y `TaskService`.
-- [ ] Alternativa con JPA Entity Listeners (`@EntityListeners`) en `ExpenseEntity` y `TaskEntity` para eventos `@PreUpdate`, `@PreRemove`.
-- [ ] Serializar el estado antes/después de cada operación a JSONB usando `ObjectMapper`.
-- [ ] Extraer `userId` del `SecurityContextHolder` para la trazabilidad de autoría.
-- [ ] Inyectar timestamp desde `Clock.systemUTC()` (bean de Spring) para impedir manipulación del cliente.
+> **Regla de TDD:** Para cada clase de lógica financiera, el ciclo será: 🔴 Escribir test que falla → 🟢 Escribir código mínimo que lo pasa → 🔵 Refactorizar.
 
-#### 3.2 Servicio de Auditoría (ISP aplicado)
-- [ ] Diseñar interfaz `AuditLogRepository extends JpaRepository` con **solo** métodos de lectura y `save()`. Eliminar explícitamente `deleteById` y `deleteAll` del contrato.
-- [ ] Implementar `AuditLogServiceImpl` que invoca únicamente `auditLogRepository.save(snapshot)`.
-- [ ] Añadir `@PreUpdate` y `@PreRemove` en `AuditSnapshotLogEntity` que lancen `UnsupportedOperationException`.
-- [ ] Verificar que el trigger DDL de PostgreSQL bloquea `UPDATE`/`DELETE` como segunda barrera.
+**Principios SOLID aplicados:**
+- `DebtSimplifierEngine` (interfaz): el algoritmo de simplificación es intercambiable sin modificar `HogarService`
+- `ExpenseService` (interfaz `IExpenseService`): única responsabilidad, sin conocimiento del algoritmo de simplificación
+- `AuditService` (interfaz `IAuditService`): única responsabilidad de registrar snapshots, invocado por `ExpenseService` via DIP
 
-#### 3.3 Feed de Actividad
-- [ ] Endpoint `GET /audit/hogar/{hogarId}?limit=50` que retorna la lista de snapshots ordenados por `server_timestamp DESC`.
-- [ ] Servicio de transformación: convierte JSONB de snapshots a texto legible en español (ej: *"Carlos modificó el gasto 'Supermercado' de 45 € a 52 €"*).
-- [ ] Pruebas de integración: crear gasto → modificar → verificar que hay 2 entradas en `audit_snapshot_log`.
+**Ciclos TDD — `DebtSimplifierEngine`:**
 
----
+- [ ] 🔴 **Test 1:** `simplify([A→B: 10€, B→C: 10€])` → `[A→C: 10€]` *(regla de tránsito)*
+- [ ] 🟢 Implementar `SimpleTransitDebtSimplifier implements DebtSimplifierEngine`
+- [ ] 🔴 **Test 2:** `simplify([A→B: 30€, C→B: 20€])` → `[A→B: 30€, C→B: 20€]` *(sin simplificación posible)*
+- [ ] 🟢 Ajustar implementación
+- [ ] 🔴 **Test 3:** `simplify([A→B: 10€, B→C: 5€, B→D: 5€])` → `[A→C: 5€, A→D: 5€]`
+- [ ] 🟢 Ajustar implementación
+- [ ] 🔵 Refactorizar para claridad sin romper tests
+- [ ] 🔴 **Test 4 (porcentajes personalizados):** Gasto de 100€, pagador A, afectados [B 70%, C 30%] → B debe 70€ a A, C debe 30€ a A
+- [ ] 🟢 Implementar validación y prorrateo en `ExpenseServiceImpl`
+- [ ] 🔴 **Test 5 (porcentajes inválidos):** Porcentajes [60%, 30%] = 90% → lanza `InvalidPercentageDistributionException`
+- [ ] 🟢 Añadir validación
 
-### Fase 4 — Módulo de Alojamiento y Mapa
-**Duración estimada: 2 semanas**
+**Tareas — Backend:**
 
-**Objetivo:** Mercado de anuncios completamente funcional con búsqueda geolocalizada, valoraciones y mensajería.
+- [ ] Crear entidades JPA: `Hogar`, `HogarMember`, `Expense`, `ExpenseAffected` con `@Version` donde corresponda
+- [ ] Crear migraciones Flyway para estas tablas con índices y constraint de porcentajes
+- [ ] Diseñar interfaz `IHogarService`: `createHogar`, `inviteMember`, `removeMember`, `getHogarById`
+- [ ] Implementar `HogarServiceImpl implements IHogarService` con validación de balance antes de eliminar miembro
+- [ ] Diseñar interfaz `IExpenseService`: `createExpense`, `updateExpense`, `deleteExpense`, `getExpensesByHogar`
+- [ ] Implementar `ExpenseServiceImpl implements IExpenseService` invocando `IAuditService` en cada mutación
+- [ ] Diseñar interfaz `DebtSimplifierEngine`: `simplify(List<RawDebt>): List<SimplifiedDebt>`
+- [ ] Implementar `SimpleTransitDebtSimplifier implements DebtSimplifierEngine`
+- [ ] Implementar endpoint `GET /home/{homeId}/balances` que invoca `DebtSimplifierEngine`
+- [ ] Implementar `HogarController` y `ExpenseController` con sus endpoints correspondientes
 
-#### 4.1 CRUD de Alojamientos y Aprobaciones
-- [ ] Diseñar interfaz `AccommodationService` y `AccommodationServiceImpl`.
-- [ ] Endpoint `POST /accommodations`: crea anuncio en estado `PENDIENTE`.
-- [ ] Endpoint `PATCH /accommodations/{id}/status`: solo ADMIN puede activar/rechazar. Validar ≥ 2 imágenes antes de activar.
-- [ ] Integración con proveedor de almacenamiento cloud: `POST /accommodations/{id}/images` recibe URL verificada y la persiste en `accommodation_image`.
-- [ ] Endpoint `GET /accommodations/pending` para el panel de administración.
+**Tests adicionales:**
 
-#### 4.2 Búsqueda y Filtrado
-- [ ] Query JPA con `Specification` o JPQL dinámica para filtros: `city`, `minPrice`, `maxPrice`, `status = ACTIVO`.
-- [ ] Endpoint paginado `GET /accommodations?page=0&size=12`.
-- [ ] Endpoint con filtro geográfico por bounding box (lat/lon min-max) usando los índices B-Tree.
+- [ ] Test de integración `ExpenseServiceIT` con Testcontainers: crear gasto, verificar que se genera snapshot en `AUDIT_SNAPSHOT_LOG`
+- [ ] Test de concurrencia: dos hilos modifican el mismo `Expense` simultáneamente → segundo hilo recibe `409 Conflict`
 
-#### 4.3 Sistema de Valoraciones
-- [ ] `AccommodationReviewService` + `UserReviewService` (dos servicios separados: SRP).
-- [ ] Validar que un usuario no pueda valorarse a sí mismo.
-- [ ] Validar unicidad de valoración (un usuario → un anuncio: constraint `UNIQUE`).
-- [ ] Endpoints de moderación para ADMIN.
-
-#### 4.4 Mensajería Privada
-- [ ] `PrivateMessageService` + `PrivateMessageController`.
-- [ ] Soporte para `offerAmount` opcional (oferta económica formal).
-- [ ] Listar conversaciones agrupadas por interlocutor.
-
-#### 4.5 Frontend — Módulo de Alojamiento
-- [ ] Página Home (`/`): grid de `AccommodationCard` + `AccommodationMap` con marcadores Leaflet (carga dinámica SSR=false).
-- [ ] Página de detalle (`/accommodations/[id]`): galería de imágenes, descripción, mapa centrado, valoraciones, botón de mensaje.
-- [ ] Formulario de nuevo anuncio con `ImageUploader` y validación de mínimo 2 imágenes.
-- [ ] Panel de administración: lista de pendientes con botones Aprobar/Rechazar.
+**Entregable verificable:** Cobertura de tests > 90 % en las clases del motor financiero. El endpoint de balances devuelve el grafo de deudas simplificado correcto para los escenarios de TDD.
 
 ---
 
-### Fase 5 — Frontend — Módulo de Hogar
-**Duración estimada: 1 semana**
+### Fase 3 — Subsistema de Auditoría e Inmutabilidad (Semana 5)
 
-**Objetivo:** Interfaz completa para gestión de convivencia, gastos y auditoría.
+**Objetivo:** Implementar la capa de trazabilidad append-only con captura automática de snapshots.
 
-- [ ] Página del hogar (`/hogar`): lista de miembros con `BalanceIndicator` (verde/rojo), resumen de deudas simplificadas.
-- [ ] Componente `DebtGraph`: visualización de quién debe pagar a quién según el algoritmo de tránsito.
-- [ ] Página de gastos (`/hogar/expenses`): lista cronológica, formulario de nuevo gasto con `ExpenseForm` (selector de afectados + inputs de porcentaje con validación de suma = 100%).
-- [ ] Página de tareas (`/hogar/tasks`): lista de `TaskCard` con toggle de estado (optimistic UI update).
-- [ ] Página del feed de actividad (`/hogar/activity`): lista de `AuditFeedItem` con diff visual antes/después.
-- [ ] Flujo de invitación de miembros mediante modal.
+**Principios SOLID aplicados:**
+- `IAuditService` con único método `recordSnapshot(entityType, entityId, before, after, userId)` → SRP
+- El `AuditLogRepository` expone solo `save` y métodos `find*`. Los métodos `delete` y `update` no existen en la interfaz → ISP
+- `ExpenseServiceImpl` y `TaskServiceImpl` dependen de `IAuditService` (abstracción), no de `AuditServiceImpl` → DIP
 
----
+**Tareas:**
 
-### Fase 6 — Servidor MCP y Chat IA
-**Duración estimada: 1 semana**
+- [ ] Crear entidad JPA `AuditSnapshotLog` con campos `@Column(updatable = false)` en todos sus campos
+- [ ] Diseñar interfaz `IAuditLogRepository extends JpaRepository` con métodos solo de lectura y `save`; eliminar explícitamente `deleteById` sobreescribiendo para lanzar `UnsupportedOperationException`
+- [ ] Diseñar interfaz `IAuditService` con método `recordSnapshot(...)`
+- [ ] Implementar `AuditServiceImpl implements IAuditService` que serializa los estados como JSONB usando Jackson
+- [ ] Implementar `AuditEntityListener` con `@PreUpdate` y `@PreRemove` sobre `AuditSnapshotLog` que lanza `AuditImmutabilityViolationException`
+- [ ] Verificar que el trigger de PostgreSQL de inmutabilidad está activo en migración Flyway
+- [ ] Crear `TaskEntity` con `@Version`, entidad `Task` y su servicio `ITaskService` / `TaskServiceImpl`
+- [ ] Implementar `TaskController` con todos los endpoints de tareas
+- [ ] Implementar endpoint `GET /audit/home/{homeId}` con paginación y filtros
+- [ ] Implementar transformación de snapshots JSONB a texto legible en `AuditFeedFormatter`
 
-**Objetivo:** Servidor MCP completamente operativo con las tres herramientas e integrado en el frontend.
+**Tests:**
 
-#### 6.1 Servidor MCP (Node.js + TypeScript)
-- [ ] Inicializar proyecto Node.js 20 con TypeScript, compilación `tsc`.
-- [ ] Instalar SDK oficial MCP (`@modelcontextprotocol/sdk`).
-- [ ] Implementar servidor con transporte SSE o stdio según entorno.
-- [ ] Registrar las tres tools: `auditar_conflictos_hogar`, `analizar_balances_y_deudas`, `busqueda_semantica_alojamientos`.
-- [ ] Implementar lógica de extracción del JWT del contexto de la petición JSON-RPC.
-- [ ] Implementar cliente HTTP hacia Spring Boot con propagación del JWT (passthrough).
-- [ ] Gestionar respuestas `403` del backend retornando `McpError` apropiado.
-- [ ] Pruebas de integración: simular petición MCP con JWT válido/inválido.
+- [ ] Test unitario: intentar `auditLogRepository.deleteById(...)` lanza `UnsupportedOperationException`
+- [ ] Test de integración: crear gasto → actualizar gasto → verificar exactamente 2 registros en `AUDIT_SNAPSHOT_LOG` con `snapshot_before` y `snapshot_after` correctos
+- [ ] Test de integración: intentar UPDATE SQL directo sobre `audit_snapshot_log` es bloqueado por trigger de PostgreSQL
 
-#### 6.2 Frontend — Interfaz de Chat
-- [ ] Página `/chat` con componente `ChatInterface`.
-- [ ] Conexión al servidor MCP vía SSE o WebSocket con inyección del JWT en metadatos de contexto.
-- [ ] Historial de mensajes con diferenciación visual usuario / asistente.
-- [ ] Indicador de "tool en uso" mientras el LLM llama a una herramienta MCP.
-- [ ] Manejo de errores: token expirado, acceso denegado.
+**Entregable verificable:** Cualquier mutación sobre `EXPENSE` o `TASK` genera automáticamente un snapshot inmutable. El feed de actividad devuelve los cambios en orden cronológico.
 
 ---
 
-### Fase 7 — Integración, Pruebas y Pulido Final
-**Duración estimada: 1 semana**
+### Fase 4 — Módulo de Alojamiento: Estructura Física e Imágenes (Semana 6)
 
-**Objetivo:** Sistema completamente integrado, testeado y listo para presentación.
+**Objetivo:** Implementar la base de datos de las propiedades físicas (`Accommodation`) y la integración del almacenamiento cloud en Cloudinary para las imágenes.
 
-#### 7.1 Pruebas de Integración Backend
-- [ ] Tests de integración con `@SpringBootTest` + `TestContainers` (PostgreSQL real).
-- [ ] Test del ciclo completo de auditoría: crear → modificar → verificar inmutabilidad.
-- [ ] Test de concurrencia optimista: dos hilos modificando el mismo `ExpenseEntity` simultáneamente.
-- [ ] Test del algoritmo de simplificación de deudas con escenario de tránsito (A→B→C = A→C).
-- [ ] Verificar que el trigger DDL bloquea efectivamente `UPDATE`/`DELETE` en `audit_snapshot_log`.
+**Principios SOLID aplicados:**
+- `IAccommodationService` gestiona exclusivamente el inventario físico e inmutable de propiedades → SRP
+- `IImageStorageService` (interfaz) de almacenamiento cloud: permite intercambiar proveedores fácilmente sin alterar la lógica de negocio → OCP / DIP
 
-#### 7.2 Configuración Docker Compose
-- [ ] Completar `docker-compose.yml` con todos los servicios.
-- [ ] Crear archivo `.env.example` con todas las variables necesarias.
-- [ ] Verificar arranque completo con `docker compose up --build`.
-- [ ] Comprobar healthchecks y orden de arranque con `depends_on`.
+**Tareas — Backend:**
 
-#### 7.3 Seguridad y Hardening
-- [ ] Revisar que todos los endpoints sensibles exigen JWT.
-- [ ] Auditar que ningún endpoint del módulo de hogar retorna datos si el usuario no es miembro.
-- [ ] Configurar CORS de Spring Boot para aceptar solo el origen del frontend.
-- [ ] Revisar headers de seguridad en Next.js (`next.config.js`).
+- [ ] Crear entidades JPA `Accommodation` (propiedad física) y `AccommodationImage` (imágenes de Cloudinary asociadas a una propiedad física)
+- [ ] Crear migraciones Flyway: tabla `accommodation` con índices B-Tree geoespaciales sobre `(latitude, longitude)` y `city`, y tabla `accommodation_image`
+- [ ] Diseñar interfaz `IImageStorageService` con métodos `uploadImage(file): String` y `deleteImage(publicId): void`
+- [ ] Implementar `CloudinaryImageStorageService implements IImageStorageService`
+- [ ] Diseñar interfaz `IAccommodationService` para administración física: `registerProperty`, `findById`, `updateProperty`, `deleteProperty`, `addImage`, `deleteImage`
+- [ ] Implementar `AccommodationServiceImpl implements IAccommodationService` inyectando `IImageStorageService`
+- [ ] Implementar `AccommodationController` con los endpoints de gestión física (`POST /accommodations`, `GET /accommodations/{id}`, `PUT /accommodations/{id}`, `DELETE /accommodations/{id}`) y de subida de imágenes (`POST /accommodations/{id}/images`, `DELETE /accommodations/{id}/images/{imageId}`)
 
-#### 7.4 Documentación
-- [ ] Generar documentación de la API REST con **Springdoc OpenAPI** (Swagger UI en `/swagger-ui.html`).
-- [ ] Documentar en `README.md`: instrucciones de arranque con Docker, variables de entorno, arquitectura.
-- [ ] Comentar las interfaces y clases clave de Spring Boot con Javadoc.
+**Tareas — Tests:**
+
+- [ ] Test unitario: `CloudinaryImageStorageServiceTest` mockeando el SDK de Cloudinary
+- [ ] Test de integración: crear alojamiento, subir imágenes y validar que las URLs e índices de orden de visualización persisten correctamente en la BD
+
+**Entregable verificable:** Un propietario autenticado puede registrar su propiedad física, geolocalizarla con coordenadas latitud/longitud y subir múltiples imágenes que quedan persistidas con su URL pública de Cloudinary.
 
 ---
 
-## Resumen de Fases
+### Fase 5 — Publicación y Catálogo Comercial (Listings) (Semana 7)
 
-| Fase | Nombre | Duración Est. | Entregable Principal |
-|------|--------|--------------|---------------------|
-| 1 | Infraestructura Base y Seguridad | 1-2 semanas | Autenticación JWT + DB funcionando |
-| 2 | Backend Core: Hogar y Motor Financiero | 2 semanas | API de hogares, gastos y deudas |
-| 3 | Subsistema de Auditoría Inmutable | 1 semana | Captura de snapshots + feed de actividad |
-| 4 | Módulo de Alojamiento y Mapa | 2 semanas | Mercado de anuncios con mapa y valoraciones |
-| 5 | Frontend — Módulo de Hogar | 1 semana | UI completa de gestión de convivencia |
-| 6 | Servidor MCP y Chat IA | 1 semana | Servidor MCP con 3 tools + chat integrado |
-| 7 | Integración, Pruebas y Pulido Final | 1 semana | Sistema completo, testeado y dockerizado |
-| | **Total estimado** | **9-10 semanas** | |
+**Objetivo:** Implementar la publicación de anuncios comerciales (`AccommodationListing`), el buscador catalogado con filtros y geolocalización, la lógica de moderación por administrador y el sistema de reportes/valoraciones.
+
+**Principios SOLID aplicados:**
+- `IAccommodationListingService` encapsula exclusivamente el ciclo de vida del anuncio y el catálogo → SRP
+- `IAccommodationReportService` e `IReviewService` desacoplados en servicios independientes de la publicación comercial → SRP
+
+**Tareas — Backend:**
+
+- [ ] Crear entidades JPA `AccommodationListing`, `AccommodationReview`, `AccommodationReport` y `Message` (con soporte para ofertas económicas)
+- [ ] Crear migraciones Flyway: tablas `accommodation_listing`, `accommodation_review`, `accommodation_report`, y `message`
+- [ ] Agregar índices críticos `idx_listing_status_price`, `idx_report_listing_status`, etc.
+- [ ] Añadir campos `bannedUntil` y `banReason` a `User`, implementando `isBanned()` e integrándolo en `JwtAuthenticationFilter` para rechazar con `403` a usuarios baneados
+- [ ] Diseñar interfaz `IAccommodationListingService` para la gestión comercial: `publishListing`, `approveListing`, `rejectListing`, `finishListing`, `updateListing`, `searchListings`
+- [ ] Implementar `AccommodationListingServiceImpl implements IAccommodationListingService` (valida mínimo 2 imágenes físicas asociadas a la propiedad antes de permitir que pase a `APPROVED` / `AVAILABLE`)
+- [ ] Implementar `AccommodationReportServiceImpl` que, tras cada reporte persistido, cuenta las denuncias `PENDING` del `listingId`. Si supera 5 denuncias, cambia el estado del anuncio a `PENDIENTE` atómicamente
+- [ ] Implementar servicios para valoraciones (`ReviewServiceImpl`) y mensajería con ofertas (`MessageServiceImpl`)
+- [ ] Implementar `AccommodationListingController`, `ReviewController`, `MessageController`, `AccommodationReportController` y `AdminController` (moderación de anuncios, gestión de reportes y baneo de usuarios)
+
+**Tareas — Tests:**
+
+- [ ] Test unitario: intentar aprobar un listing con < 2 imágenes lanza `InsufficientImagesException`
+- [ ] Test unitario: `AccommodationReportServiceImpl` activa auto-moderación atómicamente al llegar a la sexta denuncia
+- [ ] Test de integración: realizar búsquedas y validar que los filtros de geolocalización, rango de precios y disponibilidad devuelven los anuncios aprobados correspondientes
+
+**Entregable verificable:** Un propietario con una propiedad y al menos 2 imágenes puede solicitar publicar un anuncio. Tras la aprobación del administrador, el anuncio entra en estado `AVAILABLE` en el catálogo y es localizable mediante el mapa y filtros.
 
 ---
 
-*Documento generado como Plan de Desarrollo Maestro para TFG. Actualizar el estado de las tareas (`[ ]` → `[x]`) conforme avance el desarrollo.*
+### Fase 6 — Frontend Core (Semanas 6-7, paralelo a Fases 4 y 5)
+
+**Objetivo:** Desarrollar la interfaz web completa para usuarios y administradores, consumiendo los nuevos endpoints de forma reactiva.
+
+**Tareas:**
+
+- [ ] Configurar Next.js App Router con layout base, fuentes y Tailwind
+- [ ] Implementar `authStore` (Zustand) con persistencia de JWT
+- [ ] Crear cliente HTTP centralizado con interceptor de JWT (`lib/apiClient.ts`)
+- [ ] Implementar vista `Home` con `<SearchBar />`, `<AccommodationMap />` (Leaflet) y `<AccommodationGrid />` para listar publicaciones (`listings`)
+- [ ] Implementar páginas de login y registro de usuarios
+- [ ] Implementar vistas de gestión física (`/accommodations` y `/accommodations/new` con subida a Cloudinary)
+- [ ] Implementar creación de anuncio comercial (`/listings/new`) y vista de detalle de publicación con comentarios y formulario de ofertas
+- [ ] Implementar dashboard del hogar con `<BalanceSummaryWidget />`, `<RecentExpensesList />` y `<PendingTasksList />`
+- [ ] Implementar vista de gastos (prorrateo dinámico) y balances con panel de deudas simplificadas
+- [ ] Implementar feed de actividad de auditoría con filtros
+- [ ] Implementar panel de administración para moderación de anuncios pendientes, bandeja de reportes y control de baneos
+
+**Entregable verificable:** Flujo visual y navegable completo de usuario y administrador en el frontend Next.js consumiendo los servicios del backend Spring Boot.
+
+---
+
+### Fase 7 — Servidor MCP e Integración IA (Semana 8)
+
+**Objetivo:** Construir el servidor MCP independiente y conectar la interfaz de chat del frontend para consultas en lenguaje natural.
+
+**Tareas — Servidor MCP (Node.js / TypeScript):**
+
+- [ ] Inicializar proyecto con el SDK oficial de MCP
+- [ ] Implementar transporte SSE (o stdio para desarrollo local)
+- [ ] Implementar middleware de extracción de JWT desde el contexto JSON-RPC
+- [ ] Implementar cliente HTTP tipado para llamadas al backend (`BackendApiClient`)
+- [ ] Implementar tool `auditar_conflictos_hogar` con esquema de parámetros validado con Zod
+- [ ] Implementar tool `analizar_balances_y_deudas` con esquema de parámetros validado con Zod
+- [ ] Implementar tool `busqueda_semantica_alojamientos` con esquema de parámetros validado con Zod (para buscar anuncios comerciales mediante lenguaje natural)
+- [ ] Implementar propagación de errores `403` / `401` del backend hacia el LLM
+
+**Tareas — Frontend (Integración de Chat):**
+
+- [ ] Implementar componente `<ChatWindow />` con historial de mensajes
+- [ ] Implementar llamada al LLM con inyección del JWT en el contexto MCP
+- [ ] Implementar `<ToolCallIndicator />` que muestra qué herramienta MCP está usando el modelo
+- [ ] Conectar el chat a la ruta `/home/[homeId]/chat`
+
+**Entregable verificable:** El usuario puede preguntar *"¿Quién ha tocado el gasto de la luz?"* o *"Busca alojamientos luminosos cerca de Barcelona"* y el LLM resuelve la consulta llamando a las herramientas MCP correspondientes con seguridad multi-tenant.
+
+---
+
+### Fase 8 — Hardening, Documentación y Despliegue (Semana 9)
+
+**Objetivo:** Preparar el proyecto para entrega académica con calidad de producción.
+
+**Tareas — Backend:**
+
+- [ ] Añadir Swagger / OpenAPI 3.0 con `springdoc-openapi`: documentar todos los endpoints con ejemplos de request/response
+- [ ] Revisar y aumentar cobertura de tests hasta ≥ 80 % global (JaCoCo)
+- [ ] Configurar perfiles de Spring: `dev` (logs verbose, H2 para unit tests) y `prod` (PostgreSQL, logs estructurados)
+- [ ] Auditar y robustecer manejo de excepciones en `@RestControllerAdvice`
+- [ ] Configurar CORS para el dominio del frontend
+
+**Tareas — Frontend:**
+
+- [ ] Implementar manejo global de errores (`ErrorBoundary` en rutas críticas)
+- [ ] Revisar accesibilidad: roles ARIA en componentes interactivos, contraste de colores
+- [ ] Añadir metadata y `og:image` para SEO básico en páginas públicas
+- [ ] Revisar y optimizar bundle size (dynamic imports para Leaflet y el chat)
+
+**Tareas — Infraestructura:**
+
+- [ ] Validar `docker-compose.yml` completo: todos los servicios arrancan sin errores
+- [ ] Crear `docker-compose.prod.yml` con variables de entorno sin secretos hardcodeados
+- [ ] Documentar variables de entorno en `README.md`
+
+**Tareas — Documentación:**
+
+- [ ] Escribir `README.md` raíz con instrucciones de instalación, levantar con Docker, ejecutar tests
+- [ ] Documentar el algoritmo de simplificación de deudas con ejemplos en `docs/debt-algorithm.md`
+- [ ] Documentar la arquitectura MCP y el flujo de autenticación passthrough en `docs/mcp-architecture.md`
+
+**Entregable verificable:** Proyecto arranca con un único `docker-compose up`. Documentación de API disponible en `http://localhost:8080/swagger-ui.html`. README permite a cualquier evaluador clonar y ejecutar el proyecto en menos de 10 minutos.
+
+---
+
+### Resumen del Cronograma
+
+| Semana | Fase | Módulo Principal |
+|---|---|---|
+| 0 | Fase 0 | Scaffolding, Docker, esquema BD |
+| 1-2 | Fase 1 | Autenticación JWT y gestión de usuarios |
+| 3-4 | Fase 2 | Motor financiero (TDD) — Gastos y deudas |
+| 5 | Fase 3 | Auditoría inmutable y feed de actividad |
+| 6 | Fase 4 | Módulo físico de alojamientos (Accommodation) e imágenes Cloudinary |
+| 7 | Fase 5 | Publicación comercial (AccommodationListing) y moderación |
+| 6-7 | Fase 6 | Frontend Core (desarrollado en paralelo a Fases 4 y 5) |
+| 8 | Fase 7 | Servidor MCP e integración del chat IA |
+| 9 | Fase 8 | Hardening, documentación y despliegue |
+
+---
+
+*Documento generado como plan maestro de desarrollo para TFG de desarrollador único.*
+*Versión 1.1 — Arquitectura: Next.js 15 · Java Spring Boot 3.x · PostgreSQL 15 · Node.js MCP Server*

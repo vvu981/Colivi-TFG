@@ -1,0 +1,325 @@
+package com.vvu981.colivibackend.features.accommodation.service.impl;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
+import com.vvu981.colivibackend.core.exception.ResourceNotFoundException;
+import com.vvu981.colivibackend.core.exception.UnauthorizedActionException;
+import com.vvu981.colivibackend.core.storage.service.IImageStorageService;
+import com.vvu981.colivibackend.features.accommodation.domain.Accommodation;
+import com.vvu981.colivibackend.features.accommodation.domain.AccommodationImage;
+import com.vvu981.colivibackend.features.accommodation.domain.AccommodationListing;
+import com.vvu981.colivibackend.features.accommodation.domain.AccommodationVisibility;
+import com.vvu981.colivibackend.features.accommodation.dto.AccommodationImageOrderRequest;
+import com.vvu981.colivibackend.features.accommodation.dto.AccommodationRequest;
+import com.vvu981.colivibackend.features.accommodation.dto.AccommodationResponse;
+import com.vvu981.colivibackend.features.accommodation.dto.AccommodationListingStatsDTO;
+import com.vvu981.colivibackend.features.accommodation.repository.AccommodationImageRepository;
+import com.vvu981.colivibackend.features.accommodation.repository.AccommodationRepository;
+import com.vvu981.colivibackend.features.accommodation.service.AccommodationListingService;
+import com.vvu981.colivibackend.features.accommodation.service.AccommodationService;
+import com.vvu981.colivibackend.features.user.domain.User;
+import com.vvu981.colivibackend.features.user.domain.UserRole;
+import com.vvu981.colivibackend.features.user.repository.UserRepository;
+
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+@Service
+public class AccommodationServiceImpl implements AccommodationService {
+
+    private final AccommodationRepository accommodationRepository;
+    private final IImageStorageService imageStorageService;
+    private final AccommodationImageRepository accommodationImageRepository;
+    private final AccommodationListingService listingService;
+    private final UserRepository userRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public AccommodationServiceImpl(
+            AccommodationRepository accommodationRepository,
+            IImageStorageService imageStorageService,
+            AccommodationImageRepository accommodationImageRepository,
+            @org.springframework.context.annotation.Lazy AccommodationListingService listingService,
+            UserRepository userRepository) {
+        this.accommodationRepository = accommodationRepository;
+        this.imageStorageService = imageStorageService;
+        this.accommodationImageRepository = accommodationImageRepository;
+        this.listingService = listingService;
+        this.userRepository = userRepository;
+    }
+
+    private User getUser(UUID currentUserId) {
+        return userRepository.findActiveById(currentUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("Error: Usuario no encontrado"));
+    }
+
+    @Override
+    @Transactional
+    public AccommodationResponse createAccommodation(AccommodationRequest accommodation, UUID currentUserId) {
+        User owner = userRepository.getReferenceById(currentUserId);
+        Accommodation accommodationToCreate = new Accommodation(accommodation, owner);
+
+        Accommodation accommodationSaved = accommodationRepository.save(accommodationToCreate);
+
+        return new AccommodationResponse(accommodationSaved);
+    }
+
+    @Override
+    @Transactional
+    public AccommodationResponse deleteAccommodationSoft(UUID accommodationId, UUID currentUserId) {
+        Accommodation accommodationToSoftDelete = findAccommodationWithImagesByIdAndDeletedAtIsNull(accommodationId);
+        User currentUser = getUser(currentUserId);
+        if (!canEdit(accommodationToSoftDelete, currentUser))
+            throw new UnauthorizedActionException("Error: no puedes editar");
+
+        if (listingService.hasActiveListings(accommodationId)) {
+            throw new BusinessRuleValidationException(
+                    "No es posible eliminar el alojamiento porque todavía tiene anuncios activos asociados. Debes dar de baja o eliminar primero todos sus anuncios vinculados.");
+        }
+
+        accommodationToSoftDelete.setDeletedAt(LocalDateTime.now());
+        Accommodation accommodationDeleted = accommodationRepository.save(accommodationToSoftDelete);
+
+        List<String> imageUrlsToPurge = accommodationToSoftDelete.getImages() != null
+                ? accommodationToSoftDelete.getImages().stream()
+                        .map(AccommodationImage::getImageUrl)
+                        .filter(url -> url != null && !url.trim().isEmpty())
+                        .toList()
+                : java.util.Collections.emptyList();
+
+        if (!imageUrlsToPurge.isEmpty()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    for (String url : imageUrlsToPurge) {
+                        try {
+                            imageStorageService.deleteImage(url);
+                        } catch (Exception e) {
+                            log.error("Alerta de Inconsistencia: Imagen huérfana en Cloud tras borrado de alojamiento ({}): {}", url, e.getMessage(), e);
+                        }
+                    }
+                }
+            });
+        }
+
+        return new AccommodationResponse(accommodationDeleted);
+    }
+
+    @Override
+    @Transactional
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public void deleteAccommodationHard(UUID accommodationId, UUID currentUserId) {
+
+        Accommodation accommodationToDelete = accommodationRepository.findById(accommodationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Error: Accommodation not found."));
+
+        List<AccommodationListing> associatedListings = listingService
+                .findListingsByAccommodationId(accommodationToDelete.getId());
+
+        for (AccommodationListing listing : associatedListings) {
+            listingService.deleteAccommodationListingHard(listing.getId(), currentUserId);
+        }
+
+        accommodationRepository.delete(accommodationToDelete);
+
+    }
+
+    @Override
+    @Transactional
+    public AccommodationResponse updateAccommodation(UUID id, AccommodationRequest dto, UUID currentUserId) {
+        Accommodation accommodationToUpdate = findAccommodationWithImagesByIdAndDeletedAtIsNullWithPessimisticLock(id);
+        User currentUser = getUser(currentUserId);
+        if (!canEdit(accommodationToUpdate, currentUser))
+            throw new UnauthorizedActionException("Error: no puedes editar");
+
+        accommodationToUpdate.setAddress(dto.address());
+        accommodationToUpdate.setCity(dto.city());
+        accommodationToUpdate.setCountry(dto.country());
+        accommodationToUpdate.setFreeRooms(dto.freeRooms());
+        accommodationToUpdate.setLatitude(dto.latitude());
+        accommodationToUpdate.setLongitude(dto.longitude());
+        accommodationToUpdate.setProvince(dto.province());
+        accommodationToUpdate.setSquareMeters(dto.squareMeters());
+        accommodationToUpdate.setTotalBathrooms(dto.totalBathrooms());
+        
+        AccommodationListingStatsDTO stats = listingService.getListingStatsForAccommodation(id);
+        if (dto.totalRooms() < stats.roomCount()) {
+            throw new BusinessRuleValidationException("No puedes reducir el número de habitaciones por debajo de las actualmente comprometidas en anuncios (" + stats.roomCount() + ").");
+        }
+        accommodationToUpdate.setTotalRooms(dto.totalRooms());
+        accommodationToUpdate.setUpdatedAt(LocalDateTime.now());
+
+        if (dto.amenities() != null) {
+            accommodationToUpdate.getAmenities().retainAll(dto.amenities());
+            accommodationToUpdate.getAmenities().addAll(dto.amenities());
+        } else {
+            accommodationToUpdate.getAmenities().clear();
+        }
+        Accommodation accommodationUpdated = accommodationRepository.save(accommodationToUpdate);
+        return new AccommodationResponse(accommodationUpdated);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public AccommodationResponse getAccommodation(UUID id) {
+        Accommodation accommodation = findAccommodationByIdAndDeletedAtIsNull(id);
+        return new AccommodationResponse(accommodation);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<AccommodationResponse> getMyAccommodations(UUID ownerId, AccommodationVisibility visibility,
+            int page, int size, UUID currentUserId) {
+
+        User currentUser = getUser(currentUserId);
+        UUID searchId = ownerId;
+
+        if (currentUser.getRole() != UserRole.ADMIN) {
+            searchId = currentUser.getId();
+        }
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+
+        Page<Accommodation> accommodationEntities = accommodationRepository.findByFields(searchId, visibility.name(),
+                pageable);
+
+        return accommodationEntities.map(AccommodationResponse::new);
+    }
+
+    @Override
+    @Transactional
+    public AccommodationResponse addImageToAccommodation(UUID accommodationId, MultipartFile image, UUID currentUserId) {
+        Accommodation accommodationToAdd = findAccommodationByIdAndDeletedAtIsNull(accommodationId);
+        User currentUser = getUser(currentUserId);
+
+        if (!canEdit(accommodationToAdd, currentUser)) {
+            throw new UnauthorizedActionException("Error: no tienes permiso para añadir imágenes");
+        }
+
+        final String secureUrl = imageStorageService.uploadImage(image);
+
+        // Compensación en caso de rollback para evitar storage leak
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status == STATUS_ROLLED_BACK) {
+                    log.warn("Transacción abortada: Purgando imagen {} de Cloudinary...", secureUrl);
+                    try {
+                        imageStorageService.deleteImage(secureUrl);
+                    } catch (Exception e) {
+                        log.error("Error al purgar imagen tras rollback: {}", e.getMessage(), e);
+                    }
+                }
+            }
+        });
+
+        AccommodationImage accommodationImageEntity = AccommodationImage.builder()
+                .imageUrl(secureUrl)
+                .accommodation(accommodationToAdd)
+                .displayOrder(accommodationToAdd.getImages().size() + 1)
+                .build();
+
+        accommodationToAdd.getImages().add(accommodationImageEntity);
+
+        Accommodation accommodationAdded = accommodationRepository.save(accommodationToAdd);
+
+        return new AccommodationResponse(accommodationAdded);
+    }
+
+    @Override
+    @Transactional
+    public void removeImageFromAccommodation(UUID accommodationId, UUID imageId, UUID currentUserId) {
+        Accommodation accommodation = findAccommodationByIdAndDeletedAtIsNull(accommodationId);
+        User currentUser = getUser(currentUserId);
+
+        if (!canEdit(accommodation, currentUser)) {
+            throw new UnauthorizedActionException("Error: no tienes permiso para eliminar imágenes de este alojamiento");
+        }
+
+        AccommodationImage imageToDelete = accommodationImageRepository.findById(imageId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Error: no se ha podido obtener la imagen a eliminar con el id: " + imageId + "."));
+
+        if (!imageToDelete.getAccommodation().getId().equals(accommodationId)) {
+            throw new BusinessRuleValidationException("Error: La imagen no pertenece al alojamiento especificado");
+        }
+
+        final String urlToPurge = imageToDelete.getImageUrl();
+        accommodation.getImages().remove(imageToDelete);
+        accommodationRepository.save(accommodation);
+
+        // Borrado difuso (Lazy Delete) usando hooks para no bloquear el Commit de BD
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                log.info("Eliminando objeto remoto tras Commit: {}", urlToPurge);
+                try {
+                    imageStorageService.deleteImage(urlToPurge);
+                } catch (Exception e) {
+                    log.error("Alerta de Inconsistencia: Imagen borrada en BD ({}) pero la eliminación remota en Cloud falló: {}", urlToPurge, e.getMessage(), e);
+                }
+            }
+        });
+    }
+
+    @Override
+    @Transactional
+    public AccommodationResponse updateImagesOrder(UUID accommodationId,
+            List<AccommodationImageOrderRequest> orderRequests, UUID currentUserId) {
+        Accommodation accommodation = findAccommodationByIdAndDeletedAtIsNull(accommodationId);
+        User currentUser = getUser(currentUserId);
+
+        if (!canEdit(accommodation, currentUser)) {
+            throw new UnauthorizedActionException("Error: no tienes permiso para modificar este alojamiento");
+        }
+
+        for (AccommodationImageOrderRequest req : orderRequests) {
+            accommodation.getImages().stream()
+                    .filter(img -> img.getId().equals(req.imageId()))
+                    .findFirst()
+                    .ifPresent(img -> img.setDisplayOrder(req.displayOrder()));
+        }
+
+        Accommodation updated = accommodationRepository.save(accommodation);
+        return new AccommodationResponse(updated);
+    }
+
+    @Override
+    public Accommodation findAccommodationByIdAndDeletedAtIsNull(UUID id) {
+        return accommodationRepository.findByIdAndDeletedAtIsNull(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Error: Accommodation with id: " + id + " not found."));
+    }
+
+    private boolean canEdit(Accommodation accommodationToUpdate, User currentUser) {
+        boolean isOwner = accommodationToUpdate.getOwner().getId().equals(currentUser.getId());
+        boolean isAdmin = currentUser.getRole() == UserRole.ADMIN;
+        return isOwner || isAdmin;
+    }
+
+    @Override
+    public Accommodation findAccommodationWithImagesByIdAndDeletedAtIsNull(UUID id) {
+        return accommodationRepository.findByIdAndDeletedAtIsNullWithImages(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Error: Accommodation with id: " + id + " not found."));
+    }
+
+    @Override
+    @Transactional
+    public Accommodation findAccommodationWithImagesByIdAndDeletedAtIsNullWithPessimisticLock(UUID id) {
+        return accommodationRepository.findByIdAndDeletedAtIsNullWithPessimisticLock(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Error: Accommodation with id: " + id + " not found."));
+    }
+
+}

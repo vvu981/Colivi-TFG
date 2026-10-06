@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+
+<html class="h-full bg-background antialiased" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Crea tu cuenta en Colivi</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-error": "#ffffff",
+                      "primary-container": "#bf542c",
+                      "surface-tint": "#a23e18",
+                      "on-tertiary-fixed": "#001f26",
+                      "error": "#ba1a1a",
+                      "surface-variant": "#d3e4fe",
+                      "surface-container-highest": "#d3e4fe",
+                      "inverse-on-surface": "#eaf1ff",
+                      "on-tertiary-container": "#f9fdff",
+                      "on-surface": "#0b1c30",
+                      "inverse-primary": "#ffb59c",
+                      "outline": "#8a726a",
+                      "on-primary-fixed-variant": "#822801",
+                      "on-tertiary-fixed-variant": "#004e5d",
+                      "on-primary-container": "#fffbff",
+                      "on-secondary-fixed-variant": "#3f465c",
+                      "primary-fixed-dim": "#ffb59c",
+                      "on-error-container": "#93000a",
+                      "tertiary-fixed": "#adecff",
+                      "inverse-surface": "#213145",
+                      "outline-variant": "#dec0b7",
+                      "secondary-fixed-dim": "#bec6e0",
+                      "surface-container-low": "#eff4ff",
+                      "on-secondary-container": "#5c647a",
+                      "on-secondary-fixed": "#131b2e",
+                      "on-primary-fixed": "#390c00",
+                      "primary-fixed": "#ffdbcf",
+                      "surface-container-lowest": "#ffffff",
+                      "surface": "#f8f9ff",
+                      "surface-container-high": "#dce9ff",
+                      "on-primary": "#ffffff",
+                      "surface-dim": "#cbdbf5",
+                      "on-tertiary": "#ffffff",
+                      "secondary-container": "#dae2fd",
+                      "secondary": "#565e74",
+                      "tertiary-container": "#008097",
+                      "surface-container": "#e5eeff",
+                      "secondary-fixed": "#dae2fd",
+                      "error-container": "#ffdad6",
+                      "on-surface-variant": "#57423b",
+                      "primary": "#9f3c16",
+                      "tertiary": "#006578",
+                      "background": "#f8f9ff",
+                      "on-background": "#0b1c30",
+                      "tertiary-fixed-dim": "#72d4ee",
+                      "on-secondary": "#ffffff",
+                      "surface-bright": "#f8f9ff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "max-width": "1280px",
+                      "md": "16px",
+                      "base": "4px",
+                      "xs": "4px",
+                      "margin-mobile": "16px",
+                      "2xl": "64px",
+                      "margin-desktop": "48px",
+                      "sm": "8px",
+                      "xl": "40px",
+                      "lg": "24px",
+                      "gutter": "24px"
+              },
+              "fontFamily": {
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "label-md": [
+                              "Inter"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "display-lg": [
+                              "Inter"
+                      ],
+                      "display-lg-mobile": [
+                              "Inter"
+                      ],
+                      "label-sm": [
+                              "Inter"
+                      ],
+                      "headline-sm": [
+                              "Inter"
+                      ],
+                      "headline-md": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "1.4",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "1.5",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "display-lg": [
+                              "48px",
+                              {
+                                      "lineHeight": "1.1",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "display-lg-mobile": [
+                              "32px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "label-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "letterSpacing": "0.02em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-sm": [
+                              "20px",
+                              {
+                                      "lineHeight": "1.4",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "1.3",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+          .ambient-shadow {
+              box-shadow: 0px 4px 20px rgba(15, 23, 42, 0.04);
+          }
+      </style>
+</head>
+<body class="h-full flex text-on-surface">
+<!-- Split Screen Layout -->
+<div class="flex w-full min-h-screen flex-col md:flex-row">
+<!-- Left Column: Form Section -->
+<div class="flex flex-1 flex-col justify-center px-margin-mobile py-2xl sm:px-lg lg:flex-none lg:w-1/2 lg:px-margin-desktop bg-surface-container-lowest">
+<div class="mx-auto w-full max-w-md">
+<!-- Brand -->
+<div class="flex items-center gap-2 mb-xl">
+<span class="font-headline-md text-headline-md font-bold text-primary">Colivi</span>
+</div>
+<!-- Headings -->
+<h2 class="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-on-background mb-sm">
+                    Crea tu cuenta en Colivi
+                </h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant mb-xl">
+                    Únete a la comunidad de coliving de forma rápida y segura.
+                </p>
+<!-- Role Selector (Segmented Control) -->
+<div class="flex p-1 bg-surface-container-low rounded-lg mb-lg border border-outline-variant">
+<button class="flex-1 py-2 text-center rounded bg-surface shadow-sm font-label-md text-label-md text-on-surface border border-outline-variant transition-all">
+                        Busco habitación (Inquilino)
+                    </button>
+<button class="flex-1 py-2 text-center rounded font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-all">
+                        Tengo un inmueble (Propietario)
+                    </button>
+</div>
+<!-- Form -->
+<form action="#" class="space-y-lg" method="POST">
+<!-- Name Row -->
+<div class="flex gap-md">
+<div class="flex-1">
+<label class="block font-label-md text-label-md text-on-surface mb-xs" for="first-name">Nombre</label>
+<input class="block w-full rounded-lg border-outline-variant py-2 px-3 text-on-surface shadow-sm focus:border-on-surface focus:ring-2 focus:ring-surface-variant focus:ring-offset-0 sm:text-body-md transition-colors bg-surface-container-lowest" id="first-name" name="first-name" placeholder="Ej. Juan" required="" type="text"/>
+</div>
+<div class="flex-1">
+<label class="block font-label-md text-label-md text-on-surface mb-xs" for="last-name">Apellido</label>
+<input class="block w-full rounded-lg border-outline-variant py-2 px-3 text-on-surface shadow-sm focus:border-on-surface focus:ring-2 focus:ring-surface-variant focus:ring-offset-0 sm:text-body-md transition-colors bg-surface-container-lowest" id="last-name" name="last-name" placeholder="Ej. Pérez" required="" type="text"/>
+</div>
+</div>
+<!-- Email -->
+<div>
+<label class="block font-label-md text-label-md text-on-surface mb-xs" for="email">Correo electrónico</label>
+<input class="block w-full rounded-lg border-outline-variant py-2 px-3 text-on-surface shadow-sm focus:border-on-surface focus:ring-2 focus:ring-surface-variant focus:ring-offset-0 sm:text-body-md transition-colors bg-surface-container-lowest" id="email" name="email" placeholder="juan@ejemplo.com" required="" type="email"/>
+</div>
+<!-- Password with Strength Indicator -->
+<div>
+<label class="block font-label-md text-label-md text-on-surface mb-xs" for="password">Contraseña</label>
+<input class="block w-full rounded-lg border-outline-variant py-2 px-3 text-on-surface shadow-sm focus:border-on-surface focus:ring-2 focus:ring-surface-variant focus:ring-offset-0 sm:text-body-md transition-colors bg-surface-container-lowest mb-2" id="password" name="password" placeholder="••••••••" required="" type="password"/>
+<!-- Strength Bars -->
+<div class="flex gap-1 h-1 mt-2">
+<div class="flex-1 bg-outline-variant rounded-full"></div>
+<div class="flex-1 bg-surface-container-high rounded-full"></div>
+<div class="flex-1 bg-surface-container-high rounded-full"></div>
+<div class="flex-1 bg-surface-container-high rounded-full"></div>
+</div>
+<p class="font-label-sm text-label-sm text-on-surface-variant mt-1 text-right">Usa al menos 8 caracteres</p>
+</div>
+<!-- Terms Checkbox -->
+<div class="flex items-start">
+<div class="flex h-6 items-center">
+<input class="h-4 w-4 rounded border-outline-variant text-primary focus:ring-primary focus:ring-offset-0" id="terms" name="terms" required="" type="checkbox"/>
+</div>
+<div class="ml-3">
+<label class="font-body-md text-body-md text-on-surface-variant" for="terms">
+                                Acepto los <a class="text-primary hover:underline" href="#">Términos de servicio</a> y la <a class="text-primary hover:underline" href="#">Política de privacidad</a>.
+                            </label>
+</div>
+</div>
+<!-- Submit Button -->
+<div>
+<button class="flex w-full justify-center rounded-lg bg-primary px-4 py-3 font-label-md text-label-md font-semibold text-on-primary shadow-sm hover:bg-surface-tint focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-colors duration-200" type="submit">
+                            Crear cuenta
+                        </button>
+</div>
+</form>
+<!-- Footer Log In Link -->
+<p class="mt-xl text-center font-body-md text-body-md text-on-surface-variant">
+                    ¿Ya tienes cuenta?
+                    <a class="font-semibold text-primary hover:text-surface-tint transition-colors" href="#">Inicia sesión</a>
+</p>
+</div>
+</div>
+<!-- Right Column: Image & Testimonial -->
+<div class="relative hidden w-full flex-1 lg:flex bg-surface-container-low">
+<img alt="Living room setting with people" class="absolute inset-0 h-full w-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBe3avdtE3i6MxrvaTcLucEDsPXMp-cAEdJBNVK8QUMtZSH8uGWdhQ_xkxYCfhgyjG6P81L0HYO3gAUq_z5I4ZfYbA3Q-T4TCzmzErK4Cto8UHO3I8_xhuTnAJ0yfQleRLXzZE183b6QXLbtnfshz7LQjwKsX2U8P-AyYwJCU8RdULreKmqt8-ogz7hlTzb9gNmVoVAJss_gBq5j8DBQ-xS0ig9ksDrGIWFy0z7ftwCj1kzGD6SXa-p"/>
+<!-- Gradient Overlay for readability if needed, kept subtle -->
+<div class="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
+<!-- Floating Testimonial Card -->
+<div class="absolute bottom-margin-desktop left-margin-desktop right-margin-desktop md:right-auto md:w-[400px]">
+<div class="bg-surface-container-lowest/95 backdrop-blur-sm p-lg rounded-xl border border-outline-variant ambient-shadow">
+<div class="flex items-start gap-4">
+<span class="material-symbols-outlined text-primary text-3xl">format_quote</span>
+<div>
+<p class="font-body-md text-body-md text-on-surface italic mb-4">
+                                "Colivi me permitió mudarme a Madrid en 48 horas sin complicaciones."
+                            </p>
+<p class="font-label-md text-label-md text-on-surface-variant font-semibold">
+                                — Marta S.
+                            </p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</body></html>

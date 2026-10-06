@@ -12,7 +12,7 @@ services:
       POSTGRES_USER: tfg_user
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -23,11 +23,24 @@ services:
       retries: 5
 
   # ──────────────────────────────────────────────
+  # MAILPIT — Servidor SMTP local (intercepta correos en dev)
+  # SMTP:  puerto 1025
+  # Web UI: http://localhost:8025
+  # ──────────────────────────────────────────────
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: tfg_mailpit
+    restart: unless-stopped
+    ports:
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"   # SMTP
+      - "${MAILPIT_WEB_PORT:-8025}:8025"   # Web UI de inspección
+
+  # ──────────────────────────────────────────────
   # BACKEND — Java Spring Boot
   # ──────────────────────────────────────────────
   backend:
     build:
-      context: ./backend
+      context: ./Colivi-backend
       dockerfile: Dockerfile
     container_name: tfg_backend
     restart: unless-stopped
@@ -35,17 +48,43 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/tfg_db
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/tfg_db?stringtype=unspecified
       SPRING_DATASOURCE_USERNAME: tfg_user
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRATION_MS: 86400000
-      CLOUD_STORAGE_URL: ${CLOUD_STORAGE_URL}
-      CLOUD_STORAGE_API_KEY: ${CLOUD_STORAGE_API_KEY}
+      
+      # ── Credenciales de Cloudinary (Leídas desde tu .env) ──
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
+
+      # ── Mail (Mailpit en local / SMTP real en producción) ──
+      FRONTEND_URL: ${FRONTEND_URL:-https://colivi.denmarkeast.cloudapp.azure.com}
+      MAIL_HOST: ${MAIL_HOST:-mailpit}
+      MAIL_PORT: ${MAIL_PORT:-1025}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_SMTP_AUTH: ${MAIL_SMTP_AUTH:-false}
+      MAIL_SMTP_STARTTLS_ENABLE: ${MAIL_SMTP_STARTTLS_ENABLE:-false}
+      MAIL_FROM: ${MAIL_FROM:-noreply@colivi.com}
+      MAIL_REACTIVATION_URL: ${MAIL_REACTIVATION_URL:-${FRONTEND_URL:-https://colivi.denmarkeast.cloudapp.azure.com}/reactivate?token=}
+      MAIL_PASSWORD_RESET_URL: ${MAIL_PASSWORD_RESET_URL:-${FRONTEND_URL:-https://colivi.denmarkeast.cloudapp.azure.com}/reset-password?token=}
+      MAIL_RECEIVED_REQUESTS_URL: ${MAIL_RECEIVED_REQUESTS_URL:-${FRONTEND_URL:-https://colivi.denmarkeast.cloudapp.azure.com}/received-requests?requestId=}
+
+      # ── AI Orchestration & MCP (Configuración delegada al .env) ──
+      AI_BASE_URL: ${AI_BASE_URL:-https://api.groq.com/openai}
+      AI_API_KEY: ${AI_API_KEY:-${GROQ_API_KEY}}
+      AI_MODEL: ${AI_MODEL:-${GROQ_MODEL:-qwen/qwen3.8-27b}}
+      GROQ_API_KEY: ${GROQ_API_KEY:-${AI_API_KEY}}
+      GROQ_MODEL: ${GROQ_MODEL:-${AI_MODEL:-qwen/qwen3.8-27b}}
+      MCP_SERVER_URL: http://mcp-server:3001
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost,http://localhost:*,http://127.0.0.1,http://127.0.0.1:*,https://localhost,https://localhost:*,capacitor://localhost,http://192.168.*:*,http://192.168.*,https://*.cloudapp.azure.com,https://*.cloudapp.azure.com:*}
+      APP_CORS_ALLOWED_ORIGIN_PATTERNS: ${CORS_ALLOWED_ORIGINS:-http://localhost,http://localhost:*,http://127.0.0.1,http://127.0.0.1:*,https://localhost,https://localhost:*,capacitor://localhost,http://192.168.*:*,http://192.168.*,https://*.cloudapp.azure.com,https://*.cloudapp.azure.com:*}
     ports:
-      - "8080:8080"
+      - "${BACKEND_PORT:-8080}:8080"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/v3/api-docs"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -63,17 +102,24 @@ services:
       backend:
         condition: service_healthy
     environment:
+      NODE_ENV: production
       SPRING_API_BASE_URL: http://backend:8080/api/v1
       MCP_PORT: 3001
+      JWT_SECRET: ${JWT_SECRET}
     ports:
-      - "3001:3001"
+      - "${MCP_PORT:-3001}:3001"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3001/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
 
   # ──────────────────────────────────────────────
-  # FRONTEND — Next.js
+  # FRONTEND — Vite React
   # ──────────────────────────────────────────────
   frontend:
     build:
-      context: ./frontend
+      context: ./Colivi-frontend
       dockerfile: Dockerfile
     container_name: tfg_frontend
     restart: unless-stopped
@@ -81,11 +127,57 @@ services:
       - backend
       - mcp-server
     environment:
-      NEXT_PUBLIC_API_URL: http://backend:8080/api/v1
-      NEXT_PUBLIC_MCP_URL: http://mcp-server:3001
-      NEXT_PUBLIC_MAP_TOKEN: ${MAP_TOKEN}
+      BACKEND_URL: ${BACKEND_URL}
     ports:
-      - "3000:3000"
+      - "${FRONTEND_PORT:-5173}:5173"
+    volumes:
+      - ./Colivi-frontend/src:/app/src
+      - ./Colivi-frontend/public:/app/public
+      - ./Colivi-frontend/index.html:/app/index.html
+      - ./Colivi-frontend/vite.config.ts:/app/vite.config.ts
+
+  # ──────────────────────────────────────────────
+  # REVERSE PROXY & TERMINACIÓN SSL/HTTPS — Caddy
+  # ──────────────────────────────────────────────
+  caddy:
+    image: caddy:2.8-alpine
+    container_name: tfg_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:-colivi.denmarkeast.cloudapp.azure.com}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+      - backend
+
+  # ──────────────────────────────────────────────
+  # SEEDER — Población automática de datos iniciales para evaluación
+  # ──────────────────────────────────────────────
+  seeder:
+    build:
+      context: .
+      dockerfile: scripts/Dockerfile
+    container_name: tfg_seeder
+    restart: "no"
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      COLIVI_API_URL: http://backend:8080
+      PGHOST: postgres
+      PGUSER: tfg_user
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: tfg_db
+      IN_DOCKER: "true"
+      PYTHONUNBUFFERED: "1"
 
 volumes:
   postgres_data:
+  caddy_data:
+  caddy_config:

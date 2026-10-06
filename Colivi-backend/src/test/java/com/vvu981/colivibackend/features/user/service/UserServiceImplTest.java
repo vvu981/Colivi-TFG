@@ -1,0 +1,1598 @@
+package com.vvu981.colivibackend.features.user.service;
+
+import com.vvu981.colivibackend.core.security.JwtTokenProvider;
+import com.vvu981.colivibackend.features.home.repository.ActivityLogRepository;
+import com.vvu981.colivibackend.features.user.domain.User;
+import com.vvu981.colivibackend.features.user.domain.UserRole;
+import com.vvu981.colivibackend.features.user.dto.*;
+import com.vvu981.colivibackend.features.user.exception.AccountAlreadyActiveException;
+import com.vvu981.colivibackend.features.user.exception.InvalidReactivationTokenException;
+import com.vvu981.colivibackend.features.user.mapper.UserMapper;
+import com.vvu981.colivibackend.features.user.repository.UserRepository;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import com.vvu981.colivibackend.core.exception.BusinessRuleValidationException;
+import com.vvu981.colivibackend.core.exception.UnauthorizedActionException;
+import com.vvu981.colivibackend.features.user.exception.InvalidTokenException;
+import com.vvu981.colivibackend.features.user.exception.StaleSessionException;
+import com.vvu981.colivibackend.features.user.exception.UserNotFoundException;
+import org.springframework.context.ApplicationEventPublisher;
+import com.vvu981.colivibackend.features.user.domain.UserReactivationRequestedEvent;
+
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
+
+/**
+ * Tests unitarios de UserServiceImpl.
+ * Todas las dependencias externas están mockeadas. No se levanta contexto
+ * Spring.
+ *
+ * HISTORIAL DE BUGS: Este test suite detectó un bug crítico en producción:
+ * UserServiceImpl.updateSensibleData() tenía la condición de guarda INVERTIDA.
+ * Usaba `if (passwordEncoder.matches(...))` en lugar de `if
+ * (!passwordEncoder.matches(...))`.
+ * Consecuencia: lanzaba excepción cuando la contraseña era CORRECTA
+ * (autenticación rota).
+ * Bug corregido: línea 116 de UserServiceImpl ahora usa
+ * `!passwordEncoder.matches(...)`.
+ */
+
+@ExtendWith(MockitoExtension.class)
+@DisplayName("UserServiceImpl")
+class UserServiceImplTest {
+
+        @Mock
+        private UserRepository userRepository;
+        @Mock
+        private ActivityLogRepository activityLogRepository;
+        @Mock
+        private JwtTokenProvider jwtTokenProvider;
+        @Mock
+        private PasswordEncoder passwordEncoder;
+        @Mock
+        private UserMapper userMapper;
+        @Mock
+        private ApplicationEventPublisher eventPublisher;
+        @Mock
+        private com.vvu981.colivibackend.core.storage.service.IImageStorageService imageStorageService;
+        @Mock
+        private GoogleTokenValidator googleTokenValidator;
+
+        @InjectMocks
+        private UserServiceImpl userService;
+
+        private User persistedUser;
+
+        @BeforeEach
+        void setUp() {
+                persistedUser = new User();
+                persistedUser.setId(UUID.randomUUID());
+                persistedUser.setEmail("victor@colivi.com");
+                persistedUser.setNickname("vvu981");
+                persistedUser.setPasswordHash("$2a$12$hashedPassword");
+                persistedUser.setFirstName("Víctor");
+                persistedUser.setLastName1("Vallejo");
+                persistedUser.setRole(UserRole.USER);
+                persistedUser.setTokenVersion(1);
+        }
+
+        // =========================================================================
+        // login
+        // =========================================================================
+
+        @Nested
+        @DisplayName("login")
+        class Login {
+
+                @Test
+                @DisplayName("happy path: credenciales válidas devuelven un AuthResponse con tokens")
+                void givenValidCredentials_whenLogin_thenReturnsAuthResponse() {
+                        // Arrange
+                        LoginRequest request = new LoginRequest("victor@colivi.com", "password123");
+                        when(userRepository.findActiveByEmail("victor@colivi.com"))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(passwordEncoder.matches("password123", persistedUser.getPasswordHash()))
+                                        .thenReturn(true);
+                        when(jwtTokenProvider.generateAccessToken(persistedUser)).thenReturn("access.token");
+                        when(jwtTokenProvider.generateRefreshToken(persistedUser)).thenReturn("refresh.token");
+
+                        // Act
+                        AuthResponse response = userService.login(request);
+
+                        // Assert
+                        assertThat(response.accessToken()).isEqualTo("access.token");
+                        assertThat(response.refreshToken()).isEqualTo("refresh.token");
+                        assertThat(response.expiresIn()).isEqualTo(86_400_000L);
+                }
+
+                @Test
+                @DisplayName("usuario no encontrado lanza UnauthorizedActionException con mensaje genérico")
+                void givenNonExistentEmail_whenLogin_thenThrowsUnauthorizedActionException() {
+                        // Arrange
+                        LoginRequest request = new LoginRequest("ghost@colivi.com", "password123");
+                        when(userRepository.findActiveByEmail("ghost@colivi.com"))
+                                        .thenReturn(Optional.empty());
+
+                        // Act & Assert
+                        assertThatThrownBy(() -> userService.login(request))
+                                        .isInstanceOf(UnauthorizedActionException.class)
+                                        .hasMessageContaining("Credenciales inválidas");
+                }
+
+                @Test
+                @DisplayName("contraseña incorrecta lanza UnauthorizedActionException con mensaje genérico")
+                void givenWrongPassword_whenLogin_thenThrowsUnauthorizedActionException() {
+                        // Arrange
+                        LoginRequest request = new LoginRequest("victor@colivi.com", "wrong_password");
+                        when(userRepository.findActiveByEmail("victor@colivi.com"))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(passwordEncoder.matches("wrong_password", persistedUser.getPasswordHash()))
+                                        .thenReturn(false);
+
+                        // Act & Assert
+                        assertThatThrownBy(() -> userService.login(request))
+                                        .isInstanceOf(UnauthorizedActionException.class)
+                                        .hasMessageContaining("Credenciales inválidas");
+
+                        // Garantizamos que no se generaron tokens
+                        verifyNoInteractions(jwtTokenProvider);
+                }
+
+                @Test
+                @DisplayName("el mensaje de error es idéntico para email y contraseña incorrectos (no oráculos)")
+                void givenWrongEmailOrPassword_whenLogin_thenSameGenericMessage() {
+                        // Arrange — email inexistente
+                        LoginRequest badEmail = new LoginRequest("nobody@colivi.com", "pass");
+                        when(userRepository.findActiveByEmail("nobody@colivi.com"))
+                                        .thenReturn(Optional.empty());
+
+                        // Arrange — contraseña incorrecta
+                        LoginRequest badPass = new LoginRequest("victor@colivi.com", "wrong");
+                        when(userRepository.findActiveByEmail("victor@colivi.com"))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(passwordEncoder.matches("wrong", persistedUser.getPasswordHash()))
+                                        .thenReturn(false);
+
+                        // Act & Assert
+                        String msgBadEmail = catchThrowable(() -> userService.login(badEmail))
+                                        .getMessage();
+                        String msgBadPass = catchThrowable(() -> userService.login(badPass))
+                                        .getMessage();
+
+                }
+        }
+
+        // =========================================================================
+        // loginWithGoogle
+        // =========================================================================
+
+        @Nested
+        @DisplayName("loginWithGoogle")
+        class LoginWithGoogle {
+
+                @Test
+                @DisplayName("happy path: usuario existente inicia sesión exitosamente")
+                void givenExistingUser_whenLoginWithGoogle_thenReturnsAuthResponse() {
+                        // Arrange
+                        GoogleLoginRequest request = new GoogleLoginRequest("mock_token");
+                        com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload payload = new com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload();
+                        payload.setEmail("victor@colivi.com");
+                        payload.set("name", "Víctor Vallejo");
+                        payload.set("given_name", "Víctor");
+                        payload.set("family_name", "Vallejo");
+                        payload.set("picture", "https://google.com/real_avatar.jpg");
+
+                        when(googleTokenValidator.validateAndExtractPayload("mock_token")).thenReturn(payload);
+
+                        persistedUser.setProfilePicUrl("https://google.com/real_avatar.jpg");
+
+                        when(userRepository.findByEmailIgnoreCase("victor@colivi.com"))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(jwtTokenProvider.generateAccessToken(persistedUser)).thenReturn("access.token");
+                        when(jwtTokenProvider.generateRefreshToken(persistedUser)).thenReturn("refresh.token");
+
+                        // Act
+                        AuthResponse response = userService.loginWithGoogle(request);
+
+                        // Assert
+                        assertThat(response.accessToken()).isEqualTo("access.token");
+                        assertThat(response.refreshToken()).isEqualTo("refresh.token");
+                        verify(userRepository, never()).save(any(User.class));
+                }
+
+                @Test
+                @DisplayName("happy path: nuevo usuario se registra automáticamente e inicia sesión")
+                void givenNewUser_whenLoginWithGoogle_thenRegistersAndReturnsAuthResponse() {
+                        // Arrange
+                        GoogleLoginRequest request = new GoogleLoginRequest("mock_token");
+                        com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload payload = new com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload();
+                        payload.setEmail("new_user@colivi.com");
+                        payload.set("name", "New User");
+                        payload.set("given_name", "New");
+                        payload.set("family_name", "User");
+                        payload.set("picture", "https://google.com/real_avatar.jpg");
+
+                        when(googleTokenValidator.validateAndExtractPayload("mock_token")).thenReturn(payload);
+
+                        when(userRepository.findByEmailIgnoreCase("new_user@colivi.com"))
+                                        .thenReturn(Optional.empty());
+                        when(passwordEncoder.encode(anyString())).thenReturn("hashed_random");
+
+                        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+                        User savedUser = new User();
+                        savedUser.setEmail("new_user@colivi.com");
+                        savedUser.setFirstName("New");
+                        savedUser.setLastName1("User");
+                        savedUser.setRole(UserRole.USER);
+                        savedUser.setProfilePicUrl("https://google.com/real_avatar.jpg");
+
+                        when(userRepository.save(userCaptor.capture())).thenReturn(savedUser);
+                        when(jwtTokenProvider.generateAccessToken(savedUser)).thenReturn("access.token");
+                        when(jwtTokenProvider.generateRefreshToken(savedUser)).thenReturn("refresh.token");
+
+                        // Act
+                        AuthResponse response = userService.loginWithGoogle(request);
+
+                        // Assert
+                        assertThat(response.accessToken()).isEqualTo("access.token");
+                        assertThat(response.refreshToken()).isEqualTo("refresh.token");
+
+                        User captured = userCaptor.getValue();
+                        assertThat(captured.getEmail()).isEqualTo("new_user@colivi.com");
+                        assertThat(captured.getFirstName()).isEqualTo("New");
+                        assertThat(captured.getLastName1()).isEqualTo("User");
+                        assertThat(captured.getNickname()).startsWith("new_user_");
+                        assertThat(captured.getRole()).isEqualTo(UserRole.USER);
+                        assertThat(captured.getProfilePicUrl()).isEqualTo("https://google.com/real_avatar.jpg");
+                }
+
+                @Test
+                @DisplayName("debe lanzar excepcion si el token no contiene email")
+                void givenTokenWithoutEmail_whenLoginWithGoogle_thenThrowsIllegalArgumentException() {
+                        // Arrange
+                        GoogleLoginRequest request = new GoogleLoginRequest("mock_token");
+                        com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload payload = new com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload();
+                        payload.set("name", "No Email User");
+
+                        when(googleTokenValidator.validateAndExtractPayload("mock_token")).thenReturn(payload);
+
+                        // Act & Assert
+                        assertThatThrownBy(() -> userService.loginWithGoogle(request))
+                                        .isInstanceOf(IllegalArgumentException.class)
+                                        .hasMessageContaining("El token de Google no contiene un correo válido");
+                }
+
+                @Test
+                @DisplayName("debe lanzar excepcion si el token no es valido")
+                void givenInvalidToken_whenLoginWithGoogle_thenThrowsIllegalArgumentException() {
+                        // Arrange
+                        GoogleLoginRequest request = new GoogleLoginRequest("invalid_token");
+                        when(googleTokenValidator.validateAndExtractPayload("invalid_token"))
+                                        .thenThrow(new IllegalArgumentException("El token de Google no es válido."));
+
+                        // Act & Assert
+                        assertThatThrownBy(() -> userService.loginWithGoogle(request))
+                                        .isInstanceOf(IllegalArgumentException.class)
+                                        .hasMessageContaining("El token de Google no es válido");
+                }
+
+                @Test
+                @DisplayName("debe lanzar excepcion si la cuenta esta baneada al loguear con google")
+                void givenBannedUser_whenLoginWithGoogle_thenThrowsException() {
+                        GoogleLoginRequest request = new GoogleLoginRequest("mock_token");
+                        com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload payload = new com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload();
+                        payload.setEmail("victor@colivi.com");
+                        when(googleTokenValidator.validateAndExtractPayload("mock_token")).thenReturn(payload);
+
+                        persistedUser.setBannedAt(LocalDateTime.now());
+                        when(userRepository.findByEmailIgnoreCase("victor@colivi.com"))
+                                        .thenReturn(Optional.of(persistedUser));
+
+                        assertThatThrownBy(() -> userService.loginWithGoogle(request))
+                                        .isInstanceOf(UnauthorizedActionException.class)
+                                        .hasMessageContaining("suspendida");
+                }
+
+                @Test
+                @DisplayName("debe lanzar excepcion si la cuenta esta eliminada al loguear con google")
+                void givenDeletedUser_whenLoginWithGoogle_thenThrowsException() {
+                        GoogleLoginRequest request = new GoogleLoginRequest("mock_token");
+                        com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload payload = new com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload();
+                        payload.setEmail("victor@colivi.com");
+                        when(googleTokenValidator.validateAndExtractPayload("mock_token")).thenReturn(payload);
+
+                        persistedUser.setDeletedAt(LocalDateTime.now());
+                        when(userRepository.findByEmailIgnoreCase("victor@colivi.com"))
+                                        .thenReturn(Optional.of(persistedUser));
+
+                        assertThatThrownBy(() -> userService.loginWithGoogle(request))
+                                        .isInstanceOf(UnauthorizedActionException.class)
+                                        .hasMessageContaining("eliminada");
+                }
+
+                @Test
+                @DisplayName("debe lanzar excepcion si el email de google es solo espacios en blanco")
+                void givenTokenWithBlankEmail_whenLoginWithGoogle_thenThrowsIllegalArgumentException() {
+                        GoogleLoginRequest request = new GoogleLoginRequest("mock_token");
+                        com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload payload = new com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload();
+                        payload.setEmail("   ");
+
+                        when(googleTokenValidator.validateAndExtractPayload("mock_token")).thenReturn(payload);
+
+                        assertThatThrownBy(() -> userService.loginWithGoogle(request))
+                                        .isInstanceOf(IllegalArgumentException.class)
+                                        .hasMessageContaining("El token de Google no contiene un correo válido");
+                }
+
+                @Test
+                @DisplayName("nuevo usuario sin given_name ni family_name usa fallbacks correctamente")
+                void givenNewUserWithoutGivenNameAndFamilyName_whenLoginWithGoogle_thenUsesDefaults() {
+                        GoogleLoginRequest request = new GoogleLoginRequest("mock_token");
+                        com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload payload = new com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload();
+                        payload.setEmail("anon@colivi.com");
+
+                        when(googleTokenValidator.validateAndExtractPayload("mock_token")).thenReturn(payload);
+                        when(userRepository.findByEmailIgnoreCase("anon@colivi.com")).thenReturn(Optional.empty());
+                        when(passwordEncoder.encode(anyString())).thenReturn("hashed_pass");
+
+                        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+                        User savedUser = new User();
+                        savedUser.setEmail("anon@colivi.com");
+                        savedUser.setFirstName("Usuario Google");
+                        savedUser.setLastName1("");
+                        savedUser.setRole(UserRole.USER);
+
+                        when(userRepository.save(userCaptor.capture())).thenReturn(savedUser);
+                        when(jwtTokenProvider.generateAccessToken(savedUser)).thenReturn("access.token");
+                        when(jwtTokenProvider.generateRefreshToken(savedUser)).thenReturn("refresh.token");
+
+                        AuthResponse response = userService.loginWithGoogle(request);
+
+                        assertThat(response.accessToken()).isEqualTo("access.token");
+                        User captured = userCaptor.getValue();
+                        assertThat(captured.getFirstName()).isEqualTo("Usuario Google");
+                        assertThat(captured.getLastName1()).isEqualTo("");
+                }
+
+                @Test
+                @DisplayName("sincroniza foto de perfil de google si la actual es nula o de ejemplo")
+                void givenExistingUserWithNullOrExamplePic_whenLoginWithGoogle_thenUpdatesPic() {
+                        GoogleLoginRequest request = new GoogleLoginRequest("mock_token");
+                        com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload payload = new com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload();
+                        payload.setEmail("victor@colivi.com");
+                        payload.set("picture", "https://google.com/new_pic.jpg");
+
+                        persistedUser.setProfilePicUrl("http://example.com/old_pic.jpg");
+
+                        when(googleTokenValidator.validateAndExtractPayload("mock_token")).thenReturn(payload);
+                        when(userRepository.findByEmailIgnoreCase("victor@colivi.com")).thenReturn(Optional.of(persistedUser));
+                        when(userRepository.save(persistedUser)).thenReturn(persistedUser);
+                        when(jwtTokenProvider.generateAccessToken(persistedUser)).thenReturn("access.token");
+                        when(jwtTokenProvider.generateRefreshToken(persistedUser)).thenReturn("refresh.token");
+
+                        AuthResponse response = userService.loginWithGoogle(request);
+
+                        assertThat(response.accessToken()).isEqualTo("access.token");
+                        assertThat(persistedUser.getProfilePicUrl()).isEqualTo("https://google.com/new_pic.jpg");
+                        verify(userRepository).save(persistedUser);
+                }
+
+                @Test
+                @DisplayName("sincroniza foto de perfil de google si la actual es una cadena en blanco")
+                void givenExistingUserWithBlankPic_whenLoginWithGoogle_thenUpdatesPic() {
+                        GoogleLoginRequest request = new GoogleLoginRequest("mock_token");
+                        com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload payload = new com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload();
+                        payload.setEmail("victor@colivi.com");
+                        payload.set("picture", "https://google.com/new_pic.jpg");
+
+                        persistedUser.setProfilePicUrl("   ");
+
+                        when(googleTokenValidator.validateAndExtractPayload("mock_token")).thenReturn(payload);
+                        when(userRepository.findByEmailIgnoreCase("victor@colivi.com")).thenReturn(Optional.of(persistedUser));
+                        when(userRepository.save(persistedUser)).thenReturn(persistedUser);
+                        when(jwtTokenProvider.generateAccessToken(persistedUser)).thenReturn("access.token");
+                        when(jwtTokenProvider.generateRefreshToken(persistedUser)).thenReturn("refresh.token");
+
+                        AuthResponse response = userService.loginWithGoogle(request);
+
+                        assertThat(response.accessToken()).isEqualTo("access.token");
+                        assertThat(persistedUser.getProfilePicUrl()).isEqualTo("https://google.com/new_pic.jpg");
+                        verify(userRepository).save(persistedUser);
+                }
+
+                @Test
+                @DisplayName("no sincroniza foto si la foto de google viene en blanco")
+                void givenGoogleTokenWithBlankPic_whenLoginWithGoogle_thenDoesNotUpdatePic() {
+                        GoogleLoginRequest request = new GoogleLoginRequest("mock_token");
+                        com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload payload = new com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload();
+                        payload.setEmail("victor@colivi.com");
+                        payload.set("picture", "   ");
+
+                        persistedUser.setProfilePicUrl(null);
+
+                        when(googleTokenValidator.validateAndExtractPayload("mock_token")).thenReturn(payload);
+                        when(userRepository.findByEmailIgnoreCase("victor@colivi.com")).thenReturn(Optional.of(persistedUser));
+                        when(jwtTokenProvider.generateAccessToken(persistedUser)).thenReturn("access.token");
+                        when(jwtTokenProvider.generateRefreshToken(persistedUser)).thenReturn("refresh.token");
+
+                        AuthResponse response = userService.loginWithGoogle(request);
+
+                        assertThat(response.accessToken()).isEqualTo("access.token");
+                        verify(userRepository, never()).save(any());
+                }
+        }
+
+        // =========================================================================
+        // register
+        // =========================================================================
+
+        @Nested
+        @DisplayName("register")
+        class Register {
+
+                private RegisterRequest validRequest;
+
+                @BeforeEach
+                void setUpRegister() {
+                        validRequest = new RegisterRequest(
+                                        "vvu981", "nuevo@colivi.com", "SecurePass1!",
+                                        "Víctor", "Vallejo", "Uroz", "+34600000000");
+                }
+
+                @Test
+                @DisplayName("happy path: nuevo usuario devuelve AuthResponse con tokens")
+                void givenNewUser_whenRegister_thenReturnsAuthResponse() {
+                        // Arrange
+                        when(userRepository.findActiveByEmail("nuevo@colivi.com"))
+                                        .thenReturn(Optional.empty());
+                        when(userRepository.findActiveByNickname("vvu981"))
+                                        .thenReturn(Optional.empty());
+                        when(passwordEncoder.encode("SecurePass1!")).thenReturn("$2a$12$encoded");
+                        when(userRepository.save(any(User.class))).thenReturn(persistedUser);
+                        when(jwtTokenProvider.generateAccessToken(persistedUser)).thenReturn("new.access");
+                        when(jwtTokenProvider.generateRefreshToken(persistedUser)).thenReturn("new.refresh");
+
+                        // Act
+                        AuthResponse response = userService.register(validRequest);
+
+                        // Assert
+                        assertThat(response.accessToken()).isEqualTo("new.access");
+                        assertThat(response.refreshToken()).isEqualTo("new.refresh");
+                        verify(userRepository).save(any(User.class));
+                }
+
+                @Test
+                @DisplayName("email duplicado lanza BusinessRuleValidationException")
+                void givenDuplicateEmail_whenRegister_thenThrowsBusinessRuleValidationException() {
+                        // Arrange
+                        when(userRepository.findActiveByEmail("nuevo@colivi.com"))
+                                        .thenReturn(Optional.of(persistedUser));
+
+                        // Act & Assert
+                        assertThatThrownBy(() -> userService.register(validRequest))
+                                        .isInstanceOf(BusinessRuleValidationException.class)
+                                        .hasMessageContaining("email ya está registrado");
+
+                        verify(userRepository, never()).save(any());
+                }
+
+                @Test
+                @DisplayName("nickname duplicado lanza BusinessRuleValidationException")
+                void givenDuplicateNickname_whenRegister_thenThrowsBusinessRuleValidationException() {
+                        // Arrange
+                        when(userRepository.findActiveByEmail("nuevo@colivi.com"))
+                                        .thenReturn(Optional.empty());
+                        when(userRepository.findActiveByNickname("vvu981"))
+                                        .thenReturn(Optional.of(persistedUser));
+
+                        // Act & Assert
+                        assertThatThrownBy(() -> userService.register(validRequest))
+                                        .isInstanceOf(BusinessRuleValidationException.class)
+                                        .hasMessageContaining("apodo ya está en uso");
+
+                        verify(userRepository, never()).save(any());
+                }
+
+                @Test
+                @DisplayName("el usuario guardado tiene rol USER (nunca ADMIN) y contraseña hasheada")
+                void givenNewUser_whenRegister_thenSavedWithUserRoleAndHashedPassword() {
+                        // Arrange
+                        when(userRepository.findActiveByEmail(anyString())).thenReturn(Optional.empty());
+                        when(userRepository.findActiveByNickname(anyString())).thenReturn(Optional.empty());
+                        when(passwordEncoder.encode(anyString())).thenReturn("$2a$12$hashed");
+                        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+                        when(jwtTokenProvider.generateAccessToken(any())).thenReturn("tok");
+                        when(jwtTokenProvider.generateRefreshToken(any())).thenReturn("ref");
+
+                        // Act
+                        userService.register(validRequest);
+
+                        // Assert — capturamos el User que se pasó a save()
+                        verify(userRepository).save(argThat(savedUser -> savedUser.getRole() == UserRole.USER &&
+                                        "$2a$12$hashed".equals(savedUser.getPasswordHash())));
+                }
+        }
+
+        // =========================================================================
+        // refreshToken
+        // =========================================================================
+
+        @Nested
+        @DisplayName("refreshToken")
+        class RefreshToken {
+
+                @Test
+                @DisplayName("happy path: refresh token válido devuelve nuevo access token y refresh token")
+                void givenValidRefreshToken_whenRefresh_thenReturnsNewAccessToken() {
+                        // Arrange
+                        RefreshTokenRequest request = new RefreshTokenRequest("valid.refresh.token");
+                        when(jwtTokenProvider.isTokenValid("valid.refresh.token")).thenReturn(true);
+                        when(jwtTokenProvider.extractEmail("valid.refresh.token")).thenReturn("victor@colivi.com");
+                        when(userRepository.findActiveByEmail("victor@colivi.com"))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(jwtTokenProvider.extractTokenVersion("valid.refresh.token")).thenReturn(1);
+                        when(jwtTokenProvider.generateAccessToken(persistedUser)).thenReturn("new.access.token");
+                        when(jwtTokenProvider.generateRefreshToken(persistedUser)).thenReturn("new.refresh.token");
+
+                        // Act
+                        AuthResponse response = userService.refreshToken(request);
+
+                        // Assert
+                        assertThat(response.accessToken()).isEqualTo("new.access.token");
+                        // El refresh token rota
+                        assertThat(response.refreshToken()).isEqualTo("new.refresh.token");
+                }
+
+                @Test
+                @DisplayName("refresh token inválido o expirado lanza InvalidTokenException")
+                void givenInvalidRefreshToken_whenRefresh_thenThrowsInvalidTokenException() {
+                        // Arrange
+                        RefreshTokenRequest request = new RefreshTokenRequest("expired.or.invalid.token");
+                        when(jwtTokenProvider.isTokenValid("expired.or.invalid.token")).thenReturn(false);
+
+                        // Act & Assert
+                        assertThatThrownBy(() -> userService.refreshToken(request))
+                                        .isInstanceOf(InvalidTokenException.class)
+                                        .hasMessageContaining("inválido o caducado");
+
+                        verifyNoInteractions(userRepository);
+                }
+
+                @Test
+                @DisplayName("usuario del refresh token no existe en BD lanza UserNotFoundException")
+                void givenTokenWithNonExistentUser_whenRefresh_thenThrowsUserNotFoundException() {
+                        // Arrange
+                        RefreshTokenRequest request = new RefreshTokenRequest("valid.token.dead.user");
+                        when(jwtTokenProvider.isTokenValid("valid.token.dead.user")).thenReturn(true);
+                        when(jwtTokenProvider.extractEmail("valid.token.dead.user")).thenReturn("deleted@colivi.com");
+                        when(userRepository.findActiveByEmail("deleted@colivi.com"))
+                                        .thenReturn(Optional.empty());
+
+                        // Act & Assert
+                        assertThatThrownBy(() -> userService.refreshToken(request))
+                                        .isInstanceOf(UserNotFoundException.class)
+                                        .hasMessageContaining("Usuario no encontrado");
+                }
+
+                @Test
+                @DisplayName("versión del token discrepante lanza StaleSessionException")
+                void givenMismatchingTokenVersion_whenRefresh_thenThrowsStaleSessionException() {
+                        // Arrange
+                        RefreshTokenRequest request = new RefreshTokenRequest("mismatch.version.token");
+                        when(jwtTokenProvider.isTokenValid("mismatch.version.token")).thenReturn(true);
+                        when(jwtTokenProvider.extractEmail("mismatch.version.token")).thenReturn("victor@colivi.com");
+                        when(userRepository.findActiveByEmail("victor@colivi.com"))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(jwtTokenProvider.extractTokenVersion("mismatch.version.token")).thenReturn(99); // Versión
+                                                                                                             // en DB es
+                                                                                                             // 1
+
+                        // Act & Assert
+                        assertThatThrownBy(() -> userService.refreshToken(request))
+                                        .isInstanceOf(StaleSessionException.class)
+                                        .hasMessageContaining("La sesión ha expirado");
+                }
+        }
+
+        // =========================================================================
+        // setAdmin
+        // =========================================================================
+
+        @Nested
+        @DisplayName("setAdmin")
+        class SetAdmin {
+
+                @Test
+                @DisplayName("happy path: el rol del usuario se eleva a ADMIN y se persiste")
+                void givenExistingUser_whenSetAdmin_thenRoleIsAdminAndSaved() {
+                        // Arrange
+                        UUID userId = persistedUser.getId();
+                        when(userRepository.findActiveById(userId))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(userRepository.save(persistedUser)).thenReturn(persistedUser);
+
+                        // Act
+                        userService.setAdmin(userId);
+
+                        // Assert
+                        assertThat(persistedUser.getRole()).isEqualTo(UserRole.ADMIN);
+                        verify(userRepository).save(persistedUser);
+                }
+
+                @Test
+                @DisplayName("usuario no encontrado lanza UserNotFoundException")
+                void givenNonExistentUserId_whenSetAdmin_thenThrowsUserNotFoundException() {
+                        // Arrange
+                        UUID unknownId = UUID.randomUUID();
+                        when(userRepository.findActiveById(unknownId))
+                                        .thenReturn(Optional.empty());
+
+                        // Act & Assert
+                        assertThatThrownBy(() -> userService.setAdmin(unknownId))
+                                        .isInstanceOf(UserNotFoundException.class)
+                                        .hasMessageContaining("Usuario no encontrado");
+
+                        verify(userRepository, never()).save(any());
+                }
+        }
+
+        // =========================================================================
+        // updateNonSensibleData
+        // =========================================================================
+
+        @Nested
+        @DisplayName("updateNonSensibleData")
+        class UpdateNonSensibleData {
+
+                @Test
+                @DisplayName("happy path: delega al mapper y persiste, devolviendo DTO actualizado")
+                void givenValidUpdate_whenUpdateNonSensible_thenMapperCalledAndDtoReturned() {
+                        // Arrange
+                        UpdateNonSensible updateRequest = new UpdateNonSensible(
+                                        "newNick", "NuevoNombre", "NuevoApellido", null, "+34699999999", null);
+                        UpdateNonSensible expectedResponse = new UpdateNonSensible(
+                                        "newNick", "NuevoNombre", "NuevoApellido", null, "+34699999999", null);
+                        when(userRepository.findActiveById(persistedUser.getId()))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(userRepository.save(persistedUser)).thenReturn(persistedUser);
+                        when(userMapper.toUpdateNonSensibleDto(persistedUser)).thenReturn(expectedResponse);
+
+                        // Act
+                        UpdateNonSensible result = userService.updateNonSensibleData(persistedUser.getId(),
+                                        updateRequest);
+
+                        // Assert
+                        verify(userMapper).updateEntityFromDto(updateRequest, persistedUser);
+                        verify(userRepository).save(persistedUser);
+                        assertThat(result).isEqualTo(expectedResponse);
+                }
+        }
+
+        // =========================================================================
+        // updateSensibleData
+        // =========================================================================
+
+        @Nested
+        @DisplayName("updateSensibleData")
+        class UpdateSensibleData {
+
+                /**
+                 * Contraseña actual incorrecta debe lanzar RuntimeException.
+                 * NOTA: Este test detectó y corrigió un bug de producción en UserServiceImpl
+                 * donde la condición estaba invertida (matches en lugar de !matches).
+                 */
+                @Test
+                @DisplayName("contraseña actual INCORRECTA lanza UnauthorizedActionException")
+                void givenWrongCurrentPassword_whenUpdateSensible_thenThrowsUnauthorizedActionException() {
+                        // Arrange
+                        UpdateSensible request = new UpdateSensible("wrong_current", "new@email.com", null);
+                        when(userRepository.findActiveById(persistedUser.getId()))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(passwordEncoder.matches("wrong_current", persistedUser.getPasswordHash()))
+                                        .thenReturn(false); // contraseña incorrecta
+
+                        // Act & Assert
+                        assertThatThrownBy(() -> userService.updateSensibleData(persistedUser.getId(), request))
+                                        .isInstanceOf(UnauthorizedActionException.class)
+                                        .hasMessageContaining("contraseña es incorrecta");
+
+                        verify(userRepository, never()).save(any());
+                }
+
+                @Test
+                @DisplayName("contraseña actual CORRECTA con nuevo email actualiza el email y persiste")
+                void givenCorrectCurrentPassword_whenUpdateEmailOnly_thenEmailUpdatedAndSaved() {
+                        // Arrange
+                        UpdateSensible request = new UpdateSensible("correct_current", "nuevo@colivi.com", null);
+                        when(userRepository.findActiveById(persistedUser.getId()))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(passwordEncoder.matches("correct_current", persistedUser.getPasswordHash()))
+                                        .thenReturn(true);
+                        when(userRepository.save(persistedUser)).thenReturn(persistedUser);
+
+                        // Act
+                        userService.updateSensibleData(persistedUser.getId(), request);
+
+                        // Assert
+                        assertThat(persistedUser.getEmail()).isEqualTo("nuevo@colivi.com");
+                        verify(userRepository).save(persistedUser);
+                }
+
+                @Test
+                @DisplayName("contraseña actual CORRECTA con nueva contraseña la hashea y persiste")
+                void givenCorrectCurrentPassword_whenUpdatePasswordOnly_thenPasswordHashedAndSaved() {
+
+                        // Arrange
+                        UpdateSensible request = new UpdateSensible("correct_current", null, "NewSecure1!");
+                        when(userRepository.findActiveById(persistedUser.getId()))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(passwordEncoder.matches("correct_current", persistedUser.getPasswordHash()))
+                                        .thenReturn(true);
+                        when(passwordEncoder.encode("NewSecure1!")).thenReturn("$2a$12$newHashed");
+                        when(userRepository.save(persistedUser)).thenReturn(persistedUser);
+
+                        // Act
+                        userService.updateSensibleData(persistedUser.getId(), request);
+
+                        // Assert
+                        assertThat(persistedUser.getPasswordHash()).isEqualTo("$2a$12$newHashed");
+                        verify(userRepository).save(persistedUser);
+                }
+
+                @Test
+                @DisplayName("sin cambios (newEmail y newPassword son null/blank) no persiste en BD")
+                void givenNoChanges_whenUpdateSensible_thenRepositoryNotCalled() {
+                        // Arrange — nada que cambiar
+                        UpdateSensible request = new UpdateSensible("correct_current", null, null);
+                        when(userRepository.findActiveById(persistedUser.getId()))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(passwordEncoder.matches("correct_current", persistedUser.getPasswordHash()))
+                                        .thenReturn(true);
+
+                        // Act
+                        userService.updateSensibleData(persistedUser.getId(), request);
+
+                        // Assert — no se guardó nada innecesariamente
+                        verify(userRepository, never()).save(any());
+                }
+
+                @Test
+                @DisplayName("con campos en blanco (newEmail y newPassword son empty) no persiste en BD")
+                void givenBlankChanges_whenUpdateSensible_thenRepositoryNotCalled() {
+                        // Arrange — nada que cambiar
+                        UpdateSensible request = new UpdateSensible("correct_current", "   ", "");
+                        when(userRepository.findActiveById(persistedUser.getId()))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(passwordEncoder.matches("correct_current", persistedUser.getPasswordHash()))
+                                        .thenReturn(true);
+
+                        // Act
+                        userService.updateSensibleData(persistedUser.getId(), request);
+
+                        // Assert — no se guardó nada innecesariamente
+                        verify(userRepository, never()).save(any());
+                }
+        }
+
+        // =========================================================================
+        // deleteUserSoft
+        // =========================================================================
+
+        @Nested
+        @DisplayName("deleteUserSoft")
+        class DeleteUserSoft {
+
+                @Test
+                @DisplayName("happy path: usuario existente obtiene deletedAt y se persiste")
+                void givenExistingUser_whenDeleteUserSoft_thenDeletedAtSetAndSaved() {
+                        // Arrange
+                        UUID userId = persistedUser.getId();
+                        assertThat(persistedUser.getDeletedAt()).isNull(); // precondición
+                        when(userRepository.findActiveById(userId))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(userRepository.save(persistedUser)).thenReturn(persistedUser);
+
+                        // Act
+                        userService.deleteUserSoft(userId);
+
+                        // Assert — el campo deletedAt fue asignado y el usuario fue persistido
+                        assertThat(persistedUser.getDeletedAt()).isNotNull();
+                        verify(userRepository).save(persistedUser);
+                }
+
+                @Test
+                @DisplayName("el timestamp de deletedAt es anterior o igual al momento de la llamada")
+                void givenExistingUser_whenDeleteUserSoft_thenDeletedAtIsBeforeOrEqualNow() {
+                        // Arrange
+                        UUID userId = persistedUser.getId();
+                        when(userRepository.findActiveById(userId))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(userRepository.save(persistedUser)).thenReturn(persistedUser);
+
+                        LocalDateTime before = LocalDateTime.now();
+
+                        // Act
+                        userService.deleteUserSoft(userId);
+
+                        LocalDateTime after = LocalDateTime.now();
+
+                        // Assert — el timestamp debe estar en el rango [before, after]
+                        assertThat(persistedUser.getDeletedAt())
+                                        .isAfterOrEqualTo(before)
+                                        .isBeforeOrEqualTo(after);
+                }
+
+                @Test
+                @DisplayName("usuario no encontrado lanza UserNotFoundException y no persiste nada")
+                void givenNonExistentUserId_whenDeleteUserSoft_thenThrowsUserNotFoundException() {
+                        // Arrange
+                        UUID unknownId = UUID.randomUUID();
+                        when(userRepository.findActiveById(unknownId))
+                                        .thenReturn(Optional.empty());
+
+                        // Act & Assert
+                        assertThatThrownBy(() -> userService.deleteUserSoft(unknownId))
+                                        .isInstanceOf(UserNotFoundException.class)
+                                        .hasMessageContaining("Usuario no encontrado");
+
+                        verify(userRepository, never()).save(any());
+                }
+        }
+
+        // =========================================================================
+        // deleteUserHard
+        // =========================================================================
+
+        @Nested
+        @DisplayName("deleteUserHard")
+        class DeleteUserHard {
+
+                @Test
+                @DisplayName("happy path: usuario existente se elimina físicamente de la BD")
+                void givenExistingUser_whenDeleteUserHard_thenRepositoryDeleteCalled() {
+                        // Arrange
+                        UUID userId = persistedUser.getId();
+                        when(userRepository.findById(userId))
+                                        .thenReturn(Optional.of(persistedUser));
+
+                        // Act
+                        userService.deleteUserHard(userId);
+
+                        // Assert — se delegó en delete(), nunca en save()
+                        verify(activityLogRepository).nullifyActorIdByUserId(userId);
+                        verify(userRepository).delete(persistedUser);
+                        verify(userRepository, never()).save(any());
+                }
+
+                @Test
+                @DisplayName("usuario no encontrado lanza UserNotFoundException y no elimina nada")
+                void givenNonExistentUserId_whenDeleteUserHard_thenThrowsUserNotFoundException() {
+                        // Arrange
+                        UUID unknownId = UUID.randomUUID();
+                        when(userRepository.findById(unknownId))
+                                        .thenReturn(Optional.empty());
+
+                        // Act & Assert
+                        assertThatThrownBy(() -> userService.deleteUserHard(unknownId))
+                                        .isInstanceOf(UserNotFoundException.class)
+                                        .hasMessageContaining("Usuario no encontrado");
+
+                        verify(userRepository, never()).delete(any(User.class));
+                }
+        }
+
+        // =========================================================================
+        // logout
+        // =========================================================================
+
+        @Nested
+        @DisplayName("logout")
+        class Logout {
+
+                @Test
+                @DisplayName("happy path: incrementa tokenVersion y guarda usuario")
+                void givenAuthenticatedUser_whenLogout_thenTokenVersionIncrementedAndSaved() {
+                        // Arrange
+                        UUID userId = persistedUser.getId();
+                        Integer originalVersion = persistedUser.getTokenVersion();
+                        when(userRepository.findActiveById(userId))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(userRepository.save(persistedUser)).thenReturn(persistedUser);
+
+                        // Act
+                        userService.logout(persistedUser.getId());
+
+                        // Assert
+                        assertThat(persistedUser.getTokenVersion()).isEqualTo(originalVersion + 1);
+                        verify(userRepository).save(persistedUser);
+                }
+
+                @Test
+                @DisplayName("usuario no encontrado lanza UserNotFoundException")
+                void givenNonExistentUser_whenLogout_thenThrowsUserNotFoundException() {
+                        // Arrange
+                        UUID unknownId = UUID.randomUUID();
+                        when(userRepository.findActiveById(unknownId))
+                                        .thenReturn(Optional.empty());
+
+                        // Act & Assert
+                        assertThatThrownBy(() -> userService.logout(unknownId))
+                                        .isInstanceOf(UserNotFoundException.class)
+                                        .hasMessageContaining("Usuario no encontrado");
+
+                        verify(userRepository, never()).save(any());
+                }
+        }
+
+        // =========================================================================
+        // banUser
+        // =========================================================================
+
+        @Nested
+        @DisplayName("banUser")
+        class BanUser {
+
+                @Test
+                @DisplayName("happy path: usuario se banea con la fecha y motivo correctos")
+                void givenExistingUser_whenBanUser_thenBannedAndSaved() {
+                        // Arrange
+                        UUID userId = persistedUser.getId();
+                        when(userRepository.findActiveById(userId))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(userRepository.save(persistedUser)).thenReturn(persistedUser);
+
+                        // Act
+                        userService.banUser(userId, "Mal comportamiento",
+                                        LocalDateTime.now().plusDays(5));
+
+                        // Assert
+                        assertThat(persistedUser.getBannedAt()).isNotNull();
+                        assertThat(persistedUser.getBanReason()).isEqualTo("Mal comportamiento");
+                        assertThat(persistedUser.getBannedUntil())
+                                        .isAfter(LocalDateTime.now().plusDays(4));
+                        verify(userRepository).save(persistedUser);
+                }
+        }
+
+        // =========================================================================
+        // unbanUser
+        // =========================================================================
+
+        @Nested
+        @DisplayName("unbanUser")
+        class UnbanUser {
+
+                @Test
+                @DisplayName("happy path: usuario se desbanea limpiando bannedAt")
+                void givenExistingUser_whenUnbanUser_thenUnbannedAndSaved() {
+                        // Arrange
+                        UUID userId = persistedUser.getId();
+                        persistedUser.setBannedAt(LocalDateTime.now());
+                        when(userRepository.findActiveById(userId))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(userRepository.save(persistedUser)).thenReturn(persistedUser);
+
+                        // Act
+                        userService.unbanUser(userId);
+
+                        // Assert
+                        assertThat(persistedUser.getBannedAt()).isNull();
+                        verify(userRepository).save(persistedUser);
+                }
+        }
+
+        // =========================================================================
+        // requestReactivation
+        // =========================================================================
+
+        @Nested
+        @DisplayName("requestReactivation")
+        class RequestReactivation {
+
+                @Test
+                @DisplayName("happy path: cuenta eliminada genera token, persiste y envía correo")
+                void givenSoftDeletedAccount_whenRequestReactivation_thenTokenSavedAndEmailSent() {
+                        // Arrange — cuenta con soft-delete
+                        persistedUser.setDeletedAt(LocalDateTime.now().minusDays(1));
+                        when(userRepository.findByEmailIgnoreCase("victor@colivi.com"))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(userRepository.save(any(User.class))).thenReturn(persistedUser);
+
+                        // Act
+                        userService.requestReactivation("victor@colivi.com");
+
+                        // Assert — el token fue generado y el correo enviado
+                        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+                        verify(userRepository).save(userCaptor.capture());
+
+                        User savedUser = userCaptor.getValue();
+                        assertThat(savedUser.getReactivationToken()).isNotNull().isNotBlank();
+                        assertThat(savedUser.getReactivationTokenExpiresAt())
+                                        .isAfter(LocalDateTime.now().plusHours(23));
+
+                        verify(eventPublisher).publishEvent(any(UserReactivationRequestedEvent.class));
+                }
+
+                @Test
+                @DisplayName("email desconocido: retorna silenciosamente sin lanzar excepción (anti user-enumeration)")
+                void givenUnknownEmail_whenRequestReactivation_thenSilentReturn() {
+                        // Arrange
+                        when(userRepository.findByEmailIgnoreCase("unknown@colivi.com"))
+                                        .thenReturn(Optional.empty());
+
+                        // Act — no debe lanzar ninguna excepción
+                        assertThatCode(() -> userService.requestReactivation("unknown@colivi.com"))
+                                        .doesNotThrowAnyException();
+
+                        // Assert — no se generó token ni se envió correo
+                        verify(userRepository, never()).save(any());
+                        verifyNoInteractions(eventPublisher);
+                }
+
+                @Test
+                @DisplayName("cuenta ya activa (sin deletedAt) lanza AccountAlreadyActiveException")
+                void givenActiveAccount_whenRequestReactivation_thenThrowsAccountAlreadyActiveException() {
+                        // Arrange — cuenta activa (deletedAt == null)
+                        assertThat(persistedUser.getDeletedAt()).isNull(); // precondición
+                        when(userRepository.findByEmailIgnoreCase("victor@colivi.com"))
+                                        .thenReturn(Optional.of(persistedUser));
+
+                        // Act & Assert
+                        assertThatThrownBy(() -> userService.requestReactivation("victor@colivi.com"))
+                                        .isInstanceOf(AccountAlreadyActiveException.class)
+                                        .hasMessageContaining("ya está activa");
+
+                        verify(userRepository, never()).save(any());
+                        verifyNoInteractions(eventPublisher);
+                }
+
+                @Test
+                @DisplayName("el token de reactivación generado es un UUID válido")
+                void givenSoftDeletedAccount_whenRequestReactivation_thenTokenIsValidUuid() {
+                        // Arrange
+                        persistedUser.setDeletedAt(LocalDateTime.now().minusDays(1));
+                        when(userRepository.findByEmailIgnoreCase("victor@colivi.com"))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+                        // Act
+                        userService.requestReactivation("victor@colivi.com");
+
+                        // Assert — el token tiene formato UUID (36 caracteres con guiones)
+                        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+                        verify(userRepository).save(captor.capture());
+
+                        String token = captor.getValue().getReactivationToken();
+                        assertThatCode(() -> UUID.fromString(token)).doesNotThrowAnyException();
+                }
+
+                @Test
+                @DisplayName("el TTL del token de reactivación es de aproximadamente 24 horas")
+                void givenSoftDeletedAccount_whenRequestReactivation_thenTokenExpiresInApprox24Hours() {
+                        // Arrange
+                        persistedUser.setDeletedAt(LocalDateTime.now().minusDays(1));
+                        when(userRepository.findByEmailIgnoreCase("victor@colivi.com"))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+                        LocalDateTime before = LocalDateTime.now().plusHours(23).plusMinutes(59);
+
+                        // Act
+                        userService.requestReactivation("victor@colivi.com");
+
+                        LocalDateTime after = LocalDateTime.now().plusHours(24).plusMinutes(1);
+
+                        // Assert
+                        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+                        verify(userRepository).save(captor.capture());
+
+                        LocalDateTime expiresAt = captor.getValue().getReactivationTokenExpiresAt();
+                        assertThat(expiresAt).isAfter(before).isBefore(after);
+                }
+        }
+
+        // =========================================================================
+        // reactivateAccount
+        // =========================================================================
+
+        @Nested
+        @DisplayName("reactivateAccount")
+        class ReactivateAccount {
+
+                private static final String VALID_TOKEN = "550e8400-e29b-41d4-a716-446655440000";
+
+                @BeforeEach
+                void setUpDeletedUser() {
+                        // El usuario tiene la cuenta eliminada y un token de reactivación válido
+                        persistedUser.setDeletedAt(LocalDateTime.now().minusDays(1));
+                        persistedUser.setReactivationToken(VALID_TOKEN);
+                        persistedUser.setReactivationTokenExpiresAt(LocalDateTime.now().plusHours(23));
+                }
+
+                @Test
+                @DisplayName("happy path: token válido reactiva cuenta y devuelve AuthResponse con JWT")
+                void givenValidToken_whenReactivateAccount_thenAccountReactivatedAndAuthResponseReturned() {
+                        // Arrange
+                        when(userRepository.findByReactivationToken(VALID_TOKEN))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(userRepository.save(any(User.class))).thenReturn(persistedUser);
+                        when(jwtTokenProvider.generateAccessToken(persistedUser)).thenReturn("react.access");
+                        when(jwtTokenProvider.generateRefreshToken(persistedUser)).thenReturn("react.refresh");
+
+                        // Act
+                        AuthResponse response = userService.reactivateAccount(VALID_TOKEN);
+
+                        // Assert — JWT devueltos
+                        assertThat(response.accessToken()).isEqualTo("react.access");
+                        assertThat(response.refreshToken()).isEqualTo("react.refresh");
+                        assertThat(response.expiresIn()).isEqualTo(86_400_000L);
+                }
+
+                @Test
+                @DisplayName("la cuenta queda con deletedAt = null tras reactivar")
+                void givenValidToken_whenReactivateAccount_thenDeletedAtClearedToNull() {
+                        // Arrange
+                        assertThat(persistedUser.getDeletedAt()).isNotNull(); // precondición
+                        when(userRepository.findByReactivationToken(VALID_TOKEN))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+                        when(jwtTokenProvider.generateAccessToken(any())).thenReturn("tok");
+                        when(jwtTokenProvider.generateRefreshToken(any())).thenReturn("ref");
+
+                        // Act
+                        userService.reactivateAccount(VALID_TOKEN);
+
+                        // Assert
+                        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+                        verify(userRepository).save(captor.capture());
+                        assertThat(captor.getValue().getDeletedAt()).isNull();
+                }
+
+                @Test
+                @DisplayName("el token se limpia (null) tras reactivar: tokens de un solo uso")
+                void givenValidToken_whenReactivateAccount_thenTokenClearedAfterUse() {
+                        // Arrange
+                        when(userRepository.findByReactivationToken(VALID_TOKEN))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+                        when(jwtTokenProvider.generateAccessToken(any())).thenReturn("tok");
+                        when(jwtTokenProvider.generateRefreshToken(any())).thenReturn("ref");
+
+                        // Act
+                        userService.reactivateAccount(VALID_TOKEN);
+
+                        // Assert — token y expiración limpios
+                        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+                        verify(userRepository).save(captor.capture());
+                        assertThat(captor.getValue().getReactivationToken()).isNull();
+                        assertThat(captor.getValue().getReactivationTokenExpiresAt()).isNull();
+                }
+
+                @Test
+                @DisplayName("el tokenVersion se incrementa para invalidar sesiones anteriores al borrado")
+                void givenValidToken_whenReactivateAccount_thenTokenVersionIncremented() {
+                        // Arrange
+                        int originalVersion = persistedUser.getTokenVersion(); // = 1
+                        when(userRepository.findByReactivationToken(VALID_TOKEN))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+                        when(jwtTokenProvider.generateAccessToken(any())).thenReturn("tok");
+                        when(jwtTokenProvider.generateRefreshToken(any())).thenReturn("ref");
+
+                        // Act
+                        userService.reactivateAccount(VALID_TOKEN);
+
+                        // Assert
+                        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+                        verify(userRepository).save(captor.capture());
+                        assertThat(captor.getValue().getTokenVersion()).isEqualTo(originalVersion + 1);
+                }
+
+                @Test
+                @DisplayName("token inexistente lanza InvalidTokenException")
+                void givenNonExistentToken_whenReactivateAccount_thenThrowsInvalidTokenException() {
+                        // Arrange
+                        when(userRepository.findByReactivationToken("bad-token"))
+                                        .thenReturn(Optional.empty());
+
+                        // Act & Assert
+                        assertThatThrownBy(() -> userService.reactivateAccount("bad-token"))
+                                        .isInstanceOf(InvalidReactivationTokenException.class)
+                                        .hasMessageContaining("no es válido");
+
+                        verify(userRepository, never()).save(any());
+                        verifyNoInteractions(eventPublisher);
+                }
+
+                @Test
+                @DisplayName("token caducado lanza InvalidTokenException y no reactiva la cuenta")
+                void givenExpiredToken_whenReactivateAccount_thenThrowsInvalidTokenException() {
+                        // Arrange — token caducado (expiró hace 1 hora)
+                        persistedUser.setReactivationTokenExpiresAt(LocalDateTime.now().minusHours(1));
+                        when(userRepository.findByReactivationToken(VALID_TOKEN))
+                                        .thenReturn(Optional.of(persistedUser));
+
+                        // Act & Assert
+                        assertThatThrownBy(() -> userService.reactivateAccount(VALID_TOKEN))
+                                        .isInstanceOf(InvalidReactivationTokenException.class)
+                                        .hasMessageContaining("caducado");
+
+                        // La cuenta NO debe reactivarse
+                        verify(userRepository, never()).save(any());
+                        assertThat(persistedUser.getDeletedAt()).isNotNull(); // sigue eliminada
+                }
+
+                @Test
+                @DisplayName("token con expiresAt = null (estado inconsistente) lanza InvalidTokenException")
+                void givenTokenWithNullExpiry_whenReactivateAccount_thenThrowsInvalidTokenException() {
+                        // Arrange — estado de BD inconsistente: token sin TTL
+                        persistedUser.setReactivationTokenExpiresAt(null);
+                        when(userRepository.findByReactivationToken(VALID_TOKEN))
+                                        .thenReturn(Optional.of(persistedUser));
+
+                        // Act & Assert
+                        assertThatThrownBy(() -> userService.reactivateAccount(VALID_TOKEN))
+                                        .isInstanceOf(InvalidReactivationTokenException.class);
+
+                        verify(userRepository, never()).save(any());
+                }
+
+                @Test
+                @DisplayName("token que expira exactamente ahora es rechazado (boundary)")
+                void givenTokenExpiringExactlyNow_whenReactivateAccount_thenThrowsInvalidTokenException() {
+                        // Arrange — el token expira en el pasado inmediato
+                        persistedUser.setReactivationTokenExpiresAt(LocalDateTime.now().minusNanos(1));
+                        when(userRepository.findByReactivationToken(VALID_TOKEN))
+                                        .thenReturn(Optional.of(persistedUser));
+
+                        // Act & Assert
+                        assertThatThrownBy(() -> userService.reactivateAccount(VALID_TOKEN))
+                                        .isInstanceOf(InvalidReactivationTokenException.class)
+                                        .hasMessageContaining("caducado");
+                }
+        }
+
+        @Nested
+        @DisplayName("getUserProfile")
+        class GetUserProfile {
+                @Test
+                @DisplayName("happy path: retorna el perfil del usuario")
+                void givenExistingUserId_whenGetUserProfile_thenReturnsUserProfile() {
+                        // Arrange
+                        UUID userId = persistedUser.getId();
+                        UserProfileResponse expectedDto = new UserProfileResponse(userId, "nick", "first", "last", null,
+                                        "url", null);
+                        when(userRepository.findActiveById(userId)).thenReturn(Optional.of(persistedUser));
+                        when(userMapper.toUserProfileDto(persistedUser)).thenReturn(expectedDto);
+
+                        // Act
+                        UserProfileResponse result = userService.getUserProfile(userId);
+
+                        // Assert
+                        assertThat(result).isEqualTo(expectedDto);
+                        verify(userRepository).findActiveById(userId);
+                        verify(userMapper).toUserProfileDto(persistedUser);
+                }
+
+                @Test
+                @DisplayName("debe lanzar UserNotFoundException si el usuario no existe")
+                void givenNonExistingUserId_whenGetUserProfile_thenThrowsUserNotFoundException() {
+                        UUID userId = UUID.randomUUID();
+                        when(userRepository.findActiveById(userId)).thenReturn(Optional.empty());
+
+                        org.junit.jupiter.api.Assertions.assertThrows(
+                                        com.vvu981.colivibackend.features.user.exception.UserNotFoundException.class,
+                                        () -> userService.getUserProfile(userId));
+                }
+
+                @Test
+                @DisplayName("debe lanzar UserNotFoundException si el usuario está baneado")
+                void givenBannedUserId_whenGetUserProfile_thenThrowsUserNotFoundException() {
+                        UUID userId = persistedUser.getId();
+                        persistedUser.setBannedAt(java.time.LocalDateTime.now());
+                        persistedUser.setBannedUntil(java.time.LocalDateTime.now().plusDays(10));
+                        when(userRepository.findActiveById(userId)).thenReturn(Optional.of(persistedUser));
+
+                        org.junit.jupiter.api.Assertions.assertThrows(
+                                        com.vvu981.colivibackend.features.user.exception.UserNotFoundException.class,
+                                        () -> userService.getUserProfile(userId));
+                }
+        }
+
+        @Nested
+        @DisplayName("getMyProfile")
+        class GetMyProfile {
+                @Test
+                @DisplayName("happy path: retorna el propio perfil del usuario")
+                void givenExistingUserId_whenGetMyProfile_thenReturnsUserProfile() {
+                        // Arrange
+                        UUID userId = persistedUser.getId();
+                        MyProfileResponse expectedDto = new MyProfileResponse(
+                                        userId, "test@colivi.com", "123", UserRole.USER, "nick", "First", "Last", null,
+                                        "url", null);
+                        when(userRepository.findActiveById(userId)).thenReturn(Optional.of(persistedUser));
+                        when(userMapper.toMyProfileDto(persistedUser)).thenReturn(expectedDto);
+
+                        // Act
+                        MyProfileResponse result = userService.getMyProfile(userId);
+
+                        // Assert
+                        assertThat(result).isEqualTo(expectedDto);
+                        verify(userRepository).findActiveById(userId);
+                        verify(userMapper).toMyProfileDto(persistedUser);
+                }
+        }
+
+        @Nested
+        @DisplayName("uploadProfilePicture")
+        class UploadProfilePicture {
+
+                @Test
+                @DisplayName("happy path: sube foto nueva, borra la anterior si existe y guarda en BD")
+                void givenExistingUserWithOldPic_whenUploadProfilePicture_thenUploadsNewAndDeletesOldAndSaves() {
+                        // Arrange
+                        UUID userId = persistedUser.getId();
+                        persistedUser.setProfilePicUrl("https://cloudinary.com/old.jpg");
+                        MultipartFile mockFile = mock(MultipartFile.class);
+
+                        when(userRepository.findActiveById(userId)).thenReturn(Optional.of(persistedUser));
+                        when(imageStorageService.uploadImage(mockFile)).thenReturn("https://cloudinary.com/new.jpg");
+                        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+                        // Act
+                        String result = userService.uploadProfilePicture(userId, mockFile);
+
+                        // Assert
+                        assertThat(result).isEqualTo("https://cloudinary.com/new.jpg");
+                        verify(imageStorageService).deleteImage("https://cloudinary.com/old.jpg");
+                        verify(imageStorageService).uploadImage(mockFile);
+                        verify(userRepository).save(persistedUser);
+                        assertThat(persistedUser.getProfilePicUrl()).isEqualTo("https://cloudinary.com/new.jpg");
+                }
+
+                @Test
+                @DisplayName("happy path: sube foto nueva sin foto anterior y guarda en BD")
+                void givenExistingUserWithoutOldPic_whenUploadProfilePicture_thenUploadsNewAndSaves() {
+                        // Arrange
+                        UUID userId = persistedUser.getId();
+                        persistedUser.setProfilePicUrl(null);
+                        MultipartFile mockFile = mock(MultipartFile.class);
+
+                        when(userRepository.findActiveById(userId)).thenReturn(Optional.of(persistedUser));
+                        when(imageStorageService.uploadImage(mockFile)).thenReturn("https://cloudinary.com/new.jpg");
+                        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+                        // Act
+                        String result = userService.uploadProfilePicture(userId, mockFile);
+
+                        // Assert
+                        assertThat(result).isEqualTo("https://cloudinary.com/new.jpg");
+                        verify(imageStorageService, never()).deleteImage(anyString());
+                        verify(imageStorageService).uploadImage(mockFile);
+                        verify(userRepository).save(persistedUser);
+                        assertThat(persistedUser.getProfilePicUrl()).isEqualTo("https://cloudinary.com/new.jpg");
+                }
+
+                @Test
+                @DisplayName("usuario no encontrado lanza UserNotFoundException")
+                void givenNonExistentUser_whenUploadProfilePicture_thenThrowsUserNotFoundException() {
+                        // Arrange
+                        UUID userId = UUID.randomUUID();
+                        MultipartFile mockFile = mock(MultipartFile.class);
+                        when(userRepository.findActiveById(userId)).thenReturn(Optional.empty());
+
+                        // Act & Assert
+                        assertThatThrownBy(() -> userService.uploadProfilePicture(userId, mockFile))
+                                        .isInstanceOf(UserNotFoundException.class);
+
+                        verifyNoInteractions(imageStorageService);
+                        verify(userRepository, never()).save(any());
+                }
+
+                @Test
+                @DisplayName("captura excepción si falla el borrado de la foto anterior y continua exitosamente")
+                void givenOldPicFailsDeletion_whenUploadProfilePicture_thenLogsAndDoesNotThrow() {
+                        UUID userId = persistedUser.getId();
+                        persistedUser.setProfilePicUrl("https://cloudinary.com/old.jpg");
+                        MultipartFile mockFile = mock(MultipartFile.class);
+
+                        when(userRepository.findActiveById(userId)).thenReturn(Optional.of(persistedUser));
+                        when(imageStorageService.uploadImage(mockFile)).thenReturn("https://cloudinary.com/new.jpg");
+                        doThrow(new RuntimeException("Cloudinary timeout")).when(imageStorageService).deleteImage("https://cloudinary.com/old.jpg");
+                        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+                        String result = userService.uploadProfilePicture(userId, mockFile);
+
+                        assertThat(result).isEqualTo("https://cloudinary.com/new.jpg");
+                        verify(userRepository).save(persistedUser);
+                }
+        }
+
+        // =========================================================================
+        // forgotPassword / resetPassword
+        // =========================================================================
+
+        @Nested
+        @DisplayName("forgotPassword")
+        class ForgotPassword {
+                @Test
+                @DisplayName("happy path: envia token de recuperacion si el usuario existe y no esta baneado ni eliminado")
+                void shouldSendResetToken() {
+                        when(userRepository.findByEmailIgnoreCase("victor@colivi.com"))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(userRepository.save(any(User.class))).thenReturn(persistedUser);
+
+                        userService.forgotPassword("victor@colivi.com");
+
+                        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+                        verify(userRepository).save(captor.capture());
+                        assertThat(captor.getValue().getPasswordResetToken()).isNotNull();
+                        assertThat(captor.getValue().getPasswordResetTokenExpiresAt()).isNotNull();
+                        verify(eventPublisher).publishEvent(any(com.vvu981.colivibackend.features.user.domain.UserPasswordResetRequestedEvent.class));
+                }
+
+                @Test
+                @DisplayName("silent return si el usuario esta baneado")
+                void shouldSilentReturnIfBanned() {
+                        persistedUser.setBannedAt(LocalDateTime.now());
+                        when(userRepository.findByEmailIgnoreCase("victor@colivi.com"))
+                                        .thenReturn(Optional.of(persistedUser));
+
+                        userService.forgotPassword("victor@colivi.com");
+
+                        verify(userRepository, never()).save(any());
+                        verifyNoInteractions(eventPublisher);
+                }
+
+                @Test
+                @DisplayName("silent return si el usuario no existe")
+                void shouldSilentReturnIfUnknown() {
+                        when(userRepository.findByEmailIgnoreCase("unknown@colivi.com"))
+                                        .thenReturn(Optional.empty());
+
+                        userService.forgotPassword("unknown@colivi.com");
+
+                        verify(userRepository, never()).save(any());
+                        verifyNoInteractions(eventPublisher);
+                }
+
+                @Test
+                @DisplayName("silent return si el usuario esta eliminado")
+                void shouldSilentReturnIfDeleted() {
+                        persistedUser.setDeletedAt(LocalDateTime.now());
+                        when(userRepository.findByEmailIgnoreCase("victor@colivi.com"))
+                                        .thenReturn(Optional.of(persistedUser));
+
+                        userService.forgotPassword("victor@colivi.com");
+
+                        verify(userRepository, never()).save(any());
+                        verifyNoInteractions(eventPublisher);
+                }
+        }
+
+        @Nested
+        @DisplayName("resetPassword")
+        class ResetPassword {
+                @Test
+                @DisplayName("happy path: resetea la contrasena con token valido")
+                void shouldResetPassword() {
+                        persistedUser.setPasswordResetToken("valid-token");
+                        persistedUser.setPasswordResetTokenExpiresAt(LocalDateTime.now().plusHours(1));
+                        int originalVersion = persistedUser.getTokenVersion();
+
+                        when(userRepository.findByPasswordResetToken("valid-token"))
+                                        .thenReturn(Optional.of(persistedUser));
+                        when(passwordEncoder.encode("new-password")).thenReturn("$2a$12$newHashed");
+
+                        userService.resetPassword("valid-token", "new-password");
+
+                        assertThat(persistedUser.getPasswordHash()).isEqualTo("$2a$12$newHashed");
+                        assertThat(persistedUser.getPasswordResetToken()).isNull();
+                        assertThat(persistedUser.getPasswordResetTokenExpiresAt()).isNull();
+                        assertThat(persistedUser.getTokenVersion()).isEqualTo(originalVersion + 1);
+                        verify(userRepository).save(persistedUser);
+                }
+
+                @Test
+                @DisplayName("lanza excepcion si el token no existe")
+                void shouldThrowIfTokenInvalid() {
+                        when(userRepository.findByPasswordResetToken("bad-token"))
+                                        .thenReturn(Optional.empty());
+
+                        assertThatThrownBy(() -> userService.resetPassword("bad-token", "pass"))
+                                        .isInstanceOf(InvalidTokenException.class);
+                }
+
+                @Test
+                @DisplayName("lanza excepcion si el token expiro")
+                void shouldThrowIfTokenExpired() {
+                        persistedUser.setPasswordResetToken("valid-token");
+                        persistedUser.setPasswordResetTokenExpiresAt(LocalDateTime.now().minusHours(1));
+
+                        when(userRepository.findByPasswordResetToken("valid-token"))
+                                        .thenReturn(Optional.of(persistedUser));
+
+                        assertThatThrownBy(() -> userService.resetPassword("valid-token", "pass"))
+                                        .isInstanceOf(InvalidTokenException.class);
+                }
+
+                @Test
+                @DisplayName("lanza excepcion si la fecha de expiracion del token es nula")
+                void shouldThrowIfTokenExpiresAtIsNull() {
+                        persistedUser.setPasswordResetToken("valid-token");
+                        persistedUser.setPasswordResetTokenExpiresAt(null);
+
+                        when(userRepository.findByPasswordResetToken("valid-token"))
+                                        .thenReturn(Optional.of(persistedUser));
+
+                        assertThatThrownBy(() -> userService.resetPassword("valid-token", "pass"))
+                                        .isInstanceOf(InvalidTokenException.class);
+                }
+        }
+
+        @Nested
+        @DisplayName("getAdminUserProfile")
+        class GetAdminUserProfile {
+                @Test
+                @DisplayName("retorna el perfil de admin cuando el usuario existe")
+                void shouldReturnAdminUserProfile() {
+                        AdminUserProfileResponse dto = mock(AdminUserProfileResponse.class);
+                        when(userRepository.findById(persistedUser.getId())).thenReturn(Optional.of(persistedUser));
+                        when(userMapper.toAdminUserProfileDto(persistedUser)).thenReturn(dto);
+
+                        AdminUserProfileResponse result = userService.getAdminUserProfile(persistedUser.getId());
+
+                        assertThat(result).isEqualTo(dto);
+                }
+
+                @Test
+                @DisplayName("lanza excepcion si el usuario no existe")
+                void shouldThrowIfUserNotFound() {
+                        UUID randomId = UUID.randomUUID();
+                        when(userRepository.findById(randomId)).thenReturn(Optional.empty());
+
+                        assertThatThrownBy(() -> userService.getAdminUserProfile(randomId))
+                                        .isInstanceOf(UserNotFoundException.class);
+                }
+        }
+
+        // searchUsersForAdmin
+        @Nested
+        @DisplayName("searchUsersForAdmin")
+        class SearchUsersForAdmin {
+                @Test
+                @DisplayName("retorna pagina mapeada de perfiles de admin")
+                void shouldReturnMappedPage() {
+                        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(0, 10);
+                        org.springframework.data.domain.Page<User> userPage = new org.springframework.data.domain.PageImpl<>(List.of(persistedUser));
+                        AdminUserProfileResponse dto = mock(AdminUserProfileResponse.class);
+
+                        when(userRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), eq(pageable)))
+                                        .thenReturn(userPage);
+                        when(userMapper.toAdminUserProfileDto(persistedUser)).thenReturn(dto);
+
+                        org.springframework.data.domain.Page<AdminUserProfileResponse> result = 
+                                        userService.searchUsersForAdmin("test", UserRole.USER, false, false, pageable);
+
+                        assertThat(result).isNotNull();
+                        assertThat(result.getContent()).containsExactly(dto);
+                }
+        }
+}
