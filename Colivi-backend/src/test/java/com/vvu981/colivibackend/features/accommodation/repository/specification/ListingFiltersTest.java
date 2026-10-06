@@ -526,4 +526,71 @@ class ListingFiltersTest {
         assertThat(result).isEqualTo(disjunctionPredicate);
         verify(cb, times(1)).disjunction();
     }
+
+    @Test
+    @DisplayName("AccommodationIdFilter debe ser aplicable si existe el parametro 'accommodationId' no vacio")
+    void testAccommodationIdFilterApplicability() {
+        AccommodationIdFilter filter = new AccommodationIdFilter();
+        assertThat(filter.isApplicable(null)).isFalse();
+
+        Map<String, String> params = new HashMap<>();
+        assertThat(filter.isApplicable(params)).isFalse();
+
+        params.put("accommodationId", null);
+        assertThat(filter.isApplicable(params)).isFalse();
+
+        params.put("accommodationId", "   ");
+        assertThat(filter.isApplicable(params)).isFalse();
+
+        params.put("accommodationId", java.util.UUID.randomUUID().toString());
+        assertThat(filter.isApplicable(params)).isTrue();
+    }
+
+    @Test
+    @DisplayName("AccommodationIdFilter apply debe generar la condicion equal correcta para UUID valido")
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    void testAccommodationIdFilterApplyValid() {
+        AccommodationIdFilter filter = new AccommodationIdFilter();
+        java.util.UUID accId = java.util.UUID.randomUUID();
+        Map<String, String> params = Map.of("accommodationId", accId.toString());
+        Specification<AccommodationListing> spec = filter.apply(params);
+
+        Root root = mock(Root.class);
+        CriteriaQuery query = mock(CriteriaQuery.class);
+        CriteriaBuilder cb = mock(CriteriaBuilder.class);
+        Path accommodationPath = mock(Path.class);
+        Path idPath = mock(Path.class);
+        Predicate equalPredicate = mock(Predicate.class);
+
+        when(root.get("accommodation")).thenReturn(accommodationPath);
+        when(accommodationPath.get("id")).thenReturn(idPath);
+        when(cb.equal(idPath, accId)).thenReturn(equalPredicate);
+
+        Predicate result = spec.toPredicate(root, query, cb);
+
+        assertThat(result).isEqualTo(equalPredicate);
+        verify(cb, times(1)).equal(idPath, accId);
+    }
+
+    @Test
+    @DisplayName("AccommodationIdFilter apply debe devolver disjunction si UUID es invalido")
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    void testAccommodationIdFilterApplyInvalidUuid() {
+        AccommodationIdFilter filter = new AccommodationIdFilter();
+        Map<String, String> params = Map.of("accommodationId", "not-a-valid-uuid");
+        Specification<AccommodationListing> spec = filter.apply(params);
+
+        Root root = mock(Root.class);
+        CriteriaQuery query = mock(CriteriaQuery.class);
+        CriteriaBuilder cb = mock(CriteriaBuilder.class);
+        Predicate disjunctionPredicate = mock(Predicate.class);
+
+        when(cb.disjunction()).thenReturn(disjunctionPredicate);
+
+        Predicate result = spec.toPredicate(root, query, cb);
+
+        assertThat(result).isEqualTo(disjunctionPredicate);
+        verify(cb, times(1)).disjunction();
+    }
 }
+
