@@ -11,10 +11,10 @@
     }
 
     # Proxy para endpoints de documentación OpenAPI / Swagger
-    handle /swagger-ui/* {
+    handle /swagger-ui* {
         reverse_proxy backend:8080
     }
-    handle /v3/api-docs/* {
+    handle /v3/api-docs* {
         reverse_proxy backend:8080
     }
 
