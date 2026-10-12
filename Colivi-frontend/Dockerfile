@@ -1,16 +1,25 @@
-FROM node:22-alpine
+# Etapa 1: Build de la aplicacion
+FROM node:22-alpine AS build
 
 WORKDIR /app
 
-# Instalar dependencias primero
+# Instalar dependencias primero para aprovechar la cache de capas
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
-# Copiar el resto del proyecto
+# Copiar codigo fuente y compilar bundle de produccion
 COPY . .
+RUN npm run build
 
-# Exponer el puerto de Vite
-EXPOSE 5173
+# Etapa 2: Servidor web ligero en produccion
+FROM nginx:alpine
 
-# Arrancar Vite escuchando en todas las interfaces de red
-CMD ["npm", "run", "dev", "--", "--host"]
+# Copiar configuracion optimizada para SPA
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Copiar artefactos estaticos compilados
+COPY --from=build /app/dist /usr/share/nginx/html
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
