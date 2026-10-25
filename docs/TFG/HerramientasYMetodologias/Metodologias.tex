@@ -1,13 +1,13 @@
 \section{Metodologías usadas}
 \label{Metodologias usadas}
 
-Según la guía del cuerpo de conocimiento de la ingeniería del software o SWEBOK (\emph{Software Engineering Body of Knowledge}) \cite{SWEBOK2014}, los procesos de desarrollo deben estructurarse en etapas sistemáticas que permitan proyectar, supervisar y reajustar el avance en función de las restricciones operativas y los objetivos establecidos. Esta concepción metodológica abarca desde los modelos predictivos secuenciales hasta las estrategias adaptativas fundamentadas en marcos ágiles. La elección de una metodología condiciona de forma directa la trazabilidad del código, la capacidad de respuesta ante requisitos emergentes y el aseguramiento de la calidad técnica. Con el fin de fundamentar la estrategia de trabajo de Colivi, a continuación se analizan los paradigmas más extendidos en la ingeniería del software contemporánea.
+    La guía SWEBOK (\emph{Software Engineering Body of Knowledge}) \cite{SWEBOK2014} divide la ingeniería del software en procesos disciplinados para planificar, ejecutar y controlar el desarrollo frente a restricciones reales. Elegir un método de trabajo determina cómo evoluciona el código y cómo se responde a cambios en los requisitos sin comprometer la estabilidad del sistema.
 
 \subsection{Revisión de enfoques metodológicos}
 
-Por un lado, el modelo tradicional en cascada plantea una progresión estrictamente secuencial a través de fases cerradas (análisis de requisitos, diseño de la arquitectura, codificación, verificación y mantenimiento). Cada etapa exige la validación completa de sus entregables para iniciar la siguiente. Si bien aporta certidumbre contractual en entornos donde la especificación funcional está congelada desde el inicio, resulta excesivamente rígido en sistemas con integración de servicios desacoplados o dependencias experimentales, donde cualquier cambio arquitectónico tardío acarrea un sobrecoste elevado.
+    El modelo tradicional en cascada exige completar y congelar cada fase antes de iniciar la siguiente: requisitos, diseño, codificación, verificación y entrega. Si bien funciona en proyectos con especificaciones cerradas y contratos rígidos, fracasa al integrar servicios desacoplados o protocolos emergentes como MCP. Descubrir un fallo de integración en la fase final de pruebas dispararía el coste de rehacer módulos enteros.
 
-Por otro lado, marcos ágiles como Scrum plantean ciclos iterativos de corta duración denominados \emph{sprints}, orientados a la entrega de incrementos funcionales utilizables en intervalos de dos a cuatro semanas. Scrum define ceremonias específicas (reuniones diarias de sincronización, planificación de iteración, retrospectivas) y distribuye responsabilidades entre roles formales, tales como el facilitador del flujo de trabajo o \emph{Scrum Master} y el responsable del producto o \emph{Product Owner}. Aunque constituye el estándar predominante en equipos de desarrollo corporativos, la sobrecarga organizativa de sus ceremonias carece de aplicabilidad práctica en un contexto de desarrollo unipersonal. En la figura \ref{fig:agile_vs_waterfall} se ilustra una comparativa gráfica representativa entre los resultados históricos de proyectos desarrollados bajo cascada frente a enfoques ágiles.
+    Scrum estructura el trabajo en iteraciones cortas llamadas \emph{sprints}, orientadas a entregar incrementos funcionales cada dos o cuatro semanas. Reparte responsabilidades entre perfiles definidos (\emph{Scrum Master}, \emph{Product Owner}, equipo de desarrollo) y exige reuniones periódicas de sincronización y retrospectiva. Pese a dominar en la industria corporativa, su burocracia de reuniones pierde sentido en un proyecto individual sin equipo que coordinar. La figura \ref{fig:agile_vs_waterfall} refleja la comparativa histórica de tasas de éxito entre ambos enfoques.
 
 \begin{figure}[H]
     \centering
@@ -16,7 +16,7 @@ Por otro lado, marcos ágiles como Scrum plantean ciclos iterativos de corta dur
     \label{fig:agile_vs_waterfall}
 \end{figure}
 
-Una alternativa complementaria es Kanban, un método centrado en la visualización continua del flujo de trabajo y en el control del trabajo en curso o WIP (\emph{Work In Progress}). Mediante tableros estructurados en estados secuenciales (como «Pendiente», «En curso» y «Completado»), como el reflejado en la figura \ref{fig:tablero_kanban}, Kanban permite gestionar la evolución de las tareas sin imponer cadencias temporales fijas. Esta flexibilidad facilita priorizar el trabajo según las dependencias técnicas reales, optimizando el rendimiento individual y la detección temprana de cuellos de botella.
+    Kanban elimina las cadencias temporales fijas y se centra en limitar el trabajo en curso o WIP (\emph{Work In Progress}). Las tareas avanzan a través de columnas de estado en un tablero visual (figura \ref{fig:tablero_kanban}): pendientes, en desarrollo y completadas. Este flujo continuo permite priorizar el trabajo según cuellos de botella reales, facilitando al programador concentrarse en un solo componente hasta cerrarlo.
 
 \begin{figure}[H]
     \centering
@@ -25,18 +25,18 @@ Una alternativa complementaria es Kanban, un método centrado en la visualizaci�
     \label{fig:tablero_kanban}
 \end{figure}
 
-Por último, la metodología de programación extrema o XP (\emph{Extreme Programming}) sitúa el foco en la excelencia técnica y la mitigación del riesgo mediante prácticas disciplinadas de codificación. Entre sus fundamentos destacan la integración continua del código, la refactorización sistemática orientada a la simplicidad y el desarrollo guiado por pruebas o TDD (\emph{Test-Driven Development}), donde los casos de prueba automatizados se redactan antes de la lógica de producción.
+    La programación extrema (\emph{Extreme Programming} o XP) antepone la excelencia en el código a la gestión burocrática. Sus pilares incluyen la refactorización continua, la integración frecuente y el desarrollo guiado por pruebas o TDD (\emph{Test-Driven Development}). En TDD, los tests se redactan antes que el código de producción, garantizando que cada función responda a una necesidad validada y medible.
 
 \subsection{Análisis comparativo y selección para el proyecto}
 
-La naturaleza técnica de Colivi —caracterizada por un backend modular en Spring Boot 3, un microservicio independiente bajo el protocolo MCP (\emph{Model Context Protocol}), una interfaz reactiva en React y el empaquetado móvil con Capacitor— desaconsejaba el empleo de una cascada pura. La integración de modelos de lenguaje mediante inferencia remota exigía admitir ajustes de diseño a medida que se validaban las herramientas de contexto del servidor.
+    La arquitectura de Colivi —un backend modular en Spring Boot 3, un servidor MCP independiente en Node.js, un cliente web en React y el paquete móvil con Capacitor— hacía inviable una cascada estricta. Conectar herramientas de inteligencia artificial con inferencia remota exigía experimentar con esquemas JSON y ajustar contratos sobre la marcha.
 
-Sin embargo, adoptar Scrum de manera dogmática resultaba inviable ante la inexistencia de un equipo multidisciplinar con el que coordinar reuniones diarias o repartir roles de gestión. Por tanto, para este Trabajo Fin de Grado se optó por un enfoque metodológico híbrido:
+    Scrum tampoco encajaba en un escenario unipersonal sin ceremonias diarias. Por estas razones, se diseñó una estrategia híbrida adaptada a las necesidades reales del desarrollo:
 
 \begin{itemize}
-\item Gestión visual del flujo de trabajo: se adoptó la base operativa de Kanban para organizar las tareas en función de sus estados y dependencias lógicas, utilizando el soporte de gestión de incidencias y tableros integrado en GitHub Projects.
-\item Disciplina de ingeniería técnica: se incorporaron prácticas troncales de XP, haciendo especial énfasis en el desarrollo guiado por pruebas (TDD), cuyo ciclo iterativo de diseño, prueba y refactorización se sintetiza en la figura \ref{fig:TDD}. Esta práctica permitió blindar los módulos con alta complejidad algorítmica y financiera (como el reparto proporcional de gastos o el control de concurrencia en reservas), manteniendo una refactorización orientada al cumplimiento de los principios SOLID (\emph{Single responsibility, Open-closed, Liskov substitution, Interface segregation, Dependency inversion}).
-\item Integración continua asistida: el ciclo de desarrollo se apoyó en el entorno Antigravity y en herramientas de inteligencia artificial para agilizar la cobertura de casos límite en pruebas unitarias con JUnit y Mockito, complementando la verificación manual con flujos automatizados de compilación y pruebas en ramas de características (\emph{feature branches}).
+\item \textbf{Gestión del flujo de trabajo}: Kanban organizó el avance técnico mediante un tablero en GitHub Projects, vinculando incidencias, dependencias y confirmaciones de código sin imponer cortes temporales artificiales.
+\item \textbf{Disciplina técnica con TDD}: las prácticas de XP guiaron la implementación mediante el ciclo de diseño, prueba y refactorización resumido en la figura \ref{fig:TDD}. Este mecanismo protegió el cálculo financiero de deudas y la reserva concurrente de habitaciones, forzando un diseño desacoplado bajo principios SOLID (\emph{Single responsibility, Open-closed, Liskov substitution, Interface segregation, Dependency inversion}).
+\item \textbf{Integración asistida}: el entorno Antigravity aceleró la formulación de baterías de pruebas con JUnit y Mockito, complementando la inspección manual con compilaciones automatizadas en ramas de características (\emph{feature branches}).
 \end{itemize}
 
 \begin{figure}[H]

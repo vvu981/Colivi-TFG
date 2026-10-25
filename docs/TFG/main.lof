@@ -2,20 +2,32 @@
 \babel@toc {spanish}{}\relax 
 \addvspace {10\p@ }
 \contentsline {figure}{\numberline {1.1}{\ignorespaces Estructura técnica global y arquitectura de la plataforma Colivi}}{4}{figure.caption.6}%
-\contentsline {figure}{\numberline {1.2}{\ignorespaces Planificación Temporal General}}{5}{figure.caption.7}%
-\contentsline {figure}{\numberline {1.3}{\ignorespaces Planificación Temporal de la implementación}}{6}{figure.caption.8}%
-\contentsline {figure}{\numberline {1.4}{\ignorespaces Interfaces de las principales soluciones analizadas en el mercado}}{8}{figure.caption.9}%
+\contentsline {figure}{\numberline {1.2}{\ignorespaces Planificación Temporal General}}{4}{figure.caption.7}%
+\contentsline {figure}{\numberline {1.3}{\ignorespaces Planificación Temporal de la implementación}}{5}{figure.caption.8}%
+\contentsline {figure}{\numberline {1.4}{\ignorespaces Interfaces de las principales soluciones analizadas en el mercado}}{7}{figure.caption.9}%
 \addvspace {10\p@ }
-\contentsline {figure}{\numberline {2.1}{\ignorespaces Diferencia de éxito entre metodologías ágiles y tradicionales en cascada}}{15}{figure.caption.11}%
-\contentsline {figure}{\numberline {2.2}{\ignorespaces Tablero Kanban representativo del flujo de desarrollo ágil}}{16}{figure.caption.12}%
-\contentsline {figure}{\numberline {2.3}{\ignorespaces Ciclo iterativo de la metodología TDD (\emph {Test-Driven Development})}}{17}{figure.caption.13}%
-\contentsline {figure}{\numberline {2.4}{\ignorespaces Entornos de desarrollo utilizados en el proyecto. Elaboración propia}}{19}{figure.caption.14}%
-\contentsline {figure}{\numberline {2.5}{\ignorespaces Sistema gestor de bases de datos PostgreSQL}}{20}{figure.caption.15}%
-\contentsline {figure}{\numberline {2.6}{\ignorespaces Herramientas auxiliares empleadas para diseño de interfaz, modelado y verificación de API}}{21}{figure.caption.16}%
+\contentsline {figure}{\numberline {2.1}{\ignorespaces Diferencia de éxito entre metodologías ágiles y tradicionales en cascada}}{12}{figure.caption.11}%
+\contentsline {figure}{\numberline {2.2}{\ignorespaces Tablero Kanban representativo del flujo de desarrollo ágil}}{13}{figure.caption.12}%
+\contentsline {figure}{\numberline {2.3}{\ignorespaces Ciclo iterativo de la metodología TDD (\emph {Test-Driven Development})}}{14}{figure.caption.13}%
+\contentsline {figure}{\numberline {2.4}{\ignorespaces Entornos de desarrollo utilizados en el proyecto. Elaboración propia}}{15}{figure.caption.14}%
+\contentsline {figure}{\numberline {2.5}{\ignorespaces Sistema gestor de bases de datos PostgreSQL}}{16}{figure.caption.15}%
+\contentsline {figure}{\numberline {2.6}{\ignorespaces Herramientas auxiliares empleadas para diseño de interfaz, modelado y verificación de API}}{17}{figure.caption.16}%
 \addvspace {10\p@ }
-\contentsline {figure}{\numberline {3.1}{\ignorespaces Estructura clásica de un articulo de investigación}}{24}{figure.caption.17}%
-\contentsline {figure}{\numberline {3.2}{\ignorespaces Estructura de documentos de un proyecto técnico}}{24}{figure.caption.18}%
-\contentsline {figure}{\numberline {3.3}{\ignorespaces Planificación del proyecto}}{25}{figure.caption.19}%
+\contentsline {figure}{\numberline {3.1}{\ignorespaces Jerarquía y relaciones de herencia entre los actores del sistema. Elaboración propia}}{20}{figure.caption.17}%
+\contentsline {figure}{\numberline {3.2}{\ignorespaces Diagrama de casos de uso del módulo de identidad, sesión y perfil}}{21}{figure.caption.18}%
+\contentsline {figure}{\numberline {3.3}{\ignorespaces Diagrama de casos de uso de exploración, recomendaciones y reseñas}}{28}{figure.caption.34}%
+\contentsline {figure}{\numberline {3.4}{\ignorespaces Diagrama de casos de uso de gestión de inmuebles y publicaciones del anfitrión}}{32}{figure.caption.43}%
+\contentsline {figure}{\numberline {3.5}{\ignorespaces Diagrama de casos de uso del ciclo de vida de reservas}}{35}{figure.caption.52}%
+\contentsline {figure}{\numberline {3.6}{\ignorespaces Diagrama de casos de uso de comunidad de convivencia y hogar}}{38}{figure.caption.60}%
+\contentsline {figure}{\numberline {3.7}{\ignorespaces Diagrama de casos de uso de gestión financiera compartida}}{43}{figure.caption.72}%
+\contentsline {figure}{\numberline {3.8}{\ignorespaces Diagrama de casos de uso de tareas domésticas y puntos}}{47}{figure.caption.80}%
+\contentsline {figure}{\numberline {3.9}{\ignorespaces Diagrama de casos de uso de mensajería contextual}}{49}{figure.caption.88}%
+\contentsline {figure}{\numberline {3.10}{\ignorespaces Diagrama de casos de uso de asistente inteligente y orquestación de herramientas}}{52}{figure.caption.94}%
+\contentsline {figure}{\numberline {3.11}{\ignorespaces Diagrama de casos de uso de moderación y administración global}}{55}{figure.caption.102}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {4.1}{\ignorespaces Estructura clásica de un articulo de investigación}}{62}{figure.caption.114}%
+\contentsline {figure}{\numberline {4.2}{\ignorespaces Estructura de documentos de un proyecto técnico}}{62}{figure.caption.115}%
+\contentsline {figure}{\numberline {4.3}{\ignorespaces Planificación del proyecto}}{63}{figure.caption.116}%
 \addvspace {10\p@ }
 \addvspace {10\p@ }
 \addvspace {10\p@ }

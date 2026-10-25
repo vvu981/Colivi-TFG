@@ -1,11 +1,98 @@
 \babel@toc {spanish}{}\relax 
 \babel@toc {spanish}{}\relax 
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {1.1}{\ignorespaces Comparativa de características entre plataformas analizadas y Colivi}}{7}{table.caption.10}%
+\contentsline {table}{\numberline {1.1}{\ignorespaces Comparativa de características entre plataformas analizadas y Colivi}}{6}{table.caption.10}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {3.1}{\ignorespaces Especificación del caso de uso CU01.}}{22}{table.caption.19}%
+\contentsline {table}{\numberline {3.2}{\ignorespaces Especificación del caso de uso CU02.}}{22}{table.caption.20}%
+\contentsline {table}{\numberline {3.3}{\ignorespaces Especificación del caso de uso CU03.}}{23}{table.caption.21}%
+\contentsline {table}{\numberline {3.4}{\ignorespaces Especificación del caso de uso CU04.}}{23}{table.caption.22}%
+\contentsline {table}{\numberline {3.5}{\ignorespaces Especificación del caso de uso CU05.}}{23}{table.caption.23}%
+\contentsline {table}{\numberline {3.6}{\ignorespaces Especificación del caso de uso CU06.}}{24}{table.caption.24}%
+\contentsline {table}{\numberline {3.7}{\ignorespaces Especificación del caso de uso CU07.}}{24}{table.caption.25}%
+\contentsline {table}{\numberline {3.8}{\ignorespaces Especificación del caso de uso CU08.}}{25}{table.caption.26}%
+\contentsline {table}{\numberline {3.9}{\ignorespaces Especificación del caso de uso CU09.}}{25}{table.caption.27}%
+\contentsline {table}{\numberline {3.10}{\ignorespaces Especificación del caso de uso CU10.}}{25}{table.caption.28}%
+\contentsline {table}{\numberline {3.11}{\ignorespaces Especificación del caso de uso CU11.}}{26}{table.caption.29}%
+\contentsline {table}{\numberline {3.12}{\ignorespaces Especificación del caso de uso CU12.}}{26}{table.caption.30}%
+\contentsline {table}{\numberline {3.13}{\ignorespaces Especificación del caso de uso CU13.}}{27}{table.caption.31}%
+\contentsline {table}{\numberline {3.14}{\ignorespaces Especificación del caso de uso CU14.}}{27}{table.caption.32}%
+\contentsline {table}{\numberline {3.15}{\ignorespaces Especificación del caso de uso CU15.}}{28}{table.caption.33}%
+\contentsline {table}{\numberline {3.16}{\ignorespaces Especificación del caso de uso CU16.}}{29}{table.caption.35}%
+\contentsline {table}{\numberline {3.17}{\ignorespaces Especificación del caso de uso CU17.}}{29}{table.caption.36}%
+\contentsline {table}{\numberline {3.18}{\ignorespaces Especificación del caso de uso CU18.}}{29}{table.caption.37}%
+\contentsline {table}{\numberline {3.19}{\ignorespaces Especificación del caso de uso CU19.}}{30}{table.caption.38}%
+\contentsline {table}{\numberline {3.20}{\ignorespaces Especificación del caso de uso CU20.}}{30}{table.caption.39}%
+\contentsline {table}{\numberline {3.21}{\ignorespaces Especificación del caso de uso CU21.}}{30}{table.caption.40}%
+\contentsline {table}{\numberline {3.22}{\ignorespaces Especificación del caso de uso CU22.}}{31}{table.caption.41}%
+\contentsline {table}{\numberline {3.23}{\ignorespaces Especificación del caso de uso CU23.}}{31}{table.caption.42}%
+\contentsline {table}{\numberline {3.24}{\ignorespaces Especificación del caso de uso CU24.}}{32}{table.caption.44}%
+\contentsline {table}{\numberline {3.25}{\ignorespaces Especificación del caso de uso CU25.}}{32}{table.caption.45}%
+\contentsline {table}{\numberline {3.26}{\ignorespaces Especificación del caso de uso CU26.}}{33}{table.caption.46}%
+\contentsline {table}{\numberline {3.27}{\ignorespaces Especificación del caso de uso CU27.}}{33}{table.caption.47}%
+\contentsline {table}{\numberline {3.28}{\ignorespaces Especificación del caso de uso CU28.}}{34}{table.caption.48}%
+\contentsline {table}{\numberline {3.29}{\ignorespaces Especificación del caso de uso CU29.}}{34}{table.caption.49}%
+\contentsline {table}{\numberline {3.30}{\ignorespaces Especificación del caso de uso CU30.}}{34}{table.caption.50}%
+\contentsline {table}{\numberline {3.31}{\ignorespaces Especificación del caso de uso CU31.}}{35}{table.caption.51}%
+\contentsline {table}{\numberline {3.32}{\ignorespaces Especificación del caso de uso CU32.}}{35}{table.caption.53}%
+\contentsline {table}{\numberline {3.33}{\ignorespaces Especificación del caso de uso CU33.}}{36}{table.caption.54}%
+\contentsline {table}{\numberline {3.34}{\ignorespaces Especificación del caso de uso CU34.}}{36}{table.caption.55}%
+\contentsline {table}{\numberline {3.35}{\ignorespaces Especificación del caso de uso CU35.}}{36}{table.caption.56}%
+\contentsline {table}{\numberline {3.36}{\ignorespaces Especificación del caso de uso CU36.}}{37}{table.caption.57}%
+\contentsline {table}{\numberline {3.37}{\ignorespaces Especificación del caso de uso CU37.}}{37}{table.caption.58}%
+\contentsline {table}{\numberline {3.38}{\ignorespaces Especificación del caso de uso CU38.}}{37}{table.caption.59}%
+\contentsline {table}{\numberline {3.39}{\ignorespaces Especificación del caso de uso CU39}}{39}{table.caption.61}%
+\contentsline {table}{\numberline {3.40}{\ignorespaces Especificación del caso de uso CU40}}{39}{table.caption.62}%
+\contentsline {table}{\numberline {3.41}{\ignorespaces Especificación del caso de uso CU41}}{39}{table.caption.63}%
+\contentsline {table}{\numberline {3.42}{\ignorespaces Especificación del caso de uso CU42}}{40}{table.caption.64}%
+\contentsline {table}{\numberline {3.43}{\ignorespaces Especificación del caso de uso CU43}}{40}{table.caption.65}%
+\contentsline {table}{\numberline {3.44}{\ignorespaces Especificación del caso de uso CU44}}{40}{table.caption.66}%
+\contentsline {table}{\numberline {3.45}{\ignorespaces Especificación del caso de uso CU45}}{41}{table.caption.67}%
+\contentsline {table}{\numberline {3.46}{\ignorespaces Especificación del caso de uso CU46}}{41}{table.caption.68}%
+\contentsline {table}{\numberline {3.47}{\ignorespaces Especificación del caso de uso CU47}}{42}{table.caption.69}%
+\contentsline {table}{\numberline {3.48}{\ignorespaces Especificación del caso de uso CU48}}{42}{table.caption.70}%
+\contentsline {table}{\numberline {3.49}{\ignorespaces Especificación del caso de uso CU49}}{42}{table.caption.71}%
+\contentsline {table}{\numberline {3.50}{\ignorespaces Especificación del caso de uso CU50}}{43}{table.caption.73}%
+\contentsline {table}{\numberline {3.51}{\ignorespaces Especificación del caso de uso CU51}}{44}{table.caption.74}%
+\contentsline {table}{\numberline {3.52}{\ignorespaces Especificación del caso de uso CU52}}{44}{table.caption.75}%
+\contentsline {table}{\numberline {3.53}{\ignorespaces Especificación del caso de uso CU53}}{45}{table.caption.76}%
+\contentsline {table}{\numberline {3.54}{\ignorespaces Especificación del caso de uso CU54}}{45}{table.caption.77}%
+\contentsline {table}{\numberline {3.55}{\ignorespaces Especificación del caso de uso CU55}}{46}{table.caption.78}%
+\contentsline {table}{\numberline {3.56}{\ignorespaces Especificación del caso de uso CU56}}{46}{table.caption.79}%
+\contentsline {table}{\numberline {3.57}{\ignorespaces Especificación del caso de uso CU57}}{47}{table.caption.81}%
+\contentsline {table}{\numberline {3.58}{\ignorespaces Especificación del caso de uso CU58}}{47}{table.caption.82}%
+\contentsline {table}{\numberline {3.59}{\ignorespaces Especificación del caso de uso CU59}}{48}{table.caption.83}%
+\contentsline {table}{\numberline {3.60}{\ignorespaces Especificación del caso de uso CU60}}{48}{table.caption.84}%
+\contentsline {table}{\numberline {3.61}{\ignorespaces Especificación del caso de uso CU61}}{48}{table.caption.85}%
+\contentsline {table}{\numberline {3.62}{\ignorespaces Especificación del caso de uso CU62}}{49}{table.caption.86}%
+\contentsline {table}{\numberline {3.63}{\ignorespaces Especificación del caso de uso CU63}}{49}{table.caption.87}%
+\contentsline {table}{\numberline {3.64}{\ignorespaces Especificación del caso de uso CU64}}{50}{table.caption.89}%
+\contentsline {table}{\numberline {3.65}{\ignorespaces Especificación del caso de uso CU65}}{50}{table.caption.90}%
+\contentsline {table}{\numberline {3.66}{\ignorespaces Especificación del caso de uso CU66}}{50}{table.caption.91}%
+\contentsline {table}{\numberline {3.67}{\ignorespaces Especificación del caso de uso CU67}}{51}{table.caption.92}%
+\contentsline {table}{\numberline {3.68}{\ignorespaces Especificación del caso de uso CU68}}{51}{table.caption.93}%
+\contentsline {table}{\numberline {3.69}{\ignorespaces Especificación del caso de uso CU69}}{52}{table.caption.95}%
+\contentsline {table}{\numberline {3.70}{\ignorespaces Especificación del caso de uso CU70}}{52}{table.caption.96}%
+\contentsline {table}{\numberline {3.71}{\ignorespaces Especificación del caso de uso CU71}}{53}{table.caption.97}%
+\contentsline {table}{\numberline {3.72}{\ignorespaces Especificación del caso de uso CU72}}{53}{table.caption.98}%
+\contentsline {table}{\numberline {3.73}{\ignorespaces Especificación del caso de uso CU73}}{54}{table.caption.99}%
+\contentsline {table}{\numberline {3.74}{\ignorespaces Especificación del caso de uso CU74}}{54}{table.caption.100}%
+\contentsline {table}{\numberline {3.75}{\ignorespaces Especificación del caso de uso CU75}}{55}{table.caption.101}%
+\contentsline {table}{\numberline {3.76}{\ignorespaces Especificación del caso de uso CU76}}{56}{table.caption.103}%
+\contentsline {table}{\numberline {3.77}{\ignorespaces Especificación del caso de uso CU77}}{56}{table.caption.104}%
+\contentsline {table}{\numberline {3.78}{\ignorespaces Especificación del caso de uso CU78}}{56}{table.caption.105}%
+\contentsline {table}{\numberline {3.79}{\ignorespaces Especificación del caso de uso CU79}}{57}{table.caption.106}%
+\contentsline {table}{\numberline {3.80}{\ignorespaces Especificación del caso de uso CU80}}{57}{table.caption.107}%
+\contentsline {table}{\numberline {3.81}{\ignorespaces Especificación del caso de uso CU81}}{57}{table.caption.108}%
+\contentsline {table}{\numberline {3.82}{\ignorespaces Especificación del caso de uso CU82}}{58}{table.caption.109}%
+\contentsline {table}{\numberline {3.83}{\ignorespaces Especificación del caso de uso CU83}}{58}{table.caption.110}%
+\contentsline {table}{\numberline {3.84}{\ignorespaces Especificación del caso de uso CU84}}{58}{table.caption.111}%
+\contentsline {table}{\numberline {3.85}{\ignorespaces Especificación del caso de uso CU85}}{59}{table.caption.112}%
+\contentsline {table}{\numberline {3.86}{\ignorespaces Especificación del caso de uso CU86}}{59}{table.caption.113}%
 \addvspace {10\p@ }
 \addvspace {10\p@ }
 \addvspace {10\p@ }
+\contentsline {table}{\numberline {A.1}{\ignorespaces Campos de una entrada en archivo de bibliografía .bib}}{70}{table.caption.118}%
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {A.1}{\ignorespaces Campos de una entrada en archivo de bibliografía .bib}}{32}{table.caption.21}%
-\addvspace {10\p@ }
-\contentsline {table}{\numberline {B.1}{\ignorespaces Tipos posibles de elementos en bibligrafía con natbib}}{34}{table.caption.22}%
+\contentsline {table}{\numberline {B.1}{\ignorespaces Tipos posibles de elementos en bibligrafía con natbib}}{72}{table.caption.119}%

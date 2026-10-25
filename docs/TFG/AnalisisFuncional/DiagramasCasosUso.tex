@@ -1,0 +1,46 @@
+\section{Diagramas de casos de uso}
+\label{sec:casos_uso}
+
+    Los diagramas de casos de uso bajo el estándar UML 2.5 formalizan los límites del sistema, identificando quién ejecuta cada acción y qué subsistemas intervienen. La herramienta PlantUML permitió generar estas representaciones a partir de código fuente.
+
+    Reunir ochenta y seis casos de uso en un único diagrama saturaría la página A4 y destruiría la legibilidad del documento. Por este motivo, el sistema se divide en nueve paquetes temáticos. Antes de descender al detalle de cada paquete, resulta necesario definir los actores que intervienen en la aplicación.
+
+\subsection{Actores del sistema}
+
+    El modelo contempla usuarios humanos (con roles que varían según el contexto de la vivienda) y servicios externos integrados mediante APIs seguras. La figura \ref{fig:jerarquia_actores} representa las relaciones de generalización y herencia entre ellos.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.68\textwidth]{AnalisisFuncional/img/jerarquia_actores.png}
+    \caption{Jerarquía y relaciones de herencia entre los actores del sistema. Elaboración propia}
+    \label{fig:jerarquia_actores}
+\end{figure}
+
+    Cada actor asume un rol delimitado en la aplicación:
+
+\begin{itemize}
+    \item \textbf{Usuario Invitado}: navega de forma anónima sin sesión abierta. Explora el mapa de inmuebles, consulta fichas de habitaciones y solicita el registro o inicio de sesión.
+    \item \textbf{Usuario Autenticado}: dispone de un token JWT válido. Gestiona sus datos de perfil, abre conversaciones en el chat, envía denuncias a moderación y formula preguntas al asistente virtual.
+    \item \textbf{Inquilino}: usuario autenticado que busca piso. Emite solicitudes de reserva acotadas en el calendario, abona depósitos de fianza y puntúa las estancias finalizadas.
+    \item \textbf{Anfitrión}: usuario autenticado que oferta propiedades. Da de alta inmuebles, publica anuncios con sus características físicas, administra la galería de fotos y acepta o declina solicitudes de reserva.
+    \item \textbf{Compañero de Piso}: miembro integrado en un piso activo. Registra gastos comunes, revisa balances de deuda, transfiere liquidaciones y marca tareas de limpieza como completadas.
+    \item \textbf{Administrador del Hogar}: compañero de piso responsable de coordinar la vivienda. Genera invitaciones efímeras, expulsa a residentes sin deudas pendientes y programa las tareas recurrentes.
+    \item \textbf{Administrador del Sistema}: superusuario con permisos globales de moderación. Examina la cola de denuncias, audita conversaciones notificadas y bloquea cuentas o anuncios fraudulentos.
+    \item \textbf{Google OAuth}: proveedor de identidad que expide credenciales federadas para agilizar el acceso sin contraseña local.
+    \item \textbf{Cloudinary CDN}: infraestructura externa encargada de almacenar, transformar y servir imágenes de anuncios y avatares de usuario.
+    \item \textbf{OpenStreetMap / Nominatim}: motor cartográfico consumido por el cliente web para transformar direcciones postales en coordenadas geográficas de latitud y longitud.
+\end{itemize}
+
+\subsection{Especificación detallada de casos de uso}
+
+    Cada caso de uso se especifica mediante una ficha estructurada que define su código identificador, el actor detonante, las precondiciones del dominio, la descripción funcional y el flujo secuencial de interacción entre el usuario y la plataforma.
+
+\input{AnalisisFuncional/paquetes/paquete1.tex}
+\input{AnalisisFuncional/paquetes/paquete2.tex}
+\input{AnalisisFuncional/paquetes/paquete3.tex}
+\input{AnalisisFuncional/paquetes/paquete4.tex}
+\input{AnalisisFuncional/paquetes/paquete5.tex}
+\input{AnalisisFuncional/paquetes/paquete6.tex}
+\input{AnalisisFuncional/paquetes/paquete7.tex}
+\input{AnalisisFuncional/paquetes/paquete8.tex}
+\input{AnalisisFuncional/paquetes/paquete9.tex}

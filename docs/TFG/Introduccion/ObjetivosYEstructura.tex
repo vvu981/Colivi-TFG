@@ -1,34 +1,30 @@
 \section{Objetivos Y Estructura}
 \label{Objetivos Y Estructura}
 
-    El objetivo principal de este trabajo es diseñar y desarrollar Colivi, una plataforma web completa pensada para resolver los problemas habituales en la búsqueda de alojamiento compartido y simplificar la gestión cotidiana dentro de una vivienda de estudiantes o jóvenes profesionales. Se busca ofrecer una solución práctica e intuitiva que acompañe al usuario en todo el proceso: desde la búsqueda inicial de habitación y el contacto directo con el casero, hasta el reparto organizado de las tareas del hogar mediante dinámicas participativas una vez iniciada la convivencia.
-    Para alcanzar este objetivo general, se han definido los siguientes objetivos específicos:
+    Diseñar y construir Colivi constituye el objetivo principal de este proyecto, ofreciendo una plataforma web que da respuesta a la búsqueda de habitaciones y a la organización interna en pisos de estudiantes. La aplicación acompaña a los usuarios durante todo el ciclo: conecta al arrendatario con el propietario durante la reserva y estructura el reparto de tareas domésticas una vez comenzada la convivencia.
+    
+    La consecución de esta meta global se desglosa en los siguientes objetivos específicos:
 
-    1. Desarrollar un módulo de autenticación y seguridad para el registro e inicio de sesión de usuarios mediante tokens JWT, con soporte para perfiles diferenciados de inquilino y propietario.
+\begin{enumerate}
+    \item Implementar un módulo de seguridad para registro e inicio de sesión mediante tókenes JWT, distinguiendo perfiles de inquilino y propietario.
+    \item Habilitar la edición del perfil de usuario con datos de contacto, preferencias y hábitos de convivencia.
+    \item Desarrollar un buscador de habitaciones con filtrado por localización geográfica, precio mensual, equipamiento y normas de estancia.
+    \item Construir un canal de mensajería contextual asociado a cada anuncio que permita plantear dudas al anfitrión sin exigir una reserva previa.
+    \item Programar el ciclo de vida de las solicitudes de reserva con control estricto de estados y depósitos de fianza.
+    \item Diseñar un planificador gamificado de tareas domésticas basado en turnos rotativos (\emph{Round-Robin}), tabla de puntuaciones y posibilidad de rescate entre compañeros.
+    \item Disponer un registro inmutable de auditoría para monitorizar acciones clave dentro del hogar, como la realización de limpiezas o la incorporación de nuevos miembros.
+    \item Integrar un asistente inteligente fundamentado en el protocolo \emph{Model Context Protocol} (MCP) que consulte turnos, resuma actividad o filtre anuncios sin modificar la base de datos.
+\end{enumerate}
 
-    2. Permitir la gestión y edición del perfil personal, incluyendo datos de contacto e información relevante para la convivencia.
+    La arquitectura global del sistema (reflejada en la figura~\ref{fig:estructura_tecnica_colivi}) distribuye sus responsabilidades en cuatro capas desacopladas: el cliente web, el servidor central de aplicaciones, el microservicio de soporte inteligente y el motor de persistencia relacional.
 
-    3. Crear un sistema de publicación y exploración de anuncios de habitaciones con filtros por ubicación, precio, características del inmueble y normas de la casa.
+    El cliente web interactúa directamente con el usuario mediante una interfaz reactiva construida con React, TypeScript y Tailwind CSS. Vite actúa como empaquetador para optimizar los tiempos de recarga durante el desarrollo y minimizar el tamaño del paquete final en producción. La sincronización de datos asíncronos recae en TanStack Query, aplicando una estrategia de sondeo controlado (\emph{Smart Polling}) que refresca los mensajes y las tareas únicamente mientras la pestaña del navegador permanece en primer plano, evitando la sobrecarga de conexiones persistentes innecesarias.
 
-    4. Implementar un canal de mensajería contextual que permita a los interesados comunicarse con el propietario sobre un anuncio concreto sin obligar a formalizar una reserva previa.
+    El backend principal se ejecuta sobre la máquina virtual de Java 21 utilizando Spring Boot 3. Este servidor expone una API REST dividida en módulos de dominio bajo principios SOLID. Procesa reglas de negocio críticas: el reparto equitativo de turnos de limpieza, la desvinculación automática de reservas mediante eventos internos de dominio (@EventListener) y la contención de colisiones concurrentes mediante bloqueos pesimistas en las tablas afectadas. Asimismo, se apoya en Spring AI para consultar modelos de lenguaje remotos a través de la API de Groq, devolviendo respuestas formateadas en JSON estricto.
 
-    5. Gestionar el ciclo de vida de las solicitudes de reserva de forma controlada, garantizando un periodo de gracia posterior a la estancia para la resolución de posibles incidencias o fianzas.
+    Un microservicio complementario desarrollado en Node.js y TypeScript expone un servidor MCP oficial mediante \emph{Server-Sent Events} (SSE). Este servicio declara herramientas de inspección de anuncios, consulta de estado de tareas y cola de moderación. Cada conexión hereda el token JWT emitido por el backend, imponiendo un aislamiento estricto de solo lectura para evitar que la inteligencia artificial altere tablas de forma directa.
 
-    6. Diseñar un sistema de tareas domésticas gamificado, con asignación rotativa justa de turnos (Round-Robin), mecanismos de rescate puntual de tareas pendientes y una tabla de puntuaciones del piso.
-
-    7. Construir un módulo de auditoría del hogar que registre de forma transparente eventos clave de la convivencia, tales como la realización de tareas o la entrada y salida de compañeros.
-
-    8. Integrar un asistente inteligente basado en el estándar Model Context Protocol (MCP) para resolver dudas sobre normas, consultar turnos de limpieza o buscar habitaciones según el ambiente del piso, sin permitir modificaciones automáticas en la base de datos.
-
-    A continuación, se detalla la estructura técnica global del proyecto (ilustrada en la figura~\ref{fig:estructura_tecnica_colivi}), describiendo las herramientas y tecnologías utilizadas en cada una de sus capas: cliente web, servidor principal, microservicio de inteligencia artificial y almacenamiento.
-
-    En la parte inferior de la arquitectura se sitúa el usuario final, quien interactúa con la plataforma a través del navegador web mediante una interfaz de usuario reactiva desarrollada con React, TypeScript y Tailwind CSS. El empaquetado y la compilación se gestionan con Vite para lograr tiempos de carga rápidos y un flujo de desarrollo ágil. Para la gestión del estado remoto y la sincronización con el servidor se emplea TanStack Query, aplicando una estrategia de consultas periódicas controladas (Smart Polling) que refresca los datos de mensajería y tareas solo mientras la pestaña permanece activa, reduciendo peticiones innecesarias sin requerir infraestructura adicional de sockets.
-
-    En el nivel intermedio se encuentra el backend principal, implementado en Java 21 utilizando el framework Spring Boot 3. Este servidor expone una API REST organizada por dominios y siguiendo principios de responsabilidad única (SOLID). Se encarga de procesar las reglas de negocio críticas: el cálculo determinista de las rotaciones de limpieza, la desvinculación reactiva de solicitudes mediante eventos de dominio internos (@EventListener) y la protección de accesos concurrentes mediante bloqueos a nivel de base de datos. Además, este mismo servicio actúa como orquestador cognitivo apoyándose en Spring AI, gestionando la comunicación con modelos de lenguaje a través de la API de Groq para responder a las consultas del asistente en formato estructurado.
-
-    Junto al servidor central se integra un microservicio independiente desarrollado en Node.js con TypeScript, cuyo único propósito es funcionar como servidor MCP oficial exponiendo eventos mediante Server-Sent Events (SSE). Este servicio declara y ejecuta las herramientas de consulta autorizadas (búsqueda avanzada de anuncios, estado de tareas y cola de reportes de moderación) propagando el token de seguridad del usuario en cada conexión, manteniendo una política estricta de solo lectura que impide cualquier mutación accidental de datos desde la inteligencia artificial.
-
-    Por último, en la capa superior de persistencia, se utiliza PostgreSQL como base de datos relacional principal. A través de JPA y Hibernate se gestiona el almacenamiento estructurado de usuarios, anuncios, hilos de conversación, históricos de auditoría y series de tareas recurrentes, aplicando índices compuestos y restricciones de unicidad para evitar duplicidades y garantizar la integridad de la información en todo momento.
+    La persistencia de datos reside en un clúster relacional de PostgreSQL. Mediante JPA e Hibernate se gestionan las entidades de usuarios, publicaciones, conversaciones, trazas de auditoría y turnos periódicos. Se aplicaron índices compuestos y restricciones de unicidad para descartar registros duplicados y mantener la integridad referencial en todo momento.
 
 \begin{figure}[htbp]
     \centering
