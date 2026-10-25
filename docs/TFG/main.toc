@@ -10,20 +10,25 @@
 \contentsline {section}{\numberline {1.4}Apps Similares}{6}{section.1.4}%
 \contentsline {section}{\numberline {1.5}Contenido de la memoria}{10}{section.1.5}%
 \contentsline {chapter}{\numberline {2}Herramientas y metodologías}{13}{chapter.2}%
-\contentsline {section}{\numberline {2.1}Metodologías}{14}{section.2.1}%
+\contentsline {section}{\numberline {2.1}Metodologías usadas}{14}{section.2.1}%
 \contentsline {subsection}{\numberline {2.1.1}Revisión de enfoques metodológicos}{14}{subsection.2.1.1}%
 \contentsline {subsection}{\numberline {2.1.2}Análisis comparativo y selección para el proyecto}{16}{subsection.2.1.2}%
-\contentsline {chapter}{\numberline {3}Apartados del CUERPO DEL DOCUMENTO}{19}{chapter.3}%
-\contentsline {paragraph}{Objetivos o cuestiones de investigación}{19}{figure.caption.15}%
-\contentsline {paragraph}{Planificación temporal}{19}{figure.caption.15}%
-\contentsline {paragraph}{Contextualización o estado del arte}{19}{figure.caption.16}%
-\contentsline {paragraph}{Metodología}{21}{figure.caption.16}%
-\contentsline {paragraph}{Resultados}{21}{figure.caption.16}%
-\contentsline {chapter}{\numberline {4}Apartado BIBLIOGRAFIA}{23}{chapter.4}%
-\contentsline {section}{\numberline {4.1}Como citar}{23}{section.4.1}%
-\contentsline {section}{\numberline {4.2}Apartado referencias}{23}{section.4.2}%
-\contentsline {section}{\numberline {4.3}Archivos .bib}{24}{section.4.3}%
-\contentsline {section}{BIBLIOGRAFÍA }{24}{section.4.3}%
+\contentsline {section}{\numberline {2.2}Herramientas usadas}{18}{section.2.2}%
+\contentsline {subsection}{\numberline {2.2.1}Entornos de desarrollo y asistencia técnica}{18}{subsection.2.2.1}%
+\contentsline {subsection}{\numberline {2.2.2}Lenguajes, marcos de trabajo y servicios}{19}{subsection.2.2.2}%
+\contentsline {subsection}{\numberline {2.2.3}Almacenamiento y persistencia de datos}{20}{subsection.2.2.3}%
+\contentsline {subsection}{\numberline {2.2.4}Control de versiones, infraestructura y utilidades auxiliares}{20}{subsection.2.2.4}%
+\contentsline {chapter}{\numberline {3}Apartados del CUERPO DEL DOCUMENTO}{23}{chapter.3}%
+\contentsline {paragraph}{Objetivos o cuestiones de investigación}{23}{figure.caption.18}%
+\contentsline {paragraph}{Planificación temporal}{23}{figure.caption.18}%
+\contentsline {paragraph}{Contextualización o estado del arte}{23}{figure.caption.19}%
+\contentsline {paragraph}{Metodología}{25}{figure.caption.19}%
+\contentsline {paragraph}{Resultados}{25}{figure.caption.19}%
+\contentsline {chapter}{\numberline {4}Apartado BIBLIOGRAFIA}{27}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Como citar}{27}{section.4.1}%
+\contentsline {section}{\numberline {4.2}Apartado referencias}{27}{section.4.2}%
+\contentsline {section}{\numberline {4.3}Archivos .bib}{28}{section.4.3}%
+\contentsline {section}{BIBLIOGRAFÍA }{28}{section.4.3}%
  \vspace {5mm} \hrule \par 
-\contentsline {chapter}{\numberline {A}Contenido de una entrada en .bib}{27}{appendix.Alph1}%
-\contentsline {chapter}{\numberline {B}Tipos de referencias}{29}{appendix.Alph2}%
+\contentsline {chapter}{\numberline {A}Contenido de una entrada en .bib}{31}{appendix.Alph1}%
+\contentsline {chapter}{\numberline {B}Tipos de referencias}{33}{appendix.Alph2}%
