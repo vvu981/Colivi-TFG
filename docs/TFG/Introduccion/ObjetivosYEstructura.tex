@@ -1,0 +1,38 @@
+\section{Objetivos Y Estructura}
+\label{Objetivos Y Estructura}
+
+    El objetivo principal de este trabajo es diseñar y desarrollar Colivi, una plataforma web completa pensada para resolver los problemas habituales en la búsqueda de alojamiento compartido y simplificar la gestión cotidiana dentro de una vivienda de estudiantes o jóvenes profesionales. Se busca ofrecer una solución práctica e intuitiva que acompañe al usuario en todo el proceso: desde la búsqueda inicial de habitación y el contacto directo con el casero, hasta el reparto organizado de las tareas del hogar mediante dinámicas participativas una vez iniciada la convivencia.
+    Para alcanzar este objetivo general, se han definido los siguientes objetivos específicos:
+
+    1. Desarrollar un módulo de autenticación y seguridad para el registro e inicio de sesión de usuarios mediante tokens JWT, con soporte para perfiles diferenciados de inquilino y propietario.
+
+    2. Permitir la gestión y edición del perfil personal, incluyendo datos de contacto e información relevante para la convivencia.
+
+    3. Crear un sistema de publicación y exploración de anuncios de habitaciones con filtros por ubicación, precio, características del inmueble y normas de la casa.
+
+    4. Implementar un canal de mensajería contextual que permita a los interesados comunicarse con el propietario sobre un anuncio concreto sin obligar a formalizar una reserva previa.
+
+    5. Gestionar el ciclo de vida de las solicitudes de reserva de forma controlada, garantizando un periodo de gracia posterior a la estancia para la resolución de posibles incidencias o fianzas.
+
+    6. Diseñar un sistema de tareas domésticas gamificado, con asignación rotativa justa de turnos (Round-Robin), mecanismos de rescate puntual de tareas pendientes y una tabla de puntuaciones del piso.
+
+    7. Construir un módulo de auditoría del hogar que registre de forma transparente eventos clave de la convivencia, tales como la realización de tareas o la entrada y salida de compañeros.
+
+    8. Integrar un asistente inteligente basado en el estándar Model Context Protocol (MCP) para resolver dudas sobre normas, consultar turnos de limpieza o buscar habitaciones según el ambiente del piso, sin permitir modificaciones automáticas en la base de datos.
+
+    A continuación, se detalla la estructura técnica global del proyecto (ilustrada en la figura~\ref{fig:estructura_tecnica_colivi}), describiendo las herramientas y tecnologías utilizadas en cada una de sus capas: cliente web, servidor principal, microservicio de inteligencia artificial y almacenamiento.
+
+    En la parte inferior de la arquitectura se sitúa el usuario final, quien interactúa con la plataforma a través del navegador web mediante una interfaz de usuario reactiva desarrollada con React, TypeScript y Tailwind CSS. El empaquetado y la compilación se gestionan con Vite para lograr tiempos de carga rápidos y un flujo de desarrollo ágil. Para la gestión del estado remoto y la sincronización con el servidor se emplea TanStack Query, aplicando una estrategia de consultas periódicas controladas (Smart Polling) que refresca los datos de mensajería y tareas solo mientras la pestaña permanece activa, reduciendo peticiones innecesarias sin requerir infraestructura adicional de sockets.
+
+    En el nivel intermedio se encuentra el backend principal, implementado en Java 21 utilizando el framework Spring Boot 3. Este servidor expone una API REST organizada por dominios y siguiendo principios de responsabilidad única (SOLID). Se encarga de procesar las reglas de negocio críticas: el cálculo determinista de las rotaciones de limpieza, la desvinculación reactiva de solicitudes mediante eventos de dominio internos (@EventListener) y la protección de accesos concurrentes mediante bloqueos a nivel de base de datos. Además, este mismo servicio actúa como orquestador cognitivo apoyándose en Spring AI, gestionando la comunicación con modelos de lenguaje a través de la API de Groq para responder a las consultas del asistente en formato estructurado.
+
+    Junto al servidor central se integra un microservicio independiente desarrollado en Node.js con TypeScript, cuyo único propósito es funcionar como servidor MCP oficial exponiendo eventos mediante Server-Sent Events (SSE). Este servicio declara y ejecuta las herramientas de consulta autorizadas (búsqueda avanzada de anuncios, estado de tareas y cola de reportes de moderación) propagando el token de seguridad del usuario en cada conexión, manteniendo una política estricta de solo lectura que impide cualquier mutación accidental de datos desde la inteligencia artificial.
+
+    Por último, en la capa superior de persistencia, se utiliza PostgreSQL como base de datos relacional principal. A través de JPA y Hibernate se gestiona el almacenamiento estructurado de usuarios, anuncios, hilos de conversación, históricos de auditoría y series de tareas recurrentes, aplicando índices compuestos y restricciones de unicidad para evitar duplicidades y garantizar la integridad de la información en todo momento.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\textwidth]{Introduccion/img/Figura1.1.png}
+    \caption{Estructura técnica global y arquitectura de la plataforma Colivi}
+    \label{fig:estructura_tecnica_colivi}
+\end{figure}

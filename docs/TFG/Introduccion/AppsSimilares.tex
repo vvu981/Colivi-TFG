@@ -1,0 +1,87 @@
+\section{Apps Similares}
+\label{sec:Apps Similares}
+
+    Antes de abordar el desarrollo del sistema, se llevó a cabo un estudio de las principales soluciones existentes en el mercado que guardan relación con los servicios que plantea este proyecto. El propósito de este análisis comparativo fue doble: por un lado, identificar patrones consolidados de diseño e interacción en las fases de búsqueda y convivencia; por otro, evidenciar las carencias funcionales del software actual y justificar la necesidad de una plataforma integral como Colivi.
+
+    Dentro del conjunto de herramientas evaluadas se seleccionaron portales de alquiler tradicionales como Idealista~\cite{idealista}, plataformas de alojamiento temporal y reservas como Airbnb~\cite{airbnb}, aplicaciones especializadas en alquiler de habitaciones y búsqueda de compañeros como Badi~\cite{badi}, herramientas de gestión contable compartida como Tricount~\cite{tricount}, y aplicaciones orientadas a la organización doméstica como Flatastic~\cite{flatastic}.
+
+    En primer lugar, Idealista~\cite{idealista} (figura~\ref{subfig:idealista}) representa el referente indiscutible en el mercado inmobiliario español para la publicación y búsqueda de inmuebles. Cuenta con una base de datos masiva, un motor de filtros geográficos muy optimizado y herramientas de contacto directo con anunciantes. Sin embargo, su modelo de negocio está concebido para el alquiler tradicional de viviendas completas o habitaciones desde una perspectiva puramente transaccional. Una vez que el contrato se formaliza, la plataforma desaparece de la ecuación: no ofrece mecanismos de depósito seguro de fianza dentro de la aplicación, carece de funciones para gestionar la convivencia y no contempla ningún tipo de comunidad o afinidad entre inquilinos.
+
+    En segundo lugar, Airbnb~\cite{airbnb} (figura~\ref{subfig:airbnb}) destaca por su robusto sistema de reservas, pasarela de pagos integrada, gestión de garantías y verificación de identidades mediante reseñas mutuas. No obstante, su orientación es casi exclusivamente turística o de estancias cortas. Aunque permite estancias de varias semanas, sus comisiones por servicio no son viables para alquileres residenciales o de media estancia. Además, no contempla la figura del piso compartido entre desconocidos que necesitan coordinar su día a día, delegando cualquier acuerdo de convivencia a la comunicación externa entre huéspedes y anfitriones.
+
+    Por otro lado, Badi~\cite{badi} (figura~\ref{subfig:badi}) fue concebida de forma específica para solucionar el problema del alquiler por habitaciones en grandes urbes, permitiendo buscar tanto cuartos disponibles como compañeros de piso según perfiles personales y compatibilidad básica mediante un chat interno. Pese a ser la propuesta más cercana a la fase inicial de captación de Colivi, su alcance queda truncado en el momento de la firma: no dispone de un módulo de gestión del hogar que acompañe a los usuarios durante los meses de convivencia. Toda la organización interna del piso (cuentas, suministros, mantenimiento) queda fuera de su alcance.
+
+    En lo relativo a la economía del hogar, aplicaciones como Tricount~\cite{tricount} (figura~\ref{subfig:tricount}) son ampliamente utilizadas por estudiantes y jóvenes profesionales para el reparto de facturas comunes. Destacan por su capacidad para simplificar grafos de deudas cruzadas y registrar pagos entre múltiples participantes. Pese a su efectividad matemática, son aplicaciones aisladas: no tienen noción del inmueble físico, no verifican la legitimidad de los gastos con el contrato de alquiler ni permiten liquidar fianzas contractuales de forma segura, exigiendo que los inquilinos introduzcan los datos manualmente sin ningún vínculo con su arrendador.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\linewidth,height=7.8cm,keepaspectratio]{Introduccion/img/Idealista.png}
+        \caption{Búsqueda en Idealista}
+        \label{subfig:idealista}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\linewidth,height=7.8cm,keepaspectratio]{Introduccion/img/Airbnb.png}
+        \caption{Detalles y reserva en Airbnb}
+        \label{subfig:airbnb}
+    \end{subfigure}
+    
+    \vspace{0.4cm}
+    
+    \begin{subfigure}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\linewidth,height=7.8cm,keepaspectratio]{Introduccion/img/Badi.png}
+        \caption{Habitaciones y perfiles en Badi}
+        \label{subfig:badi}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\linewidth,height=7.8cm,keepaspectratio]{Introduccion/img/Tricount.png}
+        \caption{Reparto de gastos en Tricount}
+        \label{subfig:tricount}
+    \end{subfigure}
+    \caption{Interfaces de las principales soluciones analizadas en el mercado}
+    \label{fig:apps_similares}
+\end{figure}
+
+    En conclusión, el panorama tecnológico actual se encuentra fragmentado en silos funcionales. Ninguna de las alternativas evaluadas cubre el ciclo integral del coliving: desde la búsqueda y validación inicial del alojamiento con fianza segura, hasta la gestión activa de la convivencia (gastos, turnos rotativos y mensajería), pasando por la integración de un asistente conversacional inteligente capaz de interactuar con el estado operativo del piso. Colivi nace para unificar estas facetas bajo un único ecosistema web y móvil.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Comparativa de características entre plataformas analizadas y Colivi}
+    \label{tab:comparativa_apps}
+    \vspace{0.2cm}
+    \resizebox{\textwidth}{!}{%
+    \begin{tabular}{|l|c|c|c|c|c|c|}
+        \hline
+        \textbf{Plataforma} & \textbf{\begin{tabular}[c]{@{}c@{}}Catálogo y\\ Búsqueda\end{tabular}} & \textbf{\begin{tabular}[c]{@{}c@{}}Reserva y Fianza\\ Integrada\end{tabular}} & \textbf{\begin{tabular}[c]{@{}c@{}}Reparto de\\ Gastos Comunes\end{tabular}} & \textbf{\begin{tabular}[c]{@{}c@{}}Gamificación\\ de Tareas\end{tabular}} & \textbf{\begin{tabular}[c]{@{}c@{}}Asistente\\ IA (MCP)\end{tabular}} & \textbf{\begin{tabular}[c]{@{}c@{}}Enfoque\\ Coliving\end{tabular}} \\ \hline
+        Idealista & Sí & No & No & No & No & No \\ \hline
+        Airbnb & Sí & Sí & No & No & No & No \\ \hline
+        Badi & Sí & No & No & No & No & Sí \\ \hline
+        Tricount & No & No & Sí & No & No & No \\ \hline
+        \textbf{Colivi (Propuesta)} & \textbf{Sí} & \textbf{Sí} & \textbf{Sí} & \textbf{Sí} & \textbf{Sí} & \textbf{Sí} \\ \hline
+    \end{tabular}%
+    }
+\end{table}
+
+    Para interpretar de manera objetiva la tabla comparativa, conviene delimitar los criterios asignados a cada una de las columnas evaluadas:
+
+\begin{itemize}
+    \item \textbf{Catálogo y Búsqueda}: Indica si la plataforma dispone de un motor público de exploración con filtros geográficos y características del inmueble (precio, comodidades, disponibilidad de habitaciones). Portales como Idealista, Airbnb y Badi satisfacen este requisito con solvencia, mientras que utilidades como Tricount o Flatastic carecen por definición de esta vertiente comercial.
+
+    \item \textbf{Reserva y Fianza Integrada}: Hace referencia a la capacidad de formalizar contractualmente la estancia y retener o transferir depósitos de fianza mediante pasarelas auditables dentro del propio sistema. Solo Airbnb cumple este punto en el mercado actual, ya que Idealista y Badi delegan el pago y la garantía a acuerdos externos privados entre las partes.
+
+    \item \textbf{Reparto de Gastos Comunes}: Evalúa si el sistema ofrece un motor de balances para dividir facturas, calcular saldos individuales y registrar liquidaciones. Es el núcleo de Tricount y una función presente en Flatastic, pero inexistente en las plataformas inmobiliarias.
+
+    \item \textbf{Gamificación de Tareas}: Se exige que la herramienta incluya mecanismos dinámicos de distribución del trabajo doméstico (como asignaciones rotativas periódicas y métricas o tableros de puntuación). Solo Flatastic implementa una aproximación a este concepto, aunque de manera básica y sin auditoría cruzada con el resto del hogar.
+
+    \item \textbf{Asistente IA (MCP)}: Evalúa la existencia de un agente conversacional contextualizado mediante protocolos como Model Context Protocol, capaz no solo de responder consultas generales, sino de consultar el estado de la base de datos (por ejemplo, comprobar qué gastos siguen pendientes o listar las tareas asignadas para la semana en curso). Ninguna de las herramientas existentes ofrece integración con modelos de lenguaje orientados a la gestión operativa del inmueble.
+
+    \item \textbf{Enfoque Coliving}: Determina si el diseño de la aplicación está optimizado pensando en el modelo de habitación privada con áreas compartidas y convivencia grupal entre pares. Badi y Flatastic reciben esta marca por su enfoque específico en compañeros de piso, a diferencia de Idealista (enfocada al mercado residencial genérico) o Airbnb (diseñada para el hospedaje turístico).
+\end{itemize}
+
+En algunos casos, la asignación de estas características puede presentar matices. Por ejemplo, en Badi se gestiona la reserva inicial de la habitación a través de un depósito temporal de reserva, pero no ofrece la custodia ni la gestión contable de la fianza del contrato de arrendamiento durante la vigencia del alquiler, motivo por el cual no se considera una solución de fianza integrada completa. De igual manera, aunque plataformas como Airbnb han comenzado a experimentar con algoritmos de atención al cliente automatizados, no disponen de agentes conversacionales capaces de consultar e interactuar con la lógica interna de convivencia de los residentes.

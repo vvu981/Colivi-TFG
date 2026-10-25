@@ -1,0 +1,22 @@
+\chapter{Herramientas y metodologías}
+\label{chap:herramientas_y_metodologias}
+
+Durante el desarrollo de este proyecto se consideró fundamental adoptar una metodología que combinara el control riguroso de la calidad del código con la flexibilidad necesaria para abordar una arquitectura distribuida. Al tratarse de un trabajo individual con un grado notable de interconexión entre componentes, se optó por un enfoque ágil adaptado que combinó entregas iterativas con la práctica de desarrollo guiado por pruebas o TDD (\emph{Test-Driven Development}). Esta estrategia facilitó estructurar el trabajo en ciclos cortos de especificación, codificación y validación, asegurando la estabilidad de los módulos antes de introducir nuevas dependencias.
+
+El uso de TDD resultó especialmente relevante en los componentes con lógica de negocio crítica, como el motor contable de liquidación de gastos comunes y la gestión de concurrencia en las reservas. La escritura previa de las pruebas unitarias e integradas permitió fijar el comportamiento de las entidades y servicios con precisión, reduciendo sustancialmente la aparición de errores en fases avanzadas. De forma complementaria, este flujo de trabajo se apoyó en herramientas de inteligencia artificial generativa, utilizándolas como un asistente técnico para agilizar la creación de baterías de pruebas, evaluar casos límite y orientar refactorizaciones de código enfocadas al cumplimiento estricto de los principios SOLID (\emph{Single responsibility, Open-closed, Liskov substitution, Interface segregation, Dependency inversion}) y al desacoplamiento entre capas.
+
+Para la construcción de la plataforma se seleccionó un conjunto de tecnologías y herramientas orientado a garantizar la mantenibilidad, el tipado estricto y la escalabilidad del sistema:
+
+\begin{itemize}
+\item Entorno de desarrollo: el proyecto se articuló mediante el uso de Antigravity como entorno principal de trabajo, facilitando la navegación coordinada entre los distintos repositorios, la depuración y la automatización de tareas.
+\item Lógica de negocio y servicios: el backend principal se implementó con Java 21 sobre el marco de trabajo Spring Boot 3, incorporando Spring AI para la conexión con modelos de lenguaje y la gestión de llamadas a funciones. De forma independiente se construyó un servidor para el protocolo MCP (\emph{Model Context Protocol}) desarrollado con Node.js y TypeScript, comunicándose con el núcleo a través de eventos enviados por el servidor o SSE (\emph{Server-Sent Events}).
+\item Interfaz web y empaquetado móvil: la aplicación web se desarrolló con React, utilizando Vite como herramienta de construcción y TypeScript para asegurar el tipado estático del cliente. Para el diseño visual se empleó Tailwind CSS, mientras que la sincronización de las peticiones asíncronas se gestionó mediante TanStack Query. La adaptación hacia dispositivos móviles se resolvió mediante Capacitor, permitiendo empaquetar la base del cliente web directamente para la plataforma Android.
+\item Almacenamiento de datos: la persistencia relacional se confió al sistema gestor de bases de datos PostgreSQL, administrando las transacciones y entidades mediante JPA (\emph{Java Persistence API}) e Hibernate.
+\item Prototipado y diseño de interfaz: la experiencia de usuario y los esquemas preliminares de navegación se diseñaron en Figma, elaborando maquetas interactivas tanto para la vista de escritorio como para resoluciones móviles.
+\item Diagramación formal: los diagramas de casos de uso y esquemas de comportamiento se generaron mediante PlantUML a partir de código fuente, complementados con diagramas de bloques elaborados en draw.io para representar la arquitectura global.
+\item Control de versiones y cronograma: la gestión del código fuente se realizó en la plataforma GitHub, aplicando un flujo basado en ramas y solicitudes de extracción (\emph{pull requests}) para auditar cada incremento de funcionalidad. El control temporal y la verificación de dependencias entre fases se llevaron a cabo mediante la herramienta GanttProject.
+\end{itemize}
+
+A continuación, se describen con detalle las decisiones metodológicas adoptadas, así como la configuración técnica y el rol específico de cada una de las herramientas a lo largo de las distintas etapas del proyecto.
+
+\input{HerramientasYMetodologias/Metodologias.tex}

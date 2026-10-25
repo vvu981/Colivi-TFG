@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?><project name="Colivi TFG" company="Universidad de Almeria" webLink="" view-date="2026-05-15" view-index="0" gantt-divider-location="420" resource-divider-location="300" version="2.8.11" locale="es">
+    <description><![CDATA[Planificacion integral del proyecto Colivi - TFG ESI UAL]]></description>
+    <view zooming-state="default:6" id="gantt-chart">
+        <field id="tpd3" name="Nombre" width="240" order="0"/>
+        <field id="tpd4" name="Fecha de inicio" width="85" order="1"/>
+        <field id="tpd5" name="Fecha de fin" width="85" order="2"/>
+        <option id="taskLabelUp" value="name"/>
+        <option id="taskLabelDown" value="length"/>
+    </view>
+    <calendars>
+        <day-types>
+            <day-type id="0"/>
+            <day-type id="1"/>
+            <default-week id="1" name="default" sun="1" mon="0" tue="0" wed="0" thu="0" fri="0" sat="1"/>
+            <only-show-weekends value="false"/>
+            <overriden-day-types/>
+            <days/>
+        </day-types>
+    </calendars>
+    <tasks empty-milestones="true">
+        <taskproperties>
+            <taskproperty id="tpd0" name="type" type="default" valuetype="icon"/>
+            <taskproperty id="tpd1" name="priority" type="default" valuetype="icon"/>
+            <taskproperty id="tpd2" name="info" type="default" valuetype="icon"/>
+            <taskproperty id="tpd3" name="name" type="default" valuetype="text"/>
+            <taskproperty id="tpd4" name="begindate" type="default" valuetype="date"/>
+            <taskproperty id="tpd5" name="enddate" type="default" valuetype="date"/>
+            <taskproperty id="tpd6" name="duration" type="default" valuetype="int"/>
+            <taskproperty id="tpd7" name="completion" type="default" valuetype="int"/>
+            <taskproperty id="tpd8" name="coordinator" type="default" valuetype="text"/>
+            <taskproperty id="tpd9" name="predecessorsr" type="default" valuetype="text"/>
+        </taskproperties>
+        <task id="1" name="F00: Estudio y Aprendizaje de Herramientas (Spring AI, MCP, React, Docker)" color="#8cb6ce" meeting="false" start="2026-06-01" duration="10" complete="100" thirdDate="2026-06-01" thirdDate-constraint="0" expand="true">
+            <depend id="2" type="2" difference="0" hardness="Strong"/>
+        </task>
+        <task id="2" name="F01: Arquitectura Base, Infraestructura y DevOps" color="#8cb6ce" meeting="false" start="2026-06-15" duration="7" complete="100" thirdDate="2026-06-15" thirdDate-constraint="0" expand="true">
+            <depend id="3" type="2" difference="0" hardness="Strong"/>
+        </task>
+        <task id="3" name="F02: Gestion de Usuarios, Autenticacion y Perfiles" color="#8cb6ce" meeting="false" start="2026-06-24" duration="10" complete="100" thirdDate="2026-06-24" thirdDate-constraint="0" expand="true">
+            <depend id="4" type="2" difference="0" hardness="Strong"/>
+        </task>
+        <task id="4" name="F03: Gestion de Alojamientos y Catalogo" color="#8cb6ce" meeting="false" start="2026-07-08" duration="8" complete="100" thirdDate="2026-07-08" thirdDate-constraint="0" expand="true">
+            <depend id="5" type="2" difference="0" hardness="Strong"/>
+            <depend id="11" type="2" difference="0" hardness="Strong"/>
+        </task>
+        <task id="5" name="F04: Solicitudes de Reserva y Pagos de Fianza" color="#8cb6ce" meeting="false" start="2026-07-20" duration="7" complete="100" thirdDate="2026-07-20" thirdDate-constraint="0" expand="true">
+            <depend id="6" type="2" difference="0" hardness="Strong"/>
+        </task>
+        <task id="6" name="F05: Gestion de Hogares y Convivencia" color="#8cb6ce" meeting="false" start="2026-07-29" duration="6" complete="100" thirdDate="2026-07-29" thirdDate-constraint="0" expand="true">
+            <depend id="7" type="2" difference="0" hardness="Strong"/>
+            <depend id="8" type="2" difference="0" hardness="Strong"/>
+            <depend id="9" type="2" difference="0" hardness="Strong"/>
+            <depend id="10" type="2" difference="0" hardness="Strong"/>
+        </task>
+        <task id="7" name="F06: Gestion de Gastos Compartidos (Expenses)" color="#8cb6ce" meeting="false" start="2026-08-06" duration="6" complete="100" thirdDate="2026-08-06" thirdDate-constraint="0" expand="true">
+            <depend id="12" type="2" difference="0" hardness="Strong"/>
+        </task>
+        <task id="8" name="F07: Sistema de Denuncias, Resenas y Moderacion" color="#8cb6ce" meeting="false" start="2026-08-06" duration="5" complete="100" thirdDate="2026-08-06" thirdDate-constraint="0" expand="true">
+            <depend id="12" type="2" difference="0" hardness="Strong"/>
+        </task>
+        <task id="9" name="F08: Tareas Domesticas y Gamificacion (Chores)" color="#8cb6ce" meeting="false" start="2026-08-06" duration="6" complete="100" thirdDate="2026-08-06" thirdDate-constraint="0" expand="true">
+            <depend id="11" type="2" difference="0" hardness="Strong"/>
+        </task>
+        <task id="10" name="F09: Sistema de Mensajeria Interna" color="#8cb6ce" meeting="false" start="2026-08-06" duration="5" complete="100" thirdDate="2026-08-06" thirdDate-constraint="0" expand="true">
+            <depend id="12" type="2" difference="0" hardness="Strong"/>
+        </task>
+        <task id="11" name="F10: Asistente Virtual Inteligente (IA y MCP)" color="#8cb6ce" meeting="false" start="2026-08-14" duration="7" complete="100" thirdDate="2026-08-14" thirdDate-constraint="0" expand="true">
+            <depend id="12" type="2" difference="0" hardness="Strong"/>
+        </task>
+        <task id="12" name="F11: Adaptabilidad Movil y Despliegue Android" color="#8cb6ce" meeting="false" start="2026-08-25" duration="6" complete="100" thirdDate="2026-08-25" thirdDate-constraint="0" expand="true">
+            <depend id="13" type="2" difference="0" hardness="Strong"/>
+        </task>
+        <task id="13" name="F12: Cumplimiento Legal y Privacidad (RGPD)" color="#8cb6ce" meeting="false" start="2026-09-02" duration="3" complete="100" thirdDate="2026-09-02" thirdDate-constraint="0" expand="true">
+            <depend id="14" type="2" difference="0" hardness="Strong"/>
+        </task>
+        <task id="14" name="F13: Redaccion de Memoria, Documentacion y Revision" color="#8cb6ce" meeting="false" start="2026-09-07" duration="18" complete="100" thirdDate="2026-09-07" thirdDate-constraint="0" expand="true">
+        </task>
+    </tasks>
+    <resources/>
+    <allocations/>
+    <vacations/>
+    <previous/>
+    <roles roleset-name="Default"/>
+</project>

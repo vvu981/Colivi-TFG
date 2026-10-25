@@ -21,39 +21,30 @@
 \providecommand{\BIBdecl}{\relax}
 \BIBdecl
 
-\bibitem{malaga}
-U.~de~M{\'a}laga, ``Breves notas de estilo para la redacción de proyectos fin
-  de carreray trabajos fin de grado,'' Recuperado 20 Enero 2020
-  {https://www.uma.es/media/files/Manual\_de\_Estilo\_TFG\_ETSIT.pdf}, 2013.
+\bibitem{idealista}
+{Idealista Libertad y Control S.L.}, ``Idealista: Portal inmobiliario en
+  españa,'' Recuperado 23 Octubre 2026 {https://www.idealista.com}, 2026.
 
-\bibitem{wiki}
-Wikipedia, ``Latex,'' Recuperado 20 Enero 2020
-  {https://es.wikipedia.org/wiki/LaTeX}, 2020.
+\bibitem{airbnb}
+{Airbnb Inc.}, ``Airbnb: Alojamientos vacacionales y alquileres,'' Recuperado
+  23 Octubre 2026 {https://www.airbnb.es}, 2026.
 
-\bibitem{alicante}
-U.~de~Alicante, ``Libro de estilo para la presentación de memorias del
-  trabajofindegrado/máster,'' Recuperado 20 Enero 2020
-  {https://eps.ua.es/es/ingenieria-informatica/documentos/tfg/libro-de-estilo.pdf},
-  2020.
+\bibitem{badi}
+{Badi App S.L.}, ``Badi: Alquiler de habitaciones y compañeros de piso,''
+  Recuperado 23 Octubre 2026 {https://badi.com}, 2026.
 
-\bibitem{alba2009}
-E.~Alba, ``Redacci{\'o}n de documentos cient{\'\i}ficos,'' Recuperado 20 Enero
-  2020 {http://www.lcc.uma.es/Eeat/pdf/rdc(E.Alba).pdf}, 2009.
+\bibitem{tricount}
+{Bunq B.V.}, ``Tricount: Gestión de gastos compartidos entre amigos,''
+  Recuperado 23 Octubre 2026 {https://www.tricount.com}, 2026.
+
+\bibitem{flatastic}
+{Flatastic GmbH}, ``Flatastic: Organización doméstica y tareas de
+  convivencia,'' Recuperado 23 Octubre 2026 {https://www.flatastic-app.com},
+  2026.
 
 \bibitem{SWEBOK2014}
 P.~Bourque and R.~E. Fairley, Eds., \emph{{SWEBOK}: Guide to the Software
   Engineering Body of Knowledge}.\hskip 1em plus 0.5em minus 0.4em\relax Los
   Alamitos, CA: IEEE Computer Society, 2014.
-
-\bibitem{kitchenham2009systematic}
-B.~Kitchenham, O.~P. Brereton, D.~Budgen, M.~Turner, J.~Bailey, and S.~Linkman,
-  ``Systematic literature reviews in software engineering--a systematic
-  literature review,'' \emph{Information and software technology}, vol.~51,
-  no.~1, pp. 7--15, 2009.
-
-\bibitem{kitchenham_2013}
-B.~Kitchenham and P.~Brereton, ``A systematic review of systematic review
-  process research in software engineering,'' \emph{Information and Software
-  Technology}, vol.~55, no.~12, pp. 2049 -- 2075, 2013.
 
 \end{thebibliography}

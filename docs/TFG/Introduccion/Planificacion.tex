@@ -1,0 +1,44 @@
+\section{Planificacion}
+\label{Planificacion}
+
+    La planificación de este proyecto se estructuró siguiendo un ciclo de vida clásico de ingeniería del software, orientado a cubrir de manera rigurosa la carga de trabajo de 12 ECTS (300 horas lectivas) establecida para el Trabajo Fin de Grado. El cronograma contempla desde las etapas analíticas previas hasta la integración de servicios avanzados de inteligencia artificial, la adaptación multiplataforma y la redacción final de la memoria académica. A continuación, se presenta la visión general de la estimación inicial de tiempos, detallando la dedicación prevista para cada fase y la justificación de sus dependencias lógicas.
+
+    Antes de comenzar la construcción del sistema, se definieron tres etapas preliminares: el estudio de las herramientas tecnológicas (30 horas), el análisis de requisitos funcionales y no funcionales (30 horas) y la realización del diseño conceptual y prototipos de interfaz (40 horas). Estas actividades, que sumaron una dedicación conjunta de 100 horas a lo largo de las primeras cuatro semanas, resultaron críticas para evaluar la viabilidad de la arquitectura distribuida, familiarizarse con el estándar Model Context Protocol (MCP) y la API de inferencia de Groq, modelar el esquema relacional en PostgreSQL y concebir los flujos de interacción de usuario en mockups interactivos antes de codificar la solución.
+
+    Posteriormente, se planificó la etapa técnica central, que concentró la mayor parte del esfuerzo con un total de 170 horas de desarrollo. El núcleo principal correspondió a la implementación de la aplicación web y sus microservicios (110 horas), abarcando la lógica de negocio en Spring Boot 3, el frontend reactivo con React y TanStack Query, y el servidor MCP en Node.js. Como derivación directa de esta base funcional, se programó la adaptación ergonómica a aplicación móvil mediante Capacitor para la generación del ejecutable Android (25 horas), la configuración de la infraestructura de despliegue mediante contenedores Docker y servicios cloud en Microsoft Azure (20 horas), y una fase final de pruebas exhaustivas y control de calidad (15 horas) para validar la seguridad y robustez del sistema.
+
+    Por último, se reservó un bloque final de 30 horas de dedicación exclusiva para la redacción de la memoria académica en la plantilla oficial de la universidad, la elaboración de diagramas formales y la preparación de la defensa pública. Esta fase de documentación se programó con una dependencia estricta respecto al desarrollo técnico, asegurando que el documento recogiera con fidelidad el comportamiento final del sistema una vez verificado y estabilizado al 100 %. En conjunto, la distribución temporal abarca las 300 horas estimadas para el cumplimiento integral de los objetivos del proyecto.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\textwidth]{Introduccion/img/Planificacion.png}
+    \caption{Planificación Temporal General}
+    \label{fig:planificacion_temporal_general}
+\end{figure}
+
+    La fase principal del desarrollo se centró en la implementación de la aplicación, planificada con una dedicación de 110 horas. Para optimizar el tiempo de desarrollo, el trabajo se dividió entre tareas que se podían construir en paralelo y aquellas que requerían un orden secuencial estricto debido a dependencias directas en la base de datos y en la lógica de negocio.
+
+    En cuanto a las tareas abordadas de forma simultánea, se trabajó en el levantamiento de la infraestructura base del backend en Spring Boot y la definición de las tablas en PostgreSQL, mientras que en el frontend se maquetaba la estructura de navegación general con React y Tailwind. Del mismo modo, el desarrollo de los módulos de autenticación local con JWT y la integración de inicio de sesión con Google avanzaron a la par que sus respectivas vistas en el cliente (registro, inicio de sesión y recuperación de contraseña), ya que compartían la gestión de estados y validación de tokens. Más adelante, también se elaboraron en paralelo la interfaz del catálogo de alojamientos con sus filtros de búsqueda y el sistema de mapas interactivos, aprovechando que ambos componentes consumían los mismos endpoints de inmuebles disponibles.
+
+    Por otro lado, la mayor parte de las funcionalidades troncales tuvieron que implementarse de forma secuencial, siguiendo una cadena lógica de dependencias:
+
+    1. Gestión de alojamientos y catálogo: Antes de poder reservar, era imprescindible disponer del módulo de publicación de propiedades físicas y anuncios, permitiendo a los propietarios subir fotos y definir comodidades.
+
+    2. Solicitudes de reserva y pago de fianzas: Con el catálogo funcionando, se construyó el flujo de reservas con validación de meses completos, control de concurrencia y depósito de fianza.
+
+    3. Módulo de Hogares (Convivencia): Este apartado solo podía entrar en juego una vez confirmada y pagada la reserva. Actúa como el contenedor central del piso compartido donde conviven los inquilinos aceptados.
+
+    4. Gastos compartidos y tareas domésticas (Chores): Ambas funciones requerían obligatoriamente que el «Hogar» estuviese ya creado. Primero se implementó el reparto proporcional de facturas con cálculo dinámico de deudas y registro cronológico de actividad, y posteriormente el sistema de asignación rotativa de limpieza con puntuaciones y tareas recurrentes.
+
+    5. Mensajería interna: Se desarrolló tras tener definida la convivencia, permitiendo la comunicación directa entre los compañeros de un mismo hogar o con el propietario del inmueble.
+
+    6. Asistente virtual (Spring AI y MCP): Fue de los últimos bloques técnicos en integrarse. No tenía sentido construir las herramientas de consulta del servidor MCP (Model Context Protocol) ni conectar el chat sin tener antes estabilizadas y probadas las APIs internas de búsqueda de catálogo y de estado de tareas domésticas, de las cuales extrae los datos.
+
+    7. Moderación administrativa, reseñas y RGPD: Finalmente, se implementó el canal de denuncias con resolución administrativa en cascada, las valoraciones entre usuarios y la capa de consentimiento legal para cerrar el sistema antes de pasar a la fase móvil y de despliegue.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\textwidth]{Introduccion/img/planificacionImplementacion.png}
+    \caption{Planificación Temporal de la implementación}
+    \label{fig:planificacion_temporal_implementacion}
+\end{figure}
