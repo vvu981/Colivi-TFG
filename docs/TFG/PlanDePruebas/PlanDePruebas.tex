@@ -1,0 +1,18 @@
+\chapter{Plan de pruebas}
+\label{chap:plan_pruebas}
+
+En este capítulo se abordará todo el proceso relacionado con el plan de pruebas, incluyendo las pruebas realizadas durante el desarrollo, las pruebas posteriores, quiénes han participado en ellas y cómo se han identificado y solucionado los errores detectados. Además, se detallarán los problemas surgidos a lo largo del desarrollo de la plataforma, cómo se resolvieron y si afectaron al progreso del proyecto llegando a provocar retrasos en otras tareas.
+
+En primer lugar, es importante destacar que las pruebas se llevaron a cabo de forma continua durante el proceso de desarrollo e implementación. No se avanzaba a nuevas tareas sin haber resuelto previamente todos los errores detectados en la etapa actual. Por ejemplo, si se observaba que el sistema de autenticación no propagaba correctamente el token JWT a las peticiones subsiguientes, no se procedía con la siguiente funcionalidad, como podría ser la vista del dashboard, hasta que el problema estuviera resuelto. No obstante, en algunos casos los errores se detectaron una vez iniciada una nueva tarea, debido a que solo se manifestaban bajo condiciones muy específicas que no se habían dado antes. En estos casos, se debía decidir entre terminar la tarea actual si estaba próxima a completarse o interrumpirla para solucionar el error anterior, lo que inevitablemente provocaba ciertos retrasos en el desarrollo.
+
+En segundo lugar, una vez completada toda la aplicación, se llevaron a cabo numerosas pruebas para verificar que todas las funcionalidades y datos se comportaban como se deseaba.
+
+En tercer lugar, tanto el sistema como la aplicación fueron probados por diferentes personas: amigos, compañeros y, en especial, el tutor, con el fin de recoger opiniones, detectar posibles mejoras en la experiencia de usuario y observar cómo interactuaban con la plataforma. Esto permitió identificar errores adicionales que fueron corregidos, así como realizar mejoras visuales que ayudaron a clarificar ciertas funcionalidades que no estaban siendo bien percibidas, y también aportaron ideas de posibles implementaciones que en algunos casos se valoraron y añadieron al proyecto, mientras que otras se dejaron como posibles mejoras futuras.
+
+Una vez tratados estos aspectos generales, el capítulo se dividirá en tres secciones: en la primera se expondrán los principales problemas surgidos durante el desarrollo; en la segunda se explicará cómo se abordó y resolvió cada uno de ellos; y en la tercera se expondrán los diferentes entornos en los que se realizaron las pruebas de la plataforma, tanto a nivel de dispositivos como de navegadores.
+
+\input{PlanDePruebas/ProblemasDuranteElDesarrollo.tex}
+
+\input{PlanDePruebas/SolucionDeLosProblemas.tex}
+
+\input{PlanDePruebas/EntornosDePruebas.tex}

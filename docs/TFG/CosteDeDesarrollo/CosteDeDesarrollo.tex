@@ -1,0 +1,143 @@
+\chapter{Costes de desarrollo}
+\label{chap:costes_desarrollo}
+
+En este capítulo se presenta una estimación de los costes asociados al desarrollo de Colivi, desglosados en costes de personal, costes de hardware y costes de software. El objetivo es ofrecer una visión realista del esfuerzo económico que supondría llevar a cabo un proyecto de estas características en un contexto profesional. Los importes se expresan en euros y no incluyen el impuesto sobre el valor añadido, ya que el objetivo es estimar el coste técnico de los recursos y no elaborar una factura comercial.
+
+\section{Hipótesis de cálculo}
+\label{sec:hipotesis_costes}
+
+La estimación se basa en la planificación descrita en el capítulo de introducción. El proyecto completo requiere 300 horas de dedicación: 100 horas de análisis y diseño, 170 horas de implementación y pruebas, y 30 horas de documentación y preparación de la defensa. De las horas de implementación, 110 corresponden a la construcción de la aplicación web y los microservicios, 25 al empaquetado móvil con Capacitor, 20 a la infraestructura Docker y al despliegue en Microsoft Azure, y 15 a las pruebas de integración.
+
+Para valorar el trabajo se adopta una tarifa de 25~\euro/\hspace{0.05em}h. Esta cifra representa el coste de sustitución de un desarrollador junior o, de forma equivalente, el coste horario medio de un perfil en formación supervisado. No debe interpretarse como el salario neto del autor, sino como una referencia económica para comparar el proyecto con un desarrollo profesional equivalente. Las licencias y servicios se valoran con precios orientativos de 2026 y se aplica una amortización únicamente al periodo de uso del proyecto.
+
+\section{Costes de personal}
+\label{sec:costes_personal}
+
+El coste de personal es el componente principal de la estimación. La siguiente tabla distribuye las 300 horas de trabajo según las fases documentadas en la planificación:
+
+\begin{table}[H]
+    \centering
+    \caption{Estimación del coste de personal}
+    \label{tab:costes_personal}
+    \begin{tabular}{|p{7.2cm}|r|r|r|}
+        \hline
+        \textbf{Actividad} & \textbf{Horas} & \textbf{Tarifa} & \textbf{Coste} \\
+        \hline
+        Análisis tecnológico, requisitos y diseño & 100 & 25~\euro/\hspace{0.05em}h & 2.500~\euro \\
+        \hline
+        Desarrollo de la aplicación web y microservicios & 110 & 25~\euro/\hspace{0.05em}h & 2.750~\euro \\
+        \hline
+        Empaquetado y pruebas móviles con Capacitor & 25 & 25~\euro/\hspace{0.05em}h & 625~\euro \\
+        \hline
+        Infraestructura Docker y despliegue en Azure & 20 & 25~\euro/\hspace{0.05em}h & 500~\euro \\
+        \hline
+        Pruebas de integración y validación final & 15 & 25~\euro/\hspace{0.05em}h & 375~\euro \\
+        \hline
+        Redacción de la memoria y preparación de la defensa & 30 & 25~\euro/\hspace{0.05em}h & 750~\euro \\
+        \hline
+        \textbf{Total} & \textbf{300} & & \textbf{7.500~\euro} \\
+        \hline
+    \end{tabular}
+\end{table}
+
+Si se considera exclusivamente el trabajo de implementación, pruebas e infraestructura, el coste técnico de desarrollo asciende a 4.250~\euro (170 horas). Si se incorpora todo el ciclo de vida del proyecto, incluyendo análisis, diseño y documentación, el coste total de personal asciende a 7.500~\euro.
+
+\section{Costes de hardware}
+\label{sec:costes_hardware}
+
+El desarrollo se realizó principalmente en un equipo de escritorio con Windows 11 Pro. También se utilizó un dispositivo Android físico para comprobar la aplicación empaquetada con Capacitor. Como ambos recursos pueden reutilizarse en otros proyectos, se imputa únicamente la parte proporcional correspondiente a nueve meses de uso. La amortización se calcula mediante una cuota lineal:
+
+\[
+\text{Coste imputado} =
+\text{Precio de adquisición} \times
+\frac{\text{meses de uso del proyecto}}{\text{vida útil en meses}}
+\]
+
+\begin{table}[H]
+    \centering
+    \small
+    \caption{Estimación del coste de hardware imputable al proyecto}
+    \label{tab:costes_hardware}
+    \begin{tabular}{|p{5.2cm}|p{1.8cm}|p{1.9cm}|p{1.5cm}|p{2.0cm}|}
+        \hline
+        \textbf{Recurso} & \textbf{Precio} & \textbf{Vida útil} & \textbf{Uso} & \textbf{Coste imputado} \\
+        \hline
+        Equipo de desarrollo & 1.200~\euro & 36 meses & 9 meses & 300~\euro \\
+        \hline
+        Dispositivo Android de pruebas & 240~\euro & 24 meses & 9 meses & 90~\euro \\
+        \hline
+        Periféricos y almacenamiento auxiliar & 180~\euro & 36 meses & 9 meses & 45~\euro \\
+        \hline
+        \textbf{Total} & & & & \textbf{435~\euro} \\
+        \hline
+    \end{tabular}
+\end{table}
+
+No se imputa el precio completo de compra de estos dispositivos, puesto que no se consumen íntegramente durante el desarrollo y continúan teniendo valor de uso una vez finalizado el proyecto.
+
+\section{Costes de software y servicios}
+\label{sec:costes_software}
+
+La mayor parte de las herramientas utilizadas pertenece a la categoría de software libre, gratuito o con un plan de uso sin coste. En consecuencia, el importe económico de las herramientas no representa el esfuerzo de aprendizaje ni el coste de mantenimiento de los servicios, sino únicamente el desembolso estimado durante el periodo del proyecto.
+
+\begin{table}[H]
+    \centering
+    \caption{Estimación de costes de software y servicios}
+    \label{tab:costes_software}
+    \begin{tabular}{|p{6.3cm}|p{4.2cm}|r|}
+        \hline
+        \textbf{Recurso} & \textbf{Criterio de valoración} & \textbf{Coste} \\
+        \hline
+        IntelliJ IDEA Ultimate & Licencia individual durante 9 meses & 180~\euro \\
+        \hline
+        Microsoft Azure & Máquina virtual y almacenamiento durante 9 meses & 270~\euro \\
+        \hline
+        Cloudinary & Plan gratuito para las imágenes de prueba & 0~\euro \\
+        \hline
+        GitHub y GitHub Actions & Plan gratuito para repositorio y CI & 0~\euro \\
+        \hline
+        Visual Studio Code, Docker y Docker Compose & Software de distribución gratuita & 0~\euro \\
+        \hline
+        PostgreSQL, Java, Node.js y librerías del proyecto & Software libre y dependencias open source & 0~\euro \\
+        \hline
+        Figma, PlantUML, Postman y DBeaver & Planes gratuitos o herramientas sin coste de licencia & 0~\euro \\
+        \hline
+        \textbf{Total} & & \textbf{450~\euro} \\
+        \hline
+    \end{tabular}
+\end{table}
+
+La valoración de Azure se ha calculado con una media de 30~\euro mensuales, incluyendo una máquina virtual de baja capacidad y el almacenamiento necesario para el despliegue de pruebas. El importe real puede variar según la región, el tiempo de ejecución y el consumo de red. Del mismo modo, si el desarrollo se realizase exclusivamente en local, este coste podría reducirse a cero, aunque dejaría de contemplar las pruebas de aceptación realizadas en un entorno accesible desde Internet.
+
+\section{Resumen económico}
+\label{sec:resumen_costes}
+
+La suma de las tres categorías proporciona una estimación del coste completo del proyecto:
+
+\begin{table}[H]
+    \centering
+    \caption{Resumen de costes del proyecto}
+    \label{tab:resumen_costes}
+    \begin{tabular}{|p{9cm}|r|}
+        \hline
+        \textbf{Categoría} & \textbf{Coste} \\
+        \hline
+        Personal (300 horas) & 7.500~\euro \\
+        \hline
+        Hardware amortizado & 435~\euro \\
+        \hline
+        Software y servicios & 450~\euro \\
+        \hline
+        \textbf{Coste total estimado} & \textbf{8.385~\euro} \\
+        \hline
+    \end{tabular}
+\end{table}
+
+Por tanto, el coste de sustitución del proyecto completo se estima en 8.385~\euro. El coste directamente asociado a la implementación, incluyendo el hardware y los servicios consumidos durante esa fase, sería de 5.135~\euro. Esta segunda cifra no incluye las horas de análisis, diseño y redacción, por lo que no representa el coste total de entregar el producto terminado.
+
+\section{Interpretación de la estimación}
+\label{sec:interpretacion_costes}
+
+El resultado muestra que el principal componente económico de una plataforma como Colivi no son las licencias, sino el tiempo de trabajo especializado. La utilización de PostgreSQL, Docker, Node.js, React, Spring Boot y las restantes dependencias de código abierto permite mantener los costes recurrentes de software en un nivel reducido. No obstante, esta reducción no elimina otros costes relevantes: es necesario mantener la infraestructura, actualizar las dependencias, supervisar la seguridad, atender incidencias y dimensionar los servicios cloud cuando aumente el número de usuarios.
+
+En un escenario de producción, la estimación debería ampliarse con conceptos que quedan fuera del alcance de este TFG, como el dominio, el soporte técnico, las copias de seguridad gestionadas, la monitorización, el servicio de correo, las comisiones de una pasarela de pago real y la revisión legal en materia de protección de datos. En consecuencia, los 8.385~\euro{} deben entenderse como una referencia del coste de construcción del prototipo funcional documentado, no como el presupuesto completo de explotación comercial de la plataforma.

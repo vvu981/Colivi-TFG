@@ -1,14 +1,12 @@
 \section{Herramientas usadas}
 \label{sec:herramientas_usadas}
 
-    Cada herramienta del proyecto responde a una exigencia técnica concreta de la arquitectura distribuida. Se descartaron soluciones monolíticas pesadas en favor de tecnologías con tipado estricto, bajo consumo de memoria y separación limpia entre dominios.
+	Cada herramienta del proyecto responde a una exigencia técnica concreta de la arquitectura establecida. Debido a las tecnologías con tipado estricto, bajo consumo de memoria y separación limpia entre módulos, se descartaron soluciones monolíticas, reduciendo el acoplamiento y cumpliendo con los principios SOLID.
 
 \subsection{Entornos de desarrollo y asistencia técnica}
 \label{subsec:entornos_desarrollo}
 
-    Antigravity actuó como entorno principal para programar el backend en Spring Boot y el microservicio en Node.js (figura~\ref{fig:entornos_desarrollo}). Su soporte para espacios de trabajo desacoplados facilitó mantener abiertos los servicios del servidor mientras se levantaban contenedores y terminales de depuración simultáneas. Frente a alternativas lentas como Eclipse, agilizó la navegación entre clases de dominio y la refactorización guiada.
-
-    Visual Studio Code asumió el desarrollo del cliente web y el empaquetado móvil. El ecosistema de complementos para TypeScript, la integración con ESLint y el formateo automático con Prettier garantizaron coherencia estilística en todo el código de React. Alternativas como WebStorm ofrecían prestaciones equivalentes pero con una penalización innecesaria en el consumo de memoria RAM del equipo de desarrollo.
+    Antigravity actuó como el entorno principal para el desarrollo del backend en Spring Boot y del microservicio en Node.js (figura~\ref{fig:entornos_desarrollo}). Su soporte para espacios de trabajo desacoplados facilitó mantener abiertos los servicios del servidor mientras se levantaban contenedores y terminales de depuración simultáneas. Frente a alternativas como Eclipse, agilizó la navegación entre clases de dominio y la refactorización guiada. Además, asumió el desarrollo del cliente web y el empaquetado móvil. El ecosistema de complementos para TypeScript, la integración con ESLint y el formateo automático con la extensión Prettier garantizaron coherencia estilística en todo el código de React. Alternativas como WebStorm ofrecían prestaciones equivalentes pero con una penalización innecesaria en el consumo de memoria RAM del equipo de desarrollo.
 
     Android Studio intervino en la fase final de empaquetado y prueba sobre dispositivos móviles. La lógica de la aplicación se comparte desde React gracias a Capacitor; sin embargo, compilar el paquete nativo APK (\emph{Android Package Kit}), firmar digitalmente el binario y depurar las llamadas al puente de WebView requirió la suite oficial de Android sobre emuladores del sistema operativo.
 

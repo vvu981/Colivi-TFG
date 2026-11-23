@@ -1,0 +1,289 @@
+\section{Requisitos funcionales}
+
+La siguiente tabla recoge los requisitos funcionales identificados a partir de los casos de uso de la plataforma Colivi.
+
+\begin{longtable}{|p{2cm}|p{12cm}|}
+    \caption{Relación de requisitos funcionales de Colivi}
+    \label{tab:requisitos-funcionales} \\
+    \hline
+    \textbf{Código} & \textbf{Nombre} \\ \hline
+    \endfirsthead
+
+    \hline
+    \textbf{Código} & \textbf{Nombre} \\ \hline
+    \endhead
+
+    RF-01 & Registrarse con correo y contraseña \\ \hline
+    RF-02 & Autenticarse con credenciales \\ \hline
+    RF-03 & Autenticarse mediante Google OAuth \\ \hline
+    RF-04 & Renovar token de acceso \\ \hline
+    RF-05 & Cerrar sesión activa \\ \hline
+    RF-06 & Solicitar restablecimiento de contraseña \\ \hline
+    RF-07 & Restablecer contraseña con token seguro \\ \hline
+    RF-08 & Solicitar reactivación de cuenta \\ \hline
+    RF-09 & Confirmar reactivación con token \\ \hline
+    RF-10 & Consultar perfil propio \\ \hline
+    RF-11 & Actualizar información personal (no sensible) \\ \hline
+    RF-12 & Actualizar credenciales o correo (sensible) \\ \hline
+    RF-13 & Subir o actualizar imagen de perfil \\ \hline
+    RF-14 & Consultar perfil público de terceros \\ \hline
+    RF-15 & Dar de baja cuenta propia (borrado lógico) \\ \hline
+
+    RF-16 & Buscar anuncios con filtros combinados \\ \hline
+    RF-17 & Explorar anuncios en mapa interactivo \\ \hline
+    RF-18 & Consultar detalle de anuncio y habitaciones vinculadas \\ \hline
+    RF-19 & Registrar inmueble base \\ \hline
+    RF-20 & Modificar datos del inmueble base \\ \hline
+    RF-21 & Subir galería fotográfica a CDN \\ \hline
+    RF-22 & Geolocalizar dirección en mapa \\ \hline
+    RF-23 & Publicar nuevo anuncio (habitación o piso completo) \\ \hline
+    RF-24 & Actualizar precios, depósito y condiciones \\ \hline
+    RF-25 & Seleccionar y ordenar imágenes para el anuncio \\ \hline
+    RF-26 & Cambiar visibilidad de anuncio (disponible o pausado) \\ \hline
+    RF-27 & Consultar historial de búsquedas recientes \\ \hline
+    RF-28 & Obtener recomendaciones personalizadas \\ \hline
+
+    RF-29 & Ver reseñas y puntuación media \\ \hline
+    RF-30 & Verificar elegibilidad para reseñar \\ \hline
+    RF-31 & Publicar reseña y calificación \\ \hline
+
+    RF-32 & Enviar solicitud de reserva con rango de fechas \\ \hline
+    RF-33 & Consultar historial de mis solicitudes (inquilino) \\ \hline
+    RF-34 & Cancelar solicitud de reserva pendiente \\ \hline
+    RF-35 & Consultar solicitudes recibidas (anfitrión) \\ \hline
+    RF-36 & Aceptar solicitud de reserva \\ \hline
+    RF-37 & Rechazar solicitud de reserva \\ \hline
+    RF-38 & Confirmar y registrar pago de fianza \\ \hline
+
+    RF-39 & Crear espacio de convivencia \\ \hline
+    RF-40 & Consultar panel y detalle de convivencia \\ \hline
+    RF-41 & Generar o regenerar código de invitación \\ \hline
+    RF-42 & Unirse a un hogar mediante código \\ \hline
+    RF-43 & Personalizar color de identificación en el hogar \\ \hline
+    RF-44 & Consultar registro cronológico de actividad \\ \hline
+    RF-45 & Transferir privilegios de administrador del hogar \\ \hline
+    RF-46 & Expulsar miembro del hogar \\ \hline
+    RF-47 & Abandonar convivencia \\ \hline
+    RF-48 & Archivar o desarchivar vista de hogar \\ \hline
+    RF-49 & Consultar historial de hogares pasados \\ \hline
+
+    RF-50 & Registrar nuevo gasto con reparto \\ \hline
+    RF-51 & Modificar detalles o reparto de gasto \\ \hline
+    RF-52 & Eliminar gasto del registro \\ \hline
+    RF-53 & Filtrar gastos por fechas y participantes \\ \hline
+    RF-54 & Consultar balances y transferencias sugeridas \\ \hline
+    RF-55 & Registrar liquidación o pago directo entre miembros \\ \hline
+    RF-56 & Comprobar saldo cero antes de salida o expulsión \\ \hline
+
+    RF-57 & Crear tarea única o serie recurrente \\ \hline
+    RF-58 & Configurar estrategia de asignación (fija o rotativa) \\ \hline
+    RF-59 & Visualizar tareas en calendario y cuadrante \\ \hline
+    RF-60 & Completar tarea asignada \\ \hline
+    RF-61 & Rescatar tarea vencida de otro miembro \\ \hline
+    RF-62 & Eliminar tarea o serie recurrente \\ \hline
+    RF-63 & Reasignar tareas al salir un miembro \\ \hline
+
+    RF-64 & Iniciar conversación vinculada a un anuncio \\ \hline
+    RF-65 & Consultar bandeja de entrada y no leídos \\ \hline
+    RF-66 & Ver historial de mensajes \\ \hline
+    RF-67 & Enviar mensaje de texto \\ \hline
+    RF-68 & Marcar conversación como leída \\ \hline
+
+    RF-69 & Dialogar con el asistente en lenguaje natural \\ \hline
+    RF-70 & Obtener ticket temporal de autenticación de herramientas \\ \hline
+    RF-71 & Búsqueda semántica por preferencias \\ \hline
+    RF-72 & Consulta de estado de reservas \\ \hline
+    RF-73 & Resumen inteligente de mensajes \\ \hline
+    RF-74 & Consulta del estado de tareas del hogar \\ \hline
+    RF-75 & Inspección de cola de moderación \\ \hline
+
+    RF-76 & Denunciar anuncio, usuario o conversación \\ \hline
+    RF-77 & Recibir notificación de resolución de denuncia \\ \hline
+    RF-78 & Listar y filtrar cola global de denuncias \\ \hline
+    RF-79 & Revisar historial de conversación denunciada \\ \hline
+    RF-80 & Resolver denuncia individual con veredicto \\ \hline
+    RF-81 & Procesar denuncias en lote \\ \hline
+    RF-82 & Consultar ranking de elementos más denunciados \\ \hline
+    RF-83 & Listar usuarios registrados con filtros \\ \hline
+    RF-84 & Suspender o bloquear usuario de la plataforma \\ \hline
+    RF-85 & Listar catálogo global de anuncios \\ \hline
+    RF-86 & Bloquear o despublicar anuncio infractor \\ \hline
+
+    \caption{Relación de requisitos funcionales de Colivi}
+\end{longtable}
+
+\subsection{Descripción de los requisitos funcionales}
+
+\begin{description}
+    \item[RF-01.] El sistema permitirá crear una cuenta mediante correo electrónico y contraseña.
+
+    \item[RF-02.] El sistema permitirá iniciar sesión utilizando las credenciales registradas.
+
+    \item[RF-03.] El sistema permitirá autenticarse mediante una cuenta de Google.
+
+    \item[RF-04.] El sistema permitirá renovar el token de acceso para mantener la sesión activa.
+
+    \item[RF-05.] El sistema permitirá cerrar la sesión del usuario autenticado.
+
+    \item[RF-06.] El sistema permitirá solicitar la recuperación de una contraseña olvidada.
+
+    \item[RF-07.] El sistema permitirá establecer una nueva contraseña mediante un token seguro.
+
+    \item[RF-08.] El sistema permitirá solicitar la reactivación de una cuenta.
+
+    \item[RF-09.] El sistema permitirá confirmar la reactivación de una cuenta mediante un token.
+
+    \item[RF-10.] El sistema permitirá consultar la información del perfil propio.
+
+    \item[RF-11.] El sistema permitirá modificar la información personal no sensible del usuario.
+
+    \item[RF-12.] El sistema permitirá modificar las credenciales y el correo electrónico del usuario.
+
+    \item[RF-13.] El sistema permitirá subir y actualizar la imagen de perfil.
+
+    \item[RF-14.] El sistema permitirá consultar los perfiles públicos de otros usuarios.
+
+    \item[RF-15.] El sistema permitirá solicitar la baja de una cuenta mediante borrado lógico.
+
+    \item[RF-16.] El sistema permitirá buscar anuncios aplicando diferentes filtros de búsqueda.
+
+    \item[RF-17.] El sistema permitirá explorar los anuncios disponibles mediante un mapa interactivo.
+
+    \item[RF-18.] El sistema permitirá consultar la información detallada de un anuncio y sus habitaciones asociadas.
+
+    \item[RF-19.] El sistema permitirá a los anfitriones registrar nuevos inmuebles.
+
+    \item[RF-20.] El sistema permitirá modificar la información de los inmuebles registrados.
+
+    \item[RF-21.] El sistema permitirá subir fotografías de los inmuebles a un servicio externo de almacenamiento.
+
+    \item[RF-22.] El sistema permitirá geolocalizar las direcciones de los inmuebles en un mapa.
+
+    \item[RF-23.] El sistema permitirá publicar anuncios de habitaciones o pisos completos.
+
+    \item[RF-24.] El sistema permitirá actualizar los precios, depósitos y condiciones de los anuncios.
+
+    \item[RF-25.] El sistema permitirá seleccionar y establecer el orden de las fotografías de un anuncio.
+
+    \item[RF-26.] El sistema permitirá modificar la visibilidad de los anuncios entre disponible y pausado.
+
+    \item[RF-27.] El sistema permitirá consultar el historial de búsquedas recientes del usuario.
+
+    \item[RF-28.] El sistema permitirá generar recomendaciones de anuncios personalizadas a partir del historial de búsquedas.
+
+    \item[RF-29.] El sistema permitirá consultar las reseñas y la puntuación media de los usuarios.
+
+    \item[RF-30.] El sistema comprobará si un usuario cumple las condiciones necesarias para publicar una reseña.
+
+    \item[RF-31.] El sistema permitirá publicar reseñas y calificaciones sobre las estancias.
+
+    \item[RF-32.] El sistema permitirá enviar solicitudes de reserva indicando un rango de fechas.
+
+    \item[RF-33.] El sistema permitirá a los inquilinos consultar el historial de sus solicitudes de reserva.
+
+    \item[RF-34.] El sistema permitirá cancelar las solicitudes de reserva pendientes.
+
+    \item[RF-35.] El sistema permitirá a los anfitriones consultar las solicitudes de reserva recibidas.
+
+    \item[RF-36.] El sistema permitirá a los anfitriones aceptar solicitudes de reserva.
+
+    \item[RF-37.] El sistema permitirá a los anfitriones rechazar solicitudes de reserva.
+
+    \item[RF-38.] El sistema permitirá confirmar y registrar el pago de la fianza de una reserva aceptada.
+
+    \item[RF-39.] El sistema permitirá crear espacios de convivencia para gestionar un hogar compartido.
+
+    \item[RF-40.] El sistema permitirá consultar el panel y los detalles de un espacio de convivencia.
+
+    \item[RF-41.] El sistema permitirá generar y regenerar códigos de invitación para un hogar.
+
+    \item[RF-42.] El sistema permitirá incorporarse a un hogar mediante un código de invitación.
+
+    \item[RF-43.] El sistema permitirá personalizar el color identificativo de cada miembro del hogar.
+
+    \item[RF-44.] El sistema permitirá consultar el registro cronológico de actividad del hogar.
+
+    \item[RF-45.] El sistema permitirá transferir los privilegios de administración del hogar a otro miembro.
+
+    \item[RF-46.] El sistema permitirá al administrador expulsar miembros del hogar.
+
+    \item[RF-47.] El sistema permitirá a los miembros abandonar un espacio de convivencia.
+
+    \item[RF-48.] El sistema permitirá archivar y desarchivar la vista de un hogar.
+
+    \item[RF-49.] El sistema permitirá consultar el historial de hogares anteriores.
+
+    \item[RF-50.] El sistema permitirá registrar gastos compartidos y establecer su reparto entre los miembros.
+
+    \item[RF-51.] El sistema permitirá modificar los detalles y el reparto de los gastos registrados.
+
+    \item[RF-52.] El sistema permitirá eliminar gastos del registro del hogar.
+
+    \item[RF-53.] El sistema permitirá filtrar los gastos según fechas y participantes.
+
+    \item[RF-54.] El sistema permitirá consultar los balances económicos y las transferencias sugeridas entre miembros.
+
+    \item[RF-55.] El sistema permitirá registrar liquidaciones y pagos directos entre miembros.
+
+    \item[RF-56.] El sistema comprobará que el saldo de un miembro sea cero antes de permitir su salida o expulsión del hogar.
+
+    \item[RF-57.] El sistema permitirá crear tareas individuales o series de tareas recurrentes.
+
+    \item[RF-58.] El sistema permitirá configurar estrategias de asignación fija o rotativa para las tareas.
+
+    \item[RF-59.] El sistema permitirá visualizar las tareas del hogar mediante un calendario y un cuadrante.
+
+    \item[RF-60.] El sistema permitirá a los miembros completar las tareas que tengan asignadas.
+
+    \item[RF-61.] El sistema permitirá asumir tareas vencidas que hayan sido asignadas a otros miembros.
+
+    \item[RF-62.] El sistema permitirá eliminar tareas individuales o series recurrentes.
+
+    \item[RF-63.] El sistema redistribuirá las tareas pendientes cuando un miembro abandone o sea expulsado del hogar.
+
+    \item[RF-64.] El sistema permitirá iniciar conversaciones vinculadas a anuncios publicados.
+
+    \item[RF-65.] El sistema permitirá consultar la bandeja de entrada y los mensajes no leídos.
+
+    \item[RF-66.] El sistema permitirá consultar el historial de mensajes de una conversación.
+
+    \item[RF-67.] El sistema permitirá enviar mensajes de texto a otros usuarios.
+
+    \item[RF-68.] El sistema permitirá marcar las conversaciones como leídas.
+
+    \item[RF-69.] El sistema permitirá interactuar con un asistente inteligente mediante lenguaje natural.
+
+    \item[RF-70.] El sistema generará un ticket temporal de autenticación para autorizar el acceso del asistente a las herramientas disponibles.
+
+    \item[RF-71.] El asistente permitirá realizar búsquedas semánticas de alojamientos según las preferencias del usuario.
+
+    \item[RF-72.] El asistente permitirá consultar el estado de las reservas.
+
+    \item[RF-73.] El asistente permitirá generar resúmenes inteligentes de los mensajes recibidos.
+
+    \item[RF-74.] El asistente permitirá consultar el estado de las tareas del hogar.
+
+    \item[RF-75.] El asistente permitirá inspeccionar la cola de moderación.
+
+    \item[RF-76.] El sistema permitirá denunciar anuncios, usuarios y conversaciones.
+
+    \item[RF-77.] El sistema permitirá al usuario denunciante consultar el resultado de la resolución de su denuncia.
+
+    \item[RF-78.] El sistema permitirá a los administradores listar y filtrar las denuncias recibidas.
+
+    \item[RF-79.] El sistema permitirá a los administradores consultar el historial de las conversaciones denunciadas.
+
+    \item[RF-80.] El sistema permitirá a los administradores resolver denuncias individuales mediante un veredicto.
+
+    \item[RF-81.] El sistema permitirá a los administradores procesar varias denuncias de forma conjunta.
+
+    \item[RF-82.] El sistema permitirá consultar un ranking de los elementos que acumulan un mayor número de denuncias.
+
+    \item[RF-83.] El sistema permitirá a los administradores listar los usuarios registrados aplicando diferentes filtros.
+
+    \item[RF-84.] El sistema permitirá suspender o bloquear cuentas de usuarios.
+
+    \item[RF-85.] El sistema permitirá a los administradores consultar el catálogo global de anuncios.
+
+    \item[RF-86.] El sistema permitirá bloquear o retirar de publicación anuncios que infrinjan las normas de la plataforma.
+\end{description}

@@ -24,10 +24,32 @@
 \contentsline {figure}{\numberline {3.9}{\ignorespaces Diagrama de casos de uso de mensajería contextual}}{49}{figure.caption.88}%
 \contentsline {figure}{\numberline {3.10}{\ignorespaces Diagrama de casos de uso de asistente inteligente y orquestación de herramientas}}{52}{figure.caption.94}%
 \contentsline {figure}{\numberline {3.11}{\ignorespaces Diagrama de casos de uso de moderación y administración global}}{55}{figure.caption.102}%
+\contentsline {figure}{\numberline {3.12}{\ignorespaces Diagrama de secuencia del proceso de recuperación segura de contraseña}}{60}{figure.caption.114}%
+\contentsline {figure}{\numberline {3.13}{\ignorespaces Diagrama de secuencia del alta de inmueble con geocodificación y compensación transaccional}}{61}{figure.caption.115}%
+\contentsline {figure}{\numberline {3.14}{\ignorespaces Diagrama de secuencia de la solicitud de reserva con validación temporal y notificación multicanal}}{62}{figure.caption.116}%
+\contentsline {figure}{\numberline {3.15}{\ignorespaces Diagrama de secuencia de la aceptación de reserva y formalización del cobro de fianza}}{63}{figure.caption.117}%
+\contentsline {figure}{\numberline {3.16}{\ignorespaces Secuencia de generación de invitación y adhesión a un hogar}}{64}{figure.caption.118}%
+\contentsline {figure}{\numberline {3.17}{\ignorespaces Secuencia de registro de gasto compartido y simplificación de deudas}}{65}{figure.caption.119}%
+\contentsline {figure}{\numberline {3.18}{\ignorespaces Secuencia de baja de un miembro y rebalanceo de tareas huérfanas}}{66}{figure.caption.120}%
+\contentsline {figure}{\numberline {3.19}{\ignorespaces Secuencia de creación de serie de tareas y resolución de rescate con puntos}}{67}{figure.caption.121}%
+\contentsline {figure}{\numberline {3.20}{\ignorespaces Secuencia de consulta al asistente de IA con ejecución de herramientas MCP}}{68}{figure.caption.122}%
+\contentsline {figure}{\numberline {3.21}{\ignorespaces Secuencia de resolución de denuncias, inspección de chat y baneo de usuario}}{69}{figure.caption.123}%
+\contentsline {figure}{\numberline {3.22}{\ignorespaces Esquema relacional: Usuarios y registros de búsqueda}}{70}{figure.caption.124}%
+\contentsline {figure}{\numberline {3.23}{\ignorespaces Esquema relacional: Parque inmobiliario, publicaciones y reservas}}{72}{figure.caption.125}%
+\contentsline {figure}{\numberline {3.24}{\ignorespaces Esquema relacional: Convivencia, reparto de gastos y cuadrante de tareas}}{74}{figure.caption.126}%
+\contentsline {figure}{\numberline {3.25}{\ignorespaces Esquema relacional: Mensajería directa, auditoría y denuncias}}{75}{figure.caption.127}%
+\contentsline {figure}{\numberline {3.26}{\ignorespaces Diagrama de Base de Datos global del sistema Colivi}}{76}{figure.caption.128}%
+\contentsline {figure}{\numberline {3.27}{\ignorespaces Prototipo de la interfaz de inicio de sesión y autenticación federada. Elaboración propia}}{84}{figure.caption.130}%
+\contentsline {figure}{\numberline {3.28}{\ignorespaces Prototipo del explorador interactivo con mapas y filtros combinados. Elaboración propia}}{85}{figure.caption.131}%
+\contentsline {figure}{\numberline {3.29}{\ignorespaces Prototipo de la ficha detallada de inmueble y panel de contratación. Elaboración propia}}{86}{figure.caption.132}%
+\contentsline {figure}{\numberline {3.30}{\ignorespaces Prototipo del panel centralizado de hogares y gestión de convivencias. Elaboración propia}}{87}{figure.caption.133}%
+\contentsline {figure}{\numberline {3.31}{\ignorespaces Prototipo del módulo contable y liquidación de deudas compartidas. Elaboración propia}}{88}{figure.caption.134}%
+\contentsline {figure}{\numberline {3.32}{\ignorespaces Prototipo del calendario y cuadrante rotativo de tareas domésticas. Elaboración propia}}{89}{figure.caption.135}%
+\contentsline {figure}{\numberline {3.33}{\ignorespaces Guía de estilos, tokens de diseño y componentes atómicos de Colivi. Elaboración propia}}{90}{figure.caption.136}%
 \addvspace {10\p@ }
-\contentsline {figure}{\numberline {4.1}{\ignorespaces Estructura clásica de un articulo de investigación}}{62}{figure.caption.114}%
-\contentsline {figure}{\numberline {4.2}{\ignorespaces Estructura de documentos de un proyecto técnico}}{62}{figure.caption.115}%
-\contentsline {figure}{\numberline {4.3}{\ignorespaces Planificación del proyecto}}{63}{figure.caption.116}%
+\contentsline {figure}{\numberline {4.1}{\ignorespaces Logotipo corporativo e imagotipo oficial de Colivi.}}{94}{figure.caption.138}%
+\contentsline {figure}{\numberline {4.2}{\ignorespaces Estructura general del repositorio y partición modular del proyecto Colivi.}}{95}{figure.caption.139}%
+\addvspace {10\p@ }
 \addvspace {10\p@ }
 \addvspace {10\p@ }
 \addvspace {10\p@ }

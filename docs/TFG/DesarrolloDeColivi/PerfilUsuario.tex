@@ -1,0 +1,26 @@
+\subsection{Perfil de usuario y gobernanza de cuenta}
+\label{subsec:perfil_usuario}
+
+El perfil de usuario constituye la carta de presentación de inquilinos y propietarios dentro del ecosistema Colivi. Permite gestionar la identidad digital del estudiante, sus preferencias de convivencia, su historial de reservas y el ciclo de vida de su cuenta.
+
+\subsubsection{Diseño de la vista y componentes de configuración}
+
+En el cliente web, la funcionalidad se distribuye entre la vista de perfil privado (\texttt{ProfilePage.tsx}) y la ficha pública de presentación (\texttt{PublicProfilePage.tsx}):
+
+\begin{itemize}
+    \item \textbf{Gestión de información personal y de contacto}: El usuario puede modificar su nombre, apellidos, biografía descriptiva y teléfono móvil. La entrada de datos está blindada mediante esquemas de validación que aseguran que los números sigan el estándar internacional E.164.
+    \item \textbf{Generación de avatares e identidad visual}: Para usuarios que no suben una fotografía propia, se integra un generador determinista de avatares vectoriales basado en las iniciales y el alias del usuario, utilizando la paleta cromática corporativa para mantener una estética armónica en toda la plataforma.
+    \item \textbf{Ficha de reputación y perfil público}: Al evaluar solicitudes de reserva o buscar nuevos compañeros de piso, los usuarios pueden consultar el perfil público de otros miembros. Dicha vista expone las valoraciones medias recibidas en estancias previas, las insignias de verificación (correo confirmado, teléfono verificado) y los intereses de convivencia (hábitos de estudio, compatibilidad con mascotas, horarios de descanso).
+    \item \textbf{Desactivación voluntaria y derecho al olvido}: Siguiendo los principios de privacidad y cumplimiento del RGPD, el usuario puede desactivar temporalmente su perfil o solicitar el borrado de sus datos personales. Al desactivar la cuenta, el sistema oculta sus publicaciones y cancela automáticamente sus solicitudes pendientes.
+\end{itemize}
+
+\subsubsection{Lógica de servicio y seguridad de perfiles en backend}
+
+En el backend, el servicio \texttt{UserService} y el controlador \texttt{UserController} gestionan las transiciones de estado y la integridad de los datos:
+
+\begin{enumerate}
+    \item \textbf{Validación de unicidad y control de concurrencia}: La actualización del correo electrónico o del alias requiere comprobaciones de unicidad en base de datos. Para evitar colisiones en entornos concurrentes, las operaciones de actualización se ejecutan bajo transacciones atómicas con aislamiento de lectura comprometida.
+    \item \textbf{Sanitización de contenidos}: Las biografías y campos de texto libre introducidos por el usuario se someten a un proceso de sanitización para neutralizar cualquier intento de inyección de código malicioso (\emph{Cross-Site Scripting}, XSS).
+    \item \textbf{Ciclo de reactivación mediante token firmado}: Cuando un usuario inactivo intenta iniciar sesión, el sistema genera un token criptográfico de reactivación vinculado a la tabla \texttt{reactivation\_tokens} con un periodo de validez de 24 horas, despachando un correo transaccional automático para confirmar la reapertura de la cuenta.
+\end{enumerate}
+

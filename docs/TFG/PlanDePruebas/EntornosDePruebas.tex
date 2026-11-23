@@ -1,0 +1,59 @@
+\section{Entornos de pruebas y dispositivos utilizados}
+\label{sec:entornos_pruebas}
+
+En este apartado se describen los entornos y dispositivos empleados para verificar el correcto funcionamiento de la plataforma, tanto en su versión web como en su adaptación para dispositivos móviles.
+
+\subsection{Entorno de desarrollo}
+
+El desarrollo de Colivi se llevó a cabo en un único equipo de escritorio. Las herramientas principales utilizadas fueron las siguientes:
+
+\begin{itemize}
+    \item \textbf{Sistema operativo}: Windows 11 Pro.
+    \item \textbf{IDE principal}: IntelliJ IDEA Ultimate para el desarrollo del backend en Spring Boot y Java.
+    \item \textbf{Editor de código}: Visual Studio Code para el desarrollo del frontend en React y TypeScript.
+    \item \textbf{Gestión de base de datos}: DBeaver, utilizado para inspeccionar el esquema de PostgreSQL, ejecutar consultas SQL de diagnóstico y verificar el estado de las migraciones de Flyway.
+    \item \textbf{Pruebas de API}: Postman, empleado para verificar los endpoints REST del backend de forma independiente al frontend, comprobando códigos de respuesta HTTP y contratos de los DTOs.
+    \item \textbf{Control de versiones}: Git con repositorio remoto en GitHub.
+\end{itemize}
+
+\subsection{Navegadores web utilizados}
+
+La versión web de Colivi fue probada en los siguientes navegadores de escritorio:
+
+\begin{itemize}
+    \item \textbf{Google Chrome}: navegador principal durante el desarrollo. Se emplearon intensivamente las herramientas para desarrolladores (DevTools), especialmente el panel \emph{Network} para auditar las peticiones HTTP, el panel \emph{Application} para inspeccionar el \texttt{localStorage} y los tokens JWT, y la consola JavaScript para depurar el comportamiento de Leaflet, Supercluster y TanStack Query.
+    \item \textbf{Mozilla Firefox}: utilizado para verificar la compatibilidad entre navegadores, especialmente en lo relativo al comportamiento del mapa interactivo y las animaciones CSS.
+    \item \textbf{Microsoft Edge}: empleado para pruebas adicionales de compatibilidad en entorno Windows.
+\end{itemize}
+
+\subsection{Dispositivos móviles}
+
+Para la validación de la versión móvil generada con Capacitor, se realizaron pruebas en dispositivos físicos con sistema operativo Android, conectados mediante depuración USB (\emph{ADB}). Esto permitió inspeccionar los logs de la aplicación en tiempo real desde las DevTools de Chrome mediante la opción \texttt{chrome://inspect}, verificando el renderizado de los componentes, la navegación entre vistas, el funcionamiento del mapa y la comunicación con el backend a través de la red local.
+
+\subsection{Integración continua con GitHub Actions}
+
+Como complemento a las pruebas manuales, se configuró un flujo de integración continua (\emph{CI}) mediante \textbf{GitHub Actions}. Cada vez que se realizaba un \emph{push} o se abría una \emph{pull request} sobre la rama principal del repositorio, se disparaba automáticamente un \emph{workflow} definido en el archivo \texttt{.github/workflows/ci.yml} que ejecutaba las siguientes comprobaciones:
+
+\begin{itemize}
+    \item \textbf{Compilación del backend}: el flujo levantaba un contenedor con Java 21 y Maven, compilaba el proyecto de Spring Boot y ejecutaba los tests unitarios e de integración con \texttt{mvn verify}. Cualquier fallo en la compilación o en los tests bloqueaba la integración del cambio.
+    \item \textbf{Compilación del frontend}: en paralelo, otro \emph{job} instalaba las dependencias de Node.js y ejecutaba \texttt{npm run build} sobre el proyecto Vite + React, verificando que el código TypeScript compilaba sin errores de tipo y que el empaquetado producía los artefactos estáticos correctamente.
+    \item \textbf{Notificación de resultados}: el estado de cada ejecución quedaba visible directamente en GitHub junto a cada \emph{commit}, permitiendo identificar de forma inmediata qué cambio introdujo una regresión sin necesidad de ejecutar las comprobaciones de forma manual en el equipo local.
+\end{itemize}
+
+Este sistema de CI actuó como una red de seguridad automatizada a lo largo de todo el desarrollo, garantizando que la rama principal del repositorio se mantuviese siempre en un estado compilable y funcional.
+
+\subsection{Despliegue en la nube con Microsoft Azure}
+
+Para poder realizar pruebas en un entorno real de producción, así como para que la aplicación fuese accesible desde cualquier dispositivo sin depender del equipo de desarrollo local, se aprovisionó una \textbf{máquina virtual en Microsoft Azure}. Esta infraestructura en la nube permitió verificar el comportamiento de la plataforma bajo condiciones reales de red, alejadas del entorno \texttt{localhost}.
+
+La máquina virtual se configuró con los siguientes componentes:
+
+\begin{itemize}
+    \item \textbf{Sistema operativo}: Ubuntu Server LTS, elegido por su estabilidad y por la amplia disponibilidad de documentación para el despliegue de aplicaciones Java y Node.js.
+    \item \textbf{Backend}: el servidor de Spring Boot se desplegó como un servicio del sistema (\emph{systemd}), garantizando que el proceso se reiniciase automáticamente tras un reinicio de la máquina o un fallo inesperado.
+    \item \textbf{Base de datos}: instancia de PostgreSQL instalada en la misma máquina virtual, con acceso restringido únicamente al proceso del backend mediante la configuración del firewall de Azure (\emph{Network Security Group}).
+    \item \textbf{Frontend}: los artefactos estáticos generados por Vite (\texttt{npm run build}) se sirvieron mediante \textbf{Nginx}, configurado como proxy inverso para redirigir las peticiones \texttt{/api/**} al backend en el puerto \texttt{8080} y servir el cliente React en el puerto \texttt{80}/\texttt{443}.
+    \item \textbf{Certificado SSL}: se configuró un certificado TLS mediante \textbf{Certbot} y \emph{Let's Encrypt}, habilitando HTTPS en la aplicación, requisito indispensable para que la versión móvil generada con Capacitor pudiera comunicarse con el servidor de forma segura.
+\end{itemize}
+
+Este entorno de Azure sirvió también como plataforma de pruebas de aceptación final, permitiendo que personas externas al desarrollo (amigos, compañeros y el tutor) accediesen a la aplicación desde sus propios dispositivos y navegadores sin ninguna configuración adicional.

@@ -1,0 +1,132 @@
+\section{Problemas durante el desarrollo}
+\label{sec:problemas_desarrollo}
+
+En esta sección se comentan los problemas, dificultades y fallos que fueron surgiendo a lo largo del desarrollo de Colivi.
+
+La \textbf{Prueba-01} consistió en establecer la comunicación entre el servidor de desarrollo del frontend, ejecutándose en el puerto \texttt{5173} gracias a Vite, y la API REST del backend en el puerto \texttt{8080}. Desde el primer momento, el navegador bloqueaba todas las peticiones salientes del cliente React con errores de política de mismo origen (\emph{Same-Origin Policy}), impidiendo cualquier interacción con el servidor hasta que se configurara correctamente CORS.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|p{0.25\textwidth}|p{0.65\textwidth}|}
+\hline
+\textbf{Prueba-01} & \textbf{CORS entre frontend y backend} \\ \hline
+Salida esperada & Comunicación fluida entre el cliente React (puerto 5173) y la API REST (puerto 8080). \\ \hline
+Salida obtenida & Error en consola: \texttt{Access to XMLHttpRequest blocked by CORS policy}. Ninguna petición HTTP llegaba al backend. \\ \hline
+\end{tabular}
+\caption{Tabla Prueba-01}
+\label{tab:prueba01}
+\end{table}
+
+En cuanto a la \textbf{Prueba-02}, una vez que se iniciaron las migraciones de base de datos con Flyway, se detectó que cualquier modificación sobre un script de migración ya ejecutado provocaba que la aplicación no arrancara. Flyway almacena un \emph{checksum} de cada archivo aplicado y, al detectar que el contenido había cambiado respecto al valor registrado, lanzaba una excepción bloqueante que impedía el inicio del servidor.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|p{0.25\textwidth}|p{0.65\textwidth}|}
+\hline
+\textbf{Prueba-02} & \textbf{Integridad de migraciones Flyway} \\ \hline
+Salida esperada & La aplicación arranca con normalidad tras corregir un script de migración. \\ \hline
+Salida obtenida & La aplicación no arranca: \texttt{FlywayException: Validate failed — Migration checksum mismatch}. \\ \hline
+\end{tabular}
+\caption{Tabla Prueba-02}
+\label{tab:prueba02}
+\end{table}
+
+Otro de los problemas importantes fue el que se refiere a la \textbf{Prueba-03}, relacionado con las consultas a la base de datos al cargar el panel principal (\emph{dashboard}). Al inspeccionar los logs de Hibernate en modo \texttt{DEBUG}, se observaba que por cada miembro del hogar se lanzaba una consulta adicional para obtener sus datos relacionados, multiplicando innecesariamente la carga sobre PostgreSQL y aumentando los tiempos de respuesta de forma proporcional al número de convivientes.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|p{0.25\textwidth}|p{0.65\textwidth}|}
+\hline
+\textbf{Prueba-03} & \textbf{Problema N+1 en Hibernate} \\ \hline
+Salida esperada & El endpoint \texttt{/api/v1/homes/\{id\}/summary} resuelve todos los datos del hogar en una sola consulta SQL. \\ \hline
+Salida obtenida & Hibernate ejecuta 1 + N consultas adicionales (una por cada miembro y relación lazy), degradando el rendimiento. \\ \hline
+\end{tabular}
+\caption{Tabla Prueba-03}
+\label{tab:prueba03}
+\end{table}
+
+También se detectaron dificultades con el envío de correos transaccionales, como se puede observar en la \textbf{Prueba-04}. Los flujos de recuperación de contraseña y reactivación de cuenta requerían el envío de correos con enlaces temporales, pero el servidor de Spring Boot rechazaba la autenticación SMTP contra Gmail, impidiendo el despacho de cualquier mensaje.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|p{0.25\textwidth}|p{0.65\textwidth}|}
+\hline
+\textbf{Prueba-04} & \textbf{Autenticación SMTP para correos transaccionales} \\ \hline
+Salida esperada & El usuario recibe un correo con el enlace de recuperación o reactivación de cuenta. \\ \hline
+Salida obtenida & Error en el servidor: \texttt{535-5.7.8 Username and Password not accepted}. No se envía ningún correo. \\ \hline
+\end{tabular}
+\caption{Tabla Prueba-04}
+\label{tab:prueba04}
+\end{table}
+
+La visualización y actualización reactiva de datos en el frontend (\textbf{Prueba-05}) fue uno de los problemas principales. Al realizar operaciones de escritura —como registrar un nuevo gasto o completar una tarea doméstica—, la interfaz no reflejaba los cambios de forma inmediata. El estado global gestionado con Redux Toolkit no se sincronizaba con los datos recién obtenidos del servidor, obligando al usuario a recargar la página para ver el resultado actualizado.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|p{0.25\textwidth}|p{0.65\textwidth}|}
+\hline
+\textbf{Prueba-05} & \textbf{Sincronización del estado tras mutaciones} \\ \hline
+Entrada & Registrar un nuevo gasto compartido o marcar una tarea como completada. \\ \hline
+Salida esperada & La vista se actualiza automáticamente reflejando el cambio sin recargar la página. \\ \hline
+Salida obtenida & La vista permanece desactualizada hasta que el usuario recarga manualmente la página. \\ \hline
+\end{tabular}
+\caption{Tabla Prueba-05}
+\label{tab:prueba05}
+\end{table}
+
+Otro obstáculo fue la integración del mapa interactivo con Leaflet en la vista de búsqueda de alojamientos (\textbf{Prueba-06}). Leaflet accede directamente al objeto \texttt{window} del navegador, que no existe durante el proceso de compilación de Vite, generando errores que impedían construir el proyecto.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|p{0.25\textwidth}|p{0.65\textwidth}|}
+\hline
+\textbf{Prueba-06} & \textbf{Compatibilidad de Leaflet con el entorno de compilación} \\ \hline
+Salida esperada & El mapa interactivo se renderiza correctamente en el explorador de alojamientos. \\ \hline
+Salida obtenida & Error de compilación: \texttt{ReferenceError: window is not defined}. El proyecto no podía construirse. \\ \hline
+\end{tabular}
+\caption{Tabla Prueba-06}
+\label{tab:prueba06}
+\end{table}
+
+La \textbf{Prueba-07} consistió en la implementación de la geocodificación de direcciones mediante la API pública de Nominatim. Al publicar un alojamiento, la aplicación convertía la dirección postal a coordenadas geográficas; sin embargo, el servicio externo impone un límite estricto de una petición por segundo y bloquea las IPs que superan dicha cuota, lo que generaba errores intermitentes durante las pruebas con múltiples alojamientos.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|p{0.25\textwidth}|p{0.65\textwidth}|}
+\hline
+\textbf{Prueba-07} & \textbf{Rate limiting en la API de geocodificación Nominatim} \\ \hline
+Entrada & Publicación simultánea o rápida de varios alojamientos con nuevas direcciones. \\ \hline
+Salida esperada & Todas las direcciones son geocodificadas y los alojamientos se muestran en el mapa. \\ \hline
+Salida obtenida & Error HTTP \texttt{429 Too Many Requests}. Las coordenadas no se almacenan y los alojamientos no aparecen en el mapa. \\ \hline
+\end{tabular}
+\caption{Tabla Prueba-07}
+\label{tab:prueba07}
+\end{table}
+
+También surgieron complicaciones con la definición de las herramientas del asistente de inteligencia artificial (\textbf{Prueba-08}). Spring AI expone las herramientas MCP mediante esquemas JSON derivados de las clases Java, pero cualquier discrepancia entre los tipos del esquema y los DTOs provocaba respuestas malformadas o errores de deserialización silenciosos que eran muy difíciles de reproducir y depurar.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|p{0.25\textwidth}|p{0.65\textwidth}|}
+\hline
+\textbf{Prueba-08} & \textbf{Contrato de tipos en herramientas MCP de Spring AI} \\ \hline
+Salida esperada & El asistente de IA invoca correctamente las herramientas y devuelve respuestas coherentes. \\ \hline
+Salida obtenida & El modelo devuelve respuestas malformadas o vacías; errores de deserialización silenciosos en el servidor. \\ \hline
+\end{tabular}
+\caption{Tabla Prueba-08}
+\label{tab:prueba08}
+\end{table}
+
+El primero de los problemas relacionados con la versión móvil generada con Capacitor fue que nunca se había trabajado previamente con esta tecnología en un proyecto de esta envergadura (\textbf{Prueba-09}). En dispositivos físicos Android, las peticiones al backend en \texttt{localhost:8080} fallaban sistemáticamente, ya que el dispositivo no comparte la interfaz de red loopback del equipo de desarrollo.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|p{0.25\textwidth}|p{0.65\textwidth}|}
+\hline
+\textbf{Prueba-09} & \textbf{Conectividad del backend en dispositivos físicos Android} \\ \hline
+Salida esperada & La aplicación móvil se comunica con el backend y muestra los datos correctamente. \\ \hline
+Salida obtenida & Todas las peticiones fallan con error de red; el dispositivo no puede resolver \texttt{localhost:8080}. \\ \hline
+\end{tabular}
+\caption{Tabla Prueba-09}
+\label{tab:prueba09}
+\end{table}

@@ -1,0 +1,26 @@
+\subsection{Publicación de inmuebles y ciclo de reservas}
+\label{subsec:publicacion_reservas}
+
+El módulo inmobiliario y de contratación rige el ciclo de vida mediante el cual los propietarios publican sus anuncios y los estudiantes formalizan solicitudes de alquiler vinculadas a un depósito o fianza.
+
+\subsubsection{Formulario multi-paso y gestión multimedia en frontend}
+
+Para maximizar la tasa de finalización del alta de una vivienda, el cliente web estructura el proceso a través del componente \texttt{AccommodationFormPage.tsx} mediante un asistente por etapas (*Multi-Step Wizard*):
+
+\begin{itemize}
+    \item \textbf{Etapa 1 -- Localización y geocodificación}: El anfitrión introduce los datos postales de la vivienda. La interfaz valida la dirección en tiempo real y muestra una previsualización de confirmación sobre el mapa interactivo.
+    \item \textbf{Etapa 2 -- Características físicas y comodidades}: Se registran la superficie en metros cuadrados, el número de dormitorios, baños disponibles y el equipamiento del piso mediante selectores accesibles (*tags* de selección múltiple).
+    \item \textbf{Etapa 3 -- Galería fotográfica y selección de portada}: El usuario puede subir múltiples fotografías en alta definición. Mediante la tabla asociativa \texttt{listing\_image\_selection}, el sistema permite ordenar las imágenes mediante arrastrar y soltar (*drag and drop*) y elegir cuál actuará como imagen principal de portada para el catálogo público.
+    \item \textbf{Etapa 4 -- Condiciones contractuales y fianza}: Se fija el precio mensual del alquiler y el importe obligatorio de la fianza legal en garantía de conservación de la vivienda.
+\end{itemize}
+
+\subsubsection{Máquina de estados de reserva y control de concurrencia en backend}
+
+La interacción contractual entre inquilino y anfitrión está gobernada por una máquina de estados estricta implementada en \texttt{BookingRequestService}:
+
+\begin{enumerate}
+    \item \textbf{Transiciones de estado formales}: Una solicitud de reserva nace en estado \texttt{PENDING} al ser enviada por el estudiante. El propietario dispone de un plazo temporal acotado para tomar una decisión: si la acepta, transiciona a \texttt{ACCEPTED}; si la declina, pasa a \texttt{REJECTED}; y si expira el plazo máximo sin respuesta, un proceso programado la marca automáticamente como \texttt{EXPIRED}.
+    \item \textbf{Prevención de sobre-reserva mediante bloqueo optimista (\emph{Optimistic Locking})}: Para evitar que dos estudiantes reserven simultáneamente la misma habitación disponible en un entorno concurrido, la entidad \texttt{Accommodation} incorpora un campo de versión anotado con \texttt{@Version}. Si dos transacciones intentan confirmar la reserva al mismo instante, Hibernate detecta la colisión de versiones arrojando una excepción de concurrencia optimista (\texttt{OptimisticLockException}), abortando la segunda operación de forma segura y protegiendo la integridad del inventario.
+    \item \textbf{Bloqueo y custodia de fianza}: Cuando una solicitud es aceptada, el sistema genera el registro financiero de la fianza en la tabla \texttt{booking\_requests}, asociando un identificador de transacción y asegurando que las partes cuenten con un respaldo económico antes de formalizar la entrega de llaves.
+\end{enumerate}
+

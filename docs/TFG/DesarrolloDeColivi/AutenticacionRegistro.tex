@@ -1,0 +1,10 @@
+\subsection{Inicio de sesión, registro y autenticación}
+\label{subsec:autenticacion_registro}
+
+En esta primera fase del desarrollo web se implementaron los flujos de **login** y **registro** siguiendo los lineamientos de seguridad y usabilidad descritos por el equipo. El frontend, construido con **React 19** y **TypeScript**, dispone de las vistas `LoginPage.tsx`, `RegisterPage.tsx` y `ResetPasswordPage.tsx`. Cada formulario está gestionado mediante **React Hook Form** y validado con **Zod**, garantizando requisitos de contraseñas (mínimo 8 caracteres, mayúsculas, dígitos y símbolos) y formatos de correo electrónico.
+
+El backend, basado en **Spring Boot 3**, expone los endpoints `/api/v1/auth/login` y `/api/v1/auth/register`. La autenticación es **stateless**, utilizando **JWT** firmado con HMAC‑SHA256. Los tokens se envían al cliente y se almacenan en `localStorage`, siendo añadidos automáticamente a todas las peticiones subsecuentes mediante un interceptor de **Axios**.
+
+Para la recuperación de credenciales se implementó el flujo de *reset password*: el usuario solicita un enlace temporal que contiene un token de un solo uso, el cual permite establecer una nueva contraseña sin revelar la anterior.
+
+En el nivel de seguridad del backend, **Spring Security 6** administra un filtro `JwtAuthenticationFilter` que valida cada petición bajo `/api/v1/**`, rechaza cuentas suspendidas y gestiona la autorización basada en roles (`ADMIN`, `MEMBER`).

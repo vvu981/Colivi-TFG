@@ -1,22 +1,22 @@
 \section{Objetivos Y Estructura}
 \label{Objetivos Y Estructura}
 
-    Diseñar y construir Colivi constituye el objetivo principal de este proyecto, ofreciendo una plataforma web que da respuesta a la búsqueda de habitaciones y a la organización interna en pisos de estudiantes. La aplicación acompaña a los usuarios durante todo el ciclo: conecta al arrendatario con el propietario durante la reserva y estructura el reparto de tareas domésticas una vez comenzada la convivencia.
+    El objetivo principal de este proyecto se basa en diseñar y construir la aplicación Colivi. Esta aplicación web proporciona una solución para que los estudiantes busquen habitaciones y puedan llegar a organizar las tareas domésticas, entre otras. La aplicación acompaña a los usuarios durante todo el ciclo: conecta al arrendatario con el propietario durante la reserva y estructura el reparto de tareas domésticas una vez comenzada la convivencia.
     
-    La consecución de esta meta global se desglosa en los siguientes objetivos específicos:
+    Para alcanzar un desarrollo completo para esta aplicación, se han detallado las siguientes fases de desarrollo: 
 
 \begin{enumerate}
     \item Implementar un módulo de seguridad para registro e inicio de sesión mediante tókenes JWT, distinguiendo perfiles de inquilino y propietario.
-    \item Habilitar la edición del perfil de usuario con datos de contacto, preferencias y hábitos de convivencia.
+    \item Posibilidad para editar el perfil de usuario con datos de contacto, preferencias y hábitos de convivencia.
     \item Desarrollar un buscador de habitaciones con filtrado por localización geográfica, precio mensual, equipamiento y normas de estancia.
     \item Construir un canal de mensajería contextual asociado a cada anuncio que permita plantear dudas al anfitrión sin exigir una reserva previa.
     \item Programar el ciclo de vida de las solicitudes de reserva con control estricto de estados y depósitos de fianza.
-    \item Diseñar un planificador gamificado de tareas domésticas basado en turnos rotativos (\emph{Round-Robin}), tabla de puntuaciones y posibilidad de rescate entre compañeros.
+    \item Realizar un planificador de tareas domésticas basado en turnos rotativos (\emph{Round-Robin}), tabla de puntuaciones y posibilidad de rescate entre compañeros.
     \item Disponer un registro inmutable de auditoría para monitorizar acciones clave dentro del hogar, como la realización de limpiezas o la incorporación de nuevos miembros.
-    \item Integrar un asistente inteligente fundamentado en el protocolo \emph{Model Context Protocol} (MCP) que consulte turnos, resuma actividad o filtre anuncios sin modificar la base de datos.
+    \item Integrar un asistente inteligente fundamentado en el protocolo \emph{Model Context Protocol} (MCP) que pueda consultar información sobre turnos, resumir actividad o filtrar anuncios sin modificar la base de datos.
 \end{enumerate}
 
-    La arquitectura global del sistema (reflejada en la figura~\ref{fig:estructura_tecnica_colivi}) distribuye sus responsabilidades en cuatro capas desacopladas: el cliente web, el servidor central de aplicaciones, el microservicio de soporte inteligente y el motor de persistencia relacional.
+    La arquitectura global del sistema (reflejada en la figura~\ref{fig:estructura_tecnica_colivi}) divide sus responsabilidades en cuatro capas desacopladas: el cliente web, el servidor central de aplicaciones, el microservicio de soporte inteligente y el motor de persistencia relacional.
 
     El cliente web interactúa directamente con el usuario mediante una interfaz reactiva construida con React, TypeScript y Tailwind CSS. Vite actúa como empaquetador para optimizar los tiempos de recarga durante el desarrollo y minimizar el tamaño del paquete final en producción. La sincronización de datos asíncronos recae en TanStack Query, aplicando una estrategia de sondeo controlado (\emph{Smart Polling}) que refresca los mensajes y las tareas únicamente mientras la pestaña del navegador permanece en primer plano, evitando la sobrecarga de conexiones persistentes innecesarias.
 

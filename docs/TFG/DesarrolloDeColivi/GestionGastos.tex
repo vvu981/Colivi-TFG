@@ -1,0 +1,25 @@
+\subsection{Gestión financiera y liquidación de gastos compartidos}
+\label{subsec:gestion_gastos}
+
+La gestión contable de gastos es uno de los principales focos de fricción en la convivencia entre estudiantes. Colivi resuelve esta problemática mediante un libro mayor digital transparente que registra las compras comunes y simplifica automáticamente los pagos entre compañeros de piso.
+
+\subsubsection{Interfaz contable y desglose de cuotas en frontend}
+
+En el cliente web, la funcionalidad se centraliza en el componente de página \texttt{ExpensesPage.tsx} y sus modales asociados:
+
+\begin{itemize}
+    \item \textbf{Formulario de registro de gasto compartido}: Permite ingresar la descripción del gasto (ejemplo: «Compra semanal Mercadona» o «Factura de suministro eléctrico»), el importe total pagado en euros y el selector del pagador. El usuario puede elegir entre dividir el coste equitativamente entre todos los miembros activos del hogar o seleccionar participantes individuales con importes asignados personalizados.
+    \item \textbf{Panel visual de saldos cruzados y matriz de deudas}: La vista calcula en tiempo real el saldo neto de cada compañero respecto al resto de la comunidad. Los balances se representan con código de colores: verde para saldos acreedores (dinero a recibir) y rojo para saldos deudores (dinero a abonar).
+    \item \textbf{Modal de liquidación y pago entre miembros}: Al hacer clic en «Saldar deuda», se abre un formulario de liquidación donde un miembro registra una transferencia hacia otro compañero. La interfaz valida que el importe abonado no exceda la deuda acumulada pendiente.
+\end{itemize}
+
+\subsubsection{Motor contable y consistencia transaccional en backend}
+
+En el backend, el procesamiento financiero se aloja en \texttt{ExpenseService} y se ejecuta bajo estrictas garantías transaccionales:
+
+\begin{enumerate}
+    \item \textbf{Transaccionalidad ACID atómica (\texttt{@Transactional})}: El registro de un gasto implica insertar la cabecera en \texttt{home\_expenses} y simultáneamente las cuotas desglosadas en \texttt{home\_expense\_participants}. Si ocurre cualquier fallo o la suma de las partes no coincide con el importe global, la anotación \texttt{@Transactional} de Spring revierte automáticamente todos los cambios en PostgreSQL, impidiendo descuadres contables.
+    \item \textbf{Algoritmo de simplificación de deudas}: El servicio implementa un algoritmo de compensación de saldos que reduce la complejidad de las transferencias. Si el inquilino $A$ debe $20$~€ a $B$, y $B$ debe $20$~€ a $C$, el sistema calcula que $A$ abone directamente los $20$~€ a $C$, eliminando transacciones redundantes entre los convivientes.
+    \item \textbf{Registro histórico y trazabilidad de pagos}: Cada pago de liquidación se persiste en la tabla \texttt{home\_expense\_payments}, dejando constancia inmutable de la fecha, el emisor, el receptor y la cantidad transferida, lo que alimenta el muro de actividad del hogar para auditoría interna de los compañeros.
+\end{enumerate}
+

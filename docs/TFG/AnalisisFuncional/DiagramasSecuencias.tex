@@ -73,3 +73,103 @@
     La adhesión a una vivienda compartida se gestiona mediante invitaciones temporales de acceso (figura \ref{fig:seq_adhesion_hogar}).
 
     El compañero de piso introduce el código alfanumérico generado previamente por el administrador del hogar. El servicio comprueba la vigencia temporal del código, verifica que no haya superado su límite de usos y comprueba que el solicitante no pertenezca ya a otra vivienda activa. Tras validar las precondiciones, el backend asocia la cuenta del usuario a la entidad del hogar, asigna el rol de compañero y emite eventos de dominio para actualizar el muro de actividad de los residentes.
+
+    \subsection{Adhesión a un hogar mediante código de invitación}
+
+La incorporación de un usuario a un grupo de convivencia se gestiona mediante códigos alfanuméricos compartidos, tal como muestra la figura \ref{fig:seq_adhesion_hogar}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{AnalisisFuncional/img/seq_adhesion_hogar.png}
+    \caption{Secuencia de generación de invitación y adhesión a un hogar}
+    \label{fig:seq_adhesion_hogar}
+\end{figure}
+
+El flujo comprende dos interacciones separadas. En la primera, el administrador del piso entra al apartado de configuración y solicita un código. El frontend lanza una llamada a \texttt{POST /api/v1/homes/\{id\}/invitation-code}. Dentro de \texttt{HomeServiceImpl}, se rescata el hogar de PostgreSQL y se revisa si el usuario logueado ostenta el rol de administrador. Si no lo es, salta una \texttt{UnauthorizedActionException} que corta la petición con un error 403. Si el permiso es válido, el servicio delega en \texttt{InvitationCodeGenerator} para crear una clave aleatoria, actualiza la propiedad en la entidad y guarda los cambios en \texttt{HomeRepository}, entregando el código a la interfaz.
+
+La segunda interacción sucede cuando otro usuario mete el código recibido en el formulario de unión. La petición va dirigida a \texttt{POST /api/v1/homes/join}. El backend localiza la vivienda con \texttt{findByInvitationCodeAndDeletedAtIsNull}. Si no hay coincidencias devuelve un 404. En caso de encontrarla, consulta en \texttt{HomeMemberRepository} si ese usuario ya figura con estado \texttt{ACTIVE} dentro del grupo, devolviendo un 400 si intenta duplicar la membresía. 
+
+Al superar los filtros, se crea la fila en \texttt{HomeMember} con rol \texttt{MEMBER}, estado activo y un color de perfil asignado. Tras persistir al miembro, \texttt{ApplicationEventPublisher} emite un \texttt{MemberJoinedEvent}. El oyente \texttt{ActivityLogListener} atrapa este evento y guarda una fila en \texttt{ActivityLogRepository} para reflejar la entrada en el historial del grupo. El servidor finaliza devolviendo los datos actualizados del hogar al frontend para redirigir al nuevo miembro.
+
+\subsection{Registro de gasto compartido y simplificación de balances}
+
+El reparto de costes en la vivienda compartida y el cálculo de liquidaciones entre compañeros se ilustran en la figura \ref{fig:seq_registro_gasto}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{AnalisisFuncional/img/seq_registro_gasto.png}
+    \caption{Secuencia de registro de gasto compartido y simplificación de deudas}
+    \label{fig:seq_registro_gasto}
+\end{figure}
+
+Al introducir un ticket en la aplicación, el usuario especifica quién ha pagado el importe y cómo se divide entre los participantes. El cliente React envía un POST a \texttt{/api/v1/homes/\{homeId\}/expenses} enviando el DTO \texttt{CreateExpenseRequest}. En \texttt{HomeExpenseServiceImpl}, se comprueba que el usuario autenticado forme parte del piso con estado activo en \texttt{HomeMemberRepository}. Si no pertenece al hogar, la petición se rechaza con un 403. El servicio también verifica que los importes asignados a cada compañero en la lista de participantes sumen exactamente el total del gasto. Si hay desfases por redondeo o importes negativos, salta una \texttt{BusinessRuleValidationException} con código 400.
+
+Con los datos comprobados, se crea la entidad \texttt{HomeExpense}, se añaden sus participantes vinculados y se guardan en bloque dentro de \texttt{HomeExpenseRepository}. En la misma transacción, el publicador de eventos de Spring lanza \texttt{ExpenseCreatedEvent}. El listener \texttt{ActivityLogListener} captura este evento e inserta de forma transparente una fila en \texttt{ActivityLogRepository} para que el movimiento figure en el historial del hogar. 
+
+Para consultar el estado de cuentas, la aplicación web solicita los balances a \texttt{GET /api/v1/homes/\{homeId\}/expenses/balances}. La capa de servicio extrae los gastos vigentes, calcula el saldo neto de cada compañero sumando lo pagado y restando lo debido, y le pasa la matriz de saldos al algoritmo de \texttt{DebtSimplifierService}. Este componente procesa las diferencias y genera una lista de transferencias mínimas (\texttt{DebtTransfer}) para liquidar las deudas pendientes con el menor número posible de pagos directos.
+
+\subsection{Baja de un miembro del hogar y rebalanceo de tareas}
+
+La desvinculación de un compañero del piso exige verificar que no existan deudas abiertas y reorganizar las obligaciones domésticas pendientes, como refleja la figura \ref{fig:seq_baja_miembro}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{AnalisisFuncional/img/seq_baja_miembro.png}
+    \caption{Secuencia de baja de un miembro y rebalanceo de tareas huérfanas}
+    \label{fig:seq_baja_miembro}
+\end{figure}
+
+El proceso empieza cuando el usuario solicita abandonar el piso desde la vista de ajustes mediante una petición POST a \texttt{/api/v1/homes/\{homeId\}/leave}. Dentro de \texttt{HomeServiceImpl}, se rescata la membresía activa en \texttt{HomeMemberRepository}. Acto seguido interviene \texttt{HomeBalanceValidator} para examinar los gastos y transferencias registradas de la vivienda. Si el usuario debe dinero o tiene pagos pendientes de cobro con sus compañeros, el validador corta la transacción lanzando una \texttt{BusinessRuleValidationException} que se traduce en un código 400. De este modo se impide que ningún integrante abandone el grupo dejando saldos descompensados en la contabilidad.
+
+Si el balance neto es exactamente cero, el servicio actualiza el estado del miembro a \texttt{LEFT} y persiste el cambio en la base de datos. A continuación se emite el evento de dominio \texttt{MemberLeftEvent} mediante \texttt{ApplicationEventPublisher}. Este evento lo reciben dos componentes en paralelo: \texttt{ChoreMemberLeftListener}, que busca en \texttt{ChoreRepository} las tareas sin completar asignadas al usuario saliente para ponerlas en estado no asignado o redistribuirlas entre el resto de integrantes, y \texttt{ActivityLogListener}, que añade el apunte de salida en \texttt{ActivityLogRepository} para que conste en el historial de actividad de la casa. El endpoint responde con un código 204 y el navegador saca al usuario del panel del piso.
+
+\subsection{Planificación periódica de tareas domésticas y rescate gamificado}
+
+El módulo de tareas gestiona las responsabilidades del hogar mediante calendarios rotativos y un sistema de rescates que premia la proactividad de los compañeros (figura \ref{fig:seq_planificacion_tareas}).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{AnalisisFuncional/img/seq_planificacion_tareas.png}
+    \caption{Secuencia de creación de serie de tareas y resolución de rescate con puntos}
+    \label{fig:seq_planificacion_tareas}
+\end{figure}
+
+El flujo se divide en dos fases. En la primera, el usuario define una labor periódica indicando el intervalo de repetición y los miembros participantes en la vista web. El formulario manda un POST a \texttt{/api/v1/homes/\{homeId\}/chores} con el DTO \texttt{CreateChoreRequest}. En \texttt{ChoreServiceImpl}, se guarda la regla recurrente en \texttt{ChoreSeriesRepository} y se invoca a \texttt{ChoreRotationService}. Este servicio calcula los turnos equitativos entre los compañeros mediante algoritmos de rotación y genera las tareas individuales que se insertan en \texttt{ChoreRepository}, quedando visibles en el calendario compartido de la vivienda.
+
+La segunda fase modela el rescate gamificado. Si una tarea supera su fecha límite sin completarse, su estado pasa a \texttt{OVERDUE}. Cualquier compañero distinto del asignado puede completarla haciendo una petición a \texttt{POST /api/v1/homes/\{homeId\}/chores/\{choreId\}/rescue}. El servicio comprueba dos condiciones antes de procesar el rescate: que la tarea esté realmente vencida y que el usuario que intenta rescatarla no sea el responsable original. Si se incumplen, se aborta con un código 400.
+
+Al pasar las comprobaciones, entra en juego \texttt{ChorePointCalculator}. Este componente asigna puntos de recompensa al rescatador e impone una penalización en la clasificación al responsable que descuidó la obligación. La entidad se actualiza marcando el estado \texttt{COMPLETED} y guardando la referencia de quién hizo el rescate. Tras persistir la tarea, se dispara \texttt{ChoreRescuedEvent} para que \texttt{ActivityLogListener} inserte el movimiento en el historial del hogar, actualizando las puntuaciones de la convivencia en la interfaz de React.
+
+\subsection{Asistente conversacional mediante orquestación MCP y tickets de sesión}
+
+La integración del asistente inteligente utiliza el protocolo MCP (\emph{Model Context Protocol}) para permitir que el modelo consulte datos reales del piso sin comprometer las credenciales del usuario (figura \ref{fig:seq_asistente_mcp}).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{AnalisisFuncional/img/seq_asistente_mcp.png}
+    \caption{Secuencia de consulta al asistente de IA con ejecución de herramientas MCP}
+    \label{fig:seq_asistente_mcp}
+\end{figure}
+
+El proceso requiere dos llamadas sucesivas desde la interfaz. En primer lugar, al abrir el widget de soporte en React, la aplicación lanza un POST a \texttt{/api/v1/ai/ticket}. \texttt{McpTicketService} genera un token de un solo uso con tiempo de expiración reducido vinculado al ID del usuario autenticado. Este ticket evita reenviar el token JWT principal a los subsistemas del modelo y delimita el alcance de las operaciones que la IA podrá consultar.
+
+Una vez obtenido el ticket, el usuario envía su pregunta a \texttt{POST /api/v1/ai/chat} adjuntando el ticket y el histórico reciente de mensajes. \texttt{SpringAiOrchestratorServiceImpl} valida primero la vigencia del ticket con \texttt{McpTicketService}. Si el token ha caducado, la petición se corta de inmediato con un 401 para obligar a regenerar la sesión. 
+
+Al superar la validación, el orquestador carga el contexto inicial desde \texttt{AiPromptProvider} y contacta con el servidor MCP local por medio de \texttt{McpClientFactory}. Este servidor expone las funciones disponibles de la aplicación, como la lectura de tareas asignadas o el balance de gastos. El orquestador envía la consulta junto con el catálogo de funciones al proveedor de IA mediante las librerías de Spring AI. Si el modelo necesita datos concretos para responder, solicita una llamada de herramienta (\emph{tool call}). El backend ejecuta la función solicitada sobre el servidor MCP, devuelve el resultado al modelo y este genera la redacción final que el controlador entrega al cliente web en un objeto \texttt{AiChatResponse}.
+
+\subsection{Moderación de denuncias, auditoría de conversaciones y suspensión de cuentas}
+
+El panel de administración permite investigar incidencias reportadas por los usuarios, revisar el historial de mensajes de forma forense y aplicar sanciones sobre cuentas infractoras (figura \ref{fig:seq_moderacion_denuncias}).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{AnalisisFuncional/img/seq_moderacion_denuncias.png}
+    \caption{Secuencia de resolución de denuncias, inspección de chat y baneo de usuario}
+    \label{fig:seq_moderacion_denuncias}
+\end{figure}
+
+El flujo arranca cuando un administrador entra en la sección de moderación del panel de control. La interfaz React llama a \texttt{GET /api/v1/admin/reports/\{id\}} para recuperar los detalles del expediente desde \texttt{ReportRepository}. Si la denuncia implica comunicaciones indebidas, el administrador solicita las pruebas vinculadas mediante una petición a \texttt{GET /api/v1/admin/conversations/\{convId\}/dossier}. En este punto, \texttt{AdminConversationServiceImpl} rescata la conversación completa con sus mensajes asociados. Este endpoint salta los filtros de privacidad habituales de los participantes para que el moderador pueda leer el historial íntegro y verificar si hubo conductas de acoso o estafa.
+
+Comprobada la infracción, el administrador tramita la suspensión desde la vista de detalle. El cliente manda un POST a \texttt{/api/v1/admin/users/\{userId\}/ban} pasando el motivo y el plazo de la sanción en el cuerpo \texttt{BanRequest}. En \texttt{UserServiceImpl}, se carga el usuario denunciado, se activan los indicadores de bloqueo (\texttt{isBanned = true}) junto con la causa de la sanción y se persiste el estado en \texttt{UserRepository}. Al guardar el cambio, cualquier petición futura que intente realizar ese usuario con su token JWT será interceptada con un error 403 por el filtro de seguridad de la aplicación.
+
+Para terminar el trámite, el moderador cierra el expediente haciendo un PATCH a \texttt{/api/v1/admin/reports/\{id\}/status} con estado \texttt{RESOLVED} y una nota de resolución. \texttt{AdminReportServiceImpl} guarda la actualización en PostgreSQL y lanza \texttt{ReportResolvedEvent}. El componente \texttt{ReportNotificationListener} recibe el aviso y delega en \texttt{EmailService} para mandar un correo al usuario que puso la queja, explicándole la resolución adoptada sin revelar datos protegidos del infractor.

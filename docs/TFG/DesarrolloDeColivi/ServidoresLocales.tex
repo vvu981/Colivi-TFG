@@ -1,0 +1,12 @@
+\subsection{Creación del servidor local}
+\label{subsec:creacion_servidor_local}
+
+Para la creación del servidor local, lo primero que se tuvo que hacer fue crear una base de datos siguiendo el diagrama expuesto previamente en la sección 3.4. Una vez que la base de datos estuvo operativa en MySQL Workbench, se pudo comenzar con el desarrollo de las herramientas necesarias para garantizar su correcto funcionamiento dentro del proyecto.
+
+El primer paso para conectar la base de datos al proyecto desarrollado en React fue la creación de los archivos de configuración. Entre ellos se encuentra el archivo .env, que contiene todas las variables necesarias para establecer la conexión con la estructura definida en MySQL Workbench, y el archivo db.js, encargado de realizar dicha conexión. Posteriormente, se creó el archivo server.js, que tiene la función de levantar el servidor local y definir las rutas necesarias.
+
+Para llevar a cabo esta configuración fue necesario instalar una serie de dependencias fundamentales. En primer lugar, se utilizó la dependencia mysql2, que actúa como cliente de node.js para establecer la conexión con MySQL Workbench. También se empleó dotenv, una herramienta que permite cargar las variables definidas en el archivo .env. Otra dependencia esencial fue express, un framework de node.js que facilita la creación del servidor, la definición de rutas y la gestión de las peticiones HTTP. Finalmente, se incorporó cors, una utilidad que permite habilitar la comunicación entre el servidor backend y el frontend incluso cuando se ejecutan en puertos distintos.
+
+Una vez completada esta configuración inicial, se procedió a la creación de los controladores (controllers), los modelos (models) y las rutas (routes) correspondientes para poder realizar las distintas consultas a la base de datos. Los modelos (models) se encargan de realizar las consultas en MySQL utilizando el lenguaje propio. Por su parte, los controladores (controllers) contienen la lógica de negocio que conecta las peticiones realizadas desde los endpoints definidos en las rutas con las consultas ejecutadas por los modelos. Finalmente, las rutas (routes) se encargan de definir los distintos endpoints para acceder a las funcionalidades del sistema desde el frontend.
+
+Además, fue necesario conectar cada archivo de rutas correspondiente con el archivo server.js. Esto permite integrar todos los componentes del backend y garantizar que las peticiones que se realicen desde el frontend puedan ser gestionadas y procesadas correctamente.

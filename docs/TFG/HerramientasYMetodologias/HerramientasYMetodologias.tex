@@ -1,9 +1,9 @@
 \chapter{Herramientas y metodologías}
 \label{chap:herramientas_y_metodologias}
 
-    Construir una arquitectura distribuida de forma individual exige combinar rigor en el código con agilidad en las entregas. Se adoptó una metodología ágil adaptada, reforzada con la práctica de desarrollo guiado por pruebas o TDD (\emph{Test-Driven Development}). Esta disciplina permitió dividir el desarrollo en ciclos cortos de especificación, codificación y verificación inmediata. Cada módulo quedaba validado antes de enlazarlo con el resto del sistema.
+    Construir una arquitectura distribuida de forma individual exige combinar rigor en el código con agilidad en las entregas. Se optó por una metodología ágil adaptada, reforzada con la práctica de desarrollo guiado por pruebas o TDD (\emph{Test-Driven Development}). Esta disciplina permitió dividir el desarrollo en ciclos cortos de especificación, codificación y verificación inmediata. Cada módulo quedaba validado antes de enlazarlo con el resto del sistema.
 
-    TDD blindó las partes más sensibles del dominio: el cálculo de saldos en gastos compartidos y la concurrencia en la reserva de habitaciones. Redactar las pruebas con anterioridad fijó el comportamiento esperado de servicios y repositorios sin ambigüedades. Durante este proceso, se emplearon modelos de lenguaje como asistentes de apoyo para explorar casos límite en las aserciones y sugerir refactorizaciones orientadas a principios SOLID (\emph{Single responsibility, Open-closed, Liskov substitution, Interface segregation, Dependency inversion}).
+    La metodología TDD blindó las partes más sensibles del dominio: el cálculo de saldos en gastos compartidos y la concurrencia en la reserva de habitaciones. Redactar las pruebas con anterioridad fijó el comportamiento esperado de servicios y repositorios sin ambigüedades. Durante este proceso, se emplearon modelos de lenguaje como asistentes de apoyo para explorar casos límite en las aserciones y sugerir refactorizaciones orientadas a principios SOLID (\emph{Single responsibility, Open-closed, Liskov substitution, Interface segregation, Dependency inversion}).
 
     El stack técnico se seleccionó priorizando tipado estático, rendimiento transaccional y bajo acoplamiento:
 

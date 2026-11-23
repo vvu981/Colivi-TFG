@@ -7,7 +7,7 @@
 
     El modelo tradicional en cascada exige completar y congelar cada fase antes de iniciar la siguiente: requisitos, diseño, codificación, verificación y entrega. Si bien funciona en proyectos con especificaciones cerradas y contratos rígidos, fracasa al integrar servicios desacoplados o protocolos emergentes como MCP. Descubrir un fallo de integración en la fase final de pruebas dispararía el coste de rehacer módulos enteros.
 
-    Scrum estructura el trabajo en iteraciones cortas llamadas \emph{sprints}, orientadas a entregar incrementos funcionales cada dos o cuatro semanas. Reparte responsabilidades entre perfiles definidos (\emph{Scrum Master}, \emph{Product Owner}, equipo de desarrollo) y exige reuniones periódicas de sincronización y retrospectiva. Pese a dominar en la industria corporativa, su burocracia de reuniones pierde sentido en un proyecto individual sin equipo que coordinar. La figura \ref{fig:agile_vs_waterfall} refleja la comparativa histórica de tasas de éxito entre ambos enfoques.
+    Sin embargo, Scrum estructura el trabajo en iteraciones cortas llamadas \emph{sprints}, orientadas a entregar incrementos funcionales cada dos o cuatro semanas. Reparte responsabilidades entre perfiles definidos (\emph{Scrum Master}, \emph{Product Owner}, equipo de desarrollo) y exige reuniones periódicas de sincronización y retrospectiva. Pese a dominar en la industria corporativa, su burocracia de reuniones pierde sentido en un proyecto individual sin equipo que coordinar. La figura \ref{fig:agile_vs_waterfall} refleja la comparativa histórica de tasas de éxito entre ambos enfoques.
 
 \begin{figure}[H]
     \centering
@@ -16,7 +16,7 @@
     \label{fig:agile_vs_waterfall}
 \end{figure}
 
-    Kanban elimina las cadencias temporales fijas y se centra en limitar el trabajo en curso o WIP (\emph{Work In Progress}). Las tareas avanzan a través de columnas de estado en un tablero visual (figura \ref{fig:tablero_kanban}): pendientes, en desarrollo y completadas. Este flujo continuo permite priorizar el trabajo según cuellos de botella reales, facilitando al programador concentrarse en un solo componente hasta cerrarlo.
+    En el caso de Kanban, se eliminan las cadencias temporales fijas y se centra en limitar el trabajo en curso o WIP (\emph{Work In Progress}). Las tareas avanzan a través de columnas de estado en un tablero visual (figura \ref{fig:tablero_kanban}): pendientes, en desarrollo y completadas. Este flujo continuo permite priorizar el trabajo según cuellos de botella reales, facilitando al programador concentrarse en un solo componente hasta cerrarlo.
 
 \begin{figure}[H]
     \centering
@@ -29,14 +29,14 @@
 
 \subsection{Análisis comparativo y selección para el proyecto}
 
-    La arquitectura de Colivi —un backend modular en Spring Boot 3, un servidor MCP independiente en Node.js, un cliente web en React y el paquete móvil con Capacitor— hacía inviable una cascada estricta. Conectar herramientas de inteligencia artificial con inferencia remota exigía experimentar con esquemas JSON y ajustar contratos sobre la marcha.
+    Para el desarrollo de Colivi -un backend modular en Spring Boot 3, un servidor MCP independiente en Node.js, un cliente web en React y el paquete móvil con Capacitor— era inviable realizarlo con un formato de cascada estricta. Esto es debido a que conectar herramientas de IA con inferencia remota exigía pruebas con esquemas JSON o ajustar contratos durante el desarrollo.
 
-    Scrum tampoco encajaba en un escenario unipersonal sin ceremonias diarias. Por estas razones, se diseñó una estrategia híbrida adaptada a las necesidades reales del desarrollo:
+    Sin embargo, la metodología Scrum tampoco encajaba en un escenario unipersonal sin briefings diarias. Por estas razones, se diseñó una estrategia híbrida adaptada a las necesidades reales del desarrollo:
 
 \begin{itemize}
-\item \textbf{Gestión del flujo de trabajo}: Kanban organizó el avance técnico mediante un tablero en GitHub Projects, vinculando incidencias, dependencias y confirmaciones de código sin imponer cortes temporales artificiales.
-\item \textbf{Disciplina técnica con TDD}: las prácticas de XP guiaron la implementación mediante el ciclo de diseño, prueba y refactorización resumido en la figura \ref{fig:TDD}. Este mecanismo protegió el cálculo financiero de deudas y la reserva concurrente de habitaciones, forzando un diseño desacoplado bajo principios SOLID (\emph{Single responsibility, Open-closed, Liskov substitution, Interface segregation, Dependency inversion}).
-\item \textbf{Integración asistida}: el entorno Antigravity aceleró la formulación de baterías de pruebas con JUnit y Mockito, complementando la inspección manual con compilaciones automatizadas en ramas de características (\emph{feature branches}).
+\item \textbf{Gestión del flujo de trabajo}: Kanban organizó el avance técnico usando un tablero en GitHub Projects, vinculando incidencias, dependencias y confirmaciones de código sin imponer cortes temporales artificiales.
+\item \textbf{Disciplina técnica con TDD}: las prácticas de XP guiaron la implementación mediante el ciclo de diseño, prueba y refactorización resumido en la figura \ref{fig:TDD}. Este mecanismo protegió el cálculo financiero de deudas y la reserva concurrente de habitaciones desde el inicio del desarrollo, forzando un diseño desacoplado bajo principios SOLID (\emph{Single responsibility, Open-closed, Liskov substitution, Interface segregation, Dependency inversion}).
+\item \textbf{Integración asistida}: el entorno Antigravity aceleró la formulación de baterías de pruebas con JUnit y Mockito, complementando la inspección manual con compilaciones automatizadas en ramas de características (\emph{feature branches}), alcanzando obligatoriamente más del 90\% de cobertura.
 \end{itemize}
 
 \begin{figure}[H]

@@ -1,0 +1,25 @@
+\section{Desarrollo de la aplicación web y arquitectura de servicios}
+\label{sec:desarrollo_web_servicios}
+
+A lo largo de este capítulo se presentará todo el proceso de desarrollo seguido desde la concepción de la idea inicial hasta la finalización de ambas versiones de la aplicación: web y móvil. El contenido comenzará con aspectos preliminares como la elección del nombre y el diseño del logo. A continuación, se abordará en detalle el desarrollo de la versión web y, posteriormente, el de la versión móvil.
+
+En esta sección del capítulo se describe el proceso de desarrollo de la versión web de **Colivi**. El proyecto se estructuró en dos capas principales: un frontend implementado con **Vite** y **React 19** (TypeScript), y un backend construido con **Spring Boot 3**, **Java 21** y **PostgreSQL 16**. La arquitectura adoptó el patrón de servicios desacoplados, separando claramente la lógica de negocio del acceso a datos y la presentación.
+
+El desarrollo incluye la configuración del servidor local, la inserción de los datos iniciales, y la implementación de todas las vistas requeridas: inicio de sesión, registro, dashboard, perfil de usuario, explorador cartográfico de alojamientos, publicación de anuncios, gestión de gastos, cuadrante de tareas y asistencia mediante IA. Cada módulo se detalla en los sub‑apartados siguientes, organizados como archivos LaTeX independientes para cumplir con los principios SOLID.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.92\textwidth]{DesarrolloDeColivi/img/estructura_proyecto.png}
+    \caption{Estructura general del repositorio y partición modular del proyecto Colivi.}
+    \label{fig:estructura_proyecto}
+\end{figure}
+
+\input{DesarrolloDeColivi/ServidoresLocales.tex}
+\input{DesarrolloDeColivi/IntegracionApis.tex}
+\input{DesarrolloDeColivi/AutenticacionRegistro.tex}
+\input{DesarrolloDeColivi/Dashboard.tex}
+\input{DesarrolloDeColivi/PerfilUsuario.tex}
+\input{DesarrolloDeColivi/ExploradorAlojamientos.tex}
+\input{DesarrolloDeColivi/PublicacionReservas.tex}
+\input{DesarrolloDeColivi/GestionGastos.tex}
+\input{DesarrolloDeColivi/TareasAsistente.tex}
