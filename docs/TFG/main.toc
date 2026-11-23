@@ -75,46 +75,54 @@
 \contentsline {section}{\numberline {4.1}Identidad del proyecto: naming y diseño del logotipo}{93}{section.4.1}%
 \contentsline {section}{\numberline {4.2}Desarrollo de la aplicación web y arquitectura de servicios}{94}{section.4.2}%
 \contentsline {subsection}{\numberline {4.2.1}Creación del servidor local}{96}{subsection.4.2.1}%
-\contentsline {subsection}{\numberline {4.2.2}Integración y consumo de APIs: arquitectura REST y servicios externos}{96}{subsection.4.2.2}%
-\contentsline {subsubsection}{\numberline {4.2.2.1}Consumo e integración de la API REST interna (Frontend -- Backend)}{96}{subsubsection.4.2.2.1}%
-\contentsline {subsubsection}{\numberline {4.2.2.2}Consumo de APIs externas y geocodificación (OpenStreetMap / Nominatim)}{97}{subsubsection.4.2.2.2}%
-\contentsline {subsubsection}{\numberline {4.2.2.3}Verificación inicial de contratos y datos de prueba}{98}{subsubsection.4.2.2.3}%
-\contentsline {subsection}{\numberline {4.2.3}Inicio de sesión, registro y autenticación}{98}{subsection.4.2.3}%
-\contentsline {subsection}{\numberline {4.2.4}Panel de control (Dashboard) y gestión de la convivencia}{99}{subsection.4.2.4}%
-\contentsline {subsubsection}{\numberline {4.2.4.1}Estructura de la interfaz y composición de widgets}{99}{subsubsection.4.2.4.1}%
-\contentsline {subsubsection}{\numberline {4.2.4.2}Agregación de datos y optimización de consultas en backend}{99}{subsubsection.4.2.4.2}%
-\contentsline {subsection}{\numberline {4.2.5}Perfil de usuario y gobernanza de cuenta}{100}{subsection.4.2.5}%
-\contentsline {subsubsection}{\numberline {4.2.5.1}Diseño de la vista y componentes de configuración}{100}{subsubsection.4.2.5.1}%
-\contentsline {subsubsection}{\numberline {4.2.5.2}Lógica de servicio y seguridad de perfiles en backend}{100}{subsubsection.4.2.5.2}%
-\contentsline {subsection}{\numberline {4.2.6}Explorador cartográfico y catálogo de alojamientos}{101}{subsection.4.2.6}%
-\contentsline {subsubsection}{\numberline {4.2.6.1}Construcción del visor interactivo en frontend}{101}{subsubsection.4.2.6.1}%
-\contentsline {subsubsection}{\numberline {4.2.6.2}Motor de búsqueda geoespacial y paginación en backend}{101}{subsubsection.4.2.6.2}%
-\contentsline {subsection}{\numberline {4.2.7}Publicación de inmuebles y ciclo de reservas}{102}{subsection.4.2.7}%
-\contentsline {subsubsection}{\numberline {4.2.7.1}Formulario multi-paso y gestión multimedia en frontend}{102}{subsubsection.4.2.7.1}%
-\contentsline {subsubsection}{\numberline {4.2.7.2}Máquina de estados de reserva y control de concurrencia en backend}{102}{subsubsection.4.2.7.2}%
-\contentsline {subsection}{\numberline {4.2.8}Gestión financiera y liquidación de gastos compartidos}{103}{subsection.4.2.8}%
-\contentsline {subsubsection}{\numberline {4.2.8.1}Interfaz contable y desglose de cuotas en frontend}{103}{subsubsection.4.2.8.1}%
-\contentsline {subsubsection}{\numberline {4.2.8.2}Motor contable y consistencia transaccional en backend}{104}{subsubsection.4.2.8.2}%
-\contentsline {subsection}{\numberline {4.2.9}Cuadrante de tareas domésticas y asistente inteligente}{104}{subsection.4.2.9}%
-\contentsline {subsubsection}{\numberline {4.2.9.1}Cuadrante rotativo de tareas y gamificación}{104}{subsubsection.4.2.9.1}%
-\contentsline {subsubsection}{\numberline {4.2.9.2}Canal de mensajería contextual y copiloto inteligente con protocolo MCP}{105}{subsubsection.4.2.9.2}%
-\contentsline {chapter}{\numberline {5}Plan de pruebas}{107}{chapter.5}%
-\contentsline {section}{\numberline {5.1}Problemas durante el desarrollo}{108}{section.5.1}%
-\contentsline {section}{\numberline {5.2}Solución de los problemas encontrados}{110}{section.5.2}%
-\contentsline {section}{\numberline {5.3}Entornos de pruebas y dispositivos utilizados}{114}{section.5.3}%
-\contentsline {subsection}{\numberline {5.3.1}Entorno de desarrollo}{114}{subsection.5.3.1}%
-\contentsline {subsection}{\numberline {5.3.2}Navegadores web utilizados}{115}{subsection.5.3.2}%
-\contentsline {subsection}{\numberline {5.3.3}Dispositivos móviles}{115}{subsection.5.3.3}%
-\contentsline {subsection}{\numberline {5.3.4}Integración continua con GitHub Actions}{115}{subsection.5.3.4}%
-\contentsline {subsection}{\numberline {5.3.5}Despliegue en la nube con Microsoft Azure}{116}{subsection.5.3.5}%
-\contentsline {chapter}{\numberline {6}Costes de desarrollo}{117}{chapter.6}%
-\contentsline {section}{\numberline {6.1}Hipótesis de cálculo}{117}{section.6.1}%
-\contentsline {section}{\numberline {6.2}Costes de personal}{117}{section.6.2}%
-\contentsline {section}{\numberline {6.3}Costes de hardware}{118}{section.6.3}%
-\contentsline {section}{\numberline {6.4}Costes de software y servicios}{119}{section.6.4}%
-\contentsline {section}{\numberline {6.5}Resumen económico}{119}{section.6.5}%
-\contentsline {section}{\numberline {6.6}Interpretación de la estimación}{120}{section.6.6}%
-\contentsline {chapter}{Bibliografía}{121}{section*.162}%
+\contentsline {subsection}{\numberline {4.2.2}Patrones de diseño utilizados}{96}{subsection.4.2.2}%
+\contentsline {subsubsection}{\numberline {4.2.2.1}Patrón Strategy}{96}{subsubsection.4.2.2.1}%
+\contentsline {subsubsection}{\numberline {4.2.2.2}Patrón Observer mediante eventos de Spring}{97}{subsubsection.4.2.2.2}%
+\contentsline {subsubsection}{\numberline {4.2.2.3}Máquina de estados}{97}{subsubsection.4.2.2.3}%
+\contentsline {subsubsection}{\numberline {4.2.2.4}Patrón Chain of Responsibility}{97}{subsubsection.4.2.2.4}%
+\contentsline {subsubsection}{\numberline {4.2.2.5}Patrón Adapter y Proxy en el servidor MCP}{98}{subsubsection.4.2.2.5}%
+\contentsline {subsubsection}{\numberline {4.2.2.6}Patrón Factory}{98}{subsubsection.4.2.2.6}%
+\contentsline {subsubsection}{\numberline {4.2.2.7}Evaluación global de los patrones}{98}{subsubsection.4.2.2.7}%
+\contentsline {subsection}{\numberline {4.2.3}Integración y consumo de APIs: arquitectura REST y servicios externos}{98}{subsection.4.2.3}%
+\contentsline {subsubsection}{\numberline {4.2.3.1}Consumo e integración de la API REST interna (Frontend -- Backend)}{99}{subsubsection.4.2.3.1}%
+\contentsline {subsubsection}{\numberline {4.2.3.2}Consumo de APIs externas y geocodificación (OpenStreetMap / Nominatim)}{99}{subsubsection.4.2.3.2}%
+\contentsline {subsubsection}{\numberline {4.2.3.3}Verificación inicial de contratos y datos de prueba}{100}{subsubsection.4.2.3.3}%
+\contentsline {subsection}{\numberline {4.2.4}Inicio de sesión, registro y autenticación}{100}{subsection.4.2.4}%
+\contentsline {subsection}{\numberline {4.2.5}Panel de control (Dashboard) y gestión de la convivencia}{101}{subsection.4.2.5}%
+\contentsline {subsubsection}{\numberline {4.2.5.1}Estructura de la interfaz y composición de widgets}{101}{subsubsection.4.2.5.1}%
+\contentsline {subsubsection}{\numberline {4.2.5.2}Agregación de datos y optimización de consultas en backend}{101}{subsubsection.4.2.5.2}%
+\contentsline {subsection}{\numberline {4.2.6}Perfil de usuario y gobernanza de cuenta}{102}{subsection.4.2.6}%
+\contentsline {subsubsection}{\numberline {4.2.6.1}Diseño de la vista y componentes de configuración}{102}{subsubsection.4.2.6.1}%
+\contentsline {subsubsection}{\numberline {4.2.6.2}Lógica de servicio y seguridad de perfiles en backend}{102}{subsubsection.4.2.6.2}%
+\contentsline {subsection}{\numberline {4.2.7}Explorador cartográfico y catálogo de alojamientos}{103}{subsection.4.2.7}%
+\contentsline {subsubsection}{\numberline {4.2.7.1}Construcción del visor interactivo en frontend}{103}{subsubsection.4.2.7.1}%
+\contentsline {subsubsection}{\numberline {4.2.7.2}Motor de búsqueda geoespacial y paginación en backend}{103}{subsubsection.4.2.7.2}%
+\contentsline {subsection}{\numberline {4.2.8}Publicación de inmuebles y ciclo de reservas}{104}{subsection.4.2.8}%
+\contentsline {subsubsection}{\numberline {4.2.8.1}Formulario multi-paso y gestión multimedia en frontend}{104}{subsubsection.4.2.8.1}%
+\contentsline {subsubsection}{\numberline {4.2.8.2}Máquina de estados de reserva y control de concurrencia en backend}{104}{subsubsection.4.2.8.2}%
+\contentsline {subsection}{\numberline {4.2.9}Gestión financiera y liquidación de gastos compartidos}{105}{subsection.4.2.9}%
+\contentsline {subsubsection}{\numberline {4.2.9.1}Interfaz contable y desglose de cuotas en frontend}{105}{subsubsection.4.2.9.1}%
+\contentsline {subsubsection}{\numberline {4.2.9.2}Motor contable y consistencia transaccional en backend}{106}{subsubsection.4.2.9.2}%
+\contentsline {subsection}{\numberline {4.2.10}Cuadrante de tareas domésticas y asistente inteligente}{106}{subsection.4.2.10}%
+\contentsline {subsubsection}{\numberline {4.2.10.1}Cuadrante rotativo de tareas y gamificación}{106}{subsubsection.4.2.10.1}%
+\contentsline {subsubsection}{\numberline {4.2.10.2}Canal de mensajería contextual y copiloto inteligente con protocolo MCP}{107}{subsubsection.4.2.10.2}%
+\contentsline {chapter}{\numberline {5}Plan de pruebas}{109}{chapter.5}%
+\contentsline {section}{\numberline {5.1}Problemas durante el desarrollo}{110}{section.5.1}%
+\contentsline {section}{\numberline {5.2}Solución de los problemas encontrados}{112}{section.5.2}%
+\contentsline {section}{\numberline {5.3}Entornos de pruebas y dispositivos utilizados}{116}{section.5.3}%
+\contentsline {subsection}{\numberline {5.3.1}Entorno de desarrollo}{116}{subsection.5.3.1}%
+\contentsline {subsection}{\numberline {5.3.2}Navegadores web utilizados}{117}{subsection.5.3.2}%
+\contentsline {subsection}{\numberline {5.3.3}Dispositivos móviles}{117}{subsection.5.3.3}%
+\contentsline {subsection}{\numberline {5.3.4}Integración continua con GitHub Actions}{117}{subsection.5.3.4}%
+\contentsline {subsection}{\numberline {5.3.5}Despliegue en la nube con Microsoft Azure}{118}{subsection.5.3.5}%
+\contentsline {chapter}{\numberline {6}Costes de desarrollo}{119}{chapter.6}%
+\contentsline {section}{\numberline {6.1}Hipótesis de cálculo}{119}{section.6.1}%
+\contentsline {section}{\numberline {6.2}Costes de personal}{119}{section.6.2}%
+\contentsline {section}{\numberline {6.3}Costes de hardware}{120}{section.6.3}%
+\contentsline {section}{\numberline {6.4}Costes de software y servicios}{121}{section.6.4}%
+\contentsline {section}{\numberline {6.5}Resumen económico}{121}{section.6.5}%
+\contentsline {section}{\numberline {6.6}Interpretación de la estimación}{122}{section.6.6}%
+\contentsline {chapter}{Bibliografía}{123}{section*.162}%
  \vspace {5mm} \hrule \par 
-\contentsline {chapter}{\numberline {A}Contenido de una entrada en .bib}{123}{appendix.Alph1}%
-\contentsline {chapter}{\numberline {B}Tipos de referencias}{125}{appendix.Alph2}%
+\contentsline {chapter}{\numberline {A}Contenido de una entrada en .bib}{125}{appendix.Alph1}%
+\contentsline {chapter}{\numberline {B}Tipos de referencias}{127}{appendix.Alph2}%

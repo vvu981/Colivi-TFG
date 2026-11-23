@@ -3,7 +3,7 @@
 
 En este apartado se expone cómo se han ido resolviendo los distintos problemas que surgieron en el desarrollo, descritos en el apartado anterior.
 
-Por un lado, respecto a la \textbf{Prueba-01} relacionada con el bloqueo de peticiones por la política de mismo origen, se implementó una configuración global de CORS mediante un bean de tipo \texttt{WebMvcConfigurer} anotado con \texttt{@Configuration}. Este bean define un \texttt{CorsConfigurationSource} que autoriza explícitamente el origen \texttt{http://localhost:5173}, los métodos HTTP requeridos (\texttt{GET}, \texttt{POST}, \texttt{PUT}, \texttt{DELETE}, \texttt{PATCH}, \texttt{OPTIONS}) y las cabeceras necesarias (\texttt{Authorization}, \texttt{Content-Type}), aplicándose de forma global a todos los endpoints bajo \texttt{/api/v1/**}.
+Por un lado, respecto a la \textbf{Prueba-01} relacionada con el bloqueo de peticiones por la política de mismo origen, se implementó una configuración global de CORS mediante un bean de tipo WebMvcConfigurer anotado con @Configuration. Este bean define un CorsConfigurationSource que autoriza explícitamente el origen http://localhost:5173, los métodos HTTP requeridos (GET, POST, PUT, DELETE, PATCH, OPTIONS) y las cabeceras necesarias (Authorization, Content-Type), aplicándose de forma global a todos los endpoints bajo /api/v1/**.
 
 \begin{table}[H]
 \centering
@@ -11,14 +11,14 @@ Por un lado, respecto a la \textbf{Prueba-01} relacionada con el bloqueo de peti
 \hline
 \textbf{Prueba-01} & \textbf{CORS entre frontend y backend} \\ \hline
 Salida esperada & Comunicación fluida entre el cliente React (puerto 5173) y la API REST (puerto 8080). \\ \hline
-Salida obtenida & Error en consola: \texttt{Access to XMLHttpRequest blocked by CORS policy}. \\ \hline
-Solución & Implementar un bean \texttt{WebMvcConfigurer} con \texttt{CorsConfigurationSource} que autorice explícitamente el origen del frontend y los métodos HTTP requeridos. \\ \hline
+Salida obtenida & Error en consola: Access to XMLHttpRequest blocked by CORS policy. \\ \hline
+Solución & Implementar un bean WebMvcConfigurer con CorsConfigurationSource que autorice explícitamente el origen del frontend y los métodos HTTP requeridos. \\ \hline
 \end{tabular}
 \caption{Tabla Solución Prueba-01}
 \label{tab:sol_prueba01}
 \end{table}
 
-En relación con la \textbf{Prueba-02} sobre la integridad de las migraciones Flyway, la solución adoptada fue respetar rigurosamente la inmutabilidad de los scripts ya aplicados. Ante cualquier cambio en el esquema, se creaba siempre un nuevo script con la versión incremental siguiente (por ejemplo, \texttt{V3\_\_add\_column\_x.sql}). Para los entornos de desarrollo donde era necesario reiniciar el esquema desde cero, se utilizó la propiedad \texttt{flyway.cleanDisabled=false}, que permite limpiar y reaplicar todas las migraciones de forma controlada sin afectar a otros entornos.
+En relación con la \textbf{Prueba-02} sobre la integridad de las migraciones Flyway, la solución adoptada fue respetar rigurosamente la inmutabilidad de los scripts ya aplicados. Ante cualquier cambio en el esquema, se creaba siempre un nuevo script con la versión incremental siguiente (por ejemplo, V3__add_column_x.sql). Para los entornos de desarrollo donde era necesario reiniciar el esquema desde cero, se utilizó la propiedad flyway.cleanDisabled=false, que permite limpiar y reaplicar todas las migraciones de forma controlada sin afectar a otros entornos.
 
 \begin{table}[H]
 \centering
@@ -26,14 +26,14 @@ En relación con la \textbf{Prueba-02} sobre la integridad de las migraciones Fl
 \hline
 \textbf{Prueba-02} & \textbf{Integridad de migraciones Flyway} \\ \hline
 Salida esperada & La aplicación arranca con normalidad tras corregir un script de migración. \\ \hline
-Salida obtenida & La aplicación no arranca: \texttt{FlywayException: Validate failed --- Migration checksum mismatch}. \\ \hline
+Salida obtenida & La aplicación no arranca: FlywayException: Validate failed --- Migration checksum mismatch. \\ \hline
 Solución & No modificar nunca scripts ya aplicados; crear siempre un nuevo script de versión incremental para cualquier cambio en el esquema. \\ \hline
 \end{tabular}
 \caption{Tabla Solución Prueba-02}
 \label{tab:sol_prueba02}
 \end{table}
 
-Respecto al problema N+1 de Hibernate de la \textbf{Prueba-03}, la solución consistió en diseñar consultas JPQL personalizadas en los repositorios con cláusulas \texttt{LEFT JOIN FETCH} sobre las relaciones involucradas. Para el endpoint consolidado del dashboard, se implementó un DTO de proyección (\texttt{HomeSummaryDTO}) que permite al servidor agregar todos los datos necesarios ---miembros, gastos y tareas--- en un número acotado de consultas SQL, eliminando por completo las consultas adicionales de Hibernate.
+Respecto al problema N+1 de Hibernate de la \textbf{Prueba-03}, la solución consistió en diseñar consultas JPQL personalizadas en los repositorios con cláusulas LEFT JOIN FETCH sobre las relaciones involucradas. Para el endpoint consolidado del dashboard, se implementó un DTO de proyección (HomeSummaryDTO) que permite al servidor agregar todos los datos necesarios ---miembros, gastos y tareas--- en un número acotado de consultas SQL, eliminando por completo las consultas adicionales de Hibernate.
 
 \begin{table}[H]
 \centering
@@ -42,13 +42,13 @@ Respecto al problema N+1 de Hibernate de la \textbf{Prueba-03}, la solución con
 \textbf{Prueba-03} & \textbf{Problema N+1 en Hibernate} \\ \hline
 Salida esperada & El endpoint resuelve todos los datos del hogar en una sola consulta SQL. \\ \hline
 Salida obtenida & Hibernate ejecuta 1 + N consultas adicionales, degradando el rendimiento. \\ \hline
-Solución & Consultas JPQL con \texttt{LEFT JOIN FETCH} y DTO de proyección \texttt{HomeSummaryDTO} para agregar todos los datos en una única transacción de lectura. \\ \hline
+Solución & Consultas JPQL con LEFT JOIN FETCH y DTO de proyección HomeSummaryDTO para agregar todos los datos en una única transacción de lectura. \\ \hline
 \end{tabular}
 \caption{Tabla Solución Prueba-03}
 \label{tab:sol_prueba03}
 \end{table}
 
-En cuanto a la \textbf{Prueba-04} del servicio de correo, la solución definitiva fue sustituir la autenticación estándar de Gmail por una \textbf{contraseña de aplicación} generada desde la configuración de seguridad de la cuenta de Google, combinada con la habilitación de la verificación en dos pasos. Las credenciales se externalizaron al archivo \texttt{application.properties} mediante variables de entorno, siguiendo el principio de no incluir secretos en el repositorio de código.
+En cuanto a la \textbf{Prueba-04} del servicio de correo, la solución definitiva fue sustituir la autenticación estándar de Gmail por una \textbf{contraseña de aplicación} generada desde la configuración de seguridad de la cuenta de Google, combinada con la habilitación de la verificación en dos pasos. Las credenciales se externalizaron al archivo application.properties mediante variables de entorno, siguiendo el principio de no incluir secretos en el repositorio de código.
 
 \begin{table}[H]
 \centering
@@ -56,14 +56,14 @@ En cuanto a la \textbf{Prueba-04} del servicio de correo, la solución definitiv
 \hline
 \textbf{Prueba-04} & \textbf{Autenticación SMTP para correos transaccionales} \\ \hline
 Salida esperada & El usuario recibe un correo con el enlace de recuperación o reactivación de cuenta. \\ \hline
-Salida obtenida & Error en el servidor: \texttt{535-5.7.8 Username and Password not accepted}. \\ \hline
-Solución & Generar una contraseña de aplicación específica en la cuenta de Google y configurarla en \texttt{application.properties} como variable de entorno. \\ \hline
+Salida obtenida & Error en el servidor: 535-5.7.8 Username and Password not accepted. \\ \hline
+Solución & Generar una contraseña de aplicación específica en la cuenta de Google y configurarla en application.properties como variable de entorno. \\ \hline
 \end{tabular}
 \caption{Tabla Solución Prueba-04}
 \label{tab:sol_prueba04}
 \end{table}
 
-La solución adoptada para la \textbf{Prueba-05}, relativa a la falta de sincronización del estado tras mutaciones, fue migrar la gestión del estado asíncrono de Redux Toolkit a \textbf{TanStack Query}. Las peticiones de lectura se encapsulan en \texttt{useQuery} y las mutaciones en \texttt{useMutation}, con invalidación reactiva de claves de caché (\texttt{queryClient.invalidateQueries}) tras cada operación de escritura. Esta arquitectura redujo significativamente el código de gestión de estado y garantizó la coherencia de los datos entre componentes sin intervención manual del usuario.
+La solución adoptada para la \textbf{Prueba-05}, relativa a la falta de sincronización del estado tras mutaciones, fue migrar la gestión del estado asíncrono de Redux Toolkit a \textbf{TanStack Query}. Las peticiones de lectura se encapsulan en useQuery y las mutaciones en useMutation, con invalidación reactiva de claves de caché (queryClient.invalidateQueries) tras cada operación de escritura. Esta arquitectura redujo significativamente el código de gestión de estado y garantizó la coherencia de los datos entre componentes sin intervención manual del usuario.
 
 \begin{table}[H]
 \centering
@@ -79,7 +79,7 @@ Solución & Sustituir Redux Toolkit por TanStack Query con invalidación reactiv
 \label{tab:sol_prueba05}
 \end{table}
 
-Para resolver el error de compilación de la \textbf{Prueba-06} causado por Leaflet, el componente del mapa se aisló mediante carga dinámica (\emph{lazy loading}) con \texttt{React.lazy} y \texttt{Suspense}. De este modo, Leaflet solo se inicializa en el contexto del navegador y nunca durante el proceso de compilación de Vite, eliminando por completo el acceso prematuro al objeto \texttt{window}.
+Para resolver el error de compilación de la \textbf{Prueba-06} causado por Leaflet, el componente del mapa se aisló mediante carga dinámica (\emph{lazy loading}) con React.lazy y Suspense. De este modo, Leaflet solo se inicializa en el contexto del navegador y nunca durante el proceso de compilación de Vite, eliminando por completo el acceso prematuro al objeto window.
 
 \begin{table}[H]
 \centering
@@ -87,14 +87,14 @@ Para resolver el error de compilación de la \textbf{Prueba-06} causado por Leaf
 \hline
 \textbf{Prueba-06} & \textbf{Compatibilidad de Leaflet con el entorno de compilación} \\ \hline
 Salida esperada & El mapa interactivo se renderiza correctamente. \\ \hline
-Salida obtenida & Error de compilación: \texttt{ReferenceError: window is not defined}. \\ \hline
-Solución & Envolver el componente del mapa en \texttt{React.lazy} + \texttt{Suspense} para garantizar que Leaflet solo se ejecute en el navegador. \\ \hline
+Salida obtenida & Error de compilación: ReferenceError: window is not defined. \\ \hline
+Solución & Envolver el componente del mapa en React.lazy + Suspense para garantizar que Leaflet solo se ejecute en el navegador. \\ \hline
 \end{tabular}
 \caption{Tabla Solución Prueba-06}
 \label{tab:sol_prueba06}
 \end{table}
 
-Respecto al \emph{rate limiting} de Nominatim de la \textbf{Prueba-07}, la solución consistió en implementar una estrategia de \textbf{geocodificación asíncrona con persistencia local}: la llamada a Nominatim se realiza una única vez en el momento en que el anfitrión publica o actualiza un alojamiento, y las coordenadas resultantes se almacenan permanentemente en las columnas \texttt{latitude} y \texttt{longitude} de la tabla \texttt{accommodations} en PostgreSQL. Las búsquedas habituales del cliente consultan directamente la base de datos local sin realizar ninguna llamada externa.
+Respecto al \emph{rate limiting} de Nominatim de la \textbf{Prueba-07}, la solución consistió en implementar una estrategia de \textbf{geocodificación asíncrona con persistencia local}: la llamada a Nominatim se realiza una única vez en el momento en que el anfitrión publica o actualiza un alojamiento, y las coordenadas resultantes se almacenan permanentemente en las columnas latitude y longitude de la tabla accommodations en PostgreSQL. Las búsquedas habituales del cliente consultan directamente la base de datos local sin realizar ninguna llamada externa.
 
 \begin{table}[H]
 \centering
@@ -103,14 +103,14 @@ Respecto al \emph{rate limiting} de Nominatim de la \textbf{Prueba-07}, la soluc
 \textbf{Prueba-07} & \textbf{Rate limiting en la API de geocodificación Nominatim} \\ \hline
 Entrada & Publicación simultánea de varios alojamientos con nuevas direcciones. \\ \hline
 Salida esperada & Todas las direcciones son geocodificadas y los alojamientos aparecen en el mapa. \\ \hline
-Salida obtenida & Error HTTP \texttt{429 Too Many Requests}; coordenadas no almacenadas. \\ \hline
+Salida obtenida & Error HTTP 429 Too Many Requests; coordenadas no almacenadas. \\ \hline
 Solución & Geocodificar una única vez al publicar el alojamiento y persistir las coordenadas en base de datos, eliminando las llamadas externas en las búsquedas. \\ \hline
 \end{tabular}
 \caption{Tabla Solución Prueba-07}
 \label{tab:sol_prueba07}
 \end{table}
 
-Para resolver las incompatibilidades de la \textbf{Prueba-08} con Spring AI, se adoptó una estrategia de tipado estricto bidireccional: los esquemas JSON de las herramientas se generaron directamente desde las clases Java mediante la anotación \texttt{@Tool} de Spring AI, garantizando que el contrato de datos fuese siempre coherente con la implementación. Se habilitó el modo de depuración de Spring AI en los logs para visualizar las invocaciones del modelo y detectar desajustes de forma temprana.
+Para resolver las incompatibilidades de la \textbf{Prueba-08} con Spring AI, se adoptó una estrategia de tipado estricto bidireccional: los esquemas JSON de las herramientas se generaron directamente desde las clases Java mediante la anotación @Tool de Spring AI, garantizando que el contrato de datos fuese siempre coherente con la implementación. Se habilitó el modo de depuración de Spring AI en los logs para visualizar las invocaciones del modelo y detectar desajustes de forma temprana.
 
 \begin{table}[H]
 \centering
@@ -119,13 +119,13 @@ Para resolver las incompatibilidades de la \textbf{Prueba-08} con Spring AI, se 
 \textbf{Prueba-08} & \textbf{Contrato de tipos en herramientas MCP de Spring AI} \\ \hline
 Salida esperada & El asistente de IA invoca correctamente las herramientas y devuelve respuestas coherentes. \\ \hline
 Salida obtenida & Respuestas malformadas o vacías; errores de deserialización silenciosos. \\ \hline
-Solución & Generar los esquemas JSON directamente desde las clases Java con \texttt{@Tool} y activar el modo DEBUG de Spring AI para auditar las invocaciones. \\ \hline
+Solución & Generar los esquemas JSON directamente desde las clases Java con @Tool y activar el modo DEBUG de Spring AI para auditar las invocaciones. \\ \hline
 \end{tabular}
 \caption{Tabla Solución Prueba-08}
 \label{tab:sol_prueba08}
 \end{table}
 
-Por último, en relación con la \textbf{Prueba-09} de conectividad en dispositivos físicos Android, la solución fue configurar la URL base del backend mediante la IP local del equipo de desarrollo (por ejemplo, \texttt{http://192.168.1.X:8080}) en el archivo \texttt{.env} específico para el entorno móvil. Adicionalmente, se habilitó una regla de entrada en el firewall de Windows para permitir conexiones al puerto \texttt{8080} desde dispositivos en la misma red local.
+Por último, en relación con la \textbf{Prueba-09} de conectividad en dispositivos físicos Android, la solución fue configurar la URL base del backend mediante la IP local del equipo de desarrollo (por ejemplo, http://192.168.1.X:8080) en el archivo .env específico para el entorno móvil. Adicionalmente, se habilitó una regla de entrada en el firewall de Windows para permitir conexiones al puerto 8080 desde dispositivos en la misma red local.
 
 \begin{table}[H]
 \centering
@@ -133,8 +133,8 @@ Por último, en relación con la \textbf{Prueba-09} de conectividad en dispositi
 \hline
 \textbf{Prueba-09} & \textbf{Conectividad del backend en dispositivos físicos Android} \\ \hline
 Salida esperada & La aplicación móvil se comunica con el backend y muestra los datos correctamente. \\ \hline
-Salida obtenida & Todas las peticiones fallan con error de red; el dispositivo no puede resolver \texttt{localhost:8080}. \\ \hline
-Solución & Sustituir \texttt{localhost} por la IP local del equipo en el archivo \texttt{.env} móvil y abrir el puerto \texttt{8080} en el firewall de Windows para la red local. \\ \hline
+Salida obtenida & Todas las peticiones fallan con error de red; el dispositivo no puede resolver localhost:8080. \\ \hline
+Solución & Sustituir localhost por la IP local del equipo en el archivo .env móvil y abrir el puerto 8080 en el firewall de Windows para la red local. \\ \hline
 \end{tabular}
 \caption{Tabla Solución Prueba-09}
 \label{tab:sol_prueba09}

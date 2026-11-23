@@ -132,6 +132,19 @@ El sistema se compone de tres capas de ejecucion completamente aisladas. El fron
 
 ---
 
+## Patrones de Diseno Aplicados
+
+- **Strategy:** permite aplicar asignacion fija o rotacion Round Robin y sustituir proveedores de almacenamiento sin alterar el comportamiento principal.
+- **Observer:** las reservas, gastos, tareas y denuncias generan acontecimientos que producen actividad y notificaciones despues de confirmar la operacion.
+- **State / maquina de estados finitos:** las reservas solo pueden realizar las transiciones permitidas entre sus estados pendientes, aceptados, confirmados, rechazados, cancelados y caducados.
+- **Chain of Responsibility:** la seguridad aplica sucesivamente la validacion de identidad y el control del estado operativo del usuario.
+- **Adapter y Proxy:** el servidor MCP adapta las herramientas al servicio REST y propaga la identidad sin almacenar credenciales ni acceder directamente a la base de datos.
+- **Factory:** la construccion del servidor MCP centraliza el registro de herramientas y su configuracion segun el rol.
+
+La explicacion detallada, con responsabilidades y justificacion de cada patron, se incluye en la memoria academica en `docs/TFG/DesarrolloDeColivi/PatronesDeDiseno.tex`.
+
+---
+
 ## Acerca del Proyecto
 
 Colivi es el Trabajo de Fin de Grado (TFG) del Grado en Ingenieria Informatica. El proyecto investiga la integracion practica del **Model Context Protocol (MCP)** en aplicaciones de produccion reales, demostrando como los modelos de lenguaje pueden operar sobre datos privados y sensibles de forma segura, trazable y aislada por usuario.

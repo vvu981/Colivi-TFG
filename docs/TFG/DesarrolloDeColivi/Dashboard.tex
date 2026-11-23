@@ -5,22 +5,22 @@ El panel de control principal representa el centro neurálgico de la experiencia
 
 \subsubsection{Estructura de la interfaz y composición de widgets}
 
-En el frontend, el panel de control se implementa a través del componente de página principal (\texttt{HomePage.tsx}) y componentes de agregación modular en \texttt{components/layout/}:
+En el frontend, el panel de control se implementa a través del componente de página principal (HomePage.tsx) y componentes de agregación modular en components/layout/:
 
 \begin{itemize}
-    \item \textbf{Encabezado de comunidad y membresía activa}: Muestra el nombre del hogar actual (por ejemplo, \emph{«Piso Estudiantes Centro»}), la insignia identificativa de rol del usuario (\texttt{ADMIN} o \texttt{MEMBER}) y la lista interactiva de compañeros de piso con sus respectivos avatares y códigos de color personalizados, facilitando la distinción visual instantánea.
+    \item \textbf{Encabezado de comunidad y membresía activa}: Muestra el nombre del hogar actual (por ejemplo, \emph{«Piso Estudiantes Centro»}), la insignia identificativa de rol del usuario (ADMIN o MEMBER) y la lista interactiva de compañeros de piso con sus respectivos avatares y códigos de color personalizados, facilitando la distinción visual instantánea.
     \item \textbf{Widget de balance financiero rápido}: Sintetiza el saldo neto del usuario en el piso. Si el balance es positivo, indica el importe total que sus compañeros le adeudan; si es negativo, alerta en tono de énfasis sobre los pagos pendientes, ofreciendo un botón de acceso directo a la liquidación.
     \item \textbf{Widget de tareas domésticas inminentes}: Expone las labores asignadas al usuario para la semana en curso (como la limpieza de zonas comunes o retirada de residuos), permitiendo marcar tareas como finalizadas con un solo clic o solicitar un «rescate» gamificado a la comunidad.
-    \item \textbf{Gestión de invitaciones del hogar}: Para los administradores de la vivienda, el panel proporciona un botón para copiar al portapapeles o regenerar el código de invitación alfanumérico (ejemplo: \texttt{PISO-CENTRO-2024}), permitiendo la adhesión inmediata de nuevos inquilinos sin requerir trámites administrativos complejos.
+    \item \textbf{Gestión de invitaciones del hogar}: Para los administradores de la vivienda, el panel proporciona un botón para copiar al portapapeles o regenerar el código de invitación alfanumérico (ejemplo: PISO-CENTRO-2024), permitiendo la adhesión inmediata de nuevos inquilinos sin requerir trámites administrativos complejos.
 \end{itemize}
 
 \subsubsection{Agregación de datos y optimización de consultas en backend}
 
-Para evitar el problema clásico de sobrecarga por múltiples peticiones HTTP en cascada (*Waterfall Requests*), el backend expone un endpoint consolidado en \texttt{HomeController} (\texttt{GET /api/v1/homes/{homeId}/summary}):
+Para evitar realizar muchas consultas independientes al cargar el panel, el servidor reúne la información principal del hogar en una única respuesta:
 
 \begin{enumerate}
-    \item \textbf{Consolidación en un único DTO (\texttt{HomeSummaryDTO})}: El servicio \texttt{HomeService} orquesta en una única transacción de sólo lectura la recopilación de los miembros activos del hogar, los últimos tres gastos registrados, el balance contable individual del solicitante y el cuadrante de tareas activas.
-    \item \textbf{Prevención de consultas N+1 en Hibernate}: Se diseñaron consultas especializadas en \texttt{HomeRepository} empleando cláusulas \texttt{LEFT JOIN FETCH} sobre las entidades relacionadas (\texttt{members}, \texttt{expenses}, \texttt{chores}), asegurando que la base de datos PostgreSQL resuelva toda la información en un número acotado de consultas SQL altamente optimizadas.
-    \item \textbf{Sincronización reactiva con TanStack Query}: En el cliente, la consulta del panel se suscribe a una clave de caché unificada (\texttt{['home', homeId, 'summary']}). Cuando cualquier miembro del piso añade un gasto o completa una tarea, las mutaciones invalidan selectivamente esta clave, provocando un refresco en segundo plano que mantiene la interfaz siempre actualizada sin saltos visuales ni parpadeos.
+    \item \textbf{Consolidación en un único DTO (HomeSummaryDTO)}: El servicio HomeService orquesta en una única transacción de sólo lectura la recopilación de los miembros activos del hogar, los últimos tres gastos registrados, el balance contable individual del solicitante y el cuadrante de tareas activas.
+    \item \textbf{Prevención de consultas N+1 en Hibernate}: Se diseñaron consultas especializadas en HomeRepository empleando cláusulas LEFT JOIN FETCH sobre las entidades relacionadas (members, expenses, chores), asegurando que la base de datos PostgreSQL resuelva toda la información en un número acotado de consultas SQL altamente optimizadas.
+    \item \textbf{Sincronización reactiva con TanStack Query}: En el cliente, la consulta del panel se suscribe a una clave de caché unificada (['home', homeId, 'summary']). Cuando cualquier miembro del piso añade un gasto o completa una tarea, las mutaciones invalidan selectivamente esta clave, provocando un refresco en segundo plano que mantiene la interfaz siempre actualizada sin saltos visuales ni parpadeos.
 \end{enumerate}
 

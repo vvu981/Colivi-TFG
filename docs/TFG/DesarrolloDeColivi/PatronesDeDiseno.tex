@@ -1,0 +1,56 @@
+\subsection{Patrones de diseño utilizados}
+\label{subsec:patrones_diseno}
+
+Además de la separación entre controladores, servicios y repositorios, la implementación de Colivi utiliza varios patrones de diseño clásicos. Su elección no responde únicamente a una clasificación teórica: cada patrón resuelve un problema concreto de variabilidad, coordinación o control del ciclo de vida del sistema.
+
+\subsubsection{Patrón Strategy}
+
+El patrón \emph{Strategy} permite seleccionar un algoritmo en tiempo de ejecución sin modificar el componente que solicita su ejecución. En Colivi se utiliza para asignar responsables a las tareas periódicas del hogar mediante dos modos de funcionamiento: asignación fija y rotación entre miembros.
+
+La modalidad seleccionada determina qué miembro recibe cada tarea, pero el proceso general de creación y planificación permanece independiente del algoritmo concreto. De este modo, el sistema puede incorporar nuevas formas de asignación sin alterar los procesos principales.
+
+El mismo criterio se aplica al almacenamiento de imágenes. La aplicación se apoya en una interfaz independiente del proveedor concreto, de manera que puede sustituirse Cloudinary u otro servicio externo sin modificar la gestión funcional de los alojamientos.
+
+\subsubsection{Patrón Observer mediante eventos de Spring}
+
+El patrón \emph{Observer} se utiliza para desacoplar las operaciones de negocio de las acciones posteriores que deben ejecutarse como consecuencia de dichas operaciones. Cuando una reserva, un gasto, una tarea o una denuncia cambia de estado, el componente productor comunica el acontecimiento al resto del sistema.
+
+Los observadores reciben los cambios y ejecutan acciones secundarias independientes, como generar un registro en el muro de actividad o enviar una notificación. Estas acciones se procesan después de confirmar correctamente la operación principal, de forma que no se registre actividad de una modificación que haya sido revertida por un error.
+
+Las áreas de reservas, mensajería y miembros del hogar siguen este modelo: convierten un cambio publicado por el dominio en una notificación o en una actualización secundaria. Los observadores pueden ampliarse con tareas independientes sin obligar al proceso principal a conocer los canales de salida concretos.
+
+\subsubsection{Máquina de estados}
+
+Las reservas y sus reglas de transición constituyen una máquina de estados explícita. Una solicitud comienza en estado pendiente y puede pasar, según su situación y quien realice la acción, a aceptada, confirmada, rechazada, cancelada o caducada.
+
+Cada operación verifica el estado actual antes de cambiarlo. Por ejemplo, una solicitud solo puede confirmarse después de haber sido aceptada. Cancelar una solicitud rechazada o confirmar una solicitud todavía pendiente produce una excepción controlada. La máquina de estados incorpora también permisos por rol y validaciones transversales, como la prevención de solapamientos o la caducidad de reservas.
+
+Una parte de esta responsabilidad se trata como un patrón \emph{State} de dominio en sentido estricto, mientras que el conjunto completo constituye una máquina de estados finitos. El estado no se representa mediante variables booleanas independientes, sino mediante un único estado con transiciones validadas dentro de la entidad y del servicio.
+
+\subsubsection{Patrón Chain of Responsibility}
+
+El acceso protegido al backend se implementa mediante una cadena de filtros de seguridad. El sistema establece primero las rutas públicas y las rutas que requieren autenticación, y después aplica sucesivamente las comprobaciones necesarias.
+
+El primer filtro valida la identidad y construye el contexto de autenticación. Si la petición continúa, el siguiente filtro verifica que el usuario no esté baneado, eliminado o desactivado. Las peticiones rechazadas finalizan el procesamiento y las válidas pasan a la siguiente comprobación y, finalmente, al controlador solicitado.
+
+Este patrón separa las responsabilidades criptográfica y de estado operativo. Añadir una política de seguridad nueva supone incorporar un filtro sin modificar los controladores ni las reglas existentes.
+
+\subsubsection{Patrón Adapter y Proxy en el servidor MCP}
+
+El servidor MCP actúa como adaptador entre dos protocolos. Una petición del protocolo MCP se traduce en la invocación de una herramienta, y cada herramienta delega en el servicio REST adecuado del backend.
+
+El adaptador encapsula las llamadas HTTP y transforma respuestas y errores a operaciones coherentes con el protocolo MCP. Por tanto, las herramientas no necesitan conocer la implementación concreta del transporte HTTP.
+
+El servidor también implementa una relación de tipo \emph{Proxy} o intermediario seguro: no almacena credenciales ni accede directamente a la base de datos. Reenvía la identidad del usuario en cada llamada y devuelve al protocolo MCP los errores de autenticación o autorización recibidos del backend. El control de pertenencia al hogar y de permisos continúa ejecutándose en la aplicación principal.
+
+\subsubsection{Patrón Factory}
+
+La construcción del servidor MCP encapsula la creación de sus componentes, el registro de herramientas y la selección del tratamiento de errores.
+
+Esta aplicación del patrón \emph{Factory} evita que la capa de transporte o el enrutador HTTP construyan manualmente el servidor MCP en varios lugares. La fábrica permite además crear instancias con distintos catálogos de herramientas según el rol del usuario.
+
+\subsubsection{Evaluación global de los patrones}
+
+Estos patrones contribuyen a reducir el acoplamiento entre módulos y a mantener centralizadas las reglas susceptibles de cambiar. En particular, Strategy separa los algoritmos de asignación y almacenamiento, Observer desacopla las consecuencias secundarias del dominio, State limita las transiciones permitidas y Chain of Responsibility divide la autenticación y la autorización.
+
+No todos los mecanismos del proyecto deben interpretarse como patrones adicionales. El uso de marcos de persistencia, la inyección por contenedor o el bloqueo optimista son implementaciones y mecanismos técnicos; no constituyen por sí solos nuevos patrones de diseño. Esta precisión evita atribuir al proyecto patrones que no aportan una decisión estructural diferenciada.

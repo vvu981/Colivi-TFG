@@ -5,7 +5,7 @@ La gestión contable de gastos es uno de los principales focos de fricción en l
 
 \subsubsection{Interfaz contable y desglose de cuotas en frontend}
 
-En el cliente web, la funcionalidad se centraliza en el componente de página \texttt{ExpensesPage.tsx} y sus modales asociados:
+En el cliente web, la funcionalidad se presenta en la sección de gastos compartidos y sus ventanas de edición:
 
 \begin{itemize}
     \item \textbf{Formulario de registro de gasto compartido}: Permite ingresar la descripción del gasto (ejemplo: «Compra semanal Mercadona» o «Factura de suministro eléctrico»), el importe total pagado en euros y el selector del pagador. El usuario puede elegir entre dividir el coste equitativamente entre todos los miembros activos del hogar o seleccionar participantes individuales con importes asignados personalizados.
@@ -15,11 +15,11 @@ En el cliente web, la funcionalidad se centraliza en el componente de página \t
 
 \subsubsection{Motor contable y consistencia transaccional en backend}
 
-En el backend, el procesamiento financiero se aloja en \texttt{ExpenseService} y se ejecuta bajo estrictas garantías transaccionales:
+En el sistema de servidor, el procesamiento financiero aplica controles estrictos para que las operaciones sean completas y coherentes:
 
 \begin{enumerate}
-    \item \textbf{Transaccionalidad ACID atómica (\texttt{@Transactional})}: El registro de un gasto implica insertar la cabecera en \texttt{home\_expenses} y simultáneamente las cuotas desglosadas en \texttt{home\_expense\_participants}. Si ocurre cualquier fallo o la suma de las partes no coincide con el importe global, la anotación \texttt{@Transactional} de Spring revierte automáticamente todos los cambios en PostgreSQL, impidiendo descuadres contables.
+    \item \textbf{Registro contable completo}: Al guardar un gasto se registra también la parte correspondiente a cada participante. Si ocurre cualquier fallo o la suma de las partes no coincide con el importe global, la operación completa se cancela para evitar descuadres contables.
     \item \textbf{Algoritmo de simplificación de deudas}: El servicio implementa un algoritmo de compensación de saldos que reduce la complejidad de las transferencias. Si el inquilino $A$ debe $20$~€ a $B$, y $B$ debe $20$~€ a $C$, el sistema calcula que $A$ abone directamente los $20$~€ a $C$, eliminando transacciones redundantes entre los convivientes.
-    \item \textbf{Registro histórico y trazabilidad de pagos}: Cada pago de liquidación se persiste en la tabla \texttt{home\_expense\_payments}, dejando constancia inmutable de la fecha, el emisor, el receptor y la cantidad transferida, lo que alimenta el muro de actividad del hogar para auditoría interna de los compañeros.
+    \item \textbf{Registro histórico y trazabilidad de pagos}: Cada pago de liquidación conserva la fecha, el miembro que entrega el importe, el miembro que lo recibe y la cantidad transferida. Esta información aparece en la actividad del hogar para que todos puedan comprobarlo.
 \end{enumerate}
 

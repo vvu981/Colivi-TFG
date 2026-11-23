@@ -21,11 +21,11 @@ El esquema de color combina tonos terrosos y marinos que transmiten cercanía, h
     \begin{tabular}{|p{2cm}|p{1.8cm}|p{4.2cm}|p{5cm}|}
         \hline
         \textbf{Token} & \textbf{Hex} & \textbf{Rol en el sistema} & \textbf{Elementos asignados} \\ \hline
-        \textbf{Primary} & \texttt{\#C85A32} & Marca principal (Terracota cálido) & Botones principales (CTA), pestañas activas, chips destacados e indicadores. \\ \hline
-        \textbf{Secondary} & \texttt{\#0F172A} & Contraste estructural (Slate 900) & Titulares principales (\emph{Headlines}), texto de máximo contraste y botones invertidos. \\ \hline
-        \textbf{Tertiary} & \texttt{\#00879F} & Tono funcional (Azul petróleo / Teal) & Iconos de edición, acentos complementarios, filtros activos y progreso secundario. \\ \hline
-        \textbf{Neutral} & \texttt{\#64748B} & Soporte neutro (Slate 500) & Bordes de tarjetas, líneas divisorias, texto secundario y fondos inactivos. \\ \hline
-        \textbf{Destructive} & \texttt{\#B91C1C} & Alerta y criticidad (Rojo intenso) & Acciones de borrado (icono papelera), bajas y mensajes de error. \\ \hline
+        \textbf{Primary} & \#C85A32 & Marca principal (Terracota cálido) & Botones principales (CTA), pestañas activas, chips destacados e indicadores. \\ \hline
+        \textbf{Secondary} & \#0F172A & Contraste estructural (Slate 900) & Titulares principales (\emph{Headlines}), texto de máximo contraste y botones invertidos. \\ \hline
+        \textbf{Tertiary} & \#00879F & Tono funcional (Azul petróleo / Teal) & Iconos de edición, acentos complementarios, filtros activos y progreso secundario. \\ \hline
+        \textbf{Neutral} & \#64748B & Soporte neutro (Slate 500) & Bordes de tarjetas, líneas divisorias, texto secundario y fondos inactivos. \\ \hline
+        \textbf{Destructive} & \#B91C1C & Alerta y criticidad (Rojo intenso) & Acciones de borrado (icono papelera), bajas y mensajes de error. \\ \hline
     \end{tabular}
     \caption{Definición de tokens cromáticos y asignación semántica en Colivi}
     \label{tab:tokens_cromaticos}
@@ -37,7 +37,7 @@ Para la tipografía corporativa se ha seleccionado la fuente de palo seco (\emph
 
 El sistema establece tres niveles tipográficos esenciales:
 \begin{itemize}
-    \item \textbf{Headline (Titulares):} Fuente Inter en peso \emph{Bold} / \emph{SemiBold} y color secundario (\texttt{\#0F172A}). Aporta jerarquía visual a encabezados de sección y títulos de inmuebles.
+    \item \textbf{Headline (Titulares):} Fuente Inter en peso \emph{Bold} / \emph{SemiBold} y color secundario (\#0F172A). Aporta jerarquía visual a encabezados de sección y títulos de inmuebles.
     \item \textbf{Body (Cuerpo de texto):} Fuente Inter en peso \emph{Regular} con interlineado a 1.5 y contraste atenuado, optimizado para lectura continuada sin fatiga visual.
     \item \textbf{Label (Etiquetas y controles):} Fuente Inter en peso \emph{Medium}. Formato compacto para textos de botones, campos de entrada, selectores y microetiquetas informativas.
 \end{itemize}
@@ -49,10 +49,10 @@ A partir de los tokens de color y tipografía se articula la biblioteca de compo
 \begin{itemize}
     \item \textbf{Botones y llamadas a la acción:}
     \begin{itemize}
-        \item \emph{Primary:} Fondo terracota (\texttt{\#C85A32}) y texto blanco con bordes redondeados (radio de 8px). Se reserva exclusivamente para la acción dominante de la pantalla (p. ej., «Reservar alojamiento», «Crear hogar»).
+        \item \emph{Primary:} Fondo terracota (\#C85A32) y texto blanco con bordes redondeados (radio de 8px). Se reserva exclusivamente para la acción dominante de la pantalla (p. ej., «Reservar alojamiento», «Crear hogar»).
         \item \emph{Secondary:} Fondo azul claro desaturado y texto oscuro para acciones accesorias o de navegación intermedia.
-        \item \emph{Inverted:} Fondo marino profundo (\texttt{\#0F172A}) para destacar sobre contenedores de contraste o cabeceras.
-        \item \emph{Outlined:} Fondo transparente y contorno neutro (\texttt{\#64748B}) para acciones de cancelación o retroceso.
+        \item \emph{Inverted:} Fondo marino profundo (\#0F172A) para destacar sobre contenedores de contraste o cabeceras.
+        \item \emph{Outlined:} Fondo transparente y contorno neutro (\#64748B) para acciones de cancelación o retroceso.
     \end{itemize}
 
     \item \textbf{Campos de búsqueda e introducción de datos:} Contenedores rectangulares redondeados con icono semántico de lupa (\emph{Search}), bordes suaves y fondo neutro para evitar sobrecarga visual al rellenar formularios.

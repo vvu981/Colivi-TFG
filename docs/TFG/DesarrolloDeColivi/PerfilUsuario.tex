@@ -5,7 +5,7 @@ El perfil de usuario constituye la carta de presentación de inquilinos y propie
 
 \subsubsection{Diseño de la vista y componentes de configuración}
 
-En el cliente web, la funcionalidad se distribuye entre la vista de perfil privado (\texttt{ProfilePage.tsx}) y la ficha pública de presentación (\texttt{PublicProfilePage.tsx}):
+En el cliente web, la funcionalidad se distribuye entre la vista privada para administrar el perfil y la ficha pública con la presentación del usuario:
 
 \begin{itemize}
     \item \textbf{Gestión de información personal y de contacto}: El usuario puede modificar su nombre, apellidos, biografía descriptiva y teléfono móvil. La entrada de datos está blindada mediante esquemas de validación que aseguran que los números sigan el estándar internacional E.164.
@@ -16,11 +16,11 @@ En el cliente web, la funcionalidad se distribuye entre la vista de perfil priva
 
 \subsubsection{Lógica de servicio y seguridad de perfiles en backend}
 
-En el backend, el servicio \texttt{UserService} y el controlador \texttt{UserController} gestionan las transiciones de estado y la integridad de los datos:
+En el sistema de servidor, la lógica correspondiente a los perfiles gestiona los cambios de estado y mantiene la integridad de los datos:
 
 \begin{enumerate}
     \item \textbf{Validación de unicidad y control de concurrencia}: La actualización del correo electrónico o del alias requiere comprobaciones de unicidad en base de datos. Para evitar colisiones en entornos concurrentes, las operaciones de actualización se ejecutan bajo transacciones atómicas con aislamiento de lectura comprometida.
     \item \textbf{Sanitización de contenidos}: Las biografías y campos de texto libre introducidos por el usuario se someten a un proceso de sanitización para neutralizar cualquier intento de inyección de código malicioso (\emph{Cross-Site Scripting}, XSS).
-    \item \textbf{Ciclo de reactivación mediante token firmado}: Cuando un usuario inactivo intenta iniciar sesión, el sistema genera un token criptográfico de reactivación vinculado a la tabla \texttt{reactivation\_tokens} con un periodo de validez de 24 horas, despachando un correo transaccional automático para confirmar la reapertura de la cuenta.
+    \item \textbf{Ciclo de reactivación mediante enlace seguro}: Cuando un usuario inactivo intenta iniciar sesión, el sistema genera un enlace seguro de reactivación con un periodo de validez de 24 horas y envía automáticamente un correo electrónico para confirmar la reapertura de la cuenta.
 \end{enumerate}
 

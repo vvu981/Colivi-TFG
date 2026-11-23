@@ -8,9 +8,9 @@ En este apartado se detalla el flujo de comunicación y consumo de interfaces de
 La comunicación entre el cliente desarrollado en React y los microservicios transaccionales de Spring Boot se estructura sobre un protocolo RESTful sin estado (\emph{stateless}). Para evitar discrepancias de datos y fallos en tiempo de ejecución, se aplicó un principio de modelado simétrico entre los \emph{Data Transfer Objects} (DTOs) de Java y las interfaces tipadas de TypeScript en el cliente:
 
 \begin{itemize}
-    \item \textbf{Gestión de peticiones y mutaciones reactivas}: Las consultas de lectura (\texttt{GET}) y las operaciones de mutación (\texttt{POST}, \texttt{PUT}, \texttt{DELETE}) se gestionan a través de ganchos personalizados (\emph{custom hooks}) que encapsulan las funciones de \textbf{TanStack Query} (\texttt{useQuery} y \texttt{useMutation}). Esta capa intermedia proporciona un manejo automático de los estados del ciclo de vida asíncrono (\texttt{isLoading}, \texttt{isError}, \texttt{data}), evitando la duplicación de código en los componentes visuales.
-    \item \textbf{Propagación de credenciales y autorización}: Mediante el interceptor de Axios, cada solicitud hacia rutas protegidas viaja acompañada de la cabecera estándar \texttt{Authorization: Bearer <JWT>}. El backend valida la firma criptográfica en el filtro de seguridad antes de despachar la petición al controlador de dominio pertinente.
-    \item \textbf{Políticas de invalidación y actualización optimista}: Para garantizar una experiencia fluida al usuario, las mutaciones desencadenan la invalidación reactiva de claves de consulta específicas (\texttt{queryClient.invalidateQueries}). Por ejemplo, al registrar la liquidación de una deuda compartida en el hogar, el libro mayor contable y los saldos cruzados de todos los compañeros se sincronizan automáticamente en el cliente sin requerir una recarga completa de la página.
+    \item \textbf{Gestión de peticiones y mutaciones reactivas}: Las consultas de lectura (GET) y las operaciones de mutación (POST, PUT, DELETE) se gestionan a través de ganchos personalizados (\emph{custom hooks}) que encapsulan las funciones de \textbf{TanStack Query} (useQuery y useMutation). Esta capa intermedia proporciona un manejo automático de los estados del ciclo de vida asíncrono (isLoading, isError, data), evitando la duplicación de código en los componentes visuales.
+    \item \textbf{Propagación de credenciales y autorización}: Mediante el interceptor de Axios, cada solicitud hacia rutas protegidas viaja acompañada de la cabecera estándar Authorization: Bearer <JWT>. El backend valida la firma criptográfica en el filtro de seguridad antes de despachar la petición al controlador de dominio pertinente.
+    \item \textbf{Políticas de invalidación y actualización optimista}: Para garantizar una experiencia fluida al usuario, las mutaciones desencadenan la invalidación reactiva de claves de consulta específicas (queryClient.invalidateQueries). Por ejemplo, al registrar la liquidación de una deuda compartida en el hogar, el libro mayor contable y los saldos cruzados de todos los compañeros se sincronizan automáticamente en el cliente sin requerir una recarga completa de la página.
 \end{itemize}
 
 \subsubsection{Consumo de APIs externas y geocodificación (OpenStreetMap / Nominatim)}
@@ -21,7 +21,7 @@ Para resolver esta necesidad se integró la API pública de geocodificación \te
 \begin{itemize}
     \item Un límite de tasa estricto (*Rate Limiting*) de \textbf{máximo 1 petición por segundo}.
     \item Prohibición expresa de ejecutar consultas masivas o búsquedas repetitivas para una misma dirección.
-    \item Requerimiento obligatorio de cabecera \texttt{User-Agent} identificativa para monitorizar el consumo del servicio.
+    \item Requerimiento obligatorio de cabecera User-Agent identificativa para monitorizar el consumo del servicio.
 \end{itemize}
 
 Si la aplicación web consultara la API externa de Nominatim cada vez que un usuario explora el mapa o desplaza el zoom, el sistema colapsaría de inmediato al superar los límites de tasa, acarreando el bloqueo de la dirección IP del servidor y generando una latencia inasumible en la interfaz.
@@ -30,11 +30,11 @@ Para sortear esta limitación y garantizar la máxima eficiencia, se implementó
 
 \begin{enumerate}
     \item \textbf{Resolución única durante el alta del inmueble}: Cuando el anfitrión publica o actualiza un alojamiento, el backend captura la dirección estructurada y ejecuta una única llamada controlada al servicio de Nominatim.
-    \item \textbf{Persistencia de coordenadas en base de datos}: La respuesta JSON de la API externa es procesada y las coordenadas resultantes se almacenan permanentemente en las columnas \texttt{latitude} y \texttt{longitude} de la tabla relacional \texttt{accommodations} de PostgreSQL.
+    \item \textbf{Persistencia de coordenadas en base de datos}: La respuesta JSON de la API externa es procesada y las coordenadas resultantes se almacenan permanentemente en las columnas latitude y longitude de la tabla relacional accommodations de PostgreSQL.
     \item \textbf{Consultas locales indexadas}: En las búsquedas habituales del cliente web, la plataforma no realiza ninguna llamada a Nominatim; las viviendas se consultan directamente desde la base de datos local mediante índices numéricos sobre las coordenadas geográficas, sirviendo los datos con tiempos de respuesta inferiores a 20~ms y respetando rigurosamente los términos de uso del proveedor libre.
 \end{enumerate}
 
 \subsubsection{Verificación inicial de contratos y datos de prueba}
 
-Con el fin de verificar la robustez de los contratos de la API REST y certificar visualmente la renderización de las coordenadas en el mapa cartográfico sin depender de inserciones manuales tediosas durante el desarrollo, se diseñó una inicialización automatizada de datos de prueba (\emph{seed data}). Esta se articula mediante una migración determinista en Flyway (\texttt{V999\_\_insert\_dev\_seed\_data.sql}) que preconfigura usuarios maestros y hogares de convivencia con cláusula \texttt{ON CONFLICT DO NOTHING}, complementada por un script en Python (\texttt{seed\_db.py}) que simula la interacción de anfitriones publicando inmuebles geolocalizados en los distritos universitarios más representativos de España (Madrid, Barcelona, Granada, Salamanca, Sevilla y Valencia).
+Con el fin de verificar la robustez de los contratos de la API REST y certificar visualmente la renderización de las coordenadas en el mapa cartográfico sin depender de inserciones manuales tediosas durante el desarrollo, se diseñó una inicialización automatizada de datos de prueba (\emph{seed data}). Esta se articula mediante una migración determinista en Flyway (V999__insert_dev_seed_data.sql) que preconfigura usuarios maestros y hogares de convivencia con cláusula ON CONFLICT DO NOTHING, complementada por un script en Python (seed_db.py) que simula la interacción de anfitriones publicando inmuebles geolocalizados en los distritos universitarios más representativos de España (Madrid, Barcelona, Granada, Salamanca, Sevilla y Valencia).
 

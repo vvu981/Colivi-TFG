@@ -5,7 +5,7 @@ El último eslabón funcional de la plataforma aborda la organización del traba
 
 \subsubsection{Cuadrante rotativo de tareas y gamificación}
 
-Para erradicar los desacuerdos derivados del reparto desigual de tareas de limpieza y mantenimiento, Colivi implementa en \texttt{ChoresPage.tsx} un planificador automatizado respaldado por un sistema de recompensas:
+Para erradicar los desacuerdos derivados del reparto desigual de tareas de limpieza y mantenimiento, Colivi implementa en ChoresPage.tsx un planificador automatizado respaldado por un sistema de recompensas:
 
 \begin{itemize}
     \item \textbf{Series recurrentes y rotación Round-Robin}: El administrador del hogar define las tareas periódicas (ejemplo: «Limpieza de cocina los domingos» o «Tirar la basura reciclable»). El motor del backend distribuye los turnos de forma secuencial y equitativa entre los miembros activos del piso mediante un algoritmo rotativo \emph{Round-Robin}, garantizando que la carga de trabajo se distribuya de manera perfectamente homogénea a lo largo del curso académico.
@@ -15,11 +15,11 @@ Para erradicar los desacuerdos derivados del reparto desigual de tareas de limpi
 
 \subsubsection{Canal de mensajería contextual y copiloto inteligente con protocolo MCP}
 
-La comunicación y el soporte se articulan en el frontend mediante la bandeja de mensajes (\texttt{MessagesPage.tsx}) y el widget del asistente inteligente:
+La comunicación y el soporte se articulan en el frontend mediante la bandeja de mensajes (MessagesPage.tsx) y el widget del asistente inteligente:
 
 \begin{enumerate}
     \item \textbf{Chat directo contextual}: Permite la conversación privada entre inquilinos y propietarios para pactar visitas, así como un canal grupal interno exclusivo para los miembros del hogar.
-    \item \textbf{Asistente conversacional contextual}: Integrado en la interfaz mediante \textbf{Spring AI}, el usuario puede interactuar en lenguaje natural con un copiloto inteligente. Dicho asistente no se limita a responder preguntas estáticas, sino que está conectado a las herramientas del backend mediante el protocolo estándar \textbf{Model Context Protocol (MCP)} desarrollado en el directorio \texttt{mcp-server/}.
-    \item \textbf{Orquestación segura de herramientas}: Cuando el usuario consulta al asistente cuestiones como «¿Cuánto dinero debo en el piso?» o «¿A quién le toca limpiar el baño esta semana?», el modelo de lenguaje selecciona e invoca dinámicamente las herramientas correspondientes (\texttt{getPendingDebts}, \texttt{getChoreSchedule}). Para preservar la privacidad entre hogares, la ejecución de cada herramienta exige un ticket de sesión temporal que acota estrictamente la consulta a los datos del piso al que pertenece el usuario.
+    \item \textbf{Asistente conversacional contextual}: Integrado en la interfaz mediante \textbf{Spring AI}, el usuario puede interactuar en lenguaje natural con un copiloto inteligente. Dicho asistente no se limita a responder preguntas estáticas, sino que está conectado a las herramientas del backend mediante el protocolo estándar \textbf{Model Context Protocol (MCP)} desarrollado en el directorio mcp-server/.
+    \item \textbf{Orquestación segura de herramientas}: Cuando el usuario consulta al asistente cuestiones como «¿Cuánto dinero debo en el piso?» o «¿A quién le toca limpiar el baño esta semana?», el modelo de lenguaje selecciona e invoca dinámicamente las herramientas correspondientes (getPendingDebts, getChoreSchedule). Para preservar la privacidad entre hogares, la ejecución de cada herramienta exige un ticket de sesión temporal que acota estrictamente la consulta a los datos del piso al que pertenece el usuario.
 \end{enumerate}
 

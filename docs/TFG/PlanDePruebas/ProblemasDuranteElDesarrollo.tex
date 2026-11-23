@@ -3,7 +3,7 @@
 
 En esta sección se comentan los problemas, dificultades y fallos que fueron surgiendo a lo largo del desarrollo de Colivi.
 
-La \textbf{Prueba-01} consistió en establecer la comunicación entre el servidor de desarrollo del frontend, ejecutándose en el puerto \texttt{5173} gracias a Vite, y la API REST del backend en el puerto \texttt{8080}. Desde el primer momento, el navegador bloqueaba todas las peticiones salientes del cliente React con errores de política de mismo origen (\emph{Same-Origin Policy}), impidiendo cualquier interacción con el servidor hasta que se configurara correctamente CORS.
+La \textbf{Prueba-01} consistió en establecer la comunicación entre el servidor de desarrollo del frontend, ejecutándose en el puerto 5173 gracias a Vite, y la API REST del backend en el puerto 8080. Desde el primer momento, el navegador bloqueaba todas las peticiones salientes del cliente React con errores de política de mismo origen (\emph{Same-Origin Policy}), impidiendo cualquier interacción con el servidor hasta que se configurara correctamente CORS.
 
 \begin{table}[H]
 \centering
@@ -11,7 +11,7 @@ La \textbf{Prueba-01} consistió en establecer la comunicación entre el servido
 \hline
 \textbf{Prueba-01} & \textbf{CORS entre frontend y backend} \\ \hline
 Salida esperada & Comunicación fluida entre el cliente React (puerto 5173) y la API REST (puerto 8080). \\ \hline
-Salida obtenida & Error en consola: \texttt{Access to XMLHttpRequest blocked by CORS policy}. Ninguna petición HTTP llegaba al backend. \\ \hline
+Salida obtenida & Error en consola: Access to XMLHttpRequest blocked by CORS policy. Ninguna petición HTTP llegaba al backend. \\ \hline
 \end{tabular}
 \caption{Tabla Prueba-01}
 \label{tab:prueba01}
@@ -25,20 +25,20 @@ En cuanto a la \textbf{Prueba-02}, una vez que se iniciaron las migraciones de b
 \hline
 \textbf{Prueba-02} & \textbf{Integridad de migraciones Flyway} \\ \hline
 Salida esperada & La aplicación arranca con normalidad tras corregir un script de migración. \\ \hline
-Salida obtenida & La aplicación no arranca: \texttt{FlywayException: Validate failed — Migration checksum mismatch}. \\ \hline
+Salida obtenida & La aplicación no arranca: FlywayException: Validate failed — Migration checksum mismatch. \\ \hline
 \end{tabular}
 \caption{Tabla Prueba-02}
 \label{tab:prueba02}
 \end{table}
 
-Otro de los problemas importantes fue el que se refiere a la \textbf{Prueba-03}, relacionado con las consultas a la base de datos al cargar el panel principal (\emph{dashboard}). Al inspeccionar los logs de Hibernate en modo \texttt{DEBUG}, se observaba que por cada miembro del hogar se lanzaba una consulta adicional para obtener sus datos relacionados, multiplicando innecesariamente la carga sobre PostgreSQL y aumentando los tiempos de respuesta de forma proporcional al número de convivientes.
+Otro de los problemas importantes fue el que se refiere a la \textbf{Prueba-03}, relacionado con las consultas a la base de datos al cargar el panel principal (\emph{dashboard}). Al inspeccionar los logs de Hibernate en modo DEBUG, se observaba que por cada miembro del hogar se lanzaba una consulta adicional para obtener sus datos relacionados, multiplicando innecesariamente la carga sobre PostgreSQL y aumentando los tiempos de respuesta de forma proporcional al número de convivientes.
 
 \begin{table}[H]
 \centering
 \begin{tabular}{|p{0.25\textwidth}|p{0.65\textwidth}|}
 \hline
 \textbf{Prueba-03} & \textbf{Problema N+1 en Hibernate} \\ \hline
-Salida esperada & El endpoint \texttt{/api/v1/homes/\{id\}/summary} resuelve todos los datos del hogar en una sola consulta SQL. \\ \hline
+Salida esperada & El resumen del hogar contiene todos los datos necesarios sin requerir consultas adicionales. \\ \hline
 Salida obtenida & Hibernate ejecuta 1 + N consultas adicionales (una por cada miembro y relación lazy), degradando el rendimiento. \\ \hline
 \end{tabular}
 \caption{Tabla Prueba-03}
@@ -53,7 +53,7 @@ También se detectaron dificultades con el envío de correos transaccionales, co
 \hline
 \textbf{Prueba-04} & \textbf{Autenticación SMTP para correos transaccionales} \\ \hline
 Salida esperada & El usuario recibe un correo con el enlace de recuperación o reactivación de cuenta. \\ \hline
-Salida obtenida & Error en el servidor: \texttt{535-5.7.8 Username and Password not accepted}. No se envía ningún correo. \\ \hline
+Salida obtenida & Error en el servidor: 535-5.7.8 Username and Password not accepted. No se envía ningún correo. \\ \hline
 \end{tabular}
 \caption{Tabla Prueba-04}
 \label{tab:prueba04}
@@ -74,7 +74,7 @@ Salida obtenida & La vista permanece desactualizada hasta que el usuario recarga
 \label{tab:prueba05}
 \end{table}
 
-Otro obstáculo fue la integración del mapa interactivo con Leaflet en la vista de búsqueda de alojamientos (\textbf{Prueba-06}). Leaflet accede directamente al objeto \texttt{window} del navegador, que no existe durante el proceso de compilación de Vite, generando errores que impedían construir el proyecto.
+Otro obstáculo fue la integración del mapa interactivo con Leaflet en la vista de búsqueda de alojamientos (\textbf{Prueba-06}). Leaflet accede directamente al objeto window del navegador, que no existe durante el proceso de compilación de Vite, generando errores que impedían construir el proyecto.
 
 \begin{table}[H]
 \centering
@@ -82,7 +82,7 @@ Otro obstáculo fue la integración del mapa interactivo con Leaflet en la vista
 \hline
 \textbf{Prueba-06} & \textbf{Compatibilidad de Leaflet con el entorno de compilación} \\ \hline
 Salida esperada & El mapa interactivo se renderiza correctamente en el explorador de alojamientos. \\ \hline
-Salida obtenida & Error de compilación: \texttt{ReferenceError: window is not defined}. El proyecto no podía construirse. \\ \hline
+Salida obtenida & Error de compilación: ReferenceError: window is not defined. El proyecto no podía construirse. \\ \hline
 \end{tabular}
 \caption{Tabla Prueba-06}
 \label{tab:prueba06}
@@ -97,7 +97,7 @@ La \textbf{Prueba-07} consistió en la implementación de la geocodificación de
 \textbf{Prueba-07} & \textbf{Rate limiting en la API de geocodificación Nominatim} \\ \hline
 Entrada & Publicación simultánea o rápida de varios alojamientos con nuevas direcciones. \\ \hline
 Salida esperada & Todas las direcciones son geocodificadas y los alojamientos se muestran en el mapa. \\ \hline
-Salida obtenida & Error HTTP \texttt{429 Too Many Requests}. Las coordenadas no se almacenan y los alojamientos no aparecen en el mapa. \\ \hline
+Salida obtenida & Error HTTP 429 Too Many Requests. Las coordenadas no se almacenan y los alojamientos no aparecen en el mapa. \\ \hline
 \end{tabular}
 \caption{Tabla Prueba-07}
 \label{tab:prueba07}
@@ -117,7 +117,7 @@ Salida obtenida & El modelo devuelve respuestas malformadas o vacías; errores d
 \label{tab:prueba08}
 \end{table}
 
-El primero de los problemas relacionados con la versión móvil generada con Capacitor fue que nunca se había trabajado previamente con esta tecnología en un proyecto de esta envergadura (\textbf{Prueba-09}). En dispositivos físicos Android, las peticiones al backend en \texttt{localhost:8080} fallaban sistemáticamente, ya que el dispositivo no comparte la interfaz de red loopback del equipo de desarrollo.
+El primero de los problemas relacionados con la versión móvil generada con Capacitor fue que nunca se había trabajado previamente con esta tecnología en un proyecto de esta envergadura (\textbf{Prueba-09}). En dispositivos físicos Android, las peticiones al backend en localhost:8080 fallaban sistemáticamente, ya que el dispositivo no comparte la interfaz de red loopback del equipo de desarrollo.
 
 \begin{table}[H]
 \centering
@@ -125,7 +125,7 @@ El primero de los problemas relacionados con la versión móvil generada con Cap
 \hline
 \textbf{Prueba-09} & \textbf{Conectividad del backend en dispositivos físicos Android} \\ \hline
 Salida esperada & La aplicación móvil se comunica con el backend y muestra los datos correctamente. \\ \hline
-Salida obtenida & Todas las peticiones fallan con error de red; el dispositivo no puede resolver \texttt{localhost:8080}. \\ \hline
+Salida obtenida & Todas las peticiones fallan con error de red; el dispositivo no puede resolver localhost:8080. \\ \hline
 \end{tabular}
 \caption{Tabla Prueba-09}
 \label{tab:prueba09}
